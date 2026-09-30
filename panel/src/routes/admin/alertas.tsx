@@ -54,13 +54,15 @@ export const Route = createFileRoute('/admin/alertas')({
 })
 
 /**
- * Alertas de riesgo: las señales que piden que alguien mire una cuenta.
+ * Alertas de riesgo: las señales que piden que alguien mire a un paciente, a
+ * una clínica o a alguien de su personal.
  *
- * La base no las guarda, las deduce de los datos cada vez (cuentas que
- * comparten aparato o cédula, verificaciones desde una VPN, un consumo por
- * encima del cupo, que la app nunca debería dejar pasar). Lo único que se
- * guarda es que alguien la revisó, con su nota. Por defecto se ven las
- * pendientes: es una cola.
+ * La base no las guarda, las deduce de los datos cada vez (teléfonos o
+ * correos repetidos, un comprobante que rebotó, ráfagas de altas en una
+ * clínica, una secretaria que registra casi todo, el impago de la primera
+ * cuota por clínica…). Ninguna bloquea nada (plan §14): son la defensa contra
+ * las altas falsas. Lo único que se guarda es que alguien la revisó, con su
+ * nota. Por defecto se ven las pendientes: es una cola.
  */
 function AlertasPage() {
   const navigate = useNavigate({ from: '/admin/alertas' })
