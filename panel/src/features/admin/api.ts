@@ -179,6 +179,15 @@ export type QueueItem = {
   statementMatchesAvailable: number
   /** El movimiento del extracto que respaldó la aprobación; `null` si ninguno. */
   statementLine: MovimientoDelExtracto | null
+  /**
+   * Quién del equipo lo registró (Helios: el paciente no reporta, lo registra
+   * el equipo con `admin_register_payment`). `null` si la base no lo manda.
+   * Con el doble control, esa persona no puede aprobarlo.
+   */
+  registeredById?: string | null
+  registeredByName?: string | null
+  /** La ruta de la captura en `payment-receipts`, si se subió. */
+  receiptPath?: string | null
   /** Qué salda este pago, agrupado por compra. */
   purchases: QueuePurchase[]
   lateFees: QueueLateFee[]
@@ -255,6 +264,9 @@ export function aQueueItem(raw: unknown): QueueItem {
     // Sin el campo (una base sin la migración 145000), todos cuentan como libres.
     statementMatchesAvailable: numeroONulo(row.statement_matches_available) ?? Number(row.statement_matches),
     statementLine: leerMovimiento(row.statement_line),
+    registeredById: textoONulo(row.registered_by),
+    registeredByName: textoONulo(row.registered_by_name),
+    receiptPath: textoONulo(row.receipt_path),
     purchases: comoLista(row.purchases).map((compra) => {
       const p = comoFila(compra)
       return {

@@ -6,6 +6,7 @@ import { Banknote } from 'lucide-react'
 import { usePageTitle } from '@/components/layouts/PageAction'
 import { useToast } from '@/components/Toast'
 import {
+  Button,
   Callout,
   Card,
   DataLabel,
@@ -38,6 +39,7 @@ import { DesgloseDelPago } from '@/components/admin/caja/DesgloseDelPago'
 import { LigarDesdeElPago } from '@/components/admin/caja/LigarMovimiento'
 import type { QueueItem, StatementMatch } from '@/features/admin/api'
 import type { FiltrosPagos } from '@/features/admin/colaDePagos'
+import { enlaceDelComprobanteDePago } from '@/features/admin/pagosRegistrados/api'
 import { nombreDelMedio } from '@/features/admin/liquidaciones'
 import { fetchPaymentReport } from '@/features/admin/pagosReportados'
 import { lineaDeSumandos, sumandosDelPago } from '@/features/admin/sumandosDelPago'
@@ -275,7 +277,9 @@ function FrenteAFrente({ item }: { item: QueueItem }) {
             <Dato label="Banco" value={item.bank ?? '—'} />
             <Dato label="Cédula del pagador" value={formatDocument(item.payerDocument)} />
             <Dato label="Teléfono del pagador" value={formatPhone(item.payerPhone)} />
+            {item.registeredByName && <Dato label="Lo registró" value={item.registeredByName} />}
           </dl>
+          {item.receiptPath && <VerCaptura ruta={item.receiptPath} />}
         </Card>
 
         <Card className="flex flex-col gap-3">
@@ -395,6 +399,34 @@ function porQueSinCotejo(cotejo: Cotejo, movimiento: StatementMatch | null): str
     case 'error':
       return 'No se pudo cotejar con el extracto.'
   }
+}
+
+/**
+ * La captura que mandó el paciente por WhatsApp, del bucket privado
+ * `payment-receipts`: el enlace se firma al pulsar y caduca en diez minutos.
+ */
+function VerCaptura({ ruta }: { ruta: string }) {
+  const avisar = useToast()
+  const [abriendo, setAbriendo] = useState(false)
+
+  async function abrir() {
+    setAbriendo(true)
+    try {
+      window.open(await enlaceDelComprobanteDePago(ruta), '_blank', 'noopener,noreferrer')
+    } catch {
+      avisar('No se pudo abrir la captura')
+    } finally {
+      setAbriendo(false)
+    }
+  }
+
+  return (
+    <div>
+      <Button size="sm" variant="tonal" disabled={abriendo} onClick={() => void abrir()}>
+        {abriendo ? 'Abriendo…' : 'Ver la captura del pago'}
+      </Button>
+    </div>
+  )
 }
 
 function Dato({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {

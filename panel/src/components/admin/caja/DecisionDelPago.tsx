@@ -19,6 +19,8 @@ import { useAtajos } from '@/components/admin/ModoCola'
 import { useToast } from '@/components/Toast'
 import { flagForReview, reconcilePayment } from '@/features/admin/api'
 import type { QueueItem, StatementMatch } from '@/features/admin/api'
+import { explicarErrorDeAprobacion } from '@/features/admin/pagosRegistrados/registrarPago'
+import { useSession } from '@/features/auth/session'
 import { describeError } from '@/lib/supabase'
 
 const MOTIVOS_RECHAZO = [
@@ -61,6 +63,7 @@ export function DecisionDelPago({
 }) {
   const queryClient = useQueryClient()
   const avisar = useToast()
+  const session = useSession()
   const [dialogo, setDialogo] = useState<Dialogo | null>(null)
   const [aceptaSinCotejo, setAceptaSinCotejo] = useState(false)
   const [motivo, setMotivo] = useState(MOTIVOS_RECHAZO[0].value)
@@ -193,7 +196,18 @@ export function DecisionDelPago({
           }
           confirmLabel={`Aprobar ${formatUsd(item.amountUsd)}`}
           busy={aprobar.isPending}
-          error={aprobar.isError ? describeError(aprobar.error) : undefined}
+          // Con el doble control (`payment_four_eyes`), quien registró el
+          // pago no puede aprobarlo: el 42501 se explica en vez de salir a
+          // secas como «sin permiso».
+          error={
+            aprobar.isError
+              ? explicarErrorDeAprobacion(
+                  aprobar.error,
+                  describeError(aprobar.error),
+                  !!item.registeredById && item.registeredById === session?.user.id,
+                )
+              : undefined
+          }
           onConfirm={(razon) => aprobar.mutate(razon)}
           onClose={() => setDialogo(null)}
         />

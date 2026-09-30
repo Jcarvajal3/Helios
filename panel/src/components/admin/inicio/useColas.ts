@@ -9,10 +9,16 @@ import type { OrigenDelCaso } from '@/components/admin/ficha-persona/CobranzaCol
 import type { IdPantalla } from '@/features/admin/catalogo'
 import type { Destino } from '@/features/admin/catalogo/tipos'
 import { consultaCartera, consultaPromesas } from '@/features/admin/cobranza/consultas'
+import { diaOperativo } from '@/components/ui'
+import { consultaColaDeAvisos, consultaCorreosRecientes } from '@/features/admin/avisos/api'
+import { consultaCambiosPropuestos } from '@/features/admin/pacientes/api'
 import {
   resumirAbonos,
   resumirAlertasAltas,
+  resumirAvisosDeHoy,
+  resumirCambiosPropuestos,
   resumirCartera,
+  resumirCorreosRebotados,
   resumirPagosALocales,
   resumirPagosReportados,
   resumirPromesasDeHoy,
@@ -52,9 +58,51 @@ function leer<T>(q: UseQueryResult<T>, resumir: (datos: T) => Resumen): Lectura 
  */
 export function useColas(): ColaDeInicio[] {
   const cobranza = useColasDeCobranza()
+  const avisos = useColasDeAvisos()
   const caja = useColasDeCaja()
   const riesgo = useColasDeRiesgo()
-  return [...cobranza, ...caja, ...riesgo]
+  return [...cobranza, ...avisos, ...caja, ...riesgo]
+}
+
+// ── Avisos y datos de los pacientes ────────────────────────────────────────
+
+function useColasDeAvisos(): ColaDeInicio[] {
+  const irA = useIrALista()
+  const hoy = useQuery(consultaColaDeAvisos(diaOperativo()))
+  const correos = useQuery(consultaCorreosRecientes())
+  const cambios = useQuery(consultaCambiosPropuestos('pendiente'))
+
+  const aAvisos: Destino = { to: '/admin/avisos' }
+  const aRebotados: Destino = { to: '/admin/avisos', search: { vista: 'correos', estado: 'rebotados' } }
+  const aCambios: Destino = { to: '/admin/pacientes', search: { vista: 'cambios' } }
+
+  return [
+    {
+      id: 'avisos-hoy',
+      nombre: 'Avisos de hoy por mandar',
+      pantalla: 'avisos',
+      lista: aAvisos,
+      lectura: leer(hoy, resumirAvisosDeHoy),
+      // El modo cola de Avisos de hoy: un aviso a la vez, con teclas.
+      empezar: () => irA({ to: '/admin/avisos', search: { cola: true } }),
+    },
+    {
+      id: 'correos-rebotados',
+      nombre: 'Correos rebotados',
+      pantalla: 'avisos',
+      lista: aRebotados,
+      lectura: leer(correos, (d) => resumirCorreosRebotados(d.filas)),
+      empezar: () => irA(aRebotados),
+    },
+    {
+      id: 'cambios-propuestos',
+      nombre: 'Cambios de datos propuestos',
+      pantalla: 'personas',
+      lista: aCambios,
+      lectura: leer(cambios, resumirCambiosPropuestos),
+      empezar: () => irA(aCambios),
+    },
+  ]
 }
 
 /** Navegar a una lista, sin más. */

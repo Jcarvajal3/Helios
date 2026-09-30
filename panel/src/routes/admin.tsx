@@ -18,15 +18,20 @@ import {
 import {
   resumirAbonos,
   resumirAlertasAltas,
+  resumirAvisosDeHoy,
+  resumirCambiosPropuestos,
   resumirCartera,
+  resumirCorreosRebotados,
   resumirPagosReportados,
   resumirPromesasDeHoy,
 } from '@/components/admin/inicio/colas'
+import { consultaColaDeAvisos, consultaCorreosRecientes } from '@/features/admin/avisos/api'
+import { consultaCambiosPropuestos } from '@/features/admin/pacientes/api'
 import { hoyOperativo } from '@/components/admin/inicio/reloj'
 import { BuscadorDeLaBarra, PaletaDelPanel } from '@/components/admin/paleta'
 import { PlatformGate } from '@/components/PlatformGate'
 import { HeliosIsotipo, HeliosLogo } from '@/components/HeliosLogo'
-import { Badge } from '@/components/ui'
+import { Badge, diaOperativo } from '@/components/ui'
 import { PanelShell } from '@/components/layouts/PanelShell'
 import { contadorDeCola, sumarContadores } from '@/components/layouts/contadores'
 import type { Contador } from '@/components/layouts/contadores'
@@ -198,10 +203,30 @@ function useContadores(): Partial<Record<string, Contador>> {
     select: (r) => contadorDeCola(resumirAlertasAltas(r)),
   })
 
+  // Los avisos de hoy por mandar y los comprobantes que rebotaron: las dos
+  // pestañas de Avisos que tienen cola.
+  const avisos = useQuery({
+    ...consultaColaDeAvisos(diaOperativo()),
+    ...alVolver,
+    select: (d) => contadorDeCola(resumirAvisosDeHoy(d)),
+  })
+  const rebotados = useQuery({
+    ...consultaCorreosRecientes(),
+    ...alVolver,
+    select: (d) => contadorDeCola(resumirCorreosRebotados(d.filas)),
+  })
+  const cambios = useQuery({
+    ...consultaCambiosPropuestos('pendiente'),
+    ...alVolver,
+    select: (d) => contadorDeCola(resumirCambiosPropuestos(d)),
+  })
+
   return {
     // Abonos sin dueño es una pestaña de Pagos reportados: su cola suma en
     // el mismo contador, y cada pestaña enseña la suya.
     '/admin/cobros': sumarContadores([pagos.data, abonos.data]),
+    '/admin/avisos': sumarContadores([avisos.data, rebotados.data]),
+    '/admin/pacientes': cambios.data,
     // Promesas es una pestaña de Por cobrar: las dos colas suman en el mismo
     // contador.
     '/admin/cobranza': sumarContadores([sinContactar.data, promesas.data]),

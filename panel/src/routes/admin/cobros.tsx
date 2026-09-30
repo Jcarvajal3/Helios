@@ -6,6 +6,7 @@ import { Inbox, Upload } from 'lucide-react'
 import { EstadoBadge } from '@/components/admin/EstadoBadge'
 import { COLA_PAGOS_REPORTADOS } from '@/components/admin/FichaCobro'
 import { ImportarBanco } from '@/components/admin/ImportarBanco'
+import { BotonRegistrarPago } from '@/components/admin/pagos/RegistrarPago'
 import { abrirEnCola } from '@/components/admin/ModoCola'
 import { AvisoExtracto } from '@/components/admin/caja/AvisoExtracto'
 import { PestanaAbonos, VALORES_ESTADO_ABONOS } from '@/components/admin/caja/PestanaAbonos'
@@ -142,7 +143,7 @@ function CobrosPage() {
   const sinDueno = useQuery({ ...consultaAbonosSinDueno(), select: (d) => d.length })
 
   const importar = (
-    <Button size="sm" onClick={() => cambiar({ importar: true })}>
+    <Button size="sm" variant="tonal" onClick={() => cambiar({ importar: true })}>
       <Upload size={14} aria-hidden /> Importar el extracto
     </Button>
   )
@@ -163,7 +164,18 @@ function CobrosPage() {
       <AvisoExtracto onImportar={() => cambiar({ importar: true })} />
 
       {vista === 'reportados' ? (
-        <PagosReportados search={search} cambiar={cambiar} accion={importar} />
+        <PagosReportados
+          search={search}
+          cambiar={cambiar}
+          accion={
+            // El paciente paga y manda la captura por WhatsApp: el equipo lo
+            // registra aquí y el pago cae en esta misma cola (plan §7.1).
+            <div className="flex flex-wrap gap-2">
+              <BotonRegistrarPago variante="filled" />
+              {importar}
+            </div>
+          }
+        />
       ) : (
         <PestanaAbonos
           estado={search.abonos ?? 'pendientes'}
@@ -226,7 +238,7 @@ function PagosReportados({
         ? ['payment-queue', cola]
         : ['payment-queue', cola, search.desde ?? null, search.hasta ?? null],
     queryFn: () => fetchPaymentQueue(ESTADOS_POR_COLA[cola], resueltosEntre),
-    // Los reportes llegan de la app mientras se mira la pantalla. Con la
+    // Los pagos los registra el equipo mientras se mira la pantalla. Con la
     // pestaña oculta no se pregunta; al volver, se repregunta en el acto.
     refetchInterval: cola === 'pendientes' ? 30_000 : false,
     refetchOnWindowFocus: true,

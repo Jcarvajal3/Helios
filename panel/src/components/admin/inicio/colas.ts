@@ -8,6 +8,9 @@ import { filtrarPagos } from '@/features/admin/colaDePagos'
 import { payablesTotals } from '@/features/admin/definitions'
 import type { UnmatchedDeposit } from '@/features/admin/deposits'
 import type { RecuentoDeAlertas } from '@/features/admin/riesgo/alertas'
+import { colaDeTrabajo, rebotadosSinCorregir } from '@/features/admin/avisos/avisos'
+import type { Aviso } from '@/features/admin/avisos/avisos'
+import type { CambioPropuesto } from '@/features/admin/pacientes/datos'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // «Tu cola»: una fila por cada lista de trabajo de los equipos de la persona.
@@ -42,6 +45,9 @@ export type IdCola =
   | 'sin-contactar'
   | 'recordar-hoy'
   | 'alertas-altas'
+  | 'avisos-hoy'
+  | 'correos-rebotados'
+  | 'cambios-propuestos'
 
 /** Lo que dice una cola que se pudo leer. */
 export type Resumen = {
@@ -219,6 +225,50 @@ export function resumirAlertasAltas(r: RecuentoDeAlertas): Resumen {
   })
 }
 
+
+// ── Avisos y datos de los pacientes ────────────────────────────────────────
+
+/**
+ * Los avisos de WhatsApp de hoy que nadie ha mandado, en el orden de su
+ * pantalla (grupo a grupo). Son de hoy: mañana ya no sirven.
+ */
+export function resumirAvisosDeHoy(avisos: ReadonlyArray<Aviso>): Resumen {
+  const cola = colaDeTrabajo(avisos)
+  const grupos = new Set(cola.map((a) => a.templateLabel))
+  return resumen({
+    cantidad: cola.length,
+    detalle:
+      cola.length === 0
+        ? null
+        : `Por mandar por WhatsApp: ${[...grupos].slice(0, 3).join(', ')}${grupos.size > 3 ? '…' : ''}`,
+    plazo: 'hoy',
+    ids: cola.map((a) => a.id),
+  })
+}
+
+/**
+ * Los comprobantes que rebotaron y nadie ha reenviado a un correo que
+ * funcione: esos pacientes no tienen el papel de lo que deben.
+ */
+export function resumirCorreosRebotados(correos: ReadonlyArray<Aviso>): Resumen {
+  const rebotados = rebotadosSinCorregir(correos)
+  return resumen({
+    cantidad: rebotados.length,
+    detalle: rebotados.length === 0 ? null : 'El comprobante no les llegó: corrige el correo y reenvíalo',
+    plazo: 'hoy',
+    ids: rebotados.flatMap((c) => (c.profileId ? [c.profileId] : [])),
+  })
+}
+
+/** Los cambios de datos que propusieron las clínicas y esperan a Helios. */
+export function resumirCambiosPropuestos(cambios: ReadonlyArray<Pick<CambioPropuesto, 'profileId'>>): Resumen {
+  return resumen({
+    cantidad: cambios.length,
+    detalle: cambios.length === 0 ? null : 'Una clínica registró a un paciente conocido con otros datos',
+    plazo: 'puede_esperar',
+    ids: idsSinRepetir(cambios.map((c) => c.profileId)),
+  })
+}
 
 // ── El orden de la lista ───────────────────────────────────────────────────
 
