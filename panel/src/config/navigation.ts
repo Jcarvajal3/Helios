@@ -19,6 +19,12 @@ export type NavItem = {
    * pantalla en la que se está.
    */
   espacio?: Ambito
+  /**
+   * La acción principal del panel, pintada como botón y no como enlace. Solo
+   * la lleva «Nuevo financiamiento» de la clínica: es lo que se hace veinte
+   * veces al día, y tiene que encontrarse sin leer el menú.
+   */
+  destacado?: boolean
 }
 
 /**
@@ -47,12 +53,14 @@ export const merchantNavGroups: MerchantNavGroup[] = [
     items: [
       // Los nombres son los de la recepción, no los del sistema: se
       // «registra» un financiamiento; lo que Helios le transfiere a la
-      // clínica son sus «Pagos».
+      // clínica son sus «Pagos». En el orden del trabajo: registrar, mirar
+      // lo registrado y lo ganado, y después el dinero de la clínica.
       {
         label: 'Nuevo financiamiento',
         path: '/registrar',
         icon: FilePlus2,
         section: 'registrar',
+        destacado: true,
       },
       {
         label: 'Financiamientos',
@@ -67,16 +75,16 @@ export const merchantNavGroups: MerchantNavGroup[] = [
         section: 'comisiones',
       },
       {
-        label: 'Métricas',
-        path: '/metricas',
-        icon: BarChart3,
-        section: 'metricas',
-      },
-      {
         label: 'Pagos',
         path: '/pagos',
         icon: Landmark,
         section: 'pagos',
+      },
+      {
+        label: 'Métricas',
+        path: '/metricas',
+        icon: BarChart3,
+        section: 'metricas',
       },
       {
         label: 'Personal',

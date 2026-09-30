@@ -76,6 +76,24 @@ export function EnlaceDelMenu({
 }) {
   const Icon = item.icon
 
+  // La acción principal: un botón lleno, con aire debajo, para que se vea
+  // antes que el resto del menú. Activa, lleva además la raya como los demás.
+  if (item.destacado) {
+    return (
+      <Link
+        to={item.path}
+        title={plegado ? item.label : undefined}
+        className={`relative mb-2 flex h-panel-control-md items-center gap-2.5 rounded-panel-control bg-primary px-2.5 type-panel-control text-on-primary transition-colors duration-(--transition-fast) hover:bg-primary-bright ${
+          plegado ? 'lg:justify-center lg:px-0' : ''
+        }`}
+      >
+        {activo && <RayaDelActivo />}
+        <Icon size={18} strokeWidth={2} aria-hidden className="shrink-0" />
+        <span className={`min-w-0 truncate ${plegado ? 'lg:hidden' : ''}`}>{item.label}</span>
+      </Link>
+    )
+  }
+
   return (
     <Link
       to={item.path}
