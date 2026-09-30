@@ -1,83 +1,71 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, Lock } from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { ArrowLeft, Mail } from 'lucide-react'
 
 import { usePageTitle } from '@/components/layouts/PageAction'
+import { DesgloseDelServicio } from '@/components/registrar/PlanDePagos'
+import { useToast } from '@/components/Toast'
 import {
   Badge,
+  Button,
+  Callout,
   Card,
   DataLabel,
-  Divider,
-  EmptyState,
   ErrorBox,
   SectionTitle,
   SkeletonList,
   Table,
   Td,
   Tr,
+  formatDateTime,
   formatDay,
-  formatUsd,
   formatTime,
+  formatUsd,
 } from '@/components/ui'
-import { canSee } from '@/features/auth/permissions'
 import { useStaff } from '@/features/auth/session'
-import { fetchOrderDetail } from '@/features/charges/api'
-import type { OrderDetail, OrderPayout } from '@/features/charges/api'
+import { ESTADO_DEL_FINANCIAMIENTO, ESTADO_DEL_PAGO } from '@/features/merchant/financiamientos'
+import type { DetalleDeFinanciamiento } from '@/features/merchant/financiamientos'
+import { fetchDetalle } from '@/features/merchant/financiamientosApi'
+import { COMPROBANTE, diaDeLaSemana } from '@/features/merchant/registro'
+import type { EstadoDelComprobante } from '@/features/merchant/registro'
+import { reenviarComprobante } from '@/features/merchant/registroApi'
 import { describeError } from '@/lib/supabase'
 
 /**
- * LA FICHA DE UNA ORDEN, para el local.
+ * LA FICHA DE UN FINANCIAMIENTO, para la clínica.
  * ══════════════════════════════════════════════════════════════════════════
  *
- * El historial era una tabla y punto final: el número de orden estaba ahí,
- * pero lo que se vendió —las líneas que tecleó el propio cajero— no se podía
- * consultar una vez cerrada la pantalla del QR, así que «¿qué incluía la orden
- * 1043?» se contestaba abriendo la caja registradora del local.
+ * Lo que se viene a mirar cuando alguien pregunta por la orden 1043:
  *
- *   1. La venta: lo tuyo, el servicio que paga el cliente, y el total.
- *   2. Qué se vendió: las líneas con su precio unitario.
+ *   1. Qué se financió: la consulta, a quién, quién lo registró y su
+ *      comisión, con el servicio Helios en su propia línea (nunca sumado).
+ *   2. El comprobante: si le llegó al paciente, y «Reenviar» si dice que no.
  *   3. Cuándo te pagamos: el lunes de cierre de cada mitad.
  *
- * ---------------------------------------------------------------------------
- * Lo que NO se enseña aquí, y no es un olvido
- * ---------------------------------------------------------------------------
- * **Las cuotas del cliente.** Cómo va esa deuda es asunto entre el cliente y
- * Ronda (docs/05 §3): al local se le paga por fecha de cierre, haya pagado su
- * cliente o no. Un «en mora» en esta pantalla se leería como «esto no me lo
- * van a pagar», que es exactamente lo contrario de lo que pasa. Tampoco quién
- * es el cliente ni cuánto puso cada integrante de una cuenta repartida.
+ * Lo que NO está, y no es un olvido: **el estado de pago de las cuotas del
+ * paciente**. A la clínica se le paga por fecha de cierre, haya pagado el
+ * paciente o no; un «en mora» aquí se leería como «esto no me lo van a
+ * pagar», que es justo lo contrario de lo que pasa (plan §8.2).
  */
 export const Route = createFileRoute('/_comercio/financiamientos_/$id')({
   staticData: { title: 'Financiamiento' },
-  component: OrdenRoute,
+  component: FinanciamientoRoute,
 })
 
-function OrdenRoute() {
+function FinanciamientoRoute() {
   const { id } = Route.useParams()
   const staff = useStaff()
-
   if (!staff) return null
-
-  if (!canSee(staff.role, 'financiamientos')) {
-    return (
-      <EmptyState
-        icon={<Lock size={48} />}
-        title="Esto lo ve el administrador"
-        description="Lo que financia la clínica entera es información del administrador. Tu pantalla es Nuevo financiamiento."
-      />
-    )
-  }
-
-  return <Orden chargeId={id} />
+  return <Ficha chargeId={id} />
 }
 
-function Orden({ chargeId }: { chargeId: string }) {
+function Ficha({ chargeId }: { chargeId: string }) {
   const query = useQuery({
     queryKey: ['merchant-order', chargeId],
-    queryFn: () => fetchOrderDetail(chargeId),
+    queryFn: () => fetchDetalle(chargeId),
   })
 
-  usePageTitle(query.data ? `Orden #${query.data.orderNumber}` : null)
+  usePageTitle(query.data ? `Financiamiento #${query.data.orderNumber}` : null)
 
   return (
     <>
@@ -85,328 +73,224 @@ function Orden({ chargeId }: { chargeId: string }) {
         to="/financiamientos"
         className="mb-4 inline-flex items-center gap-1 type-panel-control text-on-surface-variant hover:text-on-surface"
       >
-        <ArrowLeft size={14} /> Financiamientos
+        <ArrowLeft size={14} aria-hidden /> Financiamientos
       </Link>
 
       {query.isLoading && <SkeletonList rows={3} />}
 
       {query.isError && (
-        <ErrorBox
-          title="No pudimos abrir esta orden"
-          detail={describeError(query.error)}
-        />
+        <ErrorBox title="No pudimos abrir este financiamiento" detail={describeError(query.error)} />
       )}
 
-      {query.data && <Detalle orden={query.data} />}
+      {query.data && (
+        <div className="flex flex-col gap-6">
+          <Resumen f={query.data} />
+          <Comprobante f={query.data} />
+          {query.data.pagos.length > 0 && <CuandoTePagamos f={query.data} />}
+        </div>
+      )}
     </>
   )
 }
 
-/** Dos decimales, para que las líneas del desglose cierren el total. */
-function round2(value: number): number {
-  return Math.round(value * 100) / 100
-}
+// ── 1. Qué se financió ────────────────────────────────────────────────────
 
-const ESTADO: Record<
-  OrderDetail['status'],
-  { texto: string; tone: 'success' | 'warning' | 'error' | 'neutral' }
-> = {
-  confirmed: { texto: 'Confirmada', tone: 'success' },
-  pending: { texto: 'Esperando al paciente', tone: 'warning' },
-  voided: { texto: 'Anulada', tone: 'error' },
-  reverted: { texto: 'Revertida', tone: 'neutral' },
-}
-
-function Detalle({ orden }: { orden: OrderDetail }) {
-  return (
-    <div className="flex flex-col gap-6">
-      <Venta orden={orden} />
-
-      {orden.items.length > 0 ? (
-        <Lineas orden={orden} />
-      ) : (
-        <p className="type-body-medium text-on-surface-variant">
-          Este financiamiento no tiene concepto guardado.
-        </p>
-      )}
-
-      {orden.payouts.length > 0 && <Cobros orden={orden} />}
-    </div>
-  )
-}
-
-// ── 1. La venta ───────────────────────────────────────────────────────────
-
-/**
- * EL HÉROE ES TU VENTA, no lo que pagó el cliente.
- *
- * `amountUsd` lleva dentro el fee del servicio y su IVA, que son de Ronda:
- * enseñarlo como ingreso del local le infla la caja un 23 %. Las dos cifras
- * están, pero la grande es la que el dueño va a comparar contra su cierre.
- */
-function Venta({ orden }: { orden: OrderDetail }) {
-  const estado = ESTADO[orden.status]
-  const servicio = round2(orden.amountUsd - orden.merchantSaleUsd)
-  const fee = orden.consumerFeeUsd
-  const iva = orden.consumerFeeVatUsd
-
-  /**
-   * El fee y su IVA por separado solo si SUMAN el servicio. Si no cuadran
-   * —un cobro anterior al desglose— se dice el servicio en una línea, que es
-   * cierto siempre, en vez de tres líneas que no cierran.
-   */
-  const desglosado =
-    fee != null && iva != null && Math.abs(fee + iva - servicio) < 0.005
-
-  const cuando = orden.confirmedAt ?? orden.createdAt
+function Resumen({ f }: { f: DetalleDeFinanciamiento }) {
+  const estado = ESTADO_DEL_FINANCIAMIENTO[f.status]
+  const cuando = f.confirmedAt ?? f.createdAt
 
   return (
-    <Card tone="brand" className="flex flex-col gap-4">
+    <Card variant="hero" className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center gap-2">
-        <Badge tone={estado.tone}>{estado.texto}</Badge>
-        {orden.isTest && <Badge tone="neutral">Prueba</Badge>}
-        <span className="type-label-medium text-on-surface-variant">
-          Orden #{orden.orderNumber}
-        </span>
+        <Badge tone={estado.tone} icono>
+          {estado.texto}
+        </Badge>
+        {f.isTest && <Badge tone="neutral">Prueba</Badge>}
+        <span className="type-panel-caption text-panel-muted">Orden #{f.orderNumber}</span>
       </div>
 
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <DataLabel>Tu financiamiento</DataLabel>
-          <p className="mt-1 type-panel-figure text-primary">
-            {formatUsd(orden.merchantSaleUsd)}
+        <div className="min-w-0">
+          <DataLabel>{f.concept ?? 'Consulta'} · lo que cobra la clínica</DataLabel>
+          <p className="mt-1 type-panel-hero tabular-nums text-on-surface">
+            {formatUsd(f.merchantSaleUsd)}
           </p>
-          {/* Quién compró, debajo del importe: las dos cosas juntas son la
-              respuesta a «la de €48 de anoche, ¿de quién era?». Solo el
-              nombre; la RPC no manda teléfono ni cédula. */}
-          <p className="mt-1 type-body-medium text-on-surface">
-            {orden.customerName ?? (
-              <span className="text-on-surface-variant">
-                Sin nombre
-              </span>
-            )}
+          <p className="mt-1 type-panel-body text-on-surface">
+            {f.patientName ?? <span className="text-on-surface-variant">Sin nombre</span>}
           </p>
+          {f.beneficiaryName && (
+            <p className="type-panel-body text-on-surface-variant">
+              Paciente atendido: {f.beneficiaryName}
+            </p>
+          )}
         </div>
 
         <div className="text-right">
-          <p className="type-body-medium text-on-surface">
-            {orden.businessDate ? formatDay(orden.businessDate) : '—'} ·{' '}
-            {formatTime(cuando)}
+          <p className="type-panel-body text-on-surface">
+            {f.businessDate ? formatDay(f.businessDate) : '—'} · {formatTime(cuando)}
           </p>
-          <p className="type-label-medium text-on-surface-variant">
-            {orden.branch?.name ?? 'Sin sede'}
-            {/* QUIÉN DEL LOCAL LA COBRÓ. Va en este lado y no debajo del
-                nombre del cliente: aquí está lo del local —sucursal, hora— y
-                enfrente lo de quien compró. Es también la respuesta a «esta
-                orden, ¿de quién es la comisión?».
-
-                Null cuando quien mira no puede saberlo (un cajero, en las
-                ventas de otros): entonces no se dice nada, en vez de un hueco
-                rotulado que solo enseña que hay algo que no se le cuenta. */}
-            {orden.staffName && ` · cobró ${orden.staffName}`}
-            {/* El día de Ronda va de 10 AM a 10 AM: una venta de las 2 AM
-                cuenta para la noche anterior, y si la hora y el día no
-                coinciden hay que decir por qué. */}
-            {orden.businessDate && cuando.slice(0, 10) !== orden.businessDate
-              ? ' · cuenta para el día anterior'
-              : ''}
+          <p className="type-panel-caption text-panel-muted">
+            {f.branchName ?? 'Sin sede'}
+            {f.registeredBy && ` · registró ${f.registeredBy}`}
           </p>
         </div>
       </div>
 
-      <Divider />
+      <DesgloseDelServicio
+        baseUsd={f.merchantSaleUsd}
+        feePct={f.feePct}
+        feeUsd={f.feeUsd}
+        feeVatUsd={f.feeVatUsd}
+        concepto={f.concept}
+      />
 
-      <dl className="flex flex-col gap-2 type-body-medium">
-        <Linea
-          label="Tu financiamiento"
-          hint={orden.vatUsd && orden.vatUsd > 0 ? 'IVA incluido' : undefined}
-          value={formatUsd(orden.merchantSaleUsd)}
-        />
-        {desglosado ? (
-          <>
-            <Linea label="Servicio tecnológico Helios" value={formatUsd(fee)} />
-            <Linea label="IVA del servicio tecnológico" value={formatUsd(iva)} />
-          </>
-        ) : (
-          servicio > 0 && (
-            <Linea
-              label="Servicio tecnológico Helios"
-              hint="IVA incluido"
-              value={formatUsd(servicio)}
-            />
-          )
-        )}
-      </dl>
-
-      {/* El dinero del local es del gerente: lo decide la base, no esta
-          pantalla. Un cajero ve la venta y las fechas, no la liquidación. */}
-      {orden.isGerente && orden.merchantNetUsd !== null && (
-        <>
-          {orden.merchantFeeUsd !== null && orden.merchantFeeUsd > 0 && (
-            <div className="flex items-baseline justify-between gap-4 type-body-medium">
-              <span className="text-on-surface-variant">Comisión Helios</span>
-              <span className="tabular-nums text-on-surface">
-                −{formatUsd(orden.merchantFeeUsd)}
-              </span>
-            </div>
-          )}
-          <Divider />
-          <div className="flex items-baseline justify-between gap-4 type-body-medium">
-            <span className="text-on-surface">Lo que te pagamos</span>
-            <span className="tabular-nums type-body-large-emphasized text-on-surface">
-              {formatUsd(orden.merchantNetUsd)}
+      {f.staffCommissionUsd !== null && (
+        <div className="flex items-baseline justify-between gap-4 rounded-panel-card bg-panel-raised px-4 py-3 type-panel-body">
+          <span className="text-on-surface-variant">
+            Comisión de {f.commissionStaffName ?? f.registeredBy ?? 'quien lo registró'}
+            <span className="block type-panel-caption text-panel-muted">
+              Va en la transferencia del lunes a la clínica, aparte de la consulta.
             </span>
-          </div>
-        </>
+          </span>
+          <span className="tabular-nums text-on-surface">{formatUsd(f.staffCommissionUsd)}</span>
+        </div>
       )}
 
-      {orden.voidReason && (
-        <p className="rounded-[var(--radius-panel-control)] bg-shell-control p-3 type-body-medium italic text-on-surface-variant">
-          {orden.voidReason}
+      {f.voidReason && (
+        <p className="rounded-panel-control bg-panel-control p-3 type-panel-body italic text-on-surface-variant">
+          {f.voidReason}
         </p>
       )}
     </Card>
   )
 }
 
-/** Una fila rótulo–importe del desglose. Los importes en una sola columna. */
-function Linea({ label, hint, value }: { label: string; hint?: string; value: string }) {
-  return (
-    <div className="flex items-baseline justify-between gap-4">
-      <dt className="text-on-surface-variant">
-        {label}
-        {hint && (
-          <span className="ml-2 type-label-medium text-on-surface-variant">{hint}</span>
-        )}
-      </dt>
-      <dd className="tabular-nums text-on-surface">{value}</dd>
-    </div>
-  )
-}
-
-// ── 2. Qué se vendió ──────────────────────────────────────────────────────
+// ── 2. El comprobante ─────────────────────────────────────────────────────
 
 /**
- * Las líneas del cobro, con el precio unitario.
- *
- * El unitario no es adorno: con la cantidad y el subtotal a secas, comprobar
- * una línea obliga a dividir de cabeza, que es justo lo que hace el cajero
- * cuando un cliente vuelve a la barra a reclamar.
+ * Lo que se dice del comprobante en la ficha. Distinto de la pantalla de
+ * éxito: aquí puede hacer días del alta, y «en camino» ya no es cierto.
  */
-function Lineas({ orden }: { orden: OrderDetail }) {
-  const suma = round2(orden.items.reduce((total, item) => total + item.lineTotalUsd, 0))
+const FRASE_DE_LA_FICHA: Record<EstadoDelComprobante | 'desconocido', string> = {
+  pendiente: 'El comprobante está en la cola de envío.',
+  enviado: 'El comprobante se envió al correo del paciente.',
+  entregado: 'El comprobante llegó al correo del paciente.',
+  rebotado: 'El comprobante no llegó: el correo rebotó.',
+  sin_configurar:
+    'El envío de correos de Helios todavía no está configurado: el comprobante saldrá en cuanto lo esté.',
+  desconocido: 'Sin datos del comprobante.',
+}
+
+/**
+ * Si al paciente le llegó el correo con sus cuotas, y el botón para
+ * mandarlo otra vez. Va al correo REGISTRADO: si está mal, lo corrige
+ * Helios, no la clínica (plan §7.3). La base limita los reenvíos por día.
+ */
+function Comprobante({ f }: { f: DetalleDeFinanciamiento }) {
+  const avisar = useToast()
+  const queryClient = useQueryClient()
+
+  const reenvio = useMutation({
+    mutationFn: () => reenviarComprobante(f.id),
+    onSuccess: (r) => {
+      avisar(`Comprobante reenviado${r.emailEnmascarado ? ` a ${r.emailEnmascarado}` : ''}`)
+      void queryClient.invalidateQueries({ queryKey: ['merchant-order', f.id] })
+      void queryClient.invalidateQueries({ queryKey: ['merchant-transactions'] })
+    },
+  })
+
+  const estado = f.receipt?.status ?? null
+  const puedeReenviar = f.status === 'confirmed' && estado !== 'sin_configurar'
 
   return (
-    <section>
-      <SectionTitle className="mb-3">Qué se vendió</SectionTitle>
-      <Card>
-        <ul className="flex flex-col gap-3">
-          {/* Las líneas no traen id propio y el nombre puede repetirse: la
-              posición dentro del cobro es la única clave estable. */}
-          {orden.items.map((item, index) => (
-            <li key={`${index}-${item.name}`} className="flex items-baseline gap-3">
-              <div className="min-w-0 flex-1">
-                <p className="truncate type-body-medium text-on-surface">{item.name}</p>
-                <p className="tabular-nums type-label-medium text-on-surface-variant">
-                  {item.quantity} × {formatUsd(item.unitPriceUsd)}
-                </p>
-              </div>
-              <span className="tabular-nums type-body-medium-emphasized text-on-surface">
-                {formatUsd(item.lineTotalUsd)}
-              </span>
-            </li>
-          ))}
-        </ul>
+    <section className="flex flex-col gap-3">
+      <SectionTitle>Comprobante del paciente</SectionTitle>
 
-        <Divider className="my-3" />
+      {estado === 'rebotado' && (
+        <Callout tone="error" titulo="El correo del paciente no es válido">
+          El comprobante rebotó: el paciente no lo recibió. Pídele un correo que funcione y
+          avisa a Helios para corregirlo; después reenvíalo desde aquí.
+        </Callout>
+      )}
 
-        <div className="flex items-baseline justify-between gap-4 type-body-medium">
-          <span className="text-on-surface-variant">
-            Suma de las líneas
-            {/* Que no cuadre con la venta quiere decir que se tecleó un monto
-                libre encima del carrito. Es un dato, no un detalle. */}
-            {Math.abs(suma - orden.merchantSaleUsd) >= 0.01 && (
-              <span className="ml-2 type-label-medium text-warning">
-                no cuadra con el financiamiento ({formatUsd(orden.merchantSaleUsd)})
-              </span>
-            )}
-          </span>
-          <span className="tabular-nums type-body-medium-emphasized text-on-surface">
-            {formatUsd(suma)}
-          </span>
+      <Card className="flex flex-wrap items-center gap-3">
+        <Mail size={20} aria-hidden className="shrink-0 text-on-surface-variant" />
+        <div className="min-w-0 flex-1 basis-60">
+          <p className="type-panel-body text-on-surface">
+            {FRASE_DE_LA_FICHA[estado ?? 'desconocido']}
+          </p>
+          {f.receipt?.sentAt && (
+            <p className="type-panel-caption text-panel-muted">
+              Enviado el {formatDateTime(f.receipt.sentAt)}
+              {f.receipt.lastEvent && ` · último aviso del correo: ${f.receipt.lastEvent}`}
+            </p>
+          )}
         </div>
+        {estado && (
+          <Badge tone={COMPROBANTE[estado].tone} icono>
+            {COMPROBANTE[estado].texto}
+          </Badge>
+        )}
+        {puedeReenviar && (
+          <Button
+            size="sm"
+            variant="tonal"
+            disabled={reenvio.isPending}
+            onClick={() => reenvio.mutate()}
+          >
+            {reenvio.isPending ? 'Reenviando…' : 'Reenviar comprobante'}
+          </Button>
+        )}
       </Card>
+
+      {reenvio.isError && (
+        <ErrorBox title="No se pudo reenviar el comprobante" detail={describeError(reenvio.error)} />
+      )}
     </section>
   )
 }
 
 // ── 3. Cuándo te pagamos ──────────────────────────────────────────────────
 
-const CONCEPTO: Record<OrderPayout['kind'], string> = {
-  advance: 'Adelanto al vender',
-  installment: 'Mitad del financiamiento',
-}
-
-const ESTADO_COBRO: Record<
-  string,
-  { texto: string; tone: 'success' | 'warning' | 'neutral' | 'error' }
-> = {
-  pending: { texto: 'Por transferir', tone: 'warning' },
-  partial: { texto: 'Transferida en parte', tone: 'warning' },
-  paid: { texto: 'Transferida', tone: 'success' },
-  cancelled: { texto: 'Cancelada', tone: 'neutral' },
-}
-
 /**
- * El calendario de cobro de ESTA orden.
- *
- * La fecha es el lunes de cierre que paga esa mitad y la calcula la base: si
- * el cierre se mueve, esta pantalla no puede quedarse con el de antes.
- *
- * El importe aparece cuando la cuota vence y nace la liquidación; hasta
- * entonces se dice «al vencer» en vez de estimarlo, porque el reparto por
- * tramos lo decide el cierre y una estimación aquí sería una promesa que
- * ninguna otra pantalla repite.
+ * Las dos mitades: el vencimiento de cada cuota del paciente (solo la fecha)
+ * y el lunes del cierre que se la paga a la clínica. El importe y el estado
+ * de la transferencia son del administrador; la base los manda vacíos a una
+ * secretaria.
  */
-function Cobros({ orden }: { orden: OrderDetail }) {
+function CuandoTePagamos({ f }: { f: DetalleDeFinanciamiento }) {
+  const conImportes = f.isGerente
+
   return (
     <section>
       <SectionTitle className="mb-3">Cuándo te pagamos</SectionTitle>
-
       <Table
         headers={
-          orden.isGerente
-            ? ['Concepto', 'Cierre', 'Importe', 'Estado']
-            : ['Concepto', 'Cierre']
+          conImportes
+            ? ['Mitad', 'Vence la cuota', 'Te pagamos el', 'Importe', 'Transferencia']
+            : ['Mitad', 'Vence la cuota', 'Te pagamos el']
         }
       >
-        {orden.payouts.map((pago) => {
-          const estado = pago.status ? ESTADO_COBRO[pago.status] : undefined
-
+        {f.pagos.map((p, i) => {
+          const estado = p.status ? ESTADO_DEL_PAGO[p.status] : null
           return (
-            <Tr key={`${pago.kind}-${pago.sequence ?? 0}-${pago.dueDate}`}>
-              <Td className="whitespace-nowrap">
-                {CONCEPTO[pago.kind]}
-                {pago.sequence !== null && ` ${pago.sequence} de 2`}
+            <Tr key={`${p.sequence ?? i}-${p.dueDate}`}>
+              <Td className="whitespace-nowrap">{p.sequence ?? i + 1} de 2</Td>
+              <Td className="whitespace-nowrap text-on-surface-variant">{formatDay(p.dueDate)}</Td>
+              <Td className="whitespace-nowrap font-semibold">
+                {diaDeLaSemana(p.paidToMerchantOn)} {formatDay(p.paidToMerchantOn)}
               </Td>
-              <Td className="whitespace-nowrap">
-                {formatDay(pago.runDate)}
-                <span className="block type-label-medium text-on-surface-variant">
-                  vence el {formatDay(pago.dueDate)}
-                </span>
-              </Td>
-
-              {orden.isGerente && (
+              {conImportes && (
                 <>
                   <Td className="whitespace-nowrap tabular-nums">
-                    {pago.amountUsd === null ? (
+                    {p.amountUsd === null ? (
                       <span className="text-on-surface-variant">Se calcula al vencer</span>
                     ) : (
                       <>
-                        {formatUsd(pago.amountUsd)}
-                        {pago.status === 'partial' && pago.paidUsd !== null && (
-                          <span className="block type-label-medium text-on-surface-variant">
-                            {formatUsd(pago.paidUsd)} transferidos
+                        {formatUsd(p.amountUsd)}
+                        {p.status === 'partial' && p.paidUsd !== null && (
+                          <span className="block type-panel-caption text-panel-muted">
+                            {formatUsd(p.paidUsd)} transferidos
                           </span>
                         )}
                       </>
@@ -416,7 +300,7 @@ function Cobros({ orden }: { orden: OrderDetail }) {
                     {estado ? (
                       <Badge tone={estado.tone}>{estado.texto}</Badge>
                     ) : (
-                      <span className="type-body-medium text-on-surface-variant">—</span>
+                      <span className="text-on-surface-variant">—</span>
                     )}
                   </Td>
                 </>
@@ -425,12 +309,10 @@ function Cobros({ orden }: { orden: OrderDetail }) {
           )
         })}
       </Table>
-
-      <p className="mt-4 type-label-medium leading-5 text-on-surface-variant">
-        Cerramos caja los lunes a las 10:00 y transferimos ese mismo día lo que
-        venció durante la semana, <strong>haya pagado o no tu paciente</strong>.
+      <p className="mt-4 type-panel-caption leading-5 text-panel-muted">
+        Helios cierra caja los lunes a las 10:00 y ese mismo día transfiere lo que venció en la
+        semana, <strong>haya pagado o no tu paciente</strong>: cobrarle es cosa de Helios.
       </p>
-
     </section>
   )
 }

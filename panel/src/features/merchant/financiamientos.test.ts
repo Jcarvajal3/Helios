@@ -1,0 +1,139 @@
+/**
+ * Pruebas de los lectores de Financiamientos y del libro para contabilidad.
+ *
+ *   npx tsx src/features/merchant/financiamientos.test.ts
+ */
+import { leerDetalle, leerFilaDeFinanciamiento, leerPorPersona, leerResumen } from './financiamientos'
+import { COLUMNAS_VENTAS, leerFilaDeVentas, usdOEur } from './ventas'
+
+let fallos = 0
+
+function comprueba(ok: boolean, titulo: string, detalle = '') {
+  if (!ok) fallos++
+  console.log(`${ok ? '  ok  ' : ' FALLA'}  ${titulo}${ok ? '' : ` — ${detalle}`}`)
+}
+
+function igual<T>(dio: T, esperado: T, titulo: string) {
+  comprueba(JSON.stringify(dio) === JSON.stringify(esperado), titulo, `dio ${JSON.stringify(dio)}`)
+}
+
+console.log('── una fila de la lista ──────────────────────────────────────')
+const fila = leerFilaDeFinanciamiento({
+  charge_id: 'c1',
+  order_number: 1042,
+  business_date: '2026-10-01',
+  confirmed_at: '2026-10-01T14:00:00Z',
+  amount_usd: 123.2,
+  merchant_sale_usd: '100.0000',
+  customer_name: 'José Pérez',
+  beneficiary_name: 'Juanito Pérez',
+  concept: 'Consulta',
+  registered_by_name: 'Ana',
+  staff_name: 'otro nombre',
+  receipt_status: 'rebotado',
+  staff_commission_usd: '0.50',
+  cuota_1_due: '2026-10-08',
+  cuota_1_run: '2026-10-12',
+  cuota_2_due: '2026-10-15',
+  cuota_2_run: null,
+})
+igual(fila.merchantSaleUsd, 100, 'la consulta, sin el fee (no lee amount_usd)')
+igual(fila.registeredBy, 'Ana', 'registered_by_name manda sobre staff_name')
+igual(fila.receipt, 'rebotado', 'el estado del comprobante')
+igual(fila.staffCommissionUsd, 0.5, 'la comisión')
+igual(fila.cuotas, [{ dueDate: '2026-10-08', paidToMerchantOn: '2026-10-12' }, null], 'sin fecha de cobro no hay cuota')
+
+const deRonda = leerFilaDeFinanciamiento({ charge_id: 'c2', order_number: 7, staff_name: 'Luis', merchant_sale_usd: 10 })
+igual(deRonda.registeredBy, 'Luis', 'forma de Ronda: staff_name')
+igual(deRonda.receipt, null, 'forma de Ronda: sin comprobante')
+igual(deRonda.staffCommissionUsd, null, 'forma de Ronda: sin comisión (null, no 0)')
+
+console.log('\n── resumen y por persona ─────────────────────────────────────')
+igual(leerResumen({ scope: 'self', order_count: 3, sale_usd: '150', avg_ticket_usd: 50, active_days: 2 }).scope, 'self', 'scope self')
+igual(leerResumen({ order_count: 3 }).scope, 'gerente', 'sin scope: la clínica entera')
+const pp = leerPorPersona({
+  scope: 'gerente',
+  rows: [{ user_id: 'u1', name: 'Ana', role: 'cajero', is_active: true, is_self: false, order_count: 4, sale_usd: 400, commission_usd: '2.00' }],
+})
+igual(pp.rows[0].commissionUsd, 2, 'la comisión por persona')
+igual(leerPorPersona({ rows: [] }).scope, 'self', 'sin scope: solo lo propio')
+igual(leerPorPersona({ rows: [{ user_id: 'u', role: 'inventario' }] }).rows[0].role, null, 'un rol que no existe en Helios')
+
+console.log('\n── la ficha ──────────────────────────────────────────────────')
+const detalle = leerDetalle({
+  charge_id: 'c1',
+  order_number: 1042,
+  status: 'confirmed',
+  created_at: '2026-10-01T14:00:00Z',
+  merchant_sale_usd: 100,
+  amount_usd: 123.2,
+  consumer_fee_usd: 20,
+  consumer_fee_vat_usd: 3.2,
+  is_gerente: true,
+  customer_name: 'José Pérez',
+  items: [{ name: 'Consulta y eco', quantity: 1, unit_price_usd: 100, line_total_usd: 100 }],
+  receipt: { status: 'entregado', sent_at: '2026-10-01T14:01:00Z', last_event: 'delivered' },
+  staff_commission_usd: 0.5,
+  commission_staff_name: 'Ana',
+  payouts: [
+    { kind: 'installment', sequence: 2, due_date: '2026-10-15', run_date: '2026-10-19', amount_usd: 50, status: 'pending' },
+    { kind: 'advance', sequence: null, due_date: '2026-10-01', run_date: '2026-10-05', amount_usd: 0 },
+    { kind: 'installment', sequence: 1, due_date: '2026-10-08', run_date: '2026-10-12', amount_usd: 50, status: 'paid', paid_usd: 50 },
+  ],
+  // Aunque la base mandara el estado de pago del paciente, no pasa.
+  installment_status: 'overdue',
+})
+igual(detalle.pagos.map((p) => p.sequence), [1, 2], 'las dos mitades en orden, sin el adelanto')
+igual(detalle.pagos[0].paidToMerchantOn, '2026-10-12', 'run_date se lee como paid_to_merchant_on')
+igual(detalle.concept, 'Consulta y eco', 'sin concept suelto, el nombre de la única línea')
+igual(detalle.receipt, { status: 'entregado', sentAt: '2026-10-01T14:01:00Z', lastEvent: 'delivered' }, 'el comprobante')
+igual(detalle.feePct, 20, 'el porcentaje del servicio sale de sus cifras')
+comprueba(!JSON.stringify(detalle).includes('overdue'), 'el estado de pago del paciente no llega a la ficha')
+
+const nueva = leerDetalle({
+  charge_id: 'c3',
+  order_number: 1,
+  created_at: 'x',
+  merchant_sale_usd: 40,
+  concept: 'Control',
+  installments: [
+    { sequence: 1, due_date: '2026-10-08', paid_to_merchant_on: '2026-10-12' },
+    { sequence: 2, due_date: '2026-10-15', paid_to_merchant_on: '2026-10-19' },
+  ],
+  receipt_status: 'pendiente',
+})
+igual(nueva.pagos.length, 2, 'forma nueva: installments con paid_to_merchant_on')
+igual(nueva.pagos[1].amountUsd, null, 'secretaria: sin importe de la transferencia')
+igual(nueva.receipt?.status, 'pendiente', 'receipt_status suelto')
+igual(nueva.status, 'confirmed', 'sin status: confirmado')
+
+console.log('\n── el libro para contabilidad ────────────────────────────────')
+igual(usdOEur({ sale_usd: 10, sale_eur: 99 }, 'sale'), 10, 'prefiere _usd')
+igual(usdOEur({ sale_eur: '12.5' }, 'sale'), 12.5, 'acepta _eur de Ronda')
+igual(usdOEur({}, 'sale'), null, 'sin ninguno, null')
+
+const venta = leerFilaDeVentas({
+  order_number: 1042,
+  charge_id: 'c1',
+  business_date: '2026-10-01',
+  cashier: 'Ana',
+  status: 'confirmed',
+  base_eur: 100,
+  vat_eur: 0,
+  sale_eur: 100,
+  consumer_fee_eur: 20,
+  charged_to_customer_eur: 123.2,
+  net_to_merchant_eur: 100,
+  settled_eur: 50,
+  paid_eur: 0,
+  receipt_status: 'enviado',
+})
+igual(venta.saleUsd, 100, 'la consulta desde sale_eur')
+igual(venta.netToMerchantUsd, 100, 'el neto desde net_to_merchant_eur')
+igual(venta.registeredBy, 'Ana', 'quien registró desde cashier')
+comprueba(!JSON.stringify(venta).includes('123.2'), 'el total con el fee del paciente no se lee')
+const cabeceras = COLUMNAS_VENTAS.map((c) => c.header.toLowerCase()).join('|')
+comprueba(!/cliente|consumer|servicio helios/.test(cabeceras), 'ninguna columna habla del fee del paciente')
+
+console.log(fallos === 0 ? '\nTODO BIEN' : `\n${fallos} FALLOS`)
+process.exit(fallos === 0 ? 0 : 1)
