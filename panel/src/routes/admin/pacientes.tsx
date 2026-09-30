@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { Users } from 'lucide-react'
+import { UserCheck, Users } from 'lucide-react'
 
 import { DataTable } from '@/components/DataTable'
 import type { OrdenDeTabla } from '@/components/DataTable'
@@ -9,6 +9,8 @@ import { Paginacion } from '@/components/Paginacion'
 import { sumandosDeDeuda, vencidoDelPadron } from '@/features/admin/directorio/padron'
 import { COLUMNAS_PERSONAS } from '@/components/admin/directorio/columnasPersonas'
 import { SeccionSinLeer } from '@/components/admin/directorio/SeccionSinLeer'
+import { CambiosPropuestos } from '@/components/admin/pacientes/CambiosPropuestos'
+import { consultaCambiosPropuestos } from '@/features/admin/pacientes/api'
 import {
   Checkbox,
   EmptyState,
@@ -16,6 +18,7 @@ import {
   Filtro,
   Select,
   SkeletonTable,
+  Tabs,
   formatUsd,
 } from '@/components/ui'
 import {
@@ -35,6 +38,8 @@ import { comoBooleano, comoEntero, comoTexto, unoDe } from '@/lib/busqueda'
 const POR_PAGINA = 50
 
 type PersonasSearch = {
+  /** `cambios`: los cambios de datos que propusieron las clínicas. Sin él, el padrón. */
+  vista?: 'cambios'
   q?: string
   estado?: ProfileStatus
   /** El nivel de la cuenta: lo usan las filas de Riesgo › Cupos. */
@@ -53,6 +58,7 @@ export const Route = createFileRoute('/admin/pacientes')({
   staticData: { title: 'Pacientes', width: 'wide' },
   component: PersonasPage,
   validateSearch: (search: Record<string, unknown>): PersonasSearch => ({
+    vista: unoDe(['cambios'], search.vista),
     q: comoTexto(search.q),
     estado: unoDe(VALORES_ESTADO_PERSONA, search.estado),
     nivel: comoEntero(search.nivel, { min: 0, max: 99 }),
@@ -67,7 +73,7 @@ export const Route = createFileRoute('/admin/pacientes')({
 const FILTROS_ESTADO = opcionesDeEstado(VALORES_ESTADO_PERSONA, ESTADOS_PERSONA)
 
 /**
- * Personas: todas las cuentas de usuario. Es el directorio: se entra con un
+ * Pacientes: todos los que registraron las clínicas. Es el directorio: se entra con un
  * nombre, un teléfono o una cédula en la cabeza, desde cualquier equipo.
  * Todo lo que se elige vive en la URL: el enlace que se pega en un chat abre
  * lo mismo.
@@ -76,7 +82,53 @@ const FILTROS_ESTADO = opcionesDeEstado(VALORES_ESTADO_PERSONA, ESTADOS_PERSONA)
  * Perfil: lo que es análisis vive en Métricas.
  */
 function PersonasPage() {
-  return <ListaDePersonas />
+  const navigate = useNavigate({ from: '/admin/pacientes' })
+  const { vista } = Route.useSearch()
+  // Misma clave que la insignia del menú y que Inicio.
+  const pendientes = useQuery({ ...consultaCambiosPropuestos('pendiente'), select: (d) => d.length })
+
+  return (
+    <>
+      <Tabs
+        options={[
+          { value: 'padron', label: 'Pacientes' },
+          { value: 'cambios', label: 'Cambios propuestos', insignia: pendientes.data },
+        ]}
+        value={vista ?? 'padron'}
+        onChange={(v) => void navigate({ search: v === 'cambios' ? { vista: 'cambios' } : {} })}
+      />
+      {vista === 'cambios' ? <ListaDeCambios /> : <ListaDePersonas />}
+    </>
+  )
+}
+
+/**
+ * Los cambios de datos que propusieron las clínicas al registrar a un
+ * paciente que ya existía, pendientes de que Helios los apruebe o rechace.
+ */
+function ListaDeCambios() {
+  const cambios = useQuery(consultaCambiosPropuestos('pendiente'))
+
+  if (cambios.isPending) return <SkeletonTable rows={4} columns={3} />
+  if (cambios.isError) {
+    return (
+      <SeccionSinLeer
+        titulo="No se pudieron leer los cambios propuestos"
+        error={cambios.error}
+        onReintentar={() => void cambios.refetch()}
+      />
+    )
+  }
+  if (cambios.data.length === 0) {
+    return (
+      <EmptyState
+        icon={<UserCheck size={40} />}
+        title="No hay cambios por revisar"
+        description="Cuando una clínica registre a un paciente que ya existe con otro teléfono, correo o dirección, el cambio esperará aquí: no se sobrescribe nada sin que Helios lo apruebe."
+      />
+    )
+  }
+  return <CambiosPropuestos cambios={cambios.data} />
 }
 
 /** La lista de cuentas, con sus filtros en la URL. */
@@ -250,8 +302,8 @@ function ListaDePersonas() {
             />
           }
           exportar={{ archivo: pagina > 1 ? `usuarios-pagina-${pagina}` : 'pacientes' }}
-          // Sin nombre extraído, la fila entera en ámbar: es una cuenta que
-          // pasó la verificación sin que se supiera quién es.
+          // Sin nombre, la fila entera en ámbar: un registro al que le falta
+          // lo primero que se pregunta en una llamada.
           rowTone={(u) => (u.fullName ? undefined : 'warning')}
           onRowClick={(u) =>
             void navigate({ to: '/admin/pacientes/$id', params: { id: u.userId } })

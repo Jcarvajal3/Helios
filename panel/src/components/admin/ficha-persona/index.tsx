@@ -16,6 +16,7 @@ import { CarrilPersona } from './Carril'
 import { PestanaCobranza } from './Cobranza'
 import { useColaDelCaso } from './CobranzaCola'
 import { PestanaConsumos } from './Consumos'
+import { PestanaDatos } from './Datos'
 import { PestanaHistorial } from './Historial'
 import { PestanaPagos } from './Pagos'
 import { PestanaResumen } from './Resumen'
@@ -29,6 +30,7 @@ import { useAccionesDeCuenta } from './ResumenAcciones'
 
 export type PestanaPersona =
   | 'resumen'
+  | 'datos'
   | 'consumos'
   | 'pagos'
   | 'cobranza'
@@ -37,6 +39,7 @@ export type PestanaPersona =
 /** En el orden de las pestañas. Sirve también para validar la URL. */
 export const PESTANAS_PERSONA: ReadonlyArray<PestanaPersona> = [
   'resumen',
+  'datos',
   'consumos',
   'pagos',
   'cobranza',
@@ -45,6 +48,7 @@ export const PESTANAS_PERSONA: ReadonlyArray<PestanaPersona> = [
 
 const ROTULO: Record<PestanaPersona, string> = {
   resumen: 'Resumen',
+  datos: 'Datos y referencia',
   consumos: 'Financiamientos y cuotas',
   pagos: 'Pagos',
   cobranza: 'Cobranza',
@@ -59,8 +63,9 @@ const PESTANAS = PESTANAS_PERSONA.map((value) => ({ value, label: ROTULO[value] 
  * La cabecera está siempre a la vista —quién es, en qué estado, cómo
  * escribirle— y el carril también —qué debe, cuánto puede gastar, qué se le
  * puede hacer—. Lo demás va en pestañas, en el orden en que se contesta una
- * llamada: si su identidad está comprobada, qué consumió, qué pagó, qué se le
- * ha dicho y qué se le ha hecho a la cuenta.
+ * llamada: quién es y cómo localizarlo, qué financió, qué pagó, qué se le
+ * ha dicho y qué se le ha hecho a la cuenta. Sus datos (los que tecleó la
+ * clínica) van en su propia pestaña: en Helios no hay verificación de identidad.
  */
 export function PaginaPersona({
   userId,
@@ -169,6 +174,8 @@ function FichaPersona({
         <Tabs options={PESTANAS} value={tab} onChange={onTab} className="mb-0" />
 
         {tab === 'resumen' && <PestanaResumen user={user} niveles={activos} bloqueo={bloqueo} />}
+
+        {tab === 'datos' && <PestanaDatos user={user} onDone={onDone} />}
 
         {tab === 'consumos' && <PestanaConsumos user={user} userId={userId} onDone={onDone} />}
 

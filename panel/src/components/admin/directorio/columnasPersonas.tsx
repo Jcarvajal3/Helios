@@ -1,4 +1,4 @@
-import { Ban } from 'lucide-react'
+import { Ban, MailWarning } from 'lucide-react'
 
 import type { Column } from '@/components/DataTable'
 import { EstadoBadge } from '@/components/admin/EstadoBadge'
@@ -45,6 +45,13 @@ export const COLUMNAS_PERSONAS: Array<Column<UserRow>> = [
               </span>
             </Tooltip>
           )}
+          {u.emailInvalidAt && (
+            <Tooltip contenido="Su correo rebotó: el comprobante no le llegó">
+              <span tabIndex={0} aria-label="Correo inválido" className="inline-flex rounded-full">
+                <MailWarning size={13} aria-hidden className="text-error" />
+              </span>
+            </Tooltip>
+          )}
           {u.isTest && <Badge tone="neutral">Prueba</Badge>}
         </div>
         <p className="mt-0.5 type-panel-caption tabular-nums text-on-surface-variant">
@@ -76,7 +83,7 @@ export const COLUMNAS_PERSONAS: Array<Column<UserRow>> = [
   {
     key: 'nivel',
     header: 'Nivel',
-    info: 'El 0 no es un nivel: es no tener ninguno, y se sale de él verificando la identidad. Del 1 al 4, cada nivel abre más cupo.',
+    info: 'El nivel decide el cupo. Todo paciente nace en el nivel 1 al registrarlo una clínica; los niveles 2 a 4 existen pero están apagados.',
     type: 'number',
     // Más alto primero: la pregunta de esta columna es quién tiene más cupo.
     sortDir: 'desc',
@@ -242,8 +249,8 @@ export const COLUMNAS_PERSONAS: Array<Column<UserRow>> = [
 
   {
     key: 'registro',
-    header: 'Pidió el código',
-    info: 'El instante en que pidió el código por SMS, que es cuando nace la cuenta; no es su registro, que cuenta desde que se aprueba su verificación de identidad.',
+    header: 'Registrado',
+    info: 'Cuándo lo registró una clínica por primera vez: el paciente nace con su primer financiamiento.',
     sortDir: 'desc',
     sort: (u) => u.createdAt,
     csv: (u) => csvInstante(u.createdAt),
@@ -257,7 +264,7 @@ export const COLUMNAS_PERSONAS: Array<Column<UserRow>> = [
   {
     key: 'ultimo',
     header: 'Último financiamiento',
-    info: 'El último financiamiento confirmado en el que tiene cuota (en un grupo, aunque lo abriera otro paciente), y su clínica.',
+    info: 'Su último financiamiento confirmado, y su clínica.',
     hidden: true,
     sortDir: 'desc',
     sort: (u) => u.lastChargeAt,
@@ -270,6 +277,32 @@ export const COLUMNAS_PERSONAS: Array<Column<UserRow>> = [
         )}
       </span>
     ),
+  },
+
+  {
+    key: 'clinica-registro',
+    header: 'Clínica de registro',
+    info: 'La clínica que lo registró por primera vez. Si luego financió en otra, esa sale en «Último financiamiento».',
+    sort: (u) => u.registeredMerchantName ?? null,
+    csv: (u) => u.registeredMerchantName ?? null,
+    cell: (u) => u.registeredMerchantName ?? <span className="text-on-surface-variant">—</span>,
+  },
+
+  {
+    key: 'correo-invalido',
+    header: 'Correo inválido',
+    info: 'Su correo rebotó: el comprobante no le llegó y hay que corregirlo en su ficha.',
+    hidden: true,
+    sort: (u) => (u.emailInvalidAt ? 1 : 0),
+    csv: (u) => (u.emailInvalidAt ? csvInstante(u.emailInvalidAt) : null),
+    cell: (u) =>
+      u.emailInvalidAt ? (
+        <Badge tone="error" icono>
+          Rebotó el {formatDateTime(u.emailInvalidAt)}
+        </Badge>
+      ) : (
+        '—'
+      ),
   },
 
   {

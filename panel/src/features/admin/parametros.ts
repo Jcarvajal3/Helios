@@ -35,6 +35,19 @@ export type ClaveParametro =
   | 'meta_cobro_a_tiempo_pct'
   | 'meta_personas_activas_semana'
   | 'meta_locales_activos'
+  // Los de Helios (contrato §3).
+  | 'min_charge_usd'
+  | 'staff_commission_usd'
+  | 'eligibility_lookups_per_staff_day'
+  | 'payment_four_eyes'
+  | 'receipt_resends_per_day'
+  | 'alert_charges_per_merchant_day'
+  | 'alert_new_patients_per_merchant_day'
+  | 'alert_staff_share_pct'
+  | 'alert_fpd_merchant_pct'
+  | 'alert_fpd_min_cases'
+  | 'alert_merchant_exposure_usd'
+  | 'alert_first_charge_limit_pct'
 
 export type GrupoParametro = 'producto' | 'umbral' | 'meta' | 'capital'
 
