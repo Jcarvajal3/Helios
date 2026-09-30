@@ -189,9 +189,20 @@ function Registrar({ staff }: { staff: StaffContext }) {
     setPaso('cedula')
   }
 
+  function seguirDesdeLaCedula() {
+    setPaso(esNuevo ? 'datos' : 'monto')
+  }
+
   function consultar() {
     setIntentado(true)
     if (problemaDeCedula(numero) || elegir.isPending) return
+    // Cada consulta cuenta contra el límite diario de la secretaria: un
+    // segundo Enter sobre la misma cédula ya contestada sigue adelante en vez
+    // de volver a preguntar.
+    if (elegibilidad) {
+      if (elegibilidad.estado !== 'no_disponible' && !noCoincide) seguirDesdeLaCedula()
+      return
+    }
     elegir.mutate({ merchantId: staff.merchantId, document: documento })
   }
 
@@ -261,7 +272,7 @@ function Registrar({ staff }: { staff: StaffContext }) {
           noCoincide={noCoincide}
           intentado={intentado}
           onConsultar={consultar}
-          onSeguir={() => setPaso(esNuevo ? 'datos' : 'monto')}
+          onSeguir={seguirDesdeLaCedula}
           onNoCoincide={() => setNoCoincide(true)}
         />
       )}

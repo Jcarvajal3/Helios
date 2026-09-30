@@ -69,8 +69,14 @@ export function PasoCedula({
   }, [])
 
   // Llegada la respuesta, el foco salta al botón de seguir: Enter otra vez y
-  // se continúa, sin buscar el ratón.
+  // se continúa, sin buscar el ratón. No al volver a este paso desde otro:
+  // quien vuelve viene a cambiar la cédula, y el foco se queda en ella.
+  const primeraPintada = useRef(true)
   useEffect(() => {
+    if (primeraPintada.current) {
+      primeraPintada.current = false
+      return
+    }
     if (elegibilidad && elegibilidad.estado !== 'no_disponible') seguirRef.current?.focus()
   }, [elegibilidad])
 
