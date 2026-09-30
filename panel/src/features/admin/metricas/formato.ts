@@ -114,8 +114,8 @@ export function porcentaje(parte: number, total: number): number | null {
 }
 
 /**
- * El desglose de lo que se paga en cuotas: «Consumo €146,72 + service fee
- * €34,04». Es la línea que acompaña SIEMPRE a una cifra `payable` (la regla
+ * El desglose de lo que se paga en cuotas: «Consumo $146,72 + service fee
+ * $34,04». Es la línea que acompaña SIEMPRE a una cifra `payable` (la regla
  * del fee): nunca se suma en una cifra suelta sin decir de qué está hecha.
  * El service fee va con su IVA dentro (`fee_usd` = payable − financed).
  */
@@ -125,7 +125,7 @@ export function textoDeDesglose({ financedUsd, feeUsd }: { financedUsd: number; 
 
 /**
  * El mismo desglose para un sitio estrecho (un pie, una celda, un eje):
- * «consumo €146,72 · fee €34,04». Las mismas dos partes, con las palabras
+ * «consumo $146,72 · fee $34,04». Las mismas dos partes, con las palabras
  * cortas que pide Javier para cuando «service fee» no cabe.
  */
 export function textoDeDesgloseCorto({ financedUsd, feeUsd }: { financedUsd: number; feeUsd: number }): string {

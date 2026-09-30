@@ -123,7 +123,7 @@ console.log('── Los pies ─────────────────
 igual(repartoDeLaSemana(r), '2 días · 2 clínicas', 'en cuántas días y clínicas')
 igual(repartoDeLaSemana({ ...r, local: 'x' }), '2 días', 'con una clínica, solo los días')
 igual(repartoDeLaSemana({ ...r, noches: [] }), 'Ningún financiamiento todavía', 'sin días')
-igual(nuevosEnElLocal(30, false), '30 nuevos en algún clínica', 'nuevos sin clínica')
+igual(nuevosEnElLocal(30, false), '30 nuevos en alguna clínica', 'nuevos sin clínica')
 igual(nuevosEnElLocal(1, true), '1 nuevo en la clínica', 'nuevos con clínica')
 igual(nuevosEnElLocal(0, true), 'Ningún paciente nuevo en la clínica', 'ninguno nuevo')
 igual(pieDeConsumos({ ticketMedioUsd: null }), 'Sin financiamientos, sin ticket medio', 'sin ticket')

@@ -61,7 +61,7 @@ export type CifraDeLaSemana = {
 
 export type DatosDeLasCifras = {
   respuesta: RespuestaSemanas
-  /** El local elegido: las metas son de todo Ronda y con local no se miden. */
+  /** El local elegido: las metas son de todo Helios y con local no se miden. */
   local: string | null
   /** Los parámetros del negocio (metas y umbrales). Sin ellos, sin metas ni pastillas. */
   parametros: Parametros | undefined
@@ -88,7 +88,7 @@ function filaDe(id: IdCifra): DefinicionDeFila {
   return fila
 }
 
-/** «18 nuevos en Ronda» (o «en el local»): la fila «Usuarios nuevos». */
+/** «18 nuevos en Helios» (o «en la clínica»): la fila «Pacientes nuevos». */
 function usuariosNuevos(n: number, conLocal: boolean): string {
   const donde = conLocal ? 'en la clínica' : 'en Helios'
   if (n === 0) return `Ningún paciente nuevo ${donde}`
@@ -128,7 +128,7 @@ export function cifrasDeLaSemana({ respuesta, local, parametros }: DatosDeLasCif
     }
   }
 
-  // Consumo, frente a su meta semanal (que es de todo Ronda).
+  // Financiado, frente a su meta semanal (que es de todo Helios).
   const metaConsumo = conMetas ? valorDe(parametros, 'meta_financiado_semana_usd') : null
   const progreso = progresoDeMeta(c.consumo.consumoUsd, metaConsumo, 'subir')
   const pieConsumo =

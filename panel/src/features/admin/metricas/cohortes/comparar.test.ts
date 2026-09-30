@@ -62,7 +62,7 @@ console.log('\n── El CSV ─────────────────
     ['Total a cobrar ($)', 'Total a cobrar: financiado, sin fee ($)', 'Total a cobrar: service fee + IVA ($)'],
     'el total a cobrar, con su desglose',
   )
-  // Todo importe (una cabecera en € que no es ya una parte) trae sus dos partes.
+  // Todo importe (una cabecera en $ que no es ya una parte) trae sus dos partes.
   const sinPartes = cabeceras
     .filter((h) => h.endsWith(' ($)') && !h.includes(':'))
     .filter((h) => {
@@ -92,9 +92,9 @@ console.log('\n── El CSV ─────────────────
 }
 
 console.log('\n── El nombre del archivo ──────────────────────────────────────')
-igual(nombreDelCsv('2026-09-26', null), 'cohortes-de-consumo-2026-09-26', 'todas las clínicas')
-igual(nombreDelCsv('2026-09-26', 'La Quinta Bar'), 'cohortes-de-consumo-la-quinta-bar-2026-09-26', 'una clínica, sin espacios')
-igual(nombreDelCsv('2026-09-26', 'Café Ñandú'), 'cohortes-de-consumo-cafe-nandu-2026-09-26', 'sin tildes')
+igual(nombreDelCsv('2026-09-26', null), 'cohortes-de-financiamiento-2026-09-26', 'todas las clínicas')
+igual(nombreDelCsv('2026-09-26', 'La Quinta Bar'), 'cohortes-de-financiamiento-la-quinta-bar-2026-09-26', 'una clínica, sin espacios')
+igual(nombreDelCsv('2026-09-26', 'Café Ñandú'), 'cohortes-de-financiamiento-cafe-nandu-2026-09-26', 'sin tildes')
 
 console.log(fallos === 0 ? '\nTodo bien.' : `\n${fallos} fallos.`)
 if (fallos > 0) process.exit(1)

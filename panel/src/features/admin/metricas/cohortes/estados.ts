@@ -30,8 +30,8 @@ export const ROTULO_DE_ESTADO: Record<EstadoDeCuota, string> = {
 
 /** Qué es cada estado, en una frase (va a las ayudas). */
 export const QUE_ES_EL_ESTADO: Record<EstadoDeCuota, string> = {
-  a_tiempo: 'pagada con un pago reportado, como tarde, el último día de gracia (vencimiento + días de gracia, por día operativo del reporte)',
-  tarde: 'pagada con un pago reportado después de la gracia',
+  a_tiempo: 'pagada con un pago registrado, como tarde, el último día de gracia (vencimiento + días de gracia, por día operativo del registro del pago)',
+  tarde: 'pagada con un pago registrado después de la gracia',
   vencida: 'sin pagar, con el vencimiento ya pasado (también dentro de la gracia) y sin dar por perdida',
   por_vencer: 'sin pagar y con el vencimiento todavía por llegar',
   perdida: 'sin pagar y dada por perdida',

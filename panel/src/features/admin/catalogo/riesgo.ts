@@ -9,7 +9,7 @@ import type { Entrada } from './tipos'
  * trabajo de cada día. Riesgo de crédito pasó a Métricas (Mora, y las
  * cosechas a Cobros › Calendario) y Niveles y cupos a Ajustes; sus cifras
  * siguen aquí, con el destino en su sitio nuevo. Las de volumen de la ventana
- * (financiado, ticket y personas de `admin_overview`) se quitaron el 27-09:
+ * (financiado, ticket y pacientes de `admin_overview`) se quitaron el 27-09:
  * ninguna pantalla las enseña ya, y las de la semana están en Semana › Resumen.
  */
 export const riesgo = [
@@ -20,7 +20,7 @@ export const riesgo = [
     titulo: 'Alertas',
     descripcion: 'Las señales de riesgo que piden que alguien mire una cuenta.',
     espacio: 'riesgo',
-    sinonimos: ['alertas de riesgo', 'fraude', 'señales', 'cuentas relacionadas', 'duplicados', 'vpn'],
+    sinonimos: ['alertas de riesgo', 'fraude', 'señales', 'cuentas relacionadas', 'duplicados', 'teléfono repetido', 'correo rebotado', 'altas falsas'],
     destino: { to: '/admin/alertas' },
     icono: ShieldAlert,
   },
@@ -78,7 +78,7 @@ export const riesgo = [
     espacio: 'riesgo',
     sinonimos: ['cobro a tiempo', 'puntualidad', 'on time', 'cuotas pagadas a tiempo'],
     destino: { to: '/admin/metricas', search: { vista: 'mora' } },
-    que: 'De las cuotas cuyo plazo ya terminó (vencimiento + días de gracia), la parte pagada dentro de él, en número de cuotas y por el día en que el paciente reportó el pago; lo dado por perdido cuenta como no pagado.',
+    que: 'De las cuotas cuyo plazo ya terminó (vencimiento + días de gracia), la parte pagada dentro de él, en número de cuotas y por el día en que se registró el pago; lo dado por perdido cuenta como no pagado.',
     rpc: 'admin_on_time_collection',
   },
   {
@@ -122,7 +122,7 @@ export const riesgo = [
     espacio: 'riesgo',
     sinonimos: ['fpd', 'first payment default', 'primera cuota', 'impago temprano', 'impago por cuota', 'cuota 1 sin pagar', 'impago de la primera cuota'],
     destino: { to: '/admin/metricas', search: { vista: 'cobros', sub: 'impago-por-cuota' } },
-    que: 'De las cuotas 1 que ya pasaron sus días de gracia, la parte que seguía sin pagar el último día de la gracia, en número de cuotas y partida por semana, mes, clínica, nivel, pacientes en el financiamiento o primer financiamiento.',
+    que: 'De las cuotas 1 que ya pasaron sus días de gracia, la parte que seguía sin pagar el último día de la gracia, en número de cuotas y partida por semana, mes, clínica, nivel o primer financiamiento.',
     rpc: 'admin_first_payment_default',
   },
   {
@@ -144,7 +144,7 @@ export const riesgo = [
     espacio: 'riesgo',
     sinonimos: ['cupo ocupado', 'utilización', 'exposición', 'cupo disponible', 'disponible hoy', 'cupo libre', 'límite'],
     destino: { to: '/admin/metricas', search: { vista: 'mora', sub: 'cupos' } },
-    que: 'Sin el service fee, que no ocupa cupo: lo financiado que todavía ocupa cupo ÷ el cupo de todos los pacientes del nivel, con la exposición (el financiamiento que falta por volver); es la misma cuenta que frena una compra.',
+    que: 'Sin el service fee, que no ocupa cupo: lo financiado que todavía ocupa cupo ÷ el cupo de todos los pacientes del nivel, con la exposición (el financiamiento que falta por volver); es la misma cuenta que frena un financiamiento nuevo.',
     rpc: 'admin_credit_utilization',
   },
   {
@@ -155,7 +155,7 @@ export const riesgo = [
     espacio: 'riesgo',
     sinonimos: ['clínicas por volumen', 'concentración', 'riesgo por clínica'],
     destino: { to: '/admin/metricas', search: { vista: 'locales' } },
-    que: 'Las clínicas de la semana elegida ordenados por financiado (sin fee): cuántos pacientes se financiaron (por sus cuotas), qué parte del financiado total representan y cuánto tienen vencido sus pacientes.',
+    que: 'Las clínicas de la semana elegida ordenadas por financiado (sin fee): cuántos pacientes se financiaron (por sus cuotas), qué parte del financiado total representan y cuánto tienen vencido sus pacientes.',
     rpc: 'admin_metricas_locales',
   },
   {
@@ -166,7 +166,7 @@ export const riesgo = [
     espacio: 'riesgo',
     sinonimos: ['alertas pendientes', 'fraude', 'señales de riesgo'],
     destino: { to: '/admin/alertas' },
-    que: 'Las señales de riesgo que la base deduce de los datos (cuentas relacionadas, redes o teléfonos sospechosos al verificarse, y financiamientos por encima del cupo, que nunca deberían ocurrir) y que nadie ha marcado como revisadas.',
+    que: 'Las señales de riesgo que la base deduce de los datos (cuentas relacionadas, teléfonos o correos repetidos entre pacientes, ráfagas de altas en una clínica, comprobantes que rebotan y financiamientos por encima del cupo, que nunca deberían ocurrir) y que nadie ha marcado como revisadas.',
     rpc: 'admin_risk_alerts',
   },
 ] as const satisfies ReadonlyArray<Entrada>

@@ -11,7 +11,7 @@ import { comoFila, comoLista, filaONula, numero, numeroONulo, textoONulo } from 
 //
 // La regla del fee: todo lo que se paga en cuotas (`payable`) llega con su
 // consumo y su service fee con IVA (`Desglose`), y la pantalla nunca lo enseña sin
-// sus dos partes. El service fee de Ronda (sin IVA) y los cargos por atraso son
+// sus dos partes. El service fee de Helios (sin IVA) y los cargos por atraso son
 // cifras aparte.
 //
 // Puro: se prueba en `lectura.test.ts`.
@@ -106,7 +106,7 @@ export type CajaDeLaSemana = {
   merchantId: string | null
   movimientos: Movimientos
   movimientosAnterior: Movimientos
-  /** La caja del libro. `null` con un local: la caja es de todo Ronda. */
+  /** La caja del libro. `null` con un local: la caja es de todo Helios. */
   caja: { alInicioUsd: number; alCierreUsd: number; alCierreAnteriorUsd: number } | null
   porPagarLocales: PorPagarLocales
   semanas: SemanaDeCaja[]

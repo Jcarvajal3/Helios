@@ -30,8 +30,8 @@ export function TablaDeLocales({ d, parametros }: { d: LocalesDeLaSemana; parame
   return (
     <SeccionMetricas
       titulo="Clínicas en la semana"
-      ayuda="Pulsa una clínica para ver todas las pestañas solo con él"
-      info="Una fila por clínica: los activos y todos los que tuvieron algo esta semana (financiamientos, cuotas que vencían, algo vencido o un cierre), aunque ya no estén activos. Vender cero también es un dato. El financiado y el ticket van sin el service fee; lo vencido lo lleva dentro, con sus dos partes debajo."
+      ayuda="Pulsa una clínica para ver todas las pestañas solo con ella"
+      info="Una fila por clínica: las activas y todas las que tuvieron algo esta semana (financiamientos, cuotas que vencían, algo vencido o un cierre), aunque ya no estén activas. Financiar cero también es un dato. El financiado y el ticket van sin el service fee; lo vencido lo lleva dentro, con sus dos partes debajo."
     >
       <DataTable
         rows={filas}
@@ -40,7 +40,7 @@ export function TablaDeLocales({ d, parametros }: { d: LocalesDeLaSemana; parame
         noun={['clínica', 'clínicas']}
         total={d.locales.length}
         summary={`${vendieron} con financiamiento`}
-        exportar={{ archivo: `locales-${d.semana.desde}` }}
+        exportar={{ archivo: `clinicas-${d.semana.desde}` }}
         onRowClick={(l) => {
           if (l.esTotal || l.merchantId === null) return
           void navigate({

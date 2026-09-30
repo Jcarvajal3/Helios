@@ -1,11 +1,11 @@
 import type { Entrada } from './tipos'
 
 /**
- * Gerencia: cómo va el negocio y si la gente llega, compra y vuelve.
+ * Gerencia: cómo va el negocio y si los pacientes llegan, se financian y vuelven.
  *
  * Sus pantallas (Resumen y Crecimiento) pasaron a Métricas: el Resumen es la
  * pestaña Semana (y lo de «por cada cien» va en General y el capital en
- * Caja), y Crecimiento es la pestaña Gente. Aquí quedan sus cifras, que son
+ * Caja), y Crecimiento es la pestaña Pacientes. Aquí quedan sus cifras, que son
  * de Gerencia, cada una con el destino en su pestaña.
  */
 export const gerencia = [
@@ -45,12 +45,12 @@ export const gerencia = [
   {
     tipo: 'cifra',
     id: 'margen-por-cada-cien',
-    titulo: 'Margen por cada cien dólares facturados',
-    descripcion: 'Lo que dejan el service fee sin IVA y los cargos por atraso, menos el impago, por cada cien dólares facturados (sin fee).',
+    titulo: 'Margen por cada cien dólares financiados',
+    descripcion: 'Lo que dejan el service fee sin IVA y los cargos por atraso, menos el impago, por cada cien dólares financiados (sin fee).',
     espacio: 'gerencia',
     sinonimos: ['rentabilidad', 'margen', 'unit economics', 'economía unitaria', 'punto de empate', 'pérdida esperada'],
     destino: { to: '/admin/metricas', search: { vista: 'global' } },
-    que: 'Desde el primer día, cuánto dejaron el service fee sin IVA y los cargos por atraso por cada cien dólares facturados (sin fee), y el margen que queda después del impago, que se lee en «Impago (%)» frente a su punto de empate.',
+    que: 'Desde el primer día, cuánto dejaron el service fee sin IVA y los cargos por atraso por cada cien dólares financiados (sin fee), y el margen que queda después del impago, que se lee en «Impago (%)» frente a su punto de empate.',
     rpc: 'admin_metricas_general',
   },
   {
@@ -76,27 +76,27 @@ export const gerencia = [
     rpc: 'admin_business_parameters',
   },
 
-  // ── Cifras de Crecimiento: hoy, Métricas › Gente ────────────────────────
+  // ── Cifras de Crecimiento: hoy, Métricas › Pacientes ────────────────────
   {
     tipo: 'cifra',
     id: 'se-registraron',
     titulo: 'Registros',
-    descripcion: 'Cuántos pacientes se registraron (verificaron su identidad) en la ventana elegida, con la media por día.',
+    descripcion: 'Cuántos pacientes registraron las clínicas en la ventana elegida, con la media por día.',
     espacio: 'gerencia',
-    sinonimos: ['se registraron', 'altas', 'nuevos pacientes', 'verificados', 'verificaciones aprobadas'],
+    sinonimos: ['se registraron', 'altas', 'nuevos pacientes', 'pacientes registrados', 'altas de pacientes'],
     destino: { to: '/admin/metricas', search: { vista: 'gente' } },
-    que: 'Los pacientes cuya verificación de identidad se aprobó en la ventana elegida (que acaba en la semana de arriba), frente a la ventana anterior a la misma altura; quien pidió el código y no se verificó no es un registro, sino que cuenta en «Solicitaron el código».',
+    que: 'Los pacientes que una clínica dio de alta en la ventana elegida (que acaba en la semana de arriba), frente a la ventana anterior a la misma altura. Cada paciente se registra en el mismo paso que su primer financiamiento.',
     rpc: 'admin_growth_overview',
   },
   {
     tipo: 'cifra',
     id: 'primer-consumo',
     titulo: 'Pacientes con su primer financiamiento',
-    descripcion: 'Cuántos pacientes hicieron su primer financiamiento en la ventana elegida, se registraran cuando se registraran.',
+    descripcion: 'Cuántos pacientes tuvieron su primer financiamiento en la ventana elegida.',
     espacio: 'gerencia',
-    sinonimos: ['estrenaron', 'activados', 'activación', 'primer financiamiento'],
+    sinonimos: ['estrenaron', 'pacientes nuevos', 'primer financiamiento'],
     destino: { to: '/admin/metricas', search: { vista: 'gente' } },
-    que: 'Los pacientes cuyo primer financiamiento confirmado (por sus cuotas) cae dentro de la ventana elegida, sin importar cuándo se registraron.',
+    que: 'Los pacientes cuyo primer financiamiento confirmado (por sus cuotas) cae dentro de la ventana elegida. Como la clínica registra al paciente con su primer financiamiento, suele coincidir con los registros.',
     rpc: 'admin_growth_overview',
   },
   {
@@ -105,29 +105,29 @@ export const gerencia = [
     titulo: 'Pacientes que se financiaron',
     descripcion: 'Pacientes distintos que se financiaron en la ventana elegida.',
     espacio: 'gerencia',
-    sinonimos: ['pacientes activos', 'activos', 'compradores', 'se financiaron', 'pacientes que se financiaron'],
+    sinonimos: ['pacientes activos', 'activos', 'se financiaron', 'pacientes que se financiaron'],
     destino: { to: '/admin/metricas', search: { vista: 'gente' } },
-    que: 'Los pacientes distintos con cuota en al menos un financiamiento confirmado de la ventana elegida: en un financiamiento de grupo cuenta cada paciente con su parte.',
+    que: 'Los pacientes distintos con cuota en al menos un financiamiento confirmado de la ventana elegida.',
     rpc: 'admin_growth_overview',
   },
   {
     tipo: 'cifra',
     id: 'han-comprado-alguna-vez',
     titulo: 'Registros que se han financiado (%)',
-    descripcion: 'Qué parte de todos los registros (pacientes verificados) se ha financiado alguna vez.',
+    descripcion: 'Qué parte de todos los pacientes registrados se ha financiado alguna vez.',
     espacio: 'gerencia',
-    sinonimos: ['conversión', 'tasa de compra', 'han comprado alguna vez'],
+    sinonimos: ['conversión', 'se han financiado alguna vez', 'han comprado alguna vez'],
     destino: { to: '/admin/metricas', search: { vista: 'gente' } },
-    que: 'Los registros desde el primer día (pacientes con la verificación aprobada) con al menos un financiamiento confirmado ÷ todos los registros; no sigue a la ventana elegida.',
+    que: 'Los pacientes registrados desde el primer día con al menos un financiamiento confirmado ÷ todos los registros; no sigue a la ventana elegida.',
     rpc: 'admin_growth_overview',
   },
   {
     tipo: 'cifra',
     id: 'consumo-por-persona',
     titulo: 'Financiado por paciente (sin fee)',
-    descripcion: 'Lo que factura el paciente típico en la ventana elegida, sin el service fee, con la mediana y la media.',
+    descripcion: 'Lo que se financia el paciente típico en la ventana elegida, sin el service fee, con la mediana y la media.',
     espacio: 'gerencia',
-    sinonimos: ['gasto por paciente', 'gasto medio', 'financiamiento por paciente', 'gasto por paciente'],
+    sinonimos: ['gasto por paciente', 'gasto medio', 'financiamiento por paciente'],
     destino: { to: '/admin/metricas', search: { vista: 'gente', sub: 'uso' } },
     que: 'Sin el service fee: la mediana de lo financiado por paciente que se financió en la ventana elegida (la mitad gasta eso o menos), con la media al lado porque unos pocos que gastan mucho la desvían.',
     rpc: 'admin_user_behavior',
@@ -138,7 +138,7 @@ export const gerencia = [
     titulo: 'Financiamientos por paciente',
     descripcion: 'Cuántos financiamientos hace el paciente típico en la ventana elegida.',
     espacio: 'gerencia',
-    sinonimos: ['frecuencia', 'cuentas por paciente', 'financiamientos por paciente', 'días'],
+    sinonimos: ['frecuencia', 'consultas por paciente', 'financiamientos por paciente', 'días'],
     destino: { to: '/admin/metricas', search: { vista: 'gente', sub: 'uso' } },
     que: 'La mediana del número de financiamientos por paciente que se financió en la ventana elegida, con la media y los días en que salió.',
     rpc: 'admin_user_behavior',
@@ -149,7 +149,7 @@ export const gerencia = [
     titulo: 'Ticket medio (sin fee)',
     descripcion: 'Lo financiado de media por financiamiento, sin el service fee.',
     espacio: 'gerencia',
-    sinonimos: ['ticket promedio', 'gasto por financiamiento', 'financiamiento por cuenta'],
+    sinonimos: ['ticket promedio', 'gasto por financiamiento', 'financiamiento por consulta'],
     destino: { to: '/admin/metricas', search: { vista: 'gente', sub: 'uso' } },
     que: 'Sin el service fee: lo financiado en la ventana elegida ÷ el número de financiamientos confirmados.',
     rpc: 'admin_growth_overview',
@@ -158,11 +158,11 @@ export const gerencia = [
     tipo: 'cifra',
     id: 'cohortes-de-registro',
     titulo: 'Cohortes de registro',
-    descripcion: 'Los pacientes que se registraron el mismo día, semana o mes, seguidos en el tiempo.',
+    descripcion: 'Los pacientes registrados el mismo día, semana o mes, seguidos en el tiempo.',
     espacio: 'gerencia',
-    sinonimos: ['cohortes', 'retención', 'vuelven', 'grupos de registro'],
+    sinonimos: ['cohortes', 'retención', 'vuelven'],
     destino: { to: '/admin/metricas', search: { vista: 'gente', sub: 'retencion' } },
-    que: 'Para cada cohorte, los pacientes que se registraron (se les aprobó la verificación de identidad) en el mismo periodo, cuántos llegaron a financiarse, cuántos volvieron en los periodos siguientes y cuánto llevan financiado (sin fee), siempre sobre esos mismos pacientes.',
+    que: 'Para cada cohorte, los pacientes que las clínicas registraron en el mismo periodo, cuántos llegaron a financiarse, cuántos volvieron en los periodos siguientes y cuánto llevan financiado (sin fee), siempre sobre esos mismos pacientes.',
     rpc: 'admin_user_cohorts',
   },
 ] as const satisfies ReadonlyArray<Entrada>

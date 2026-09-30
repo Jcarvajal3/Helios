@@ -139,7 +139,7 @@ export function CifrasDeLaSemana({
           value={c ? (aTiempo === null ? '—' : formatPct(aTiempo, 0)) : ''}
           senal={senalPorUmbralAlto(aTiempo, metaATiempo, pctDeUmbral)}
           hint={c ? pieDeCobroATiempo(c) : undefined}
-          info={`Cuotas con vencimiento en la semana (y gracia ya terminada) pagadas con un reporte como tarde el vencimiento + ${c ? c.gracia : 'los'} días de gracia ÷ esas cuotas, contadas por número de cuotas y no por dólares.${juzgado ? ` Las de la semana elegida todavía no se pueden juzgar: ${juzgado.toLowerCase()}.` : ''}`}
+          info={`Cuotas con vencimiento en la semana (y gracia ya terminada) pagadas con un pago registrado como tarde el vencimiento + ${c ? c.gracia : 'los'} días de gracia ÷ esas cuotas, contadas por número de cuotas y no por dólares.${juzgado ? ` Las de la semana elegida todavía no se pueden juzgar: ${juzgado.toLowerCase()}.` : ''}`}
           estado={estadoDeConsultas([cobro, parametros])}
           onReintentar={() => void cobro.refetch()}
         />

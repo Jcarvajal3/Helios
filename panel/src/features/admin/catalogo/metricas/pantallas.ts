@@ -46,7 +46,7 @@ export const pantallasDeMetricas = [
     id: 'metricas',
     titulo: 'Métricas',
     descripcion:
-      'Todas las cifras del negocio en una pantalla, por semana y por clínica: la semana, los cobros, la mora, la caja, las clínicas, la gente y lo global.',
+      'Todas las cifras del negocio en una pantalla, por semana y por clínica: la semana, los cobros, la mora, la caja, las clínicas, los pacientes y lo global.',
     espacio: 'metricas',
     sinonimos: [
       'estadísticas',
@@ -81,7 +81,7 @@ export const pantallasDeMetricas = [
     id: 'metricas-semana-resumen',
     titulo: 'Métricas › Semana › Resumen',
     descripcion:
-      'Lo financiado en las clínicas (sin fee), su service fee + IVA y el total a cobrar, los financiamientos y la gente, y la tabla de financiamientos por día y clínica.',
+      'Lo financiado en las clínicas (sin fee), su service fee + IVA y el total a cobrar, los financiamientos y los pacientes, y la tabla de financiamientos por día y clínica.',
     espacio: 'metricas',
     sinonimos: [
       'resumen',
@@ -106,7 +106,7 @@ export const pantallasDeMetricas = [
     id: 'metricas-semana-rendimiento',
     titulo: 'Métricas › Semana › Rendimiento',
     descripcion:
-      'Las cifras que mandan, semana a semana, frente a la anterior y a sus metas: financiamiento (sin fee), service fee, cobro, riesgo, gente y caja.',
+      'Las cifras que mandan, semana a semana, frente a la anterior y a sus metas: financiamiento (sin fee), service fee, cobro, riesgo, pacientes y caja.',
     espacio: 'metricas',
     sinonimos: [
       'semana a semana',
@@ -149,7 +149,7 @@ export const pantallasDeMetricas = [
     id: 'metricas-cobros-calendario',
     titulo: 'Métricas › Cobros › Semanas',
     descripcion:
-      'Todas las semanas de financiamiento comparados: lo que hay que cobrar de cada una (financiamiento + fee) y cómo va, y la curva de cobro y el reparto por clínica de la elegida.',
+      'Todas las semanas de financiamiento comparadas: lo que hay que cobrar de cada una (financiamiento + fee) y cómo va, y la curva de cobro y el reparto por clínica de la elegida.',
     espacio: 'metricas',
     sinonimos: [
       'comparar todas',
@@ -221,7 +221,7 @@ export const pantallasDeMetricas = [
     tipo: 'pantalla',
     id: 'metricas-mora-cupos',
     titulo: 'Métricas › Riesgo › Cupos',
-    descripcion: 'Cuánto de su cupo usa hoy la gente de cada nivel.',
+    descripcion: 'Cuánto de su cupo usan hoy los pacientes de cada nivel.',
     espacio: 'metricas',
     sinonimos: ['cupos', 'uso del cupo', 'uso del cupo por nivel', 'cupo por nivel', 'límite de crédito'],
     destino: { to: '/admin/metricas', search: { vista: 'mora', sub: 'cupos' } },
@@ -298,13 +298,13 @@ export const pantallasDeMetricas = [
     id: 'metricas-locales',
     titulo: 'Métricas › Clínicas',
     descripcion:
-      'Dónde se financia y cómo paga la gente de cada clínica, semana a semana. Es una pestaña de Métricas.',
+      'Dónde se financia y cómo pagan los pacientes de cada clínica, semana a semana. Es una pestaña de Métricas.',
     espacio: 'metricas',
     sinonimos: [
       'rendimiento de las clínicas',
       'financiamientos por clínica',
       'ranking de clínicas',
-      'quién vendió más',
+      'qué clínica financió más',
       'mejor clínica',
       'clínicas',
     ],
@@ -312,25 +312,23 @@ export const pantallasDeMetricas = [
     icono: Store,
   },
 
-  // ── Gente ────────────────────────────────────────────────────────────────
+  // ── Pacientes (id `gente`) ───────────────────────────────────────────────
   {
     tipo: 'pantalla',
     id: 'metricas-gente',
-    titulo: 'Métricas › Gente',
+    titulo: 'Métricas › Pacientes',
     descripcion:
-      'Quién llega, quién se financia y quién vuelve: quién pidió el código, registros, uso, grupos, retención y el perfil de la gente. Es una pestaña de Métricas.',
+      'Quién llega, quién se financia y quién vuelve: los pacientes que registran las clínicas, el uso y la retención. Es una pestaña de Métricas.',
     espacio: 'metricas',
     sinonimos: [
       'crecimiento',
+      'gente',
       'pacientes',
       'registros',
-      'solicitaron el código',
-      'embudo',
+      'pacientes registrados',
+      'altas de pacientes',
       'retención',
       'cohortes de registro',
-      'grupos',
-      'perfil de la gente',
-      'user paciente',
     ],
     destino: { to: '/admin/metricas', search: { vista: 'gente' } },
     icono: Sprout,
@@ -338,19 +336,19 @@ export const pantallasDeMetricas = [
   {
     tipo: 'pantalla',
     id: 'metricas-gente-resumen',
-    titulo: 'Métricas › Gente › Resumen',
+    titulo: 'Métricas › Pacientes › Resumen',
     descripcion:
-      'Cuánta gente pidió el código, se registró y se financió en la ventana, y hasta qué escalón llegó.',
+      'Cuántos pacientes registraron las clínicas y cuántos se financiaron en la ventana.',
     espacio: 'metricas',
-    sinonimos: ['crecimiento', 'embudo de registro', 'registros', 'solicitaron el código', 'listos para financiarse'],
+    sinonimos: ['crecimiento', 'registros', 'pacientes registrados', 'altas de pacientes', 'pacientes nuevos'],
     destino: { to: '/admin/metricas', search: { vista: 'gente' } },
     icono: Sprout,
   },
   {
     tipo: 'pantalla',
     id: 'metricas-gente-uso',
-    titulo: 'Métricas › Gente › Uso',
-    descripcion: 'Cuánto se financia cada paciente (sin fee) y de cuánta gente depende el total.',
+    titulo: 'Métricas › Pacientes › Uso',
+    descripcion: 'Cuánto se financia cada paciente (sin fee) y de cuántos pacientes depende el total.',
     espacio: 'metricas',
     sinonimos: ['uso', 'financiamiento por paciente', 'quién sostiene el financiamiento', 'concentración', 'frecuencia'],
     destino: { to: '/admin/metricas', search: { vista: 'gente', sub: 'uso' } },
@@ -359,8 +357,8 @@ export const pantallasDeMetricas = [
   {
     tipo: 'pantalla',
     id: 'metricas-gente-retencion',
-    titulo: 'Métricas › Gente › Retención',
-    descripcion: 'La gente que se registró junta: cuánta sigue financiándose en las semanas siguientes.',
+    titulo: 'Métricas › Pacientes › Retención',
+    descripcion: 'Los pacientes registrados en el mismo periodo: cuántos siguen financiándose en las semanas siguientes.',
     espacio: 'metricas',
     sinonimos: ['retención', 'cohortes de registro', 'vuelven', 'se quedan', 'recurrencia'],
     destino: { to: '/admin/metricas', search: { vista: 'gente', sub: 'retencion' } },
@@ -373,7 +371,7 @@ export const pantallasDeMetricas = [
     id: 'metricas-global',
     titulo: 'Métricas › Global',
     descripcion:
-      'Lo global del negocio desde el primer día: la gente, el financiamiento (sin fee), lo que se debe, lo cobrado y el riesgo. Es una pestaña de Métricas.',
+      'Lo global del negocio desde el primer día: los pacientes, el financiamiento (sin fee), lo que se debe, lo cobrado y el riesgo. Es una pestaña de Métricas.',
     espacio: 'metricas',
     sinonimos: [
       'general',

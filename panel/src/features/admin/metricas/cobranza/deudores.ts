@@ -13,7 +13,7 @@ import type { PerfilDeudor, Prioridad, UmbralesDePerfil } from './perfiles'
 //
 // Todo importe es PAYABLE (lo que la persona tiene que transferir, con el
 // service fee dentro) y llega siempre con su desglose: se enseña con
-// «Consumo € + service fee €», nunca como un total suelto.
+// «Consumo $ + service fee $», nunca como un total suelto.
 //
 // Puro: se prueba en `deudores.test.ts`.
 // ═══════════════════════════════════════════════════════════════════════════

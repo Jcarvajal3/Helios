@@ -300,7 +300,7 @@ function parametro(key: string, value: number | null, grupo: Parametro['grupo'],
   }
 }
 
-/** Metas y umbrales como los de producción, con una meta de consumo de €1.000. */
+/** Metas y umbrales como los de producción, con una meta de consumo de $1.000. */
 export function parametrosDePrueba({ conMetas = true }: { conMetas?: boolean } = {}): Parametros {
   return {
     businessDate: '2026-09-26',

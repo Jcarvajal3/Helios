@@ -17,7 +17,7 @@ export type CifrasDelTramo = {
   feeUsd: number
   /** Total a cobrar: facturado + service fee + IVA. Solo con sus dos partes. */
   payableUsd: number
-  /** El service fee SIN IVA (el ingreso de Ronda). */
+  /** El service fee SIN IVA (el ingreso de Helios). */
   servicioUsd: number
   /** El IVA del service fee: `fee − servicio`. */
   ivaUsd: number

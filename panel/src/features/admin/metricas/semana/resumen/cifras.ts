@@ -54,10 +54,10 @@ export const AYUDAS_DEL_RESUMEN: Record<IdCifraResumen, string> = {
     'Sin el service fee: lo que se financió en las clínicas en la semana (la en curso, hasta ahora), por día operativo. Solo financiamientos confirmados y sin los de prueba.',
   fee: 'El service fee de esos financiamientos, con su IVA dentro: el total a cobrar menos el total financiado. El pie lo parte en el service fee sin IVA (el ingreso de Helios) y el IVA, que no es de Helios.',
   total:
-    'Lo que la gente paga en sus dos cuotas por los financiamientos de la semana: el total financiado (sin fee) más el service fee y su IVA. Siempre con sus dos partes a la vista.',
-  consumos: 'Financiamientos confirmados de la semana, sin los de prueba. Un financiamiento de grupo es uno solo, pague cuanta gente pague.',
+    'Lo que los pacientes pagan en sus dos cuotas por los financiamientos de la semana: el total financiado (sin fee) más el service fee y su IVA. Siempre con sus dos partes a la vista.',
+  consumos: 'Financiamientos confirmados de la semana, sin los de prueba.',
   usuarios:
-    'Los pacientes distintos con cuota en los financiamientos de la semana: en un grupo, cada paciente que paga su parte, no solo quien abrió la cuenta. Quien vino dos días o a dos clínicas cuenta una vez. El pie: cuántos consumían por primera vez en algún clínica (o en el elegido).',
+    'Los pacientes distintos con cuota en los financiamientos de la semana. Quien vino dos días o a dos clínicas cuenta una vez. El pie: cuántos se financiaban por primera vez en alguna clínica (o en la elegida).',
 }
 
 export type ChispaDeCifra = {
@@ -102,34 +102,34 @@ export function etiquetaConDesglose(s: SemanaDeLaChispa): string {
   return `${etiquetaDe(s)} (${textoDeDesglose(s).replace('Financiamiento', 'financiamiento')})`
 }
 
-/** «7 noches · 3 locales»: en cuántas noches y locales se repartió lo facturado. */
+/** «7 días · 3 clínicas»: en cuántos días y clínicas se repartió lo financiado. */
 export function repartoDeLaSemana(r: RespuestaResumen): string {
   const noches = new Set(r.noches.map((n) => n.dia)).size
   const locales = new Set(r.noches.map((n) => n.merchantId)).size
   if (noches === 0) return 'Ningún financiamiento todavía'
   const enNoches = `${noches} ${noches === 1 ? 'día' : 'días'}`
-  // Con un local elegido, todas las filas son de él: los locales sobran.
+  // Con una clínica elegida, todas las filas son de ella: las clínicas sobran.
   return r.local ? enNoches : `${enNoches} · ${locales} ${locales === 1 ? 'clínica' : 'clínicas'}`
 }
 
-/** «€225,80 sin IVA + €36,12 de IVA»: de qué está hecho el fee. */
+/** «$225,80 sin IVA + $36,12 de IVA»: de qué está hecho el fee. */
 export function partesDelFee(c: Pick<CifrasDelTramo, 'servicioUsd' | 'ivaUsd'>): string {
   return `${formatUsd(c.servicioUsd)} sin IVA + ${formatUsd(c.ivaUsd)} de IVA`
 }
 
 /**
- * «30 nuevos en algún local»: los usuarios que consumieron por primera vez
- * en algún local (en el elegido, con local), contados una vez. No es
- * «nuevos en Ronda» (la fila «Usuarios nuevos» de Rendimiento): quien ya
- * había ido a otro local cuenta aquí si estrenó uno.
+ * «30 nuevos en alguna clínica»: los pacientes que se financiaron por primera
+ * vez en alguna clínica (en la elegida, con clínica), contados una vez. No es
+ * «nuevos en Helios» (la fila «Pacientes nuevos» de Rendimiento): quien ya
+ * había ido a otra clínica cuenta aquí si estrenó una.
  */
 export function nuevosEnElLocal(nuevas: number, conLocal: boolean): string {
-  const donde = conLocal ? 'en la clínica' : 'en algún clínica'
+  const donde = conLocal ? 'en la clínica' : 'en alguna clínica'
   if (nuevas === 0) return conLocal ? 'Ningún paciente nuevo en la clínica' : 'Ningún paciente nuevo en ninguna clínica'
   return `${escribirNumero(nuevas)} ${nuevas === 1 ? 'nuevo' : 'nuevos'} ${donde}`
 }
 
-/** «Ticket medio €26,26 (sin fee)». */
+/** «Ticket medio $26,26 (sin fee)». */
 export function pieDeConsumos(c: Pick<CifrasDelTramo, 'ticketMedioUsd'>): string {
   return c.ticketMedioUsd === null ? 'Sin financiamientos, sin ticket medio' : `Ticket medio ${formatUsd(c.ticketMedioUsd)} (sin fee)`
 }

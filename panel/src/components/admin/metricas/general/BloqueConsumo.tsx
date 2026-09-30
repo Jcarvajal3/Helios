@@ -46,7 +46,7 @@ export function BloqueConsumo({ lectura }: { lectura: LecturaGeneral }) {
           titulo={T.personas.titulo}
           info={T.personas.que}
           valor={g ? entero(g.consumo.personas) : ''}
-          pie="Cada paciente del grupo cuenta"
+          pie="Cada paciente cuenta una vez"
           link={{ to: '/admin/metricas', search: { vista: 'gente', sub: 'resumen', local: conLocal } }}
           estado={estado}
           onReintentar={reintentar}
@@ -56,7 +56,7 @@ export function BloqueConsumo({ lectura }: { lectura: LecturaGeneral }) {
           info={T.localesActivos.que}
           valor={g?.consumo.localesActivos == null ? '' : entero(g.consumo.localesActivos)}
           pie={g && pieLocalesActivos(g)}
-          noSeParte={local !== null && 'Con una clínica elegida no hay clínicas que contar. Quita la clínica de arriba para verlos.'}
+          noSeParte={local !== null && 'Con una clínica elegida no hay clínicas que contar. Quita la clínica de arriba para verlas.'}
           link={{ to: '/admin/metricas', search: { vista: 'locales' } }}
           estado={estado}
           onReintentar={reintentar}

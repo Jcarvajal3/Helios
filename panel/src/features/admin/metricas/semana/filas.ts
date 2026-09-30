@@ -15,13 +15,13 @@ import type { CifrasDePeriodo, RespuestaSemanas } from './tipos'
 // aquí. Una fila nueva es una entrada más en `GRUPOS_DE_FILAS`.
 //
 // La regla del fee, fila a fila: lo que se paga en cuotas (lo que vencía, lo
-// vencido) va con sus dos sumandos debajo, en filas propias —«consumo» y
+// vencido) va con sus dos sumandos debajo, en filas propias —«financiado» y
 // «service fee»—, así que nunca hay un total con el fee dentro sin sus
-// partes a la vista. El consumo va sin fee, el service fee de Ronda sin IVA
-// y los cargos por atraso aparte. Lo dado por perdido se cuenta en consumo.
+// partes a la vista. El financiado va sin fee, el service fee de Helios sin
+// IVA y los cargos por atraso aparte. Lo dado por perdido se cuenta en financiado.
 //
 // Las palabras: el fee se llama «service fee» (o «fee» donde no cabe),
-// nunca «servicio»; todo consumo dice si lleva el fee, en su nombre, en su
+// nunca «servicio»; todo financiado dice si lleva el fee, en su nombre, en su
 // unidad o al empezar su ayuda.
 //
 // Puro: se prueba en `filas.test.ts`.
@@ -87,7 +87,7 @@ export const GRUPOS_DE_FILAS: ReadonlyArray<GrupoDeFilas> = [
         formato: 'eur',
         comparar: MAS_ES_BUENO,
         valor: (c) => c.consumo.consumoUsd,
-        ayuda: `Sin el service fee: lo que la gente se financió en las clínicas. ${DEL_CONSUMO}`,
+        ayuda: `Sin el service fee: lo que los pacientes se financiaron en las clínicas. ${DEL_CONSUMO}`,
         destino: { vista: 'locales' },
       },
       {
@@ -116,7 +116,7 @@ export const GRUPOS_DE_FILAS: ReadonlyArray<GrupoDeFilas> = [
         comparar: MAS_ES_BUENO,
         valor: (c) => c.consumo.personas,
         ayuda:
-          'Pacientes distintos con cuota en algún financiamiento de la semana. En un financiamiento de grupo cuenta cada paciente que paga su parte, no solo quien abrió la cuenta.',
+          'Pacientes distintos con cuota en algún financiamiento de la semana. Quien se financió dos veces cuenta una vez.',
         destino: { vista: 'gente', sub: 'resumen' },
       },
       {
@@ -125,7 +125,7 @@ export const GRUPOS_DE_FILAS: ReadonlyArray<GrupoDeFilas> = [
         formato: 'numero',
         comparar: MAS_ES_BUENO,
         valor: (c) => c.consumo.locales,
-        ayuda: 'Clínicas que confirmaron al menos un financiamiento en la semana. Los de prueba no cuentan.',
+        ayuda: 'Clínicas que confirmaron al menos un financiamiento en la semana. Las de prueba no cuentan.',
         destino: { vista: 'locales' },
       },
     ],
@@ -181,7 +181,7 @@ export const GRUPOS_DE_FILAS: ReadonlyArray<GrupoDeFilas> = [
         formato: 'eur',
         comparar: EUR_NEUTRO,
         valor: (c) => c.cobro.vencian.financedUsd,
-        ayuda: 'Sin el service fee: la parte facturada de las cuotas que vencían.',
+        ayuda: 'Sin el service fee: la parte financiada de las cuotas que vencían.',
         destino: { vista: 'mora', sub: 'resumen' },
         sumando: true,
       },
@@ -248,7 +248,7 @@ export const GRUPOS_DE_FILAS: ReadonlyArray<GrupoDeFilas> = [
         formato: 'eur',
         comparar: MAS_ES_MALO,
         valor: (c) => c.riesgo.vencido.financedUsd,
-        ayuda: 'Sin el service fee: la parte facturada de lo vencido.',
+        ayuda: 'Sin el service fee: la parte financiada de lo vencido.',
         destino: { vista: 'mora', sub: 'resumen' },
         sumando: true,
       },
@@ -288,20 +288,9 @@ export const GRUPOS_DE_FILAS: ReadonlyArray<GrupoDeFilas> = [
   },
   {
     id: 'gente',
-    titulo: 'Gente',
+    titulo: 'Pacientes',
     tono: 'gerencia',
     filas: [
-      {
-        id: 'solicitaron',
-        nombre: 'Solicitaron el código',
-        formato: 'numero',
-        comparar: MAS_ES_BUENO,
-        valor: (c) => c.gente.solicitaron,
-        ayuda:
-          'Pacientes que pidieron el código por SMS en la semana, se verificaran o no. No son registros. Sin cuentas de prueba.',
-        destino: { vista: 'gente', sub: 'resumen' },
-        soloSinLocal: true,
-      },
       {
         id: 'registros',
         nombre: 'Registros',
@@ -309,7 +298,7 @@ export const GRUPOS_DE_FILAS: ReadonlyArray<GrupoDeFilas> = [
         comparar: MAS_ES_BUENO,
         valor: (c) => c.gente.registros,
         ayuda:
-          'Pacientes verificadas: su verificación de identidad se aprobó en la semana. Quien pidió el código y no se verificó no cuenta. Sin cuentas de prueba.',
+          'Pacientes que una clínica dio de alta en la semana, en el mismo paso que su primer financiamiento. Sin cuentas de prueba.',
         destino: { vista: 'gente', sub: 'resumen' },
         soloSinLocal: true,
       },
@@ -320,7 +309,7 @@ export const GRUPOS_DE_FILAS: ReadonlyArray<GrupoDeFilas> = [
         comparar: MAS_ES_BUENO,
         valor: (c) => c.gente.primerConsumo,
         ayuda:
-          'Pacientes cuyo primer financiamiento en Helios cayó en la semana (su parte en un grupo también cuenta). Con una clínica, los que se financiaron por primera vez en esa clínica. No es «nuevos en algún clínica» de Semana › Resumen.',
+          'Pacientes cuyo primer financiamiento en Helios cayó en la semana. Con una clínica, los que se financiaron por primera vez en esa clínica. No es «nuevos en alguna clínica» de Semana › Resumen.',
         destino: { vista: 'gente', sub: 'resumen' },
       },
     ],
@@ -337,7 +326,7 @@ export const GRUPOS_DE_FILAS: ReadonlyArray<GrupoDeFilas> = [
         comparar: EUR_NEUTRO,
         valor: (c) => c.caja.transferidoALocalesUsd,
         ayuda:
-          'Lo que se les pagó a las clínicas en la semana, por el día en que se registró el pago. Con una clínica, lo que se le pagó a ese.',
+          'Lo que se les pagó a las clínicas en la semana, por el día en que se registró el pago. Con una clínica, lo que se le pagó a ella.',
         destino: { vista: 'caja', sub: 'balance' },
       },
       {
@@ -396,7 +385,7 @@ export function motivoDeRaya(fila: DefinicionDeFila): string {
   return 'Sin dato'
 }
 
-/** Si una fila puede quedarse sin dato en alguna semana: una tasa sin nada que medir o el ticket sin consumos. */
+/** Si una fila puede quedarse sin dato en alguna semana: una tasa sin nada que medir o el ticket sin financiamientos. */
 export function puedeIrEnRaya(fila: DefinicionDeFila): boolean {
   return fila.formato === 'pct' || fila.id === 'ticket-medio'
 }
@@ -427,9 +416,9 @@ export function cambioDeFila(
 }
 
 /**
- * Ninguna semana tuvo nada que contar: ni consumos, ni cuotas que vencieran,
- * ni nada vencido, ni cargos, ni solicitudes del código, ni registros, ni
- * pagos a locales. Entonces la
+ * Ninguna semana tuvo nada que contar: ni financiamientos, ni cuotas que
+ * vencieran, ni nada vencido, ni cargos, ni registros, ni pagos a clínicas.
+ * Entonces la
  * tabla es una pared de ceros y se dice con una frase.
  */
 export function sinMovimiento(respuesta: RespuestaSemanas): boolean {

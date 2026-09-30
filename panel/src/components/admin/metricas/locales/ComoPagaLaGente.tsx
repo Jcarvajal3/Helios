@@ -28,13 +28,13 @@ export function ComoPagaLaGente({ d, parametros }: { d: LocalesDeLaSemana; param
       <ChartCard
         className="h-full"
         titulo="Cuota 1 cobrada a tiempo (%), por clínica"
-        info={`Por clínica y semana de financiamiento (las cuatro anteriores a la elegida): las cuotas 1 pagadas a tiempo entre las que ya cerraron su plazo (el vencimiento más ${d.graciaDias} días de gracia). Un pago cuenta el día en que se reportó. Una semana reciente puede ir a medias. Es la misma cuenta que Cobros.`}
+        info={`Por clínica y semana de financiamiento (las cuatro anteriores a la elegida): las cuotas 1 pagadas a tiempo entre las que ya cerraron su plazo (el vencimiento más ${d.graciaDias} días de gracia). Un pago cuenta el día en que se registró. Una semana reciente puede ir a medias. Es la misma cuenta que Cobros.`}
         resumen="Por semana de financiamiento, las cuatro anteriores a la elegida."
         tabla={filas.length > 0 ? <TablaDePago semanas={semanas} filas={filas} /> : undefined}
       >
         {filas.length === 0 ? (
           <p className="type-panel-body text-panel-muted">
-            Ninguna clínica vendió en las cuatro semanas anteriores a esta.
+            Ninguna clínica financió nada en las cuatro semanas anteriores a esta.
           </p>
         ) : (
           <ul className="flex flex-col gap-4">
@@ -66,7 +66,7 @@ function filasDeLaCelda(c: CeldaDePago): FilaDelGlobo[] {
   if (c.estado === 'sin-veredicto') {
     return [{ key: 'plazo', rotulo: 'cuotas 1, todas en plazo todavía', valor: String(c.cuotas), color: SERIE.vacio, forma: 'punto' }]
   }
-  return [{ key: 'ventas', rotulo: 'financiamientos: no vendió esa semana', valor: '0', color: SERIE.vacio, forma: 'punto' }]
+  return [{ key: 'ventas', rotulo: 'financiamientos: ninguno esa semana', valor: '0', color: SERIE.vacio, forma: 'punto' }]
 }
 
 /** Las cuatro semanas de un local, con el globo del kit. */

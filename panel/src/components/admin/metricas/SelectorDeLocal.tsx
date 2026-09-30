@@ -141,14 +141,14 @@ export function SelectorDeLocal({
         {locales.isPending && <p className="px-2.5 py-2 type-panel-caption text-panel-muted">Leyendo las clínicas…</p>}
 
         {activos.length > 0 && (
-          <Grupo titulo="Activos">
+          <Grupo titulo="Activas">
             {activos.map((l) => (
               <Opcion key={l.id} rotulo={l.name} puesta={l.id === local} onElegir={() => elegir(l.id)} />
             ))}
           </Grupo>
         )}
         {otros.length > 0 && (
-          <Grupo titulo="Pausados o terminados">
+          <Grupo titulo="Pausadas o terminadas">
             {otros.map((l) => (
               <Opcion key={l.id} rotulo={l.name} puesta={l.id === local} onElegir={() => elegir(l.id)} />
             ))}

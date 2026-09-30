@@ -24,7 +24,7 @@ import type { LecturaGeneral } from './lectura'
  *     fee + IVA» dentro de la tarjeta.
  *   - Lo ganado va en dos tarjetas: el service fee SIN IVA y los cargos por
  *     atraso. Ninguna se suma a la otra ni al facturado.
- *   - Lo perdido va sin fee: es lo que Ronda ya le pagó al local.
+ *   - Lo perdido va sin fee: es lo que Helios ya le pagó al local.
  *   - La caja y lo que se debe a los locales son del libro y de Pagos a
  *     locales, las mismas cifras que en Caja.
  */

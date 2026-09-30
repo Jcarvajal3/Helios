@@ -27,7 +27,7 @@ export function domingoDeLaSemana(lunes: string): string {
 
 /** '21–27 sep', o '31 ago–6 sep' si la semana cruza de mes. Para una lista o un eje. */
 /**
- * El nombre de una cohorte: A1 es la semana del primer consumo de Ronda y
+ * El nombre de una cohorte: A1 es la semana del primer consumo de Helios y
  * cada semana siguiente suma uno, haya tenido consumo o no. Así el nombre de
  * una semana no cambia con el local elegido ni cuando llegan semanas nuevas.
  * `primerLunes` es el lunes de la cohorte más vieja de TODOS los locales.

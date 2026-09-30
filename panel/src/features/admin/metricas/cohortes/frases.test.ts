@@ -44,7 +44,7 @@ const s21 = leerCohorte(SEMANA_21)
 
 /** Todo importe de la frase va seguido de su desglose entre paréntesis. */
 function importesConDesglose(f: string): boolean {
-  const importes = f.match(/€[\d.]+,\d\d(?! \+ service fee)(?!\))/g) ?? []
+  const importes = f.match(/\$[\d.]+,\d\d(?! \+ service fee)(?!\))/g) ?? []
   return importes.every((imp) => f.includes(`${imp} (financiado $`))
 }
 

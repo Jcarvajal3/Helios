@@ -63,14 +63,14 @@ export function CifrasDelLocal({
         titulo="Financiamientos"
         valor={String(l.consumos)}
         delta={consumosFrenteALaAnterior(l)}
-        info={`Financiamientos confirmados: uno de grupo es uno solo. El cambio es frente a ${ref}.`}
+        info={`Financiamientos confirmados aquí. El cambio es frente a ${ref}.`}
         pie={`${l.noches} ${l.noches === 1 ? 'día' : 'días'} con financiamientos`}
         chispa={chispa(serie?.consumos ?? [], 'Financiamientos de las últimas ocho semanas')}
       />
       <CifraConTendencia
         titulo="Pacientes"
         valor={String(l.personas)}
-        info="Pacientes distintos con una cuota en los financiamientos de esta semana aquí: en un grupo, cada integrante, no solo quien abrió la cuenta."
+        info="Pacientes distintos con una cuota en los financiamientos de esta semana aquí."
         pie={`${recurrentes(l)} ${recurrentes(l) === 1 ? 'repite' : 'repiten'} en la clínica`}
         chispa={chispa(serie?.personas ?? [], 'Pacientes, últimas ocho semanas')}
       />
@@ -84,7 +84,7 @@ export function CifrasDelLocal({
       <CifraConTendencia
         titulo="Pacientes nuevos en la clínica"
         valor={String(l.nuevas)}
-        info="Pacientes cuya primera cuota en esta clínica es de esta semana, se hubieran financiado antes en otro o no."
+        info="Pacientes cuya primera cuota en esta clínica es de esta semana, se hubieran financiado antes en otra o no."
         pie={l.personas > 0 ? `${pctEntero((100 * l.nuevas) / l.personas)} de sus pacientes` : 'Nadie se financió'}
         chispa={chispa(serie?.nuevas ?? [], 'Pacientes nuevos en la clínica, últimas ocho semanas')}
       />
@@ -92,7 +92,7 @@ export function CifrasDelLocal({
         titulo="Cobrado a tiempo (%)"
         valor={l.aTiempo.pct === null ? '—' : formatPorcentaje(l.aTiempo.pct, 0)}
         senal={senalPorUmbralAlto(l.aTiempo.pct, umbralCobroATiempo(parametros), pctEntero)}
-        info={`Cuotas de financiamientos en esta clínica que vencían esta semana y ya cerraron su plazo (el vencimiento más ${d.graciaDias} días de gracia): las pagadas dentro de él entre todas ellas. Un pago cuenta el día en que se reportó.`}
+        info={`Cuotas de financiamientos en esta clínica que vencían esta semana y ya cerraron su plazo (el vencimiento más ${d.graciaDias} días de gracia): las pagadas dentro de él entre todas ellas. Un pago cuenta el día en que se registró.`}
         pie={pieDelCobro(l.aTiempo)}
         link={{ to: '/admin/metricas', search: busquedaDeMetricas('mora', {}, comun) }}
       />

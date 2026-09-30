@@ -20,7 +20,7 @@ import type { LecturaGeneral } from './lectura'
  * Métricas › Global › Resumen (la carpeta General): lo global del negocio
  * desde el primer día, sin
  * semanas. La gente, el consumo, el dinero, el riesgo, lo que deja cada
- * €100 y cómo ha crecido.
+ * $100 y cómo ha crecido.
  *
  * Todo sale de una lectura (`admin_metricas_general`), que no pide la semana:
  * el marco cambia su selector por «Desde el inicio». Con un local elegido, lo

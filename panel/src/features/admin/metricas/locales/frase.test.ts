@@ -48,7 +48,7 @@ igual(
 )
 igual(
   texto(fraseDeLaSemana({ ...d, locales: [{ ...lq, consumoUsd: 100 }, { ...em, consumoUsd: 100 }] })),
-  'Esta semana se financió en **2 clínicas**. Empatan La Quinta Bar y El Marchante, con **$100,00** sin fee cada uno.',
+  'Esta semana se financió en **2 clínicas**. Empatan La Quinta Bar y El Marchante, con **$100,00** sin fee cada una.',
   'un empate arriba se dice como empate',
 )
 igual(
@@ -67,12 +67,12 @@ igual(
 )
 igual(
   texto(fraseDelLocal(cerrada, { ...lq, nuevas: 0 })),
-  'La Quinta Bar vendió la semana del 14 al 20 sep **$548,40 financiado sin fee** en 17 financiamientos de **27 pacientes**, **7 % más** que la semana anterior.',
+  'La Quinta Bar registró la semana del 14 al 20 sep **$548,40 financiado sin fee** en 17 financiamientos de **27 pacientes**, **7 % más** que la semana anterior.',
   'una semana cerrada, sin gente nueva',
 )
 igual(
   texto(fraseDelLocal(d, { ...sv, consumoAnteriorUsd: 45 })),
-  'Sin Financiamientos todavía no ha financiado esta semana. En la semana pasada a la misma altura llevaba **$45,00** sin fee.',
+  'Sin Financiamientos todavía no ha financiado nada esta semana. En la semana pasada a la misma altura llevaba **$45,00** sin fee.',
   'sin financiamientos, con lo que llevaba la anterior',
 )
 

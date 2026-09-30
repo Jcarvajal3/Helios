@@ -33,7 +33,6 @@ export const inicio = [
       'qué hago ahora',
       'lo más urgente',
       'empezar la cola de pagos',
-      'empezar la cola de verificaciones',
       'empezar la cola de promesas',
     ],
     destino: { to: '/admin' },

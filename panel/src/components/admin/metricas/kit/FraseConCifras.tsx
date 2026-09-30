@@ -5,14 +5,14 @@ export type ParteDeFrase = string | { cifra: string }
 
 /**
  * La frase de arriba de una pestaña, con los números dentro: «La semana va
- * por **€912,40 de consumo**, un 12 % más que la anterior…». Una frase con
+ * por **$912,40 de consumo**, un 12 % más que la anterior…». Una frase con
  * las cifras vale más que un párrafo, y se lee antes que las tarjetas.
  *
  * Las cifras van en blanco y el resto en gris; ninguna en color: el estado lo
  * dicen las pastillas de las tarjetas. La frase la arma la pestaña con sus
  * datos (en un `.ts` con su prueba); esto solo la pinta.
  *
- *   <FraseConCifras partes={['La semana va por ', { cifra: '€912,40 de consumo' }, '.']} />
+ *   <FraseConCifras partes={['La semana va por ', { cifra: '$912,40 de consumo' }, '.']} />
  */
 export function FraseConCifras({
   partes,

@@ -141,5 +141,5 @@ export function nombreDelCsv(hoy: string, nombreLocal: string | null): string {
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-|-$/g, '')}`
     : ''
-  return `cohortes-de-consumo${local}-${hoy}`
+  return `cohortes-de-financiamiento${local}-${hoy}`
 }

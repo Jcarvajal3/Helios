@@ -31,12 +31,12 @@ export type CifrasDePeriodo = {
     consumos: number
     /** `null` sin consumos. */
     ticketMedioUsd: number | null
-    /** Personas con cuota: en un grupo, todas las que pagan su parte. */
+    /** Pacientes distintos con cuota. */
     personas: number
     locales: number
   }
   ingreso: {
-    /** El service fee de Ronda SIN IVA. Nunca se suma al consumo. */
+    /** El service fee de Helios SIN IVA. Nunca se suma al consumo. */
     servicioUsd: number
     /** Cargos por atraso devengados, sin IVA y sin los condonados. */
     cargosPorAtrasoUsd: number
@@ -63,14 +63,14 @@ export type CifrasDePeriodo = {
   }
   gente: {
     /**
-     * Registros: personas cuya verificación de identidad se aprobó en el
-     * tramo. `null` con un local: los registros no son de ningún local.
+     * Registros: pacientes que una clínica dio de alta en el tramo. `null`
+     * con una clínica: los registros no se parten por clínica.
      */
     registros: number | null
-    /** La misma cifra que `registros`: todo registro está verificado. */
+    /** La misma cifra que `registros` (heredada de Ronda: allí era el KYC aprobado). */
     verificados: number | null
     primerConsumo: number
-    /** Pidieron el código en el tramo, se verificaran o no. No son registros. `null` con un local. */
+    /** Heredado de Ronda (pidieron el código por SMS). En Helios no hay código: no se enseña. `null` con una clínica. */
     solicitaron: number | null
   }
   caja: {

@@ -12,7 +12,7 @@ import type { CobroATiempo, General, PorCadaCien, SemanaDeLaCurva } from './tipo
 // ═══════════════════════════════════════════════════════════════════════════
 // Lo que la pestaña General escribe con las cifras de la base: la frase de
 // arriba, los pies de las tarjetas, las pastillas de estado, las líneas de
-// «por cada €100» y los puntos de la curva.
+// «por cada $100» y los puntos de la curva.
 //
 // Ninguna cifra de negocio nace aquí. Solo se escriben las que da la base y,
 // como mucho, la parte de una sobre otra (`porcentaje`). Ningún texto suma
@@ -84,15 +84,7 @@ export function pieHanComprado(g: General): string | undefined {
 }
 
 /** El pie de «Registros»: lo que es un registro, en forma y no en párrafo. */
-export const PIE_REGISTROS = 'Con la identidad verificada'
-
-/** «82,2 % llegó a registrarse»: qué parte de quien pidió el código se verificó. */
-export function pieSolicitaron(g: General): string | undefined {
-  const { solicitaron, registros } = g.gente
-  if (solicitaron === null || registros === null) return undefined
-  const parte = porcentaje(registros, solicitaron)
-  return parte === null ? undefined : `${formatPct(parte)} llegó a registrarse`
-}
+export const PIE_REGISTROS = 'Dados de alta por las clínicas'
 
 // Los pies son de una línea y se cortan si no caben: en una fila de cinco
 // tarjetas caben unos treinta caracteres. Lo largo va al InfoDot.
@@ -120,7 +112,7 @@ export function pieDeCuotas(cuotas: number, personas: number): string {
   return `${contar(cuotas, 'cuota', 'cuotas')} de ${contar(personas, 'paciente', 'pacientes')}`
 }
 
-/** «De ello, cobrado €148,00», o que no hay ninguno. */
+/** «De ello, cobrado $148,00», o que no hay ninguno. */
 export function pieCargos(g: General): string {
   const c = g.dinero.cargos
   if (c.cargos === 0) return 'Ninguno todavía'
@@ -176,7 +168,7 @@ export function senalCuotaATiempo(
   return senalPorUmbralAlto(c?.pct ?? null, umbralCobroATiempo(p), pctDeUmbral)
 }
 
-// ── Por cada €100 ──────────────────────────────────────────────────────────
+// ── Por cada $100 ──────────────────────────────────────────────────────────
 
 export type LineaPorCadaCien = { rotulo: string; valor: string; info: string; total?: boolean }
 
@@ -186,7 +178,7 @@ function conSigno(valor: number): string {
 }
 
 /**
- * Las líneas de «por cada €100»: el service fee y los cargos suman y el
+ * Las líneas de «por cada $100»: el service fee y los cargos suman y el
  * margen cierra. Lo perdido no va en su línea: es la misma cifra que
  * «Impago (%)» del bloque Riesgo, y el margen dice que ya lo resta. El fee se
  * ve como sumando, nunca sumado al consumo. `null` sin consumo: no hay nada
@@ -215,10 +207,10 @@ export function lineasPorCadaCien(p: PorCadaCien): LineaPorCadaCien[] | null {
   ]
 }
 
-/** «318 consumos con €7.373,00 facturados (sin fee)». */
+/** «318 financiamientos con $7.373,00 financiados (sin fee)». */
 export function resumenPorCadaCien(p: PorCadaCien): string {
   if (p.consumos === 0) return 'Todavía no hay financiamientos.'
-  return `${contar(p.consumos, 'financiamiento', 'financiamientos')} con ${formatUsd(p.financedUsd)} facturados (sin fee)`
+  return `${contar(p.consumos, 'financiamiento', 'financiamientos')} con ${formatUsd(p.financedUsd)} financiados (sin fee)`
 }
 
 /**
@@ -270,7 +262,7 @@ export function resumenDeRegistros(g: General): string | undefined {
   return `${contar(g.gente.registros, 'registro', 'registros')} en ${contar(g.curva.length, 'semana', 'semanas')}`
 }
 
-/** «€7.373,00 en 12 semanas, sin el service fee». */
+/** «$7.373,00 en 12 semanas, sin el service fee». */
 export function resumenDeConsumo(g: General): string | undefined {
   if (g.curva.length === 0) return undefined
   return `${formatUsd(g.consumo.financedUsd)} en ${contar(g.curva.length, 'semana', 'semanas')}, sin el service fee`

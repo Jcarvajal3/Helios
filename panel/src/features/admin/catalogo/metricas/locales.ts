@@ -1,14 +1,13 @@
 import type { Entrada } from '../tipos'
 
 /**
- * Las cifras nuevas de la pestaña Locales de Métricas, para la búsqueda
+ * Las cifras nuevas de la pestaña Clínicas de Métricas, para la búsqueda
  * (Ctrl K) y el asistente.
  *
- * Las que ya existían no se repiten aquí: «Rendimiento de los locales»
- * (`catalogo/directorio.ts`) y «Locales por volumen» (`catalogo/riesgo.ts`)
- * ya apuntan a esta pestaña. Todas salen de `admin_metricas_locales` salvo
- * las noches (`admin_nights`), y todas respetan la semana y el local de
- * arriba.
+ * Las que ya existían no se repiten aquí: «Rendimiento de las clínicas»
+ * (`catalogo/directorio.ts`) y «Clínicas por volumen» (`catalogo/riesgo.ts`)
+ * ya apuntan a esta pestaña. Todas salen de `admin_metricas_locales` y todas
+ * respetan la semana y la clínica de arriba.
  */
 export const metricasLocales = [
   {
@@ -27,7 +26,7 @@ export const metricasLocales = [
       'crecimiento por clínica',
     ],
     destino: { to: '/admin/metricas', search: { vista: 'locales' } },
-    que: 'Sin el service fee: el financiado de cada clínica en las ocho últimas semanas hasta la elegida, con una escala común para que las alturas se comparen. La nota dice cuándo empezó a vender una clínica nueva o cómo va frente a la semana anterior a la misma altura.',
+    que: 'Sin el service fee: el financiado de cada clínica en las ocho últimas semanas hasta la elegida, con una escala común para que las alturas se comparen. La nota dice cuándo empezó a financiar una clínica nueva o cómo va frente a la semana anterior a la misma altura.',
     rpc: 'admin_metricas_locales',
   },
   {
@@ -37,11 +36,11 @@ export const metricasLocales = [
     descripcion: 'La cuota 1 cobrada a tiempo de lo financiado en cada clínica, semana de financiamiento a semana de financiamiento.',
     espacio: 'metricas',
     sinonimos: [
-      'cómo paga la gente de cada clínica',
-      'cómo paga la gente',
+      'cómo pagan los pacientes de cada clínica',
+      'cómo pagan los pacientes',
       'cobro a tiempo por clínica',
       'mora por clínica',
-      'calidad de la gente de una clínica',
+      'calidad de los pacientes de una clínica',
       'qué clínica paga mejor',
       'primera cuota por clínica',
     ],
@@ -55,7 +54,7 @@ export const metricasLocales = [
     titulo: 'Vencido por clínica (financiamiento + fee)',
     descripcion: 'Las cuotas vencidas y sin pagar de los financiamientos en cada clínica (financiamiento + fee), con su financiamiento y su service fee por separado.',
     espacio: 'metricas',
-    sinonimos: ['vencido de la gente de una clínica', 'vencido de su gente', 'deuda por clínica', 'vencido por clínica', 'cartera por clínica', 'impago de una clínica'],
+    sinonimos: ['vencido de los pacientes de una clínica', 'vencido de sus pacientes', 'deuda por clínica', 'vencido por clínica', 'cartera por clínica', 'impago de una clínica'],
     destino: { to: '/admin/metricas', search: { vista: 'locales' } },
     que: 'Las cuotas vencidas y sin pagar de lo financiado en cada clínica, al cierre de la semana elegida (hoy, si está en curso), en financiamiento + fee: su financiamiento y el service fee (IVA incluido), siempre por separado. Lo dado por perdido no entra. La suma de las clínicas es el vencido de toda la cartera.',
     rpc: 'admin_metricas_locales',

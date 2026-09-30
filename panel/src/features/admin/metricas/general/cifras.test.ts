@@ -5,7 +5,7 @@
  *
  * Lo que se vigila: que la frase no sume el service fee al consumo, que un
  * denominador que falta dé un guion y no un 0 %, que las pastillas solo
- * salgan al cruzar un umbral, que «por cada €100» cierre con su margen y que
+ * salgan al cruzar un umbral, que «por cada $100» cierre con su margen y que
  * la curva no pinte como cero lo que no se parte por local.
  */
 import type { Parametros } from '@/features/admin/parametros'
@@ -27,7 +27,6 @@ import {
   pieMora,
   piePerdido,
   piePorPagar,
-  pieSolicitaron,
   puntosDeConsumo,
   puntosDeRegistros,
   resumenDeConsumo,
@@ -105,8 +104,6 @@ igual(leer(fraseGeneral({ ...todos, desde: null }, null)), 'Todavía no hay regi
 console.log('\n── Los pies ──────────────────────────────────────────────────')
 igual(pieHanComprado(todos), '134 de 194 registros', 'han comprado: de cuántos registros')
 igual(pieHanComprado(local), undefined, 'con clínica no hay pie de registros')
-igual(pieSolicitaron(todos), '82,2 % llegó a registrarse', 'solicitaron el código: qué parte se registró')
-igual(pieSolicitaron(local), undefined, 'con clínica no hay pie de solicitudes')
 igual(pieDeQuienesConsumieron(124, todos), '92,5 % de los pacientes', 'activos sobre quienes se han financiado')
 igual(pieDeQuienesConsumieron(101, local), '75,4 % de los pacientes de la clínica', 'con clínica, «de la clínica»')
 igual(
@@ -159,7 +156,7 @@ console.log('\n── Por cada $100 ──────────────�
     'suma lo que entra y cierra con el margen, que ya resta el impago',
   )
   igual(lineasPorCadaCien({ ...todos.porCadaCien, por100: null }), null, 'sin financiamiento, nada que repartir')
-  igual(resumenPorCadaCien(todos.porCadaCien), '318 financiamientos con $7.373,00 facturados (sin fee)', 'de dónde salen los cien')
+  igual(resumenPorCadaCien(todos.porCadaCien), '318 financiamientos con $7.373,00 financiados (sin fee)', 'de dónde salen los cien')
   igual(resumenPorCadaCien({ ...todos.porCadaCien, consumos: 0 }), 'Todavía no hay financiamientos.', 'sin financiamientos')
   igual(
     notaDeMadurez(todos.porCadaCien),

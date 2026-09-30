@@ -47,14 +47,14 @@ const anterior = r.comparacion.cifras
 console.log('── El catálogo ───────────────────────────────────────────────')
 igual(
   GRUPOS_DE_FILAS.map((g) => g.titulo),
-  ['Financiamiento', 'Ingreso de Helios', 'Cobro', 'Riesgo', 'Gente', 'Caja'],
+  ['Financiamiento', 'Ingreso de Helios', 'Cobro', 'Riesgo', 'Pacientes', 'Caja'],
   'los seis grupos de la maqueta, en su orden',
 )
 igual(new Set(FILAS.map((f) => f.id)).size, FILAS.length, 'ningún id repetido')
 igual(
   FILAS.filter((f) => f.soloSinLocal).map((f) => f.id),
-  ['solicitaron', 'registros', 'en-caja'],
-  'no se parten por clínica: quien pidió el código, los registros y la caja',
+  ['registros', 'en-caja'],
+  'no se parten por clínica: los registros y la caja',
 )
 
 console.log('── La regla del fee ──────────────────────────────────────────')

@@ -78,7 +78,7 @@ export function CurvaDeCobro({
 
   const marco = {
     titulo,
-    info: `Cobrado de la cuota ${curva.numero} de esta semana hasta cada día contado desde su vencimiento (por día operativo del reporte del pago) ÷ total de la cuota ${curva.numero}, en dólares con fee, frente a la media simple de las (hasta) cuatro semanas anteriores en los días que todas cerraron; la franja son los ${graciaDias} días de gracia, y su borde es lo cobrado a tiempo.`,
+    info: `Cobrado de la cuota ${curva.numero} de esta semana hasta cada día contado desde su vencimiento (por día operativo en que se registró el pago) ÷ total de la cuota ${curva.numero}, en dólares con fee, frente a la media simple de las (hasta) cuatro semanas anteriores en los días que todas cerraron; la franja son los ${graciaDias} días de gracia, y su borde es lo cobrado a tiempo.`,
     resumen: fraseDeLaCurva(curva, cuota),
     leyenda,
     controles,

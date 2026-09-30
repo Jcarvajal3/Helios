@@ -5,7 +5,7 @@ import { SERIE } from '@/components/charts'
 import { Badge, Tendencia, formatDay, formatUsd, formatPorcentaje } from '@/components/ui'
 import { ESTADOS_LOCAL } from '@/features/admin/estados'
 import { comoTendencia } from '@/features/admin/metricas/formato'
-import { frenteALaAnterior, pctEnGrupo, recurrentes, variacion } from '@/features/admin/metricas/locales/rendimiento'
+import { frenteALaAnterior, recurrentes, variacion } from '@/features/admin/metricas/locales/rendimiento'
 import { diaConNumero } from '@/features/admin/metricas/locales/semanas'
 import type { FilaLocal, LocalesDeLaSemana } from '@/features/admin/metricas/locales/tipos'
 import type { Parametros } from '@/features/admin/parametros'
@@ -50,8 +50,8 @@ export function rotuloDelCierre(cierre: LocalesDeLaSemana['cierre']): string {
 }
 
 /**
- * Las columnas de «Los locales en la semana». Las de la maqueta a la vista;
- * lo que era de Rendimiento (ciudad, estado, noches, grupos, mejor noche) y
+ * Las columnas de «Clínicas en la semana». Las de la maqueta a la vista;
+ * lo que era de Rendimiento (ciudad, estado, días con financiamientos, mejor día) y
  * las partes de cada importe, ocultas pero en el menú y en el CSV.
  */
 export function columnasDeLocales({
@@ -136,7 +136,7 @@ export function columnasDeLocales({
     {
       key: 'consumos',
       header: 'Financiamientos',
-      info: 'Financiamientos confirmados. Un financiamiento de grupo es uno solo, pague cuanta gente pague.',
+      info: 'Financiamientos confirmados de la clínica esta semana.',
       type: 'number',
       sortDir: 'desc',
       sort: orden((l) => l.consumos),
@@ -147,7 +147,7 @@ export function columnasDeLocales({
     {
       key: 'personas',
       header: 'Pacientes',
-      info: 'Pacientes distintos con una cuota en los financiamientos de la clínica esta semana: en un grupo, cada integrante, no solo quien abrió la cuenta. En «Todos», quien fue a dos clínicas cuenta una vez.',
+      info: 'Pacientes distintos con una cuota en los financiamientos de la clínica esta semana. En «Todas», quien fue a dos clínicas cuenta una vez.',
       type: 'number',
       sortDir: 'desc',
       sort: orden((l) => l.personas),
@@ -169,7 +169,7 @@ export function columnasDeLocales({
     {
       key: 'nuevas',
       header: 'Pacientes nuevos en la clínica',
-      info: 'Pacientes cuya primera cuota en ESTA clínica es de esta semana, se hubieran financiado antes en otro o no. Quien estrenó dos clínicas cuenta en los dos; en «Todos», una vez (pacientes nuevos en algún clínica, que no son los que se financiaron por primera vez en Helios).',
+      info: 'Pacientes cuya primera cuota en ESTA clínica es de esta semana, se hubieran financiado antes en otra o no. Quien estrenó dos clínicas cuenta en las dos; en «Todas», una vez (pacientes nuevos en alguna clínica, que no son los que se financiaron por primera vez en Helios).',
       type: 'number',
       sortDir: 'desc',
       sort: orden((l) => l.nuevas),
@@ -192,7 +192,7 @@ export function columnasDeLocales({
     {
       key: 'a-tiempo',
       header: 'Cobrado a tiempo (%)',
-      info: `Cuotas de financiamientos en esta clínica que vencían esta semana y ya cerraron su plazo (el vencimiento más ${d.graciaDias} días de gracia): las pagadas dentro de él entre todas ellas. Un pago cuenta el día en que se reportó. Las que siguen en plazo todavía no cuentan.`,
+      info: `Cuotas de financiamientos en esta clínica que vencían esta semana y ya cerraron su plazo (el vencimiento más ${d.graciaDias} días de gracia): las pagadas dentro de él entre todas ellas. Un pago cuenta el día en que se registró. Las que siguen en plazo todavía no cuentan.`,
       type: 'number',
       sortDir: 'desc',
       sort: orden((l) => l.aTiempo.pct),
@@ -383,30 +383,12 @@ export function columnasDeLocales({
       key: 'noches',
       header: 'Días con financiamientos',
       hidden: true,
-      info: 'Días con al menos un financiamiento. El día va de 10 de la mañana a 10 de la mañana.',
+      info: 'Días con al menos un financiamiento. El día operativo va de medianoche a medianoche, hora de Caracas.',
       type: 'number',
       sortDir: 'desc',
       sort: orden((l) => l.noches),
       csv: (l) => l.noches,
       cell: (l) => tenue(l, l.noches),
-    },
-
-    {
-      key: 'grupo',
-      header: 'Financiamientos en grupo (%)',
-      hidden: true,
-      info: 'Los financiamientos de grupo entre todos los financiamientos de la clínica esta semana.',
-      type: 'number',
-      sortDir: 'desc',
-      sort: orden(pctEnGrupo),
-      csv: (l) => {
-        const p = pctEnGrupo(l)
-        return p === null ? null : csvDinero(p, 1)
-      },
-      cell: (l) => {
-        const p = pctEnGrupo(l)
-        return tenue(l, p === null ? RAYA : formatPorcentaje(p))
-      },
     },
 
     {
@@ -432,7 +414,7 @@ export function columnasDeLocales({
 
     {
       key: 'mejor-noche-consumo',
-      header: 'Financiado de la mejor día (sin fee)',
+      header: 'Financiado del mejor día (sin fee)',
       hidden: true,
       type: 'number',
       sortDir: 'desc',

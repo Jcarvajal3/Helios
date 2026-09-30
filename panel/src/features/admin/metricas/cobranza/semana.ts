@@ -43,7 +43,7 @@ export function sumarDesgloses(a: Desglose, b: Desglose): Desglose {
 }
 
 /**
- * «Facturado €28,01 (sin fee) · service fee + IVA €6,49»: la línea que
+ * «Facturado $28,01 (sin fee) · service fee + IVA $6,49»: la línea que
  * acompaña SIEMPRE a una suma de cuotas (la regla del fee), con las palabras
  * del vocabulario de Métricas (las mismas que Cobros y Semana › Resumen). El
  * fee es payable − financed: lleva su IVA dentro.
@@ -52,7 +52,7 @@ export function textoDelDesglose({ financedUsd, feeUsd }: Pick<Desglose, 'financ
   return `Financiado ${formatUsd(financedUsd)} (sin fee) · service fee + IVA ${formatUsd(feeUsd)}`
 }
 
-/** «facturado €28,01 + service fee + IVA €6,49»: el desglose dentro de una frase o entre paréntesis. */
+/** «facturado $28,01 + service fee + IVA $6,49»: el desglose dentro de una frase o entre paréntesis. */
 export function desgloseEnLinea({ financedUsd, feeUsd }: Pick<Desglose, 'financedUsd' | 'feeUsd'>): string {
   return `financiado ${formatUsd(financedUsd)} + service fee + IVA ${formatUsd(feeUsd)}`
 }
@@ -260,8 +260,8 @@ export function resumenDeLosDias(dias: ReadonlyArray<DiaDeCobro>): {
  * desglose, y lo cobrado de ello como la parte que es, sin otro total. Lo
  * cobrado se mide HOY: en una semana pasada incluye lo que se pagó después.
  *
- *   «Hasta hoy vencían €342,28 en cuotas (facturado €278,00 (sin fee) ·
- *   service fee + IVA €64,28) y ya se ha cobrado el 72 %. Lo de hoy aún
+ *   «Hasta hoy vencían $342,28 en cuotas (facturado $278,00 (sin fee) ·
+ *   service fee + IVA $64,28) y ya se ha cobrado el 72 %. Lo de hoy aún
  *   puede pagarse.»
  */
 export function fraseDeLosDias(dias: ReadonlyArray<DiaDeCobro>, enCurso: boolean, hoy: string): ParteDeFrase[] {
