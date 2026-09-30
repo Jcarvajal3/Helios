@@ -1,0 +1,93 @@
+import type { Entrada } from '../tipos'
+
+/**
+ * Las cifras nuevas de la pestaña Locales de Métricas, para la búsqueda
+ * (Ctrl K) y el asistente.
+ *
+ * Las que ya existían no se repiten aquí: «Rendimiento de los locales»
+ * (`catalogo/directorio.ts`) y «Locales por volumen» (`catalogo/riesgo.ts`)
+ * ya apuntan a esta pestaña. Todas salen de `admin_metricas_locales` salvo
+ * las noches (`admin_nights`), y todas respetan la semana y el local de
+ * arriba.
+ */
+export const metricasLocales = [
+  {
+    tipo: 'cifra',
+    id: 'consumo-por-semana-de-cada-local',
+    titulo: 'Financiado por semana y clínica (sin fee)',
+    descripcion: 'El financiado de cada clínica semana a semana, sin el service fee, todos con la misma escala.',
+    espacio: 'metricas',
+    sinonimos: [
+      'financiamiento por semana de cada clínica',
+      'financiamiento por semana',
+      'pequeños múltiplos',
+      'evolución por clínica',
+      'financiamientos por semana por clínica',
+      'tendencia de las clínicas',
+      'crecimiento por clínica',
+    ],
+    destino: { to: '/admin/metricas', search: { vista: 'locales' } },
+    que: 'Sin el service fee: el financiado de cada clínica en las ocho últimas semanas hasta la elegida, con una escala común para que las alturas se comparen. La nota dice cuándo empezó a vender una clínica nueva o cómo va frente a la semana anterior a la misma altura.',
+    rpc: 'admin_metricas_locales',
+  },
+  {
+    tipo: 'cifra',
+    id: 'como-paga-la-gente-de-cada-local',
+    titulo: 'Cuota 1 cobrada a tiempo (%), por clínica',
+    descripcion: 'La cuota 1 cobrada a tiempo de lo financiado en cada clínica, semana de financiamiento a semana de financiamiento.',
+    espacio: 'metricas',
+    sinonimos: [
+      'cómo paga la gente de cada clínica',
+      'cómo paga la gente',
+      'cobro a tiempo por clínica',
+      'mora por clínica',
+      'calidad de la gente de una clínica',
+      'qué clínica paga mejor',
+      'primera cuota por clínica',
+    ],
+    destino: { to: '/admin/metricas', search: { vista: 'locales' } },
+    que: 'De las cuotas 1 de lo financiado en cada clínica cada semana, las pagadas a tiempo entre las que ya cerraron su plazo (el vencimiento más los días de gracia). Una semana sin financiamientos no es un cero, y una todavía en plazo no tiene veredicto. Es la misma cuenta que Métricas › Cobros.',
+    rpc: 'admin_metricas_locales',
+  },
+  {
+    tipo: 'cifra',
+    id: 'vencido-de-la-gente-de-un-local',
+    titulo: 'Vencido por clínica (financiamiento + fee)',
+    descripcion: 'Las cuotas vencidas y sin pagar de los financiamientos en cada clínica (financiamiento + fee), con su financiamiento y su service fee por separado.',
+    espacio: 'metricas',
+    sinonimos: ['vencido de la gente de una clínica', 'vencido de su gente', 'deuda por clínica', 'vencido por clínica', 'cartera por clínica', 'impago de una clínica'],
+    destino: { to: '/admin/metricas', search: { vista: 'locales' } },
+    que: 'Las cuotas vencidas y sin pagar de lo financiado en cada clínica, al cierre de la semana elegida (hoy, si está en curso), en financiamiento + fee: su financiamiento y el service fee (IVA incluido), siempre por separado. Lo dado por perdido no entra. La suma de las clínicas es el vencido de toda la cartera.',
+    rpc: 'admin_metricas_locales',
+  },
+  {
+    tipo: 'cifra',
+    id: 'se-le-transfiere-el-lunes',
+    titulo: 'Liquidación del cierre del lunes, por clínica (neto)',
+    descripcion: 'Lo que el cierre de caja del lunes siguiente le paga a cada clínica por las cuotas que vencen en la semana.',
+    espacio: 'metricas',
+    sinonimos: [
+      'lo que se le transfiere a cada clínica el lunes',
+      'se le transfiere el lunes',
+      'liquidación de la semana',
+      'pago a la clínica',
+      'transferencia a la clínica',
+      'cierre del lunes por clínica',
+      'cuánto le pagamos',
+    ],
+    destino: { to: '/admin/metricas', search: { vista: 'locales' } },
+    que: 'Por clínica, las liquidaciones de las cuotas que vencen de lunes a domingo, que el cierre de caja del lunes siguiente le transfiere se paguen o no: lo ya generado más lo que el cron generará hasta el domingo con las condiciones del día de cada financiamiento. Es su neto, que no lleva el service fee, y la misma cuenta que Pagos a clínicas. Lo atrasado de cierres anteriores va aparte: ese lunes también se paga, y con ello es lo que Pagos a clínicas llama «Sale este lunes (con lo atrasado)».',
+    rpc: 'admin_metricas_locales',
+  },
+  {
+    tipo: 'cifra',
+    id: 'cobrado-a-tiempo-en-la-semana-por-local',
+    titulo: 'Cobrado a tiempo (%) de las cuotas que vencían en la semana, por clínica',
+    descripcion: 'De las cuotas de los financiamientos en cada clínica que vencían en la semana, las pagadas a tiempo.',
+    espacio: 'metricas',
+    sinonimos: ['cobrado a tiempo en la semana, por clínica', 'a tiempo por clínica', 'puntualidad por clínica', 'cuotas de la semana por clínica'],
+    destino: { to: '/admin/metricas', search: { vista: 'locales' } },
+    que: 'Las cuotas de lo financiado en cada clínica que vencían entre el lunes y el domingo y ya cerraron su plazo, y cuántas se pagaron dentro de él. Las que siguen en plazo todavía no cuentan.',
+    rpc: 'admin_metricas_locales',
+  },
+] as const satisfies ReadonlyArray<Entrada>

@@ -1,0 +1,644 @@
+{
+  "$meta": {
+    "name": "Helios Design Tokens",
+    "version": "1.0.0",
+    "basedOn": "Material 3 Expressive",
+    "note": [
+      "FUENTE DE VERDAD ÚNICA. No edites los archivos generados.",
+      "Estructura heredada de Ronda (tokens/ronda.tokens.json). Shape, typography, motion, state y sizing",
+      "siguen verificados contra androidx.compose.material3 (ExpressiveMotionTokens.kt, ShapeTokens.kt,",
+      "TypeScaleTokens.kt, StateTokens.kt, Button*Tokens.kt, FabBaselineTokens.kt).",
+      "Los COLORES salen del logo de Helios (brand/helios-logo.svg), no de la regla tonal de M3.",
+      "Correr `node tokens/build.mjs` después de cualquier cambio: valida el contraste y falla si no llega a AA."
+    ]
+  },
+  "color": {
+    "comment": "Dos temas. `role` es el CLARO, el de por defecto (recepción de una clínica, pantalla con luz de día); `roleDark` es el oscuro, con las mismas claves. Los hex de marca salen del logo: el azul de la palabra (#0040B8) y el degradado del sol (#015CF1 → #0B6FFB → #A5D8FE / #C0E3FF). Las superficies no siguen el orden tonal de M3 al pie de la letra: se nombran por su papel en el armazón (`shell.surface`): `surfaceContainerLowest` es el lienzo, el plano más hondo, y `surfaceContainerLow` la tarjeta que flota encima; en claro el lienzo es gris azulado y la tarjeta blanca, en oscuro al revés de luz pero con el mismo orden. `logoWordmark` es el color de la palabra «Helios» en el logotipo: azul en claro, casi blanco en oscuro. `placeholder` es un tono propio, sin equivalente en M3, para texto de placeholder e iconos inactivos — nunca para texto real.",
+    "brand": {
+      "wordmark": "#0040B8",
+      "blue": "#015CF1",
+      "blueBright": "#0B6FFB",
+      "sky": "#A5D8FE",
+      "skyLight": "#C0E3FF"
+    },
+    "role": {
+      "primary": "#0040B8",
+      "onPrimary": "#FFFFFF",
+      "primaryContainer": "#DCE8FF",
+      "onPrimaryContainer": "#00205E",
+      "primaryDim": "#00338F",
+      "primaryBright": "#015CF1",
+      "secondary": "#0057D9",
+      "onSecondary": "#FFFFFF",
+      "secondaryContainer": "#E3F1FF",
+      "onSecondaryContainer": "#00306E",
+      "secondaryDim": "#0046AE",
+      "secondaryBright": "#0B6FFB",
+      "surface": "#FFFFFF",
+      "surfaceDim": "#DDE3EC",
+      "surfaceBright": "#FFFFFF",
+      "surfaceContainerLowest": "#F3F6FB",
+      "surfaceContainerLow": "#FFFFFF",
+      "surfaceContainer": "#F7F9FC",
+      "surfaceContainerHigh": "#EDF1F7",
+      "surfaceContainerHighest": "#E4EAF2",
+      "onSurface": "#0F1A2E",
+      "onSurfaceVariant": "#44506A",
+      "onSurfaceFaint": "#66728B",
+      "placeholder": "#7B869C",
+      "inverseSurface": "#1B2436",
+      "onInverseSurface": "#F2F5FA",
+      "outline": "#7D889E",
+      "outlineVariant": "#D3DAE5",
+      "error": "#C4221B",
+      "onError": "#FFFFFF",
+      "errorContainer": "#FDE8E6",
+      "onErrorContainer": "#7A120D",
+      "errorDim": "#9E1B15",
+      "warning": "#A55300",
+      "onWarning": "#FFFFFF",
+      "warningContainer": "#FFF0DA",
+      "onWarningContainer": "#5E3000",
+      "success": "#1A7A3A",
+      "onSuccess": "#FFFFFF",
+      "successContainer": "#E2F4E7",
+      "onSuccessContainer": "#0C4420",
+      "scrim": "#0A1020",
+      "shadow": "#0A1020",
+      "logoWordmark": "#0040B8"
+    },
+    "roleDark": {
+      "primary": "#8FC8FF",
+      "onPrimary": "#00214F",
+      "primaryContainer": "#0B3E8C",
+      "onPrimaryContainer": "#D9ECFF",
+      "primaryDim": "#62A9F2",
+      "primaryBright": "#C0E3FF",
+      "secondary": "#A5D8FE",
+      "onSecondary": "#002A55",
+      "secondaryContainer": "#123A6B",
+      "onSecondaryContainer": "#D6EBFF",
+      "secondaryDim": "#78B8F0",
+      "secondaryBright": "#C0E3FF",
+      "surface": "#0E1626",
+      "surfaceDim": "#0A0F1A",
+      "surfaceBright": "#2A3A58",
+      "surfaceContainerLowest": "#0A101C",
+      "surfaceContainerLow": "#111A2B",
+      "surfaceContainer": "#152033",
+      "surfaceContainerHigh": "#1C2940",
+      "surfaceContainerHighest": "#243350",
+      "onSurface": "#EEF3FB",
+      "onSurfaceVariant": "#B3BFD4",
+      "onSurfaceFaint": "#8591A9",
+      "placeholder": "#8E99AF",
+      "inverseSurface": "#EEF3FB",
+      "onInverseSurface": "#111A2B",
+      "outline": "#7F8BA3",
+      "outlineVariant": "#2A3650",
+      "error": "#FF6F63",
+      "onError": "#2B0300",
+      "errorContainer": "#5C1611",
+      "onErrorContainer": "#FFD8D3",
+      "errorDim": "#D9463B",
+      "warning": "#FFB84D",
+      "onWarning": "#2A1700",
+      "warningContainer": "#4A3000",
+      "onWarningContainer": "#FFDFA6",
+      "success": "#4CD27A",
+      "onSuccess": "#04210E",
+      "successContainer": "#10441F",
+      "onSuccessContainer": "#A8F0C0",
+      "scrim": "#000000",
+      "shadow": "#000000",
+      "logoWordmark": "#EAF3FF"
+    },
+    "gradient": {
+      "sun": [
+        "#015CF1",
+        "#A5D8FE"
+      ],
+      "sunDiagonal": [
+        "#0B6FFB",
+        "#C0E3FF"
+      ]
+    }
+  },
+  "font": {
+    "comment": "Outfit para display/headline/title: una geométrica redondeada, cercana a la palabra del logotipo. Source Sans 3 (la de Ronda) para body/label. Las dos salen de Google Fonts (el panel las importa en styles.css). Helios no tiene app, así que no hay nombres de familia de React Native.",
+    "family": {
+      "display": {
+        "css": "'Outfit', system-ui, -apple-system, 'Segoe UI', sans-serif"
+      },
+      "body": {
+        "css": "'Source Sans 3', system-ui, -apple-system, 'Segoe UI', sans-serif"
+      }
+    },
+    "weight": {
+      "regular": 400,
+      "medium": 500,
+      "semibold": 600,
+      "bold": 700,
+      "black": 900
+    }
+  },
+  "type": {
+    "comment": "15 roles M3 x 2 énfasis. size/line/tracking en px (dp/sp). `family` elige entre font.family.display y font.family.body.",
+    "displayLarge": {
+      "family": "display",
+      "size": 57,
+      "line": 64,
+      "tracking": -0.25,
+      "weight": 400
+    },
+    "displayLargeEmphasized": {
+      "family": "display",
+      "size": 57,
+      "line": 64,
+      "tracking": 0,
+      "weight": 500
+    },
+    "displayMedium": {
+      "family": "display",
+      "size": 45,
+      "line": 52,
+      "tracking": 0,
+      "weight": 400
+    },
+    "displayMediumEmphasized": {
+      "family": "display",
+      "size": 45,
+      "line": 52,
+      "tracking": 0,
+      "weight": 500
+    },
+    "displaySmall": {
+      "family": "display",
+      "size": 36,
+      "line": 44,
+      "tracking": 0,
+      "weight": 400
+    },
+    "displaySmallEmphasized": {
+      "family": "display",
+      "size": 36,
+      "line": 44,
+      "tracking": 0,
+      "weight": 500
+    },
+    "headlineLarge": {
+      "family": "display",
+      "size": 32,
+      "line": 40,
+      "tracking": 0,
+      "weight": 400
+    },
+    "headlineLargeEmphasized": {
+      "family": "display",
+      "size": 32,
+      "line": 40,
+      "tracking": 0,
+      "weight": 500
+    },
+    "headlineMedium": {
+      "family": "display",
+      "size": 28,
+      "line": 36,
+      "tracking": 0,
+      "weight": 400
+    },
+    "headlineMediumEmphasized": {
+      "family": "display",
+      "size": 28,
+      "line": 36,
+      "tracking": 0,
+      "weight": 500
+    },
+    "headlineSmall": {
+      "family": "display",
+      "size": 24,
+      "line": 32,
+      "tracking": 0,
+      "weight": 400
+    },
+    "headlineSmallEmphasized": {
+      "family": "display",
+      "size": 24,
+      "line": 32,
+      "tracking": 0,
+      "weight": 500
+    },
+    "titleLarge": {
+      "family": "display",
+      "size": 22,
+      "line": 28,
+      "tracking": 0,
+      "weight": 400
+    },
+    "titleLargeEmphasized": {
+      "family": "display",
+      "size": 22,
+      "line": 28,
+      "tracking": 0,
+      "weight": 500
+    },
+    "titleMedium": {
+      "family": "display",
+      "size": 16,
+      "line": 24,
+      "tracking": 0.15,
+      "weight": 500
+    },
+    "titleMediumEmphasized": {
+      "family": "display",
+      "size": 16,
+      "line": 24,
+      "tracking": 0.15,
+      "weight": 700
+    },
+    "titleSmall": {
+      "family": "display",
+      "size": 14,
+      "line": 20,
+      "tracking": 0.1,
+      "weight": 500
+    },
+    "titleSmallEmphasized": {
+      "family": "display",
+      "size": 14,
+      "line": 20,
+      "tracking": 0.1,
+      "weight": 700
+    },
+    "bodyLarge": {
+      "family": "body",
+      "size": 16,
+      "line": 24,
+      "tracking": 0.5,
+      "weight": 400
+    },
+    "bodyLargeEmphasized": {
+      "family": "body",
+      "size": 16,
+      "line": 24,
+      "tracking": 0.15,
+      "weight": 500
+    },
+    "bodyMedium": {
+      "family": "body",
+      "size": 14,
+      "line": 20,
+      "tracking": 0.25,
+      "weight": 400
+    },
+    "bodyMediumEmphasized": {
+      "family": "body",
+      "size": 14,
+      "line": 20,
+      "tracking": 0.25,
+      "weight": 500
+    },
+    "bodySmall": {
+      "family": "body",
+      "size": 12,
+      "line": 16,
+      "tracking": 0.4,
+      "weight": 400
+    },
+    "bodySmallEmphasized": {
+      "family": "body",
+      "size": 12,
+      "line": 16,
+      "tracking": 0.4,
+      "weight": 500
+    },
+    "labelLarge": {
+      "family": "body",
+      "size": 14,
+      "line": 20,
+      "tracking": 0.1,
+      "weight": 500
+    },
+    "labelLargeEmphasized": {
+      "family": "body",
+      "size": 14,
+      "line": 20,
+      "tracking": 0.1,
+      "weight": 700
+    },
+    "labelMedium": {
+      "family": "body",
+      "size": 12,
+      "line": 16,
+      "tracking": 0.5,
+      "weight": 500
+    },
+    "labelMediumEmphasized": {
+      "family": "body",
+      "size": 12,
+      "line": 16,
+      "tracking": 0.5,
+      "weight": 700
+    },
+    "labelSmall": {
+      "family": "body",
+      "size": 11,
+      "line": 16,
+      "tracking": 0.5,
+      "weight": 500
+    },
+    "labelSmallEmphasized": {
+      "family": "body",
+      "size": 11,
+      "line": 16,
+      "tracking": 0.5,
+      "weight": 700
+    }
+  },
+  "shape": {
+    "comment": "Escala M3 Expressive. largeIncreased (20), extraLargeIncreased (32) y extraExtraLarge (48) son las que añadió Expressive.",
+    "none": 0,
+    "extraSmall": 4,
+    "small": 8,
+    "medium": 12,
+    "large": 16,
+    "largeIncreased": 20,
+    "extraLarge": 28,
+    "extraLargeIncreased": 32,
+    "extraExtraLarge": 48,
+    "full": 999
+  },
+  "space": {
+    "0": 0,
+    "1": 4,
+    "2": 8,
+    "3": 12,
+    "4": 16,
+    "5": 20,
+    "6": 24,
+    "7": 28,
+    "8": 32,
+    "10": 40,
+    "12": 48,
+    "14": 56,
+    "16": 64,
+    "20": 80,
+    "24": 96,
+    "comment": "Grid base de 4dp de M3. La clave es el multiplicador: space.4 === 16px. Coincide con la escala por defecto de Tailwind, que es lo que consume Ronda-panel; Ronda-app lo lee como numero desde tokens.gen.ts."
+  },
+  "layout": {
+    "comment": "Window size classes de M3. `margin` es el margen horizontal de pantalla para cada clase.",
+    "breakpoint": {
+      "compact": 0,
+      "medium": 600,
+      "expanded": 840,
+      "large": 1200,
+      "extraLarge": 1600
+    },
+    "margin": {
+      "compact": 16,
+      "medium": 24,
+      "expanded": 24,
+      "large": 24,
+      "extraLarge": 24
+    },
+    "paneSpacing": 24,
+    "touchTarget": 48
+  },
+  "shell": {
+    "comment": "Capa semántica del armazón: qué superficie, qué radio y qué medida le toca a cada tipo de pieza. `surface` y `radius` guardan NOMBRES de rol (de color.role y de shape) y el generador los resuelve a su valor en cada tema, para que un cambio de paleta se propague solo.",
+    "surface": {
+      "comment": "Claves de color.role. La escalera va de más profundo a más elevado.",
+      "canvas": "surfaceContainerLowest",
+      "card": "surfaceContainerLow",
+      "control": "surfaceContainerHigh",
+      "inset": "surfaceContainerHighest",
+      "bar": "surface"
+    },
+    "radius": {
+      "comment": "Claves de shape. Solo hay dos formas: tarjeta y píldora.",
+      "card": "extraLarge",
+      "control": "full",
+      "pressedCard": "large"
+    },
+    "padding": {
+      "comment": "Margen interior por tipo de pieza.",
+      "card": 20,
+      "control": 20,
+      "row": 16
+    },
+    "size": {
+      "comment": "Alturas y diámetros fijos del armazón.",
+      "control": 56,
+      "chip": 40,
+      "avatar": 44,
+      "meter": 10
+    },
+    "gap": {
+      "comment": "El ritmo vertical, en cinco pasos y dos agrupaciones. Tener nombres y no números es lo que impide que aparezca un margen suelto: para añadir uno hay que justificar un peldaño nuevo.",
+      "tight": 4,
+      "inner": 12,
+      "group": 20,
+      "block": 32,
+      "section": 48,
+      "stack": 8,
+      "list": 12
+    }
+  },
+  "size": {
+    "button": {
+      "comment": "5 tamaños de M3 Expressive. `shapeRound` es el reposo, `shapePressed` el destino del morph al presionar. `label` apunta a un rol de `type`. Nota: M3 asigna labelLarge a xs/s, pero aquí `label` vive en Source Sans y `title` en Montserrat, así que las etiquetas de botón se partirían entre dos familias según el tamaño. titleSmall tiene métricas idénticas a labelLarge (14/20, tracking 0.1, peso 500) y mantiene Montserrat en los cinco tamaños.",
+      "xs": {
+        "height": 32,
+        "shapeRound": "full",
+        "shapeSquare": "medium",
+        "shapePressed": "small",
+        "paddingX": 16,
+        "icon": 20,
+        "gap": 8,
+        "outline": 1,
+        "label": "titleSmall"
+      },
+      "s": {
+        "height": 40,
+        "shapeRound": "full",
+        "shapeSquare": "medium",
+        "shapePressed": "small",
+        "paddingX": 16,
+        "icon": 20,
+        "gap": 8,
+        "outline": 1,
+        "label": "titleSmall"
+      },
+      "m": {
+        "height": 56,
+        "shapeRound": "full",
+        "shapeSquare": "large",
+        "shapePressed": "medium",
+        "paddingX": 24,
+        "icon": 24,
+        "gap": 8,
+        "outline": 1,
+        "label": "titleMedium"
+      },
+      "l": {
+        "height": 96,
+        "shapeRound": "full",
+        "shapeSquare": "extraLarge",
+        "shapePressed": "large",
+        "paddingX": 48,
+        "icon": 32,
+        "gap": 12,
+        "outline": 2,
+        "label": "headlineSmall"
+      },
+      "xl": {
+        "height": 136,
+        "shapeRound": "full",
+        "shapeSquare": "extraLarge",
+        "shapePressed": "large",
+        "paddingX": 64,
+        "icon": 40,
+        "gap": 16,
+        "outline": 3,
+        "label": "headlineLarge"
+      }
+    },
+    "fab": {
+      "small": {
+        "container": 56,
+        "shape": "large",
+        "icon": 24
+      },
+      "medium": {
+        "container": 80,
+        "shape": "extraLarge",
+        "icon": 28
+      },
+      "large": {
+        "container": 96,
+        "shape": "extraLarge",
+        "icon": 36
+      }
+    },
+    "icon": {
+      "xs": 16,
+      "s": 20,
+      "m": 24,
+      "l": 32,
+      "xl": 40
+    }
+  },
+  "motion": {
+    "comment": "M3 Expressive reemplazó duration+easing por muelles. `damping` es el RATIO de amortiguación (zeta) de la spec; el generador también emite `dampingCoefficient` = 2*zeta*sqrt(k*m), que es lo que esperan Reanimated y framer-motion. Pasar el ratio crudo como `damping` da un rebote descontrolado.",
+    "spring": {
+      "spatial": {
+        "comment": "Posición, tamaño, forma. Puede sobrepasar y rebotar.",
+        "fast": {
+          "damping": 0.6,
+          "stiffness": 800,
+          "mass": 1
+        },
+        "default": {
+          "damping": 0.8,
+          "stiffness": 380,
+          "mass": 1
+        },
+        "slow": {
+          "damping": 0.8,
+          "stiffness": 200,
+          "mass": 1
+        }
+      },
+      "effects": {
+        "comment": "Color, opacidad, elevación. Nunca sobrepasa (zeta = 1, críticamente amortiguado).",
+        "fast": {
+          "damping": 1,
+          "stiffness": 3800,
+          "mass": 1
+        },
+        "default": {
+          "damping": 1,
+          "stiffness": 1600,
+          "mass": 1
+        },
+        "slow": {
+          "damping": 1,
+          "stiffness": 800,
+          "mass": 1
+        }
+      }
+    },
+    "duration": {
+      "comment": "Legado M3. Solo para lo que un muelle no cubre: delays, secuencias, autoplay.",
+      "short1": 50,
+      "short2": 100,
+      "short3": 150,
+      "short4": 200,
+      "medium1": 250,
+      "medium2": 300,
+      "medium3": 350,
+      "medium4": 400,
+      "long1": 450,
+      "long2": 500,
+      "long3": 550,
+      "long4": 600,
+      "extraLong1": 700,
+      "extraLong2": 800,
+      "extraLong3": 900,
+      "extraLong4": 1000
+    },
+    "easing": {
+      "emphasized": [
+        0.2,
+        0,
+        0,
+        1
+      ],
+      "emphasizedDecelerate": [
+        0.05,
+        0.7,
+        0.1,
+        1
+      ],
+      "emphasizedAccelerate": [
+        0.3,
+        0,
+        0.8,
+        0.15
+      ],
+      "standard": [
+        0.2,
+        0,
+        0,
+        1
+      ],
+      "standardDecelerate": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "standardAccelerate": [
+        0.3,
+        0,
+        1,
+        1
+      ]
+    },
+    "pressScale": {
+      "comment": "Escala del contenedor mientras está presionado. No es un token oficial de M3; es la dosis que usa Ronda.",
+      "default": 0.96,
+      "subtle": 0.98
+    }
+  },
+  "state": {
+    "comment": "Opacidad de la capa de estado (state layer): un overlay del color de contenido SOBRE el contenedor. El label nunca baja de opacidad.",
+    "hover": 0.08,
+    "focus": 0.1,
+    "press": 0.1,
+    "drag": 0.16,
+    "disabledContainer": 0.12,
+    "disabledContent": 0.38
+  }
+}

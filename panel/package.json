@@ -1,0 +1,54 @@
+{
+  "name": "helios-panel",
+  "private": true,
+  "type": "module",
+  "imports": {
+    "#/*": "./src/*"
+  },
+  "scripts": {
+    "tokens": "node ../tokens/build.mjs",
+    "dev": "vite dev --port 3000",
+    "generate-routes": "tsr generate",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint",
+    "format": "prettier --write . && eslint --fix",
+    "check": "prettier --check .",
+    "asistente:mapa": "npx tsx scripts/exportar-mapa.ts"
+  },
+  "dependencies": {
+    "@sentry/react": "^10.75.3",
+    "@supabase/supabase-js": "^2.112.3",
+    "@tailwindcss/vite": "^4.1.18",
+    "@tanstack/react-query": "^5.101.4",
+    "@tanstack/react-router": "latest",
+    "@tanstack/react-start": "latest",
+    "lucide-react": "^1.33.0",
+    "nitro": "^3.0.260610-beta",
+    "qrcode": "^1.5.4",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "tailwindcss": "^4.1.18"
+  },
+  "devDependencies": {
+    "@sentry/vite-plugin": "^4.9.1",
+    "@tanstack/devtools-vite": "latest",
+    "@tanstack/eslint-config": "latest",
+    "@tanstack/router-cli": "^1.132.0",
+    "@types/node": "^22.10.2",
+    "@types/qrcode": "^1.5.5",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^6.0.1",
+    "eslint": "^9.20.0",
+    "prettier": "^3.8.1",
+    "typescript": "^6.0.2",
+    "vite": "^8.0.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "lightningcss"
+    ]
+  }
+}

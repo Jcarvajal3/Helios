@@ -1,0 +1,590 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;900&family=Source+Sans+3:wght@400;500;600;700&display=swap');
+@import 'tailwindcss';
+@import './styles/tokens.gen.css';
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Panel de Helios — Material 3 Expressive (fork del panel de Ronda)
+
+   Los tokens del sistema viven en styles/tokens.gen.css, generado desde
+   tokens/helios.tokens.json en la raíz del repo. No se editan a mano: se
+   corre `npm run tokens`, que además comprueba el contraste AA.
+
+   Dos temas: el CLARO es el de por defecto (una recepción con luz de día) y
+   el oscuro se elige con `data-theme="dark"` en <html> (o `"auto"`, que
+   sigue al sistema). Todo lo de abajo que es color tiene su versión oscura
+   junto a la clara.
+
+   Aquí solo queda lo propio del panel (chrome de layout) y los alias del
+   sistema anterior, que se van vaciando conforme se barren los componentes.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@theme {
+  /* ── Chrome del panel — no es de M3, es de esta app ──────────────────── */
+
+  /* La barra lateral tiene dos anchos y un tercer estado que no es un ancho:
+     por debajo de 1024 se sale del flujo y se abre encima del contenido. Ahí
+     el contenido no cede sitio, que es justo lo que hacía falta en la tablet
+     del cajero — 240 fijos se comían el 27% de la pantalla sin manera de
+     esconderlos. */
+  --sidebar-width: 240px;
+  --sidebar-width-plegado: 64px;
+
+  /* La barra de arriba. Lo que lleva dentro es un título de 22 y un campo de
+     40: 60 los deja respirar sin abrir un cinturón de aire que no rotula
+     nada. */
+  --topbar-height: 60px;
+
+  /* ── Ancho del contenido ─────────────────────────────────────────────────
+     Lo que faltaba: el <main> no tenía tope y en un monitor de 27" una tabla
+     de siete columnas se estiraba hasta el borde del cristal mientras un
+     párrafo de ayuda llegaba a 200 caracteres por línea, el doble de lo
+     legible.
+
+     Dos topes, y el tipo de página elige. `wide` para lo que se escanea —una
+     tabla, un tablero—, donde el ancho es lo que evita el scroll horizontal.
+     `normal` para lo que se lee y se rellena, que es la medida de una columna
+     de texto cómoda con sitio para una segunda al lado. */
+  --panel-measure-wide: 1440px;
+  --panel-measure-normal: 960px;
+  /* Una ficha lleva dos columnas: lo que se lee y, a la derecha, un carril con
+     el resumen y las acciones. 960 dejaba 240 px vacíos en un monitor normal. */
+  --panel-measure-ficha: 1200px;
+
+  /* ── La caja de una tabla larga ──────────────────────────────────────────
+     Una tabla de cien filas desplaza dentro de su propia caja, en los dos
+     ejes, y no estirando la página. Es lo que permite que la cabecera se
+     quede fija y que la columna de identidad no se vaya al desplazarse a lo
+     ancho: una cabecera pegajosa se pega al contenedor que desplaza, así que
+     tiene que haber uno y tiene que estar acotado.
+
+     Lo que se resta es la barra de arriba, el aire del <main>, la barra de
+     herramientas de la tabla y lo que haga falta para que se siga viendo que
+     debajo hay más página. */
+  --panel-table-max-h: calc(100vh - 15rem);
+
+  /* El único radio corto que sobrevive al barrido, y para lo único que no es
+     una superficie del sistema: la punta redondeada de las barras de un
+     gráfico. Una tarjeta usa `--radius-panel-card` y un control
+     `--radius-panel-control`; no hay un tercer radio para nada más. */
+  --radius-sm: var(--radius-small);
+
+  /* El cuerpo va en Source Sans 3; los títulos piden --font-display o una
+     clase .type-headline-* / .type-title-*. */
+  --font-sans: var(--font-body);
+
+  /* M3 Expressive usa muelles, no duraciones. En el panel la dosis de
+     movimiento es baja, así que una transición CSS basta para hover y focus —
+     pero para movimiento real están los muelles de theme/tokens.gen.ts. */
+  --transition-fast: var(--duration-short3);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   La capa de escritorio.
+
+   El panel come de los mismos tokens que la app —el color, la tipografía, la
+   escalera de superficies— pero NO de su forma. `shell` describe una pantalla
+   que se toca con el pulgar: cápsulas de 999, controles de 56, tarjetas de 28.
+   Aquí se mira con un ratón, a medio metro, y se ven cientos de filas a la vez.
+   Esa forma, leída en un monitor, no dice "marca fuerte": dice "prototipo".
+
+   El kit ya había tomado media decisión —dice que no copia la escala de alturas
+   de la app "porque aquí se ven cientos de filas"— y luego se copió la forma
+   entera igual. El mismo argumento valía para el radio y para el tamaño de la
+   cifra. Esto lo termina.
+
+   Por qué una capa aparte y no cambiar `shell` en tokens/ronda.tokens.json: ese
+   JSON lo comen la app y el panel, y tocarlo ahí redondearía también los botones
+   del móvil. Y por qué nombres nuevos en vez de redefinir --radius-shell-* solo
+   aquí: porque entonces el mismo nombre valdría dos cosas según el proyecto, y
+   quien comparase las dos superficies no tendría manera de enterarse.
+
+   La regla, entonces: en el panel no se usa --radius-shell-* ni
+   --spacing-shell-pad-*. Si ves uno en un className, es código viejo. Los huecos
+   ENTRE bloques —--spacing-shell-gap-*— sí siguen siendo los del sistema: el
+   ritmo vertical es el mismo en las dos superficies y ahí no había nada que
+   arreglar.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@theme {
+  /* ── Forma ──────────────────────────────────────────────────────────────
+     Dos radios, igual que en la app, pero medidos para un monitor. La píldora
+     no desaparece del panel: se queda para lo único que de verdad es una
+     píldora, la insignia de estado, donde la forma ES el significado. */
+  --radius-panel-card: 16px;
+  --radius-panel-control: 9px;
+  --radius-panel-pill: var(--radius-full);
+  /* La tarjeta que manda en su pantalla (la barra del asistente en Inicio, la
+     cifra titular de un tablero) va un paso más redonda que las demás. */
+  --radius-panel-hero: 20px;
+
+  /* ── Alturas de control ─────────────────────────────────────────────────
+     36 es la medida del ratón. La app usa 56 porque ahí manda el pulgar; en
+     una barra de filtros de cuatro controles, 56 ocupa lo que tres filas de
+     tabla.
+
+     40 es la medida cómoda del ratón en un monitor grande. La primera pasada
+     puso 36 y se quedó corta: en pantalla llena, con filas de dos líneas al
+     lado, un control de 36 con texto de 13 se lee apretado y pequeño. La app
+     usa 56 porque ahí manda el pulgar; 40 está donde tiene que estar, a medio
+     camino y sin gastar el alto que necesita la tabla.
+
+     `touch` ya no es una excepción de medida —coincide con la grande— pero se
+     queda nombrada: el contador de `Stepper` lo maneja el cajero de pie y con
+     el dedo, y esa razón sobrevive aunque hoy el número sea el mismo.
+
+     Tailwind emite estos como utilidades: `h-panel-control-md` es 40. El kit
+     las usa por ahí y NO con `h-10`, que es el mismo número dicho en otro
+     idioma: con dos escalas paralelas, subir una y olvidar la otra es cuestión
+     de tiempo, y fue exactamente lo que pasó en la primera pasada. */
+  --spacing-panel-control: 44px;
+  --spacing-panel-control-md: 40px;
+  --spacing-panel-control-sm: 36px;
+  --spacing-panel-touch: 44px;
+
+  /* ── Relleno ────────────────────────────────────────────────────────────
+     Lo de dentro de una caja, que es lo que decide cuántas filas caben en
+     pantalla. Lo de fuera sigue siendo del sistema. */
+  --spacing-panel-pad-card: 20px;
+  --spacing-panel-pad-control: 14px;
+  --spacing-panel-pad-row: 14px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Superficies y color con un trabajo (rediseño visual, 2026-09-25).
+
+   Antes todo era `shell-card` (#1C1C1C) sin borde: la cola, una cifra, una
+   tabla y un gráfico eran la misma caja gris, y el ojo no sabía por dónde
+   entrar. Ahora hay tres pasos de superficie con nombre de ROL, y un borde
+   de un pelo que recorta la tarjeta del lienzo sin sombra.
+
+   Van con nombres propios y no redefiniendo `shell-*`: esos salen del JSON
+   de tokens, y el mismo nombre no puede valer dos cosas.
+
+                claro     oscuro
+     lienzo     #F3F6FB   #0A101C  el fondo (sigue siendo `shell-canvas`)
+     bar        #FFFFFF   #0E1626  el menú lateral
+     card       #FFFFFF   #111A2B  una tarjeta
+     raised     #EEF3FA   #18233A  lo que se levanta: hover, ítem activo, burbuja
+     control    #E6ECF4   #1F2C45  controles, pistas de medidores, tooltips
+   ═══════════════════════════════════════════════════════════════════════════ */
+@theme {
+  --color-panel-bar: #ffffff;
+  --color-panel-card: #ffffff;
+  --color-panel-raised: #eef3fa;
+  --color-panel-control: #e6ecf4;
+  --color-panel-hairline: rgb(15 26 46 / 0.09);
+  --color-panel-hairline-strong: rgb(15 26 46 / 0.16);
+  /* Texto de tercer nivel (pies, ejes, lo que está vacío). 5,4:1 sobre la
+     tarjeta: pasa AA también a 12 px. */
+  --color-panel-muted: #5e6a82;
+  /* El rojo de un texto sobre su tinte (pastilla «Crítico», contador
+     vencido): 5,3:1 sobre el tinte de error. */
+  --color-panel-critico: #b42318;
+
+  /* ── El tono de cada área ────────────────────────────────────────────────
+     Orienta; no avisa. Contraste ≥ 3:1 sobre la tarjeta y el lienzo en los
+     dos temas (en Ronda se validaron con el comprobador de paletas sobre
+     #1C1C1C; aquí se movieron para no chocar con el azul del primario).
+
+     Regla: un tono de área nunca va solo —siempre con el nombre o el icono
+     del área— y azul y violeta nunca son dos series del mismo gráfico
+     (entre ellos no hay separación suficiente para quien no distingue el
+     rojo). El azul del logo NO es un área: es la acción principal. */
+  --color-area-cobranza: #1e7fb8;
+  --color-area-caja: #0e8a6e;
+  --color-area-riesgo: #7157d9;
+  --color-area-gerencia: #b8418f;
+  --color-area-neutro: #6b7280;
+}
+
+/* El chrome del panel en oscuro: los mismos nombres, otra luz. Junto a los
+   roles del sistema, que redefine tokens.gen.css con los mismos selectores. */
+:root[data-theme='dark'] {
+  --color-panel-bar: #0e1626;
+  --color-panel-card: #111a2b;
+  --color-panel-raised: #18233a;
+  --color-panel-control: #1f2c45;
+  --color-panel-hairline: rgb(255 255 255 / 0.07);
+  --color-panel-hairline-strong: rgb(255 255 255 / 0.12);
+  --color-panel-muted: #93a0b8;
+  --color-panel-critico: #ff8a7e;
+  --color-area-cobranza: #4fa3d9;
+  --color-area-caja: #1db38f;
+  --color-area-riesgo: #9a8af0;
+  --color-area-gerencia: #d46ab0;
+  --color-area-neutro: #9aa3b5;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-theme='auto'] {
+    --color-panel-bar: #0e1626;
+    --color-panel-card: #111a2b;
+    --color-panel-raised: #18233a;
+    --color-panel-control: #1f2c45;
+    --color-panel-hairline: rgb(255 255 255 / 0.07);
+    --color-panel-hairline-strong: rgb(255 255 255 / 0.12);
+    --color-panel-muted: #93a0b8;
+    --color-panel-critico: #ff8a7e;
+    --color-area-cobranza: #4fa3d9;
+    --color-area-caja: #1db38f;
+    --color-area-riesgo: #9a8af0;
+    --color-area-gerencia: #d46ab0;
+    --color-area-neutro: #9aa3b5;
+  }
+}
+
+/* El tono del área en la que se está, como `bg-area`, `text-area`,
+   `border-area` y `bg-area-tinte`. `inline` hace que la utilidad lea
+   `var(--area)` en el propio elemento: sin él, la variable se resolvería una
+   sola vez en :root y todo el panel saldría neutro. */
+@theme inline {
+  --color-area: var(--area);
+  --color-area-tinte: var(--area-tinte);
+}
+
+/* `data-area` lo pone el marco en <main> según la ruta (features/admin/areas),
+   y cualquier pieza que pertenezca a otra área —una tarjeta de Inicio— lo
+   pone sobre sí misma. El tinte se declara junto al tono en el mismo
+   elemento para que `var(--area)` se resuelva ahí y no en la raíz. */
+:root,
+[data-area] {
+  --area: var(--color-area-neutro);
+  --area-tinte: color-mix(in oklab, var(--area) 16%, transparent);
+}
+[data-area='cobranza'] {
+  --area: var(--color-area-cobranza);
+}
+[data-area='caja'] {
+  --area: var(--color-area-caja);
+}
+[data-area='riesgo'] {
+  --area: var(--color-area-riesgo);
+}
+[data-area='gerencia'] {
+  --area: var(--color-area-gerencia);
+}
+
+/* ── Tipografía de escritorio ─────────────────────────────────────────────
+   Seis roles, no una escala entera.
+
+   La escala de M3 salta de 24 a 22 a 16: está pensada para una pantalla de
+   teléfono con tres cosas dentro, no para un tablero con ocho cifras encima de
+   una tabla de siete columnas. Estos seis son los roles que el panel repite en
+   las veinticinco pantallas. Para todo lo demás siguen valiendo las clases
+   .type-* del sistema, que no se tocan.
+
+   Van en @layer components por lo mismo que las del sistema: las utilidades
+   text-* de Tailwind no traen la familia, y en Helios la familia cambia según el
+   rol —Outfit en lo que se mira, Source Sans en lo que se lee—. */
+@layer components {
+  /* Título de página. Un paso por debajo del headline de la app: aquí no abre
+     una pantalla, rotula una zona de trabajo que ya tiene su sitio en el
+     sidebar. */
+  .type-panel-page {
+    font-family: var(--font-display);
+    font-size: 1.375rem;
+    line-height: 1.75rem;
+    letter-spacing: -0.01em;
+    font-weight: 600;
+  }
+
+  /* Rótulo de zona dentro de una página. Subió de 16 a 18: con la cifra a 28,
+     un título de 16 quedaba por debajo de lo que rotula. */
+  .type-panel-section {
+    font-family: var(--font-display);
+    font-size: 1.125rem;
+    line-height: 1.5rem;
+    letter-spacing: 0;
+    font-weight: 600;
+  }
+
+  /* La cifra de una tarjeta de tablero. A 28 y con cifras proporcionales: a
+     este tamaño las tabulares dejan huecos entre dígitos («1 21»). Donde los
+     números sí se alinean en columna —tablas, ejes— va `tabular-nums`. */
+  .type-panel-figure {
+    font-family: var(--font-display);
+    font-size: 1.75rem;
+    line-height: 2.125rem;
+    letter-spacing: -0.01em;
+    font-weight: 600;
+  }
+
+  /* La cifra titular de una pantalla: una por pantalla, como mucho. */
+  .type-panel-hero {
+    font-family: var(--font-display);
+    font-size: 2.5rem;
+    line-height: 2.875rem;
+    letter-spacing: -0.015em;
+    font-weight: 600;
+  }
+
+  /* El saludo de Inicio, encima de la barra del asistente. */
+  .type-panel-greeting {
+    font-family: var(--font-display);
+    font-size: 2rem;
+    line-height: 2.5rem;
+    letter-spacing: -0.01em;
+    font-weight: 600;
+  }
+
+  /* Rótulo de una cifra, de un filtro o de una columna. En minúscula de
+     frase: las MAYÚSCULAS en cada tarjeta, filtro y cabecera eran la textura
+     dominante del panel y hacían gritar a lo que solo rotula. */
+  .type-panel-label {
+    font-family: var(--font-body);
+    font-size: 0.8125rem;
+    line-height: 1.125rem;
+    letter-spacing: 0;
+    font-weight: 600;
+  }
+
+  /* Pie de una cifra, eje de un gráfico, detalle de una fila. */
+  .type-panel-caption {
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    line-height: 1rem;
+    letter-spacing: 0;
+    font-weight: 400;
+  }
+
+  /* Las cabeceras de grupo del menú lateral. Es el ÚNICO sitio con
+     mayúsculas: separa bloques de navegación sin competir con los ítems. */
+  .type-panel-overline {
+    font-family: var(--font-body);
+    font-size: 0.6875rem;
+    line-height: 1rem;
+    letter-spacing: 0.07em;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  /* Lo que va escrito DENTRO de algo que se pulsa: botón, chip, ítem del
+     sidebar. */
+  .type-panel-control {
+    font-family: var(--font-display);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    letter-spacing: 0.01em;
+    font-weight: 600;
+  }
+
+  /* Texto de un campo, de una celda y de un párrafo. Uno solo: el panel
+     mezclaba 14 y 15 según quién hubiera escrito la pantalla. */
+  .type-panel-body {
+    font-family: var(--font-body);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    letter-spacing: 0.005em;
+    font-weight: 400;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Los alias del sistema anterior —ink-*, content-*, danger-*— se borraron
+   cuando el último componente dejó de usarlos. Si vuelves a ver uno de esos
+   nombres en un className, es que se coló copiando código viejo: el
+   vocabulario del panel es el mismo que el de la app —shell-*, on-surface*,
+   primary, error— y sale del mismo JSON.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Reset global ──────────────────────────────────────────────────────── */
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  min-height: 100%;
+}
+
+/*
+  El hueco de la barra de desplazamiento se reserva SIEMPRE, la haya o no.
+
+  Sin esto el ancho de la página cambia 6 px cada vez que la barra aparece o
+  se va, y ese cambio no es cosmético: la fila de filtros de Consumos está
+  justo en su punto de corte —a 1130 px de ventana, «Estado» cabe al lado del
+  buscador sin la barra y ya no cabe con ella—, así que seis píxeles mueven el
+  filtro a la fila siguiente y bajan 76 px todo lo que hay debajo.
+
+  Y se realimenta: la tabla mide `calc(100vh - 15rem)`, es decir, la página
+  entera mide casi exactamente lo que la ventana. Una fila más de filtros la
+  pasa de largo y saca la barra; sin la barra vuelve a caber. Las dos
+  situaciones se sostienen a sí mismas, y el navegador salta de una a otra en
+  cada recálculo: eso es el parpadeo que se ve en el vídeo.
+
+  Reservado el hueco, el ancho no depende ya de la barra y solo queda un
+  layout posible.
+*/
+html {
+  scrollbar-gutter: stable;
+}
+
+body {
+  margin: 0;
+  /* El lienzo profundo del sistema, igual que en la app. Las tarjetas flotan
+     sobre él y la barra lateral —que se queda en `shell-bar`— se separa sola
+     por diferencia de tono, sin depender de un borde. */
+  background-color: var(--color-shell-canvas);
+  color: var(--color-on-surface);
+  /* Cuerpo en Source Sans 3. Los títulos piden font-display explícitamente
+     o una clase .type-headline-* / .type-title-*. */
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Scrollbar ─────────────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-outline-variant);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-on-surface-faint);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   El foco del teclado.
+
+   No había ninguno. Ni una sola aparición de :focus-visible en todo el panel:
+   los pocos `focus:` que existían pintaban el borde de un campo. Quien navega
+   con teclado —un operador que teclea todo el día, que es exactamente el
+   usuario de esto— no veía nunca dónde estaba parado.
+
+   Va sin capa a propósito. Tailwind mete todo lo suyo en @layer, y una regla
+   sin capa gana a cualquier regla de una capa por mucha especificidad que
+   tenga: así este anillo se impone al `outline-none` que llevan los campos del
+   kit, sin tener que ir componente por componente.
+
+   El anillo va POR FUERA —outline-offset— para que también se vea sobre el
+   botón principal, que es azul sobre azul. Y `outline` sigue el radio del
+   elemento, así que no hace falta decirle la forma a cada uno.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* La fila de una tabla se enfoca al tabular hasta ella, pero un anillo por
+   fuera de una <tr> se sale de la caja que desplaza y se ve cortado. Ahí el
+   foco se marca como el hover, con la superficie. */
+tr:focus-visible {
+  outline: none;
+  background-color: var(--color-shell-control);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   El movimiento.
+
+   Cuatro entradas y nada más. El panel no tenía ninguna: un velo y una ventana
+   que aparecen de golpe se leen como un fallo de render, no como una decisión.
+   Son las cuatro cosas que se abren encima de otra cosa; el resto del panel
+   sigue moviéndose solo con `transition-colors`, que es la dosis correcta para
+   algo que se mira ocho horas.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@keyframes panel-velo {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes panel-ventana {
+  from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes panel-aviso {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes panel-globo {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.anim-velo { animation: panel-velo 150ms ease-out; }
+.anim-ventana { animation: panel-ventana 180ms cubic-bezier(0.2, 0, 0, 1); }
+.anim-aviso { animation: panel-aviso 200ms cubic-bezier(0.2, 0, 0, 1); }
+.anim-globo { animation: panel-globo 120ms ease-out; }
+
+/* El mes del calendario entra por el lado hacia el que se fue: la flecha
+   derecha trae el mes de la derecha. */
+@keyframes panel-mes-siguiente {
+  from { opacity: 0.3; transform: translateX(10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes panel-mes-anterior {
+  from { opacity: 0.3; transform: translateX(-10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.anim-mes-siguiente { animation: panel-mes-siguiente 160ms cubic-bezier(0.2, 0, 0, 1); }
+.anim-mes-anterior { animation: panel-mes-anterior 160ms cubic-bezier(0.2, 0, 0, 1); }
+
+/* Quien pide menos movimiento no pide "un poco menos": pide ninguno. El
+   contenido sigue apareciendo, que es lo que importaba. */
+@media (prefers-reduced-motion: reduce) {
+  .anim-velo,
+  .anim-ventana,
+  .anim-aviso,
+  .anim-globo,
+  .anim-mes-siguiente,
+  .anim-mes-anterior {
+    animation: none;
+  }
+}
+
+/* ── El dedo, en la tablet del local ──────────────────────────────────────
+   Un puntero grueso es un dedo, y la yema mide unos nueve milímetros: por
+   debajo de 44 px se falla el botón sin mirar, y en una barra nadie mira.
+   Los controles del panel están dibujados para el ratón del equipo —32 y 36
+   px, que en un ratón están bien— así que el ajuste entra solo donde no hay
+   ratón que valga.
+
+   `min-*` y no `height`: lo que ya es más grande se queda como está. Y las
+   dos medidas, no solo el alto: un icono de 32 sin `min-inline-size` saldría
+   siendo una pastilla alta y estrecha en vez de un cuadrado que se acierta.
+
+   La excepción es `.en-linea`, y hace falta: hay botones que no son un
+   objeto sino una marca DENTRO de una línea de texto —el «cómo se calcula»
+   colgado de la cabecera de una columna, el ojo que enseña la contraseña
+   metido en su propio campo—. Inflarlos a 44 no los hace más fáciles de
+   tocar: empuja la línea que los contiene y los descuadra de la caja a la
+   que pertenecen. Quien ponga esa clase se compromete a que el control siga
+   midiendo lo que mide el renglón, que ahí es el objetivo de verdad.
+
+   Va sin capa, igual que el anillo de foco: las utilidades de Tailwind viven
+   en @layer y una regla sin capa les gana, así que un `min-h-0` suelto no
+   puede desarmar esto por accidente desde un className. */
+@media (pointer: coarse) {
+  button:not(.en-linea),
+  select,
+  summary,
+  [role='button']:not(.en-linea) {
+    min-block-size: 44px;
+    min-inline-size: 44px;
+  }
+}
+
+/* ── La equis nativa del campo de búsqueda ─────────────────────────────────
+   WebKit dibuja su propia equis dentro de un `type="search"`: un círculo gris
+   de 12 px que no se puede estilar, no respeta el mínimo táctil y sale ADEMÁS
+   de la nuestra, así que el campo acaba con dos botones de borrar pegados.
+   Fuera la del navegador; la del kit se queda, que es la que mide lo que mide
+   un dedo. */
+input[type='search']::-webkit-search-cancel-button,
+input[type='search']::-webkit-search-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+}

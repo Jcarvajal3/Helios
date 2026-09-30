@@ -1,0 +1,626 @@
+/*
+ * ARCHIVO GENERADO — NO EDITAR A MANO.
+ * Fuente: tokens/helios.tokens.json · Regenerar: npm run tokens
+ *
+ * El tema claro es el de por defecto y vive en @theme. El oscuro redefine las
+ * mismas variables en [data-theme='dark'] y, con [data-theme='auto'], cuando
+ * el sistema pide oscuro. Las utilidades de Tailwind leen var(--color-*), así
+ * que cambian solas con el tema.
+ */
+
+@theme {
+  /* ── Color (tema claro) ────────────────────────────────────────── */
+  --color-primary: #0040B8;
+  --color-on-primary: #FFFFFF;
+  --color-primary-container: #DCE8FF;
+  --color-on-primary-container: #00205E;
+  --color-primary-dim: #00338F;
+  --color-primary-bright: #015CF1;
+  --color-secondary: #0057D9;
+  --color-on-secondary: #FFFFFF;
+  --color-secondary-container: #E3F1FF;
+  --color-on-secondary-container: #00306E;
+  --color-secondary-dim: #0046AE;
+  --color-secondary-bright: #0B6FFB;
+  --color-surface: #FFFFFF;
+  --color-surface-dim: #DDE3EC;
+  --color-surface-bright: #FFFFFF;
+  --color-surface-container-lowest: #F3F6FB;
+  --color-surface-container-low: #FFFFFF;
+  --color-surface-container: #F7F9FC;
+  --color-surface-container-high: #EDF1F7;
+  --color-surface-container-highest: #E4EAF2;
+  --color-on-surface: #0F1A2E;
+  --color-on-surface-variant: #44506A;
+  --color-on-surface-faint: #66728B;
+  --color-placeholder: #7B869C;
+  --color-inverse-surface: #1B2436;
+  --color-on-inverse-surface: #F2F5FA;
+  --color-outline: #7D889E;
+  --color-outline-variant: #D3DAE5;
+  --color-error: #C4221B;
+  --color-on-error: #FFFFFF;
+  --color-error-container: #FDE8E6;
+  --color-on-error-container: #7A120D;
+  --color-error-dim: #9E1B15;
+  --color-warning: #A55300;
+  --color-on-warning: #FFFFFF;
+  --color-warning-container: #FFF0DA;
+  --color-on-warning-container: #5E3000;
+  --color-success: #1A7A3A;
+  --color-on-success: #FFFFFF;
+  --color-success-container: #E2F4E7;
+  --color-on-success-container: #0C4420;
+  --color-scrim: #0A1020;
+  --color-shadow: #0A1020;
+  --color-logo-wordmark: #0040B8;
+
+  --color-brand-wordmark: #0040B8;
+  --color-brand-blue: #015CF1;
+  --color-brand-blue-bright: #0B6FFB;
+  --color-brand-sky: #A5D8FE;
+  --color-brand-sky-light: #C0E3FF;
+
+  /* ── Shape ─────────────────────────────────────────────────────── */
+  --radius-none: 0px;
+  --radius-extra-small: 4px;
+  --radius-small: 8px;
+  --radius-medium: 12px;
+  --radius-large: 16px;
+  --radius-large-increased: 20px;
+  --radius-extra-large: 28px;
+  --radius-extra-large-increased: 32px;
+  --radius-extra-extra-large: 48px;
+  --radius-full: 999px;
+
+  /* ── Tipografía ────────────────────────────────────────────────── */
+  --font-display: 'Outfit', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-body: 'Source Sans 3', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --text-display-large: 3.5625rem;
+  --text-display-large--line-height: 4rem;
+  --text-display-large--letter-spacing: -0.0156rem;
+  --text-display-large--font-weight: 400;
+  --text-display-large-emphasized: 3.5625rem;
+  --text-display-large-emphasized--line-height: 4rem;
+  --text-display-large-emphasized--letter-spacing: 0rem;
+  --text-display-large-emphasized--font-weight: 500;
+  --text-display-medium: 2.8125rem;
+  --text-display-medium--line-height: 3.25rem;
+  --text-display-medium--letter-spacing: 0rem;
+  --text-display-medium--font-weight: 400;
+  --text-display-medium-emphasized: 2.8125rem;
+  --text-display-medium-emphasized--line-height: 3.25rem;
+  --text-display-medium-emphasized--letter-spacing: 0rem;
+  --text-display-medium-emphasized--font-weight: 500;
+  --text-display-small: 2.25rem;
+  --text-display-small--line-height: 2.75rem;
+  --text-display-small--letter-spacing: 0rem;
+  --text-display-small--font-weight: 400;
+  --text-display-small-emphasized: 2.25rem;
+  --text-display-small-emphasized--line-height: 2.75rem;
+  --text-display-small-emphasized--letter-spacing: 0rem;
+  --text-display-small-emphasized--font-weight: 500;
+  --text-headline-large: 2rem;
+  --text-headline-large--line-height: 2.5rem;
+  --text-headline-large--letter-spacing: 0rem;
+  --text-headline-large--font-weight: 400;
+  --text-headline-large-emphasized: 2rem;
+  --text-headline-large-emphasized--line-height: 2.5rem;
+  --text-headline-large-emphasized--letter-spacing: 0rem;
+  --text-headline-large-emphasized--font-weight: 500;
+  --text-headline-medium: 1.75rem;
+  --text-headline-medium--line-height: 2.25rem;
+  --text-headline-medium--letter-spacing: 0rem;
+  --text-headline-medium--font-weight: 400;
+  --text-headline-medium-emphasized: 1.75rem;
+  --text-headline-medium-emphasized--line-height: 2.25rem;
+  --text-headline-medium-emphasized--letter-spacing: 0rem;
+  --text-headline-medium-emphasized--font-weight: 500;
+  --text-headline-small: 1.5rem;
+  --text-headline-small--line-height: 2rem;
+  --text-headline-small--letter-spacing: 0rem;
+  --text-headline-small--font-weight: 400;
+  --text-headline-small-emphasized: 1.5rem;
+  --text-headline-small-emphasized--line-height: 2rem;
+  --text-headline-small-emphasized--letter-spacing: 0rem;
+  --text-headline-small-emphasized--font-weight: 500;
+  --text-title-large: 1.375rem;
+  --text-title-large--line-height: 1.75rem;
+  --text-title-large--letter-spacing: 0rem;
+  --text-title-large--font-weight: 400;
+  --text-title-large-emphasized: 1.375rem;
+  --text-title-large-emphasized--line-height: 1.75rem;
+  --text-title-large-emphasized--letter-spacing: 0rem;
+  --text-title-large-emphasized--font-weight: 500;
+  --text-title-medium: 1rem;
+  --text-title-medium--line-height: 1.5rem;
+  --text-title-medium--letter-spacing: 0.0094rem;
+  --text-title-medium--font-weight: 500;
+  --text-title-medium-emphasized: 1rem;
+  --text-title-medium-emphasized--line-height: 1.5rem;
+  --text-title-medium-emphasized--letter-spacing: 0.0094rem;
+  --text-title-medium-emphasized--font-weight: 700;
+  --text-title-small: 0.875rem;
+  --text-title-small--line-height: 1.25rem;
+  --text-title-small--letter-spacing: 0.0063rem;
+  --text-title-small--font-weight: 500;
+  --text-title-small-emphasized: 0.875rem;
+  --text-title-small-emphasized--line-height: 1.25rem;
+  --text-title-small-emphasized--letter-spacing: 0.0063rem;
+  --text-title-small-emphasized--font-weight: 700;
+  --text-body-large: 1rem;
+  --text-body-large--line-height: 1.5rem;
+  --text-body-large--letter-spacing: 0.0313rem;
+  --text-body-large--font-weight: 400;
+  --text-body-large-emphasized: 1rem;
+  --text-body-large-emphasized--line-height: 1.5rem;
+  --text-body-large-emphasized--letter-spacing: 0.0094rem;
+  --text-body-large-emphasized--font-weight: 500;
+  --text-body-medium: 0.875rem;
+  --text-body-medium--line-height: 1.25rem;
+  --text-body-medium--letter-spacing: 0.0156rem;
+  --text-body-medium--font-weight: 400;
+  --text-body-medium-emphasized: 0.875rem;
+  --text-body-medium-emphasized--line-height: 1.25rem;
+  --text-body-medium-emphasized--letter-spacing: 0.0156rem;
+  --text-body-medium-emphasized--font-weight: 500;
+  --text-body-small: 0.75rem;
+  --text-body-small--line-height: 1rem;
+  --text-body-small--letter-spacing: 0.025rem;
+  --text-body-small--font-weight: 400;
+  --text-body-small-emphasized: 0.75rem;
+  --text-body-small-emphasized--line-height: 1rem;
+  --text-body-small-emphasized--letter-spacing: 0.025rem;
+  --text-body-small-emphasized--font-weight: 500;
+  --text-label-large: 0.875rem;
+  --text-label-large--line-height: 1.25rem;
+  --text-label-large--letter-spacing: 0.0063rem;
+  --text-label-large--font-weight: 500;
+  --text-label-large-emphasized: 0.875rem;
+  --text-label-large-emphasized--line-height: 1.25rem;
+  --text-label-large-emphasized--letter-spacing: 0.0063rem;
+  --text-label-large-emphasized--font-weight: 700;
+  --text-label-medium: 0.75rem;
+  --text-label-medium--line-height: 1rem;
+  --text-label-medium--letter-spacing: 0.0313rem;
+  --text-label-medium--font-weight: 500;
+  --text-label-medium-emphasized: 0.75rem;
+  --text-label-medium-emphasized--line-height: 1rem;
+  --text-label-medium-emphasized--letter-spacing: 0.0313rem;
+  --text-label-medium-emphasized--font-weight: 700;
+  --text-label-small: 0.6875rem;
+  --text-label-small--line-height: 1rem;
+  --text-label-small--letter-spacing: 0.0313rem;
+  --text-label-small--font-weight: 500;
+  --text-label-small-emphasized: 0.6875rem;
+  --text-label-small-emphasized--line-height: 1rem;
+  --text-label-small-emphasized--letter-spacing: 0.0313rem;
+  --text-label-small-emphasized--font-weight: 700;
+
+  /* ── Armazón ───────────────────────────────────────────────────── */
+  --color-shell-canvas: #F3F6FB;
+  --color-shell-card: #FFFFFF;
+  --color-shell-control: #EDF1F7;
+  --color-shell-inset: #E4EAF2;
+  --color-shell-bar: #FFFFFF;
+  --radius-shell-card: 28px;
+  --radius-shell-control: 999px;
+  --radius-shell-pressed-card: 16px;
+  --spacing-shell-pad-card: 20px;
+  --spacing-shell-pad-control: 20px;
+  --spacing-shell-pad-row: 16px;
+  --spacing-shell-control: 56px;
+  --spacing-shell-chip: 40px;
+  --spacing-shell-avatar: 44px;
+  --spacing-shell-meter: 10px;
+  --spacing-shell-gap-tight: 4px;
+  --spacing-shell-gap-inner: 12px;
+  --spacing-shell-gap-group: 20px;
+  --spacing-shell-gap-block: 32px;
+  --spacing-shell-gap-section: 48px;
+  --spacing-shell-gap-stack: 8px;
+  --spacing-shell-gap-list: 12px;
+
+  /* ── Motion (curvas y duraciones) ──────────────────────────────── */
+  --duration-short1: 50ms;
+  --duration-short2: 100ms;
+  --duration-short3: 150ms;
+  --duration-short4: 200ms;
+  --duration-medium1: 250ms;
+  --duration-medium2: 300ms;
+  --duration-medium3: 350ms;
+  --duration-medium4: 400ms;
+  --duration-long1: 450ms;
+  --duration-long2: 500ms;
+  --duration-long3: 550ms;
+  --duration-long4: 600ms;
+  --duration-extra-long1: 700ms;
+  --duration-extra-long2: 800ms;
+  --duration-extra-long3: 900ms;
+  --duration-extra-long4: 1000ms;
+  --ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  --ease-emphasized-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1);
+  --ease-emphasized-accelerate: cubic-bezier(0.3, 0, 0.8, 0.15);
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-standard-decelerate: cubic-bezier(0, 0, 0, 1);
+  --ease-standard-accelerate: cubic-bezier(0.3, 0, 1, 1);
+
+  /* ── Tamaños de componente ─────────────────────────────────────── */
+  --height-btn-xs: 32px;
+  --height-btn-s: 40px;
+  --height-btn-m: 56px;
+  --height-btn-l: 96px;
+  --height-btn-xl: 136px;
+  --height-fab-small: 56px;
+  --height-fab-medium: 80px;
+  --height-fab-large: 96px;
+  --height-touch: 48px;
+}
+
+/* ── Tema oscuro ──────────────────────────────────────────────────── */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --color-primary: #8FC8FF;
+  --color-on-primary: #00214F;
+  --color-primary-container: #0B3E8C;
+  --color-on-primary-container: #D9ECFF;
+  --color-primary-dim: #62A9F2;
+  --color-primary-bright: #C0E3FF;
+  --color-secondary: #A5D8FE;
+  --color-on-secondary: #002A55;
+  --color-secondary-container: #123A6B;
+  --color-on-secondary-container: #D6EBFF;
+  --color-secondary-dim: #78B8F0;
+  --color-secondary-bright: #C0E3FF;
+  --color-surface: #0E1626;
+  --color-surface-dim: #0A0F1A;
+  --color-surface-bright: #2A3A58;
+  --color-surface-container-lowest: #0A101C;
+  --color-surface-container-low: #111A2B;
+  --color-surface-container: #152033;
+  --color-surface-container-high: #1C2940;
+  --color-surface-container-highest: #243350;
+  --color-on-surface: #EEF3FB;
+  --color-on-surface-variant: #B3BFD4;
+  --color-on-surface-faint: #8591A9;
+  --color-placeholder: #8E99AF;
+  --color-inverse-surface: #EEF3FB;
+  --color-on-inverse-surface: #111A2B;
+  --color-outline: #7F8BA3;
+  --color-outline-variant: #2A3650;
+  --color-error: #FF6F63;
+  --color-on-error: #2B0300;
+  --color-error-container: #5C1611;
+  --color-on-error-container: #FFD8D3;
+  --color-error-dim: #D9463B;
+  --color-warning: #FFB84D;
+  --color-on-warning: #2A1700;
+  --color-warning-container: #4A3000;
+  --color-on-warning-container: #FFDFA6;
+  --color-success: #4CD27A;
+  --color-on-success: #04210E;
+  --color-success-container: #10441F;
+  --color-on-success-container: #A8F0C0;
+  --color-scrim: #000000;
+  --color-shadow: #000000;
+  --color-logo-wordmark: #EAF3FF;
+  --color-shell-canvas: #0A101C;
+  --color-shell-card: #111A2B;
+  --color-shell-control: #1C2940;
+  --color-shell-inset: #243350;
+  --color-shell-bar: #0E1626;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-theme='auto'] {
+    color-scheme: dark;
+    --color-primary: #8FC8FF;
+    --color-on-primary: #00214F;
+    --color-primary-container: #0B3E8C;
+    --color-on-primary-container: #D9ECFF;
+    --color-primary-dim: #62A9F2;
+    --color-primary-bright: #C0E3FF;
+    --color-secondary: #A5D8FE;
+    --color-on-secondary: #002A55;
+    --color-secondary-container: #123A6B;
+    --color-on-secondary-container: #D6EBFF;
+    --color-secondary-dim: #78B8F0;
+    --color-secondary-bright: #C0E3FF;
+    --color-surface: #0E1626;
+    --color-surface-dim: #0A0F1A;
+    --color-surface-bright: #2A3A58;
+    --color-surface-container-lowest: #0A101C;
+    --color-surface-container-low: #111A2B;
+    --color-surface-container: #152033;
+    --color-surface-container-high: #1C2940;
+    --color-surface-container-highest: #243350;
+    --color-on-surface: #EEF3FB;
+    --color-on-surface-variant: #B3BFD4;
+    --color-on-surface-faint: #8591A9;
+    --color-placeholder: #8E99AF;
+    --color-inverse-surface: #EEF3FB;
+    --color-on-inverse-surface: #111A2B;
+    --color-outline: #7F8BA3;
+    --color-outline-variant: #2A3650;
+    --color-error: #FF6F63;
+    --color-on-error: #2B0300;
+    --color-error-container: #5C1611;
+    --color-on-error-container: #FFD8D3;
+    --color-error-dim: #D9463B;
+    --color-warning: #FFB84D;
+    --color-on-warning: #2A1700;
+    --color-warning-container: #4A3000;
+    --color-on-warning-container: #FFDFA6;
+    --color-success: #4CD27A;
+    --color-on-success: #04210E;
+    --color-success-container: #10441F;
+    --color-on-success-container: #A8F0C0;
+    --color-scrim: #000000;
+    --color-shadow: #000000;
+    --color-logo-wordmark: #EAF3FF;
+    --color-shell-canvas: #0A101C;
+    --color-shell-card: #111A2B;
+    --color-shell-control: #1C2940;
+    --color-shell-inset: #243350;
+    --color-shell-bar: #0E1626;
+  }
+}
+
+/*
+ * Valores que no pertenecen a un namespace de Tailwind. Viven en :root
+ * para que el JS los pueda leer, pero no generan utilidades.
+ */
+:root {
+  color-scheme: light;
+  --spring-spatial-fast-stiffness: 800;
+  --spring-spatial-fast-damping: 33.94;
+  --spring-spatial-fast-mass: 1;
+  --spring-spatial-default-stiffness: 380;
+  --spring-spatial-default-damping: 31.19;
+  --spring-spatial-default-mass: 1;
+  --spring-spatial-slow-stiffness: 200;
+  --spring-spatial-slow-damping: 22.63;
+  --spring-spatial-slow-mass: 1;
+  --spring-effects-fast-stiffness: 3800;
+  --spring-effects-fast-damping: 123.29;
+  --spring-effects-fast-mass: 1;
+  --spring-effects-default-stiffness: 1600;
+  --spring-effects-default-damping: 80;
+  --spring-effects-default-mass: 1;
+  --spring-effects-slow-stiffness: 800;
+  --spring-effects-slow-damping: 56.57;
+  --spring-effects-slow-mass: 1;
+
+  --state-hover: 0.08;
+  --state-focus: 0.1;
+  --state-press: 0.1;
+  --state-drag: 0.16;
+  --state-disabled-container: 0.12;
+  --state-disabled-content: 0.38;
+
+  --layout-margin-compact: 16px;
+  --layout-margin-medium: 24px;
+  --layout-margin-expanded: 24px;
+  --layout-margin-large: 24px;
+  --layout-margin-extra-large: 24px;
+  --layout-pane-spacing: 24px;
+}
+
+/*
+ * Una clase por rol tipográfico. Las utilidades `text-*` que genera
+ * Tailwind desde --text-* no incluyen la familia, y en Helios la familia
+ * cambia según el rol (Outfit en títulos, Source Sans 3 en cuerpo).
+ */
+@layer components {
+  .type-display-large {
+    font-family: var(--font-display);
+    font-size: 3.5625rem;
+    line-height: 4rem;
+    letter-spacing: -0.0156rem;
+    font-weight: 400;
+  }
+  .type-display-large-emphasized {
+    font-family: var(--font-display);
+    font-size: 3.5625rem;
+    line-height: 4rem;
+    letter-spacing: 0rem;
+    font-weight: 500;
+  }
+  .type-display-medium {
+    font-family: var(--font-display);
+    font-size: 2.8125rem;
+    line-height: 3.25rem;
+    letter-spacing: 0rem;
+    font-weight: 400;
+  }
+  .type-display-medium-emphasized {
+    font-family: var(--font-display);
+    font-size: 2.8125rem;
+    line-height: 3.25rem;
+    letter-spacing: 0rem;
+    font-weight: 500;
+  }
+  .type-display-small {
+    font-family: var(--font-display);
+    font-size: 2.25rem;
+    line-height: 2.75rem;
+    letter-spacing: 0rem;
+    font-weight: 400;
+  }
+  .type-display-small-emphasized {
+    font-family: var(--font-display);
+    font-size: 2.25rem;
+    line-height: 2.75rem;
+    letter-spacing: 0rem;
+    font-weight: 500;
+  }
+  .type-headline-large {
+    font-family: var(--font-display);
+    font-size: 2rem;
+    line-height: 2.5rem;
+    letter-spacing: 0rem;
+    font-weight: 400;
+  }
+  .type-headline-large-emphasized {
+    font-family: var(--font-display);
+    font-size: 2rem;
+    line-height: 2.5rem;
+    letter-spacing: 0rem;
+    font-weight: 500;
+  }
+  .type-headline-medium {
+    font-family: var(--font-display);
+    font-size: 1.75rem;
+    line-height: 2.25rem;
+    letter-spacing: 0rem;
+    font-weight: 400;
+  }
+  .type-headline-medium-emphasized {
+    font-family: var(--font-display);
+    font-size: 1.75rem;
+    line-height: 2.25rem;
+    letter-spacing: 0rem;
+    font-weight: 500;
+  }
+  .type-headline-small {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    line-height: 2rem;
+    letter-spacing: 0rem;
+    font-weight: 400;
+  }
+  .type-headline-small-emphasized {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    line-height: 2rem;
+    letter-spacing: 0rem;
+    font-weight: 500;
+  }
+  .type-title-large {
+    font-family: var(--font-display);
+    font-size: 1.375rem;
+    line-height: 1.75rem;
+    letter-spacing: 0rem;
+    font-weight: 400;
+  }
+  .type-title-large-emphasized {
+    font-family: var(--font-display);
+    font-size: 1.375rem;
+    line-height: 1.75rem;
+    letter-spacing: 0rem;
+    font-weight: 500;
+  }
+  .type-title-medium {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    line-height: 1.5rem;
+    letter-spacing: 0.0094rem;
+    font-weight: 500;
+  }
+  .type-title-medium-emphasized {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    line-height: 1.5rem;
+    letter-spacing: 0.0094rem;
+    font-weight: 700;
+  }
+  .type-title-small {
+    font-family: var(--font-display);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    letter-spacing: 0.0063rem;
+    font-weight: 500;
+  }
+  .type-title-small-emphasized {
+    font-family: var(--font-display);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    letter-spacing: 0.0063rem;
+    font-weight: 700;
+  }
+  .type-body-large {
+    font-family: var(--font-body);
+    font-size: 1rem;
+    line-height: 1.5rem;
+    letter-spacing: 0.0313rem;
+    font-weight: 400;
+  }
+  .type-body-large-emphasized {
+    font-family: var(--font-body);
+    font-size: 1rem;
+    line-height: 1.5rem;
+    letter-spacing: 0.0094rem;
+    font-weight: 500;
+  }
+  .type-body-medium {
+    font-family: var(--font-body);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    letter-spacing: 0.0156rem;
+    font-weight: 400;
+  }
+  .type-body-medium-emphasized {
+    font-family: var(--font-body);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    letter-spacing: 0.0156rem;
+    font-weight: 500;
+  }
+  .type-body-small {
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    line-height: 1rem;
+    letter-spacing: 0.025rem;
+    font-weight: 400;
+  }
+  .type-body-small-emphasized {
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    line-height: 1rem;
+    letter-spacing: 0.025rem;
+    font-weight: 500;
+  }
+  .type-label-large {
+    font-family: var(--font-body);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    letter-spacing: 0.0063rem;
+    font-weight: 500;
+  }
+  .type-label-large-emphasized {
+    font-family: var(--font-body);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    letter-spacing: 0.0063rem;
+    font-weight: 700;
+  }
+  .type-label-medium {
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    line-height: 1rem;
+    letter-spacing: 0.0313rem;
+    font-weight: 500;
+  }
+  .type-label-medium-emphasized {
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    line-height: 1rem;
+    letter-spacing: 0.0313rem;
+    font-weight: 700;
+  }
+  .type-label-small {
+    font-family: var(--font-body);
+    font-size: 0.6875rem;
+    line-height: 1rem;
+    letter-spacing: 0.0313rem;
+    font-weight: 500;
+  }
+  .type-label-small-emphasized {
+    font-family: var(--font-body);
+    font-size: 0.6875rem;
+    line-height: 1rem;
+    letter-spacing: 0.0313rem;
+    font-weight: 700;
+  }
+}
