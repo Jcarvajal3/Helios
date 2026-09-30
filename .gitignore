@@ -1,0 +1,28 @@
+# Dependencias y builds
+node_modules/
+dist/
+.output/
+.vercel/
+.nitro/
+.tanstack/
+*.tsbuildinfo
+
+# Entornos (nunca se versionan; hay .env.example)
+.env
+.env.*
+!.env.example
+
+# Supabase CLI
+supabase/.temp/
+supabase/.branches/
+
+# Trabajo local de la poda (volcados grandes, se regeneran)
+supabase/poda/_trabajo/
+
+# Claude Code
+.claude/settings.local.json
+
+# Sistema
+Thumbs.db
+desktop.ini
+.DS_Store
