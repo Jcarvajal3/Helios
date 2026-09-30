@@ -1,0 +1,24 @@
+-- ============================================================================
+-- Ronda — Una cuenta para el IVA que Ronda debe al fisco
+--
+-- Va SOLA en esta migración por lo mismo que los tipos de aviso: Postgres deja
+-- añadir un valor a un enum dentro de una transacción, pero **no deja usarlo
+-- hasta que esa transacción termina**. El CLI corre cada archivo en su propia
+-- transacción, así que quien la usa vive en el archivo siguiente.
+--
+-- Hace falta porque con la facturación por cuenta de terceros (docs/00 §2.11)
+-- el cobro deja de partirse en dos y pasa a partirse en TRES:
+--
+--     lo que recibe el consumidor    127,60
+--       → al comercio                104,40   merchant_payable
+--       → ingreso de Ronda            20,00   platform_revenue
+--       → IVA de Ronda                 3,20   vat_payable      ← este
+--
+-- Sin separarlo, el ingreso de Ronda parecería 23,20. Y eso no es un detalle
+-- contable: el impuesto a las actividades económicas de la Alcaldía y el
+-- tributo de LOCTI se calculan sobre los INGRESOS declarados, así que meter el
+-- IVA dentro del ingreso es pagar tributo municipal sobre un dinero que nunca
+-- fue de Ronda.
+-- ============================================================================
+
+alter type ledger.account_type add value if not exists 'vat_payable';

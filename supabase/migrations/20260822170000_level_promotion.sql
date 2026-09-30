@@ -1,0 +1,62 @@
+-- ============================================================================
+-- Ronda — Subida de nivel
+--
+-- El motor de mora ya bajaba de nivel desde el 2026-08-22, pero nadie subía:
+-- `levels.required_spend_usd` y `required_months` estaban sembrados y sin
+-- usar. Un usuario que pagara puntualmente durante meses se quedaba en el
+-- nivel 1 para siempre.
+--
+-- Requisitos ya confirmados (docs/00-BASES §2.6, docs/06 §5):
+--
+--     Nivel 2 → $200 en gastos + 1 mes de antigüedad
+--     Nivel 3 → $600 en gastos + 2 meses
+--     Niveles 4 y 5 → `is_active = false`, no se promociona a ellos
+--
+-- ---------------------------------------------------------------------------
+-- Las dos decisiones que faltaban
+-- ---------------------------------------------------------------------------
+--
+-- 1. **"Gastos totales" cuenta lo PAGADO, no lo consumido.** Era la pregunta
+--    abierta de docs/00-BASES §2.6 y docs/06 §5, y las dos recomiendan lo
+--    mismo con el mismo argumento: premias el comportamiento que te importa,
+--    no el que te cuesta. Contar lo consumido subiría de nivel —y por tanto
+--    de límite— a quien más debe, que es exactamente al revés de lo que pide
+--    un modelo de riesgo.
+--
+-- 2. **Tras una bajada por mora hay un periodo de enfriamiento.** docs/00
+--    §2.6 deja abierto "¿puede volver a subir? ¿con qué requisitos? ¿cuánto
+--    tarda?". Sin una respuesta, el motor devolvería el nivel en el mismo
+--    instante en que la persona se pone al día —porque sus gastos y su
+--    antigüedad no se borran— y la bajada no costaría nada.
+--
+--    Se implementan **60 días** (dos ciclos completos de buen comportamiento)
+--    como parámetro con valor por defecto, no como constante: cambiarlo es
+--    pasar otro número. ⬜ Confírmalo o corrígelo.
+--
+-- ---------------------------------------------------------------------------
+-- Por qué no un log de eventos
+-- ---------------------------------------------------------------------------
+-- docs/01 §6 preveía `gamification.events` con siete tipos de evento y una
+-- función pura que recalcula un puntaje. Los requisitos reales, tal como
+-- están definidos hoy, son dos agregados: cuánto ha pagado y cuánto lleva
+-- registrado. Montar siete tipos de evento para eso sería inventar estructura
+-- sin uso.
+--
+-- Lo que el doc pedía de verdad —determinismo y poder explicarle a alguien
+-- por qué cambió de nivel— se consigue igual: el nivel se recalcula siempre
+-- desde la fuente de verdad, y cada cambio queda en `level_changes` con los
+-- números que lo justificaron. Cuando aparezcan reglas que sí necesiten
+-- histórico (referidos, rachas), el log tendrá sentido; hoy no.
+-- ============================================================================
+
+-- ⚠️ Los valores nuevos de un enum y su primer uso NO pueden ir en la misma
+-- transacción, y Supabase corre cada archivo de migración dentro de una. Por
+-- eso esta migración solo declara los tipos, y las funciones que los usan van
+-- en la siguiente.
+alter type public.level_change_reason add value if not exists 'promotion';
+alter type public.notification_type add value if not exists 'level_up';
+
+-- Los números que justificaron el cambio. Sin esto, "subiste de nivel" es un
+-- hecho que nadie puede auditar seis meses después.
+alter table public.level_changes
+  add column if not exists detail jsonb not null default '{}'::jsonb;

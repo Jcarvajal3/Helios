@@ -1,0 +1,24 @@
+-- ============================================================================
+-- Ronda — Un aviso en cola se puede CANCELAR
+--
+-- Migración de un solo valor, por la razón de siempre en este repo: Postgres
+-- deja añadir un valor a un enum dentro de una transacción, pero no deja
+-- USARLO hasta que esa transacción se confirma. La migración que lo usa va
+-- detrás, en `20260918280000`.
+--
+-- ---------------------------------------------------------------------------
+-- Por qué un estado y no un DELETE
+-- ---------------------------------------------------------------------------
+-- Cuando alguien reporta un pago hay que frenar los recordatorios de cuota que
+-- todavía estén en la cola. Borrar la fila lo conseguiría, pero dejaría la
+-- pregunta del soporte sin respuesta: "el sistema dice que te avisó, ¿por qué
+-- no te llegó?". Un cuarto estado contesta que el aviso existió, que no se
+-- mandó, y que no se mandó porque el usuario ya había hecho lo suyo.
+--
+-- `dispatch_push_queue` reclama solo lo que está en 'pending', así que un
+-- cancelado se queda fuera del despacho sin tocar una línea del despachador.
+-- `purge_push_queue` borra por `settled_at`, que la cancelación rellena, así
+-- que tampoco hay que enseñarle el estado nuevo.
+-- ============================================================================
+
+alter type public.push_status add value if not exists 'cancelled';

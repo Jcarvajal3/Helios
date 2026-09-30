@@ -1,0 +1,21 @@
+-- ============================================================================
+-- Ronda — Un motivo de bajada que no lleve el umbral en el nombre
+--
+-- `level_change_reason` tenía `mora_15d`, y el umbral acaba de pasar a 30 días
+-- (20260830230000). Un valor de enum que promete "15" sobre filas creadas con
+-- otro número es peor que no tener nombre: el super admin lee la bitácora y le
+-- dice una cosa que no pasó.
+--
+-- `mora_demotion` no envejece. Es el mismo criterio por el que el plazo de las
+-- cuotas vive en `helios_installment_interval_days()` y no en un `14` repartido
+-- por el esquema.
+--
+-- Va SOLO en esta migración porque Postgres no deja usar un valor de enum en la
+-- misma transacción en que se añade. Quien lo usa vive en el archivo siguiente.
+--
+-- `mora_15d` NO se retira: hay filas históricas con ese motivo y borrarlo las
+-- dejaría sin poder leerse. Se deja de escribir, y quien lee la bitácora tiene
+-- que aceptar los dos.
+-- ============================================================================
+
+alter type public.level_change_reason add value if not exists 'mora_demotion';
