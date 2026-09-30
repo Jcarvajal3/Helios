@@ -26,3 +26,6 @@ supabase/poda/_trabajo/
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# Worktrees de subagentes
+.claude/worktrees/
