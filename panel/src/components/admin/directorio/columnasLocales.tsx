@@ -46,7 +46,6 @@ export function columnasLocales(porPagar: PorPagar): Array<Column<MerchantRow>> 
             <p className="font-medium text-on-surface">{m.name}</p>
             <p className="type-panel-caption text-on-surface-variant">
               {m.taxId ?? 'Sin RIF'}
-              {m.handle && ` · @${m.handle.replace(/^@/, '')}`}
             </p>
           </div>
         </div>

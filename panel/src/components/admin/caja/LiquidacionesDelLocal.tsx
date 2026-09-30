@@ -16,6 +16,7 @@ import { RegistrarTransferencia } from '@/components/admin/caja/RegistrarTransfe
 import { SeccionSinLeer } from '@/components/admin/directorio/SeccionSinLeer'
 import { fetchMerchantSettlements } from '@/features/admin/api'
 import type { Settlement } from '@/features/admin/api'
+import { partirPorMotivo } from '@/features/admin/clinicas/clinicas'
 import { MOTIVO_DE_LIQUIDACION } from '@/features/admin/liquidaciones'
 
 /** Cuántas líneas se enseñan de un cierre antes de pedir ver el resto. */
@@ -110,6 +111,10 @@ export function LiquidacionesDelLocal({
   const totalMarcado = abiertas
     .filter((s) => marcadas.has(s.id))
     .reduce((sum, s) => sum + s.pendingUsd, 0)
+  // Lo marcado en consultas y comisiones del personal: lo que falta de cada una.
+  const desgloseMarcado = partirPorMotivo(
+    abiertas.filter((s) => marcadas.has(s.id)).map((s) => ({ reason: s.reason, amountUsd: s.pendingUsd })),
+  )
 
   function alternar(ids: string[], marcar: boolean) {
     const siguiente = new Set(marcadas)
@@ -233,6 +238,14 @@ export function LiquidacionesDelLocal({
                       {grupo.lineas.length}{' '}
                       {grupo.lineas.length === 1 ? 'liquidación' : 'liquidaciones'}
                       {algunas && ` · ${marcadasDelGrupo} marcadas`}
+                      {(() => {
+                        const partes = partirPorMotivo(
+                          grupo.lineas.map((s) => ({ reason: s.reason, amountUsd: s.pendingUsd })),
+                        )
+                        return partes.comisionesUsd > 0
+                          ? ` · Consultas ${formatUsd(partes.consultasUsd)} + Comisiones del personal ${formatUsd(partes.comisionesUsd)}`
+                          : ''
+                      })()}
                     </span>
                   </span>
 
@@ -275,6 +288,7 @@ export function LiquidacionesDelLocal({
           merchantName={merchantName}
           settlementIds={[...marcadas]}
           totalUsd={totalMarcado}
+          desglose={desgloseMarcado}
           onRegistrado={() => setTocado(null)}
         />
       )}

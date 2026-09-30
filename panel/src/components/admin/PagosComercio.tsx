@@ -101,6 +101,9 @@ export function PaginaPagosComercio({
                     ? `Sale el ${formatDay(payable.nextRunDate)} (con lo atrasado)`
                     : 'Sale este lunes (con lo atrasado)',
                   value: formatUsd(payable?.nextRunUsd ?? 0),
+                  hint: payable?.desglose
+                    ? `Consultas ${formatUsd(payable.desglose.consultasUsd)} + Comisiones del personal ${formatUsd(payable.desglose.comisionesUsd)}`
+                    : undefined,
                   estado,
                   onReintentar: reintentar,
                 },

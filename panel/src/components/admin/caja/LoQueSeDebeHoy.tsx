@@ -198,11 +198,38 @@ const COLUMNAS: Array<Column<MerchantPayable>> = [
     key: 'este-lunes',
     header: 'Sale este lunes (con lo atrasado)',
     type: 'number',
-    info: 'Lo que hay que transferirle en el próximo cierre: lo de la semana más lo atrasado de cierres anteriores. Arriba, «de la semana que cierra» no lleva lo atrasado. Es la parte de la clínica (financiado sin fee) menos su comisión.',
+    info: 'Lo que hay que transferirle en el próximo cierre: lo de la semana más lo atrasado de cierres anteriores. Arriba, «de la semana que cierra» no lleva lo atrasado. Son sus consultas (financiado sin fee, menos su comisión) más las comisiones de su personal; debajo, partido.',
     sort: (m) => m.nextRunUsd,
     sortDir: 'desc',
     csv: (m) => csvDinero(m.nextRunUsd),
-    cell: (m) => <span className="font-semibold">{formatUsd(m.nextRunUsd)}</span>,
+    cell: (m) => (
+      <>
+        <span className="font-semibold">{formatUsd(m.nextRunUsd)}</span>
+        {m.desglose && m.desglose.comisionesUsd > 0 && (
+          <span className="block whitespace-nowrap type-panel-caption font-normal text-on-surface-variant">
+            consultas {formatUsd(m.desglose.consultasUsd)} + comisiones {formatUsd(m.desglose.comisionesUsd)}
+          </span>
+        )}
+      </>
+    ),
+  },
+  {
+    key: 'consultas',
+    header: 'Este lunes: consultas',
+    type: 'number',
+    hidden: true,
+    sort: (m) => m.desglose?.consultasUsd ?? null,
+    csv: (m) => (m.desglose ? csvDinero(m.desglose.consultasUsd) : null),
+    cell: (m) => (m.desglose ? formatUsd(m.desglose.consultasUsd) : '—'),
+  },
+  {
+    key: 'comisiones',
+    header: 'Este lunes: comisiones del personal',
+    type: 'number',
+    hidden: true,
+    sort: (m) => m.desglose?.comisionesUsd ?? null,
+    csv: (m) => (m.desglose ? csvDinero(m.desglose.comisionesUsd) : null),
+    cell: (m) => (m.desglose ? formatUsd(m.desglose.comisionesUsd) : '—'),
   },
   {
     key: 'atrasado',
