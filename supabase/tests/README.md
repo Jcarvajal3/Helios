@@ -30,7 +30,16 @@ devuelve lo que devolvía `my_available_balance()` (podada) y
 `run.sh` pega `_ayudas.sql` donde la suite dice `-- @ayudas` (justo después de
 su `begin;`): las funciones viven en `pg_temp` y se van con el rollback.
 
-## Estado (2026-09-30)
+**Pacientes (H3).** El paciente no tiene cuenta en Auth: una suite lo crea con
+`insert into public.profiles (id, phone_e164)` (nace `active`, nivel 1) y solo
+el PERSONAL va a `auth.users`. `quote_installments` y `report_payment` (la app)
+no tienen permiso para la API desde H3: las suites las llaman por
+`pg_temp.quote_installments` / `pg_temp.report_payment` (_ayudas.sql), después
+de poner los claims del paciente y un `reset role` (el paciente no se
+autentica; ya no hay políticas `*_read_own`). `prueba_cobro` aplica el mínimo
+de `min_charge_usd` (0).
+
+## Estado (2026-09-30, tras la fase 1A)
 
 | Suite | Estado | Adaptación |
 |---|---|---|
@@ -42,10 +51,11 @@ su `begin;`): las funciones viven en `pg_temp` y se van con el rollback.
 | `merchant_payout_smoke` | ✓ | `prueba_cobro`; nivel 3 fijado a $200; acción de bitácora `merchant.payout` |
 | `statement_smoke` | ✓ | `prueba_cobro` |
 | `edit_merchants_smoke` | ✓ | `prueba_cobro`; `admin_remove_merchant_staff` → `merchant_staff_remove` |
-| `level_promotion_smoke` | ✓ | — |
-| `due_dates_smoke` | ✓ | — |
+| `level_promotion_smoke` | ✓ | Pacientes en `profiles`; enciende los niveles 1-4 dentro de la prueba (en Helios solo el 1 está activo); la subida ya no va a la bandeja de la app |
+| `due_dates_smoke` | ✓ | Test 4 reescrito: el día operativo empieza a medianoche (H2) |
 | `saldo_smoke` | ✓ | `prueba_cobro`/`prueba_saldo` |
 | `fx_rate_smoke` | ✓ | — |
+| `helios_cimientos_smoke` | ✓ | **Nueva** (fase 1A): tasa BCV en dólares, niveles, parámetros y lectores, mínimo, día a medianoche (00:00 y 10:00), paciente sin Auth y FK, ayudantes, ficha y cuenta de pago de la clínica (RLS), contacto + `helios_config_status`, varias cuentas de cobro, la cola y el comprobante |
 | `metricas_cimientos`, `metricas_general`, `metricas_semana`, `metricas_semana_resumen`, `metricas_locales`, `metricas_cobranza` | ✓ | `prueba_admin()`; sin `admin_nights`; las dos primeras envueltas en begin/rollback. Son de «mirar a ojo»: con la base vacía solo prueban que las RPC contestan y los permisos |
 
 Varias suites de Ronda estaban en rojo contra el esquema final de Ronda (se
@@ -59,8 +69,6 @@ mismos arreglos a Ronda.
 | Suite | Por qué | Cuándo |
 |---|---|---|
 | `notifications_smoke` | Prueba avisos de grupo, `my_notifications()` y la cola de push | H7 (avisos por WhatsApp/correo en `outbound_messages`) |
-| `profile_smoke` | Prueba `my_purchases()` y consumos en grupo: la vista del usuario en la app | H3 (el paciente no tiene cuenta); reescribir sobre las fichas del admin |
-| `nivel_cero_smoke` | El primer nivel lo daba el KYC aprobado | H3 (el paciente nace activo con nivel 1) |
 | `facturacion.test.mjs` | Node + `pg` con `SUPABASE_DB_URL`, y usa `confirm_charge` | H4 (reescribir contra `create_patient_charge`) |
 | `metricas_cohortes` | Necesita cohortes con datos (`'null' - 'cuotas'` revienta con la base vacía) | Con la semilla de métricas (docs/00 §9) |
 | `metricas_gente-caja` | Usa `admin_growth_funnel` (el embudo de KYC, podado) y datos | Al rehacer Métricas › Gente (H3) |
@@ -73,3 +81,7 @@ mismos arreglos a Ronda.
 QR), `metricas_avisos`, `metricas_coherencia_avisos` (push),
 `metricas_coherencia_registro` (el registro por KYC),
 `metricas_coherencia_prod_antes` (una foto de producción de Ronda).
+En la fase 1A (H3): `profile_smoke` (`my_purchases()`, grupos y métodos de
+pago: la app) y `nivel_cero_smoke` (se nacía en el nivel 0 y el KYC/PIN daba
+el 1); lo que seguía valiendo —el nivel 0 inactivo, nacer activo en el 1— está
+en `helios_cimientos_smoke`.

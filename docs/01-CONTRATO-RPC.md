@@ -265,10 +265,30 @@ bitácora).
 
 - `admin_platform_contact() → jsonb`: devuelve `{whatsapp_number, support_email, support_hours, sender_name, sender_email, updated_at, updated_by_name}`.
 - `admin_set_platform_contact(p jsonb) → jsonb`. Solo super_admin; queda en la bitácora.
-- `admin_payment_destinations() → table` (heredada) y
-  `admin_set_payment_destination(...)`: la de Ronda más `p_sort_order int` y
-  `p_is_active boolean`. Puede haber **varias activas**.
-- `helios_config_status() → jsonb`: `{whatsapp: bool, cuentas_de_cobro: int, resend: bool, remitente: bool}`. La usa el aviso de "configuración incompleta" del Inicio.
+  `whatsapp_number` se guarda en E.164 (un móvil VE se normaliza: `0414…` →
+  `+58414…`). Solo cambian las claves presentes en `p`; `null` o `''` borra.
+- `admin_payment_destinations() → table` (heredada): añade las columnas
+  `method`, `account_number`, `email`, `sort_order` al final. Orden:
+  activas primero, por `sort_order`.
+- `admin_set_payment_destination(...) → uuid` (implementada en 20261002000600).
+  La de Ronda más `p_sort_order` y `p_is_active`, y además `p_id` (sin él se
+  crea otra cuenta; con él se edita o se apaga esa), `p_method`,
+  `p_account_number` y `p_email`. Crear una ya **no** apaga las demás.
+
+  ```sql
+  admin_set_payment_destination(
+    p_bank_name text, p_rif text, p_phone text,
+    p_holder_name text default null, p_note text default null,
+    p_sort_order int default null, p_is_active boolean default true,
+    p_id uuid default null,
+    p_method text default 'pago_movil',   -- pago_movil | transferencia | zelle
+    p_account_number text default null,   -- transferencia: 20 dígitos
+    p_email text default null             -- zelle
+  ) returns uuid
+  ```
+  Datos obligatorios por método: Pago Móvil banco + RIF/C.I. + teléfono;
+  transferencia banco + RIF/C.I. + cuenta + titular; Zelle correo + titular.
+- `helios_config_status() → jsonb`: `{whatsapp: bool, cuentas_de_cobro: int, resend: bool, remitente: bool}`. La usa el aviso de "configuración incompleta" del Inicio. Exige `is_platform_admin()`. `resend` = existe en Vault un secreto llamado `resend_api_key` (no lee su valor); `remitente` = hay `sender_name` y `sender_email`.
 
 ### 2.4 Pacientes
 
@@ -289,10 +309,34 @@ bitácora).
 
 - `admin_create_merchant(...)` (heredada) añade `p_specialty`, `p_mpps_number`,
   `p_phone`, `p_email` y `p_address`. `p_category` usa los valores nuevos
-  `clinica | consultorio | odontologia | laboratorio | imagenes | otros`.
+  `clinica | consultorio | odontologia | laboratorio | imagenes | otros`
+  (`discoteca`/`conciertos` se rechazan con `22023`). Firma final
+  (20261002000500), los nuevos al final y con default:
+
+  ```sql
+  admin_create_merchant(p_name text, p_legal_name text default null, p_tax_id text default null,
+    p_category merchant_category default null, p_city text default null, p_handle text default null,
+    p_logo_url text default null, p_social_url text default null,
+    p_specialty text default null, p_mpps_number text default null, p_phone text default null,
+    p_email text default null, p_address text default null) returns merchants
+  ```
+- `admin_set_merchant_profile(...)` (heredada) añade al final los mismos cinco
+  (`p_specialty`, `p_mpps_number`, `p_phone`, `p_email`, `p_address`, default
+  null). Para ellos `null` = no tocar y `''` = borrar.
+- `admin_merchant_detail(p_merchant_id)` (heredada): `profile` añade
+  `specialty`, `mpps_number`, `phone`, `email`, `address`, y la respuesta
+  añade `payout_account` (lo mismo que `admin_merchant_payout_account`, o null).
 - `admin_merchant_payout_account(p_merchant_id) → jsonb` y
   `admin_set_merchant_payout_account(p_merchant_id, p jsonb) → jsonb`
   (`bank`, `account_holder`, `holder_document`, `account_number`, `pago_movil_phone`, `pago_movil_bank`).
+  Devuelven `{merchant_id, bank, account_holder, holder_document, account_number,
+  pago_movil_phone, pago_movil_bank, updated_at, updated_by_name}` (null si no
+  hay). Escribir: solo super_admin, con bitácora (`merchant.payout_account_set`).
+  Obligatorios titular y documento, y al menos cuenta (20 dígitos) o Pago
+  Móvil (móvil VE; se guarda en E.164). El `gerente` de la clínica puede leer
+  su fila directamente en `merchant_payout_accounts` (RLS).
+- `merchant_staff_add` / `merchant_staff_update`: el rol `inventario` se
+  rechaza (`22023`).
 - `admin_set_settlement_terms(...)` (heredada) añade
   `p_staff_commission_usd numeric default null`. `null` significa que usa el
   parámetro global.
@@ -332,6 +376,16 @@ Cada fila trae:
 | `alert_merchant_exposure_usd` | 3000 | alerta `exposicion_clinica` |
 | `alert_first_charge_limit_pct` | 90 | alerta `cupo_al_limite_al_estrenar` |
 
+Sembrados en 20261002000100 con vigencia desde 2026-09-30 (más una fila de
+`late_fee_usd` = 2 en dólares). Lectores (`stable security definer`, para
+`authenticated`): `helios_min_charge_usd()`, `helios_staff_commission_usd()`,
+`helios_eligibility_lookups_per_staff_day()`, `helios_payment_four_eyes()`
+(boolean), `helios_receipt_resends_per_day()`. Los `alert_*` se leen con
+`helios_parameter('alert_…', fallback)`, que los oculta a quien no es del
+equipo si se llaman directo desde la API. La regla del monto vive en
+`helios_assert_charge_amount(p_base numeric)` (22023 «El monto mínimo es $10»,
+«El monto admite como mucho 2 decimales»).
+
 ## 4. Plantillas de mensajes (`notification_templates`)
 
 | key | canal | cuándo |
@@ -350,3 +404,25 @@ Variables disponibles:
 - del financiamiento: `{clinica}`, `{orden}`, `{monto_cuota}`, `{fecha}`, `{cuotas}`;
 - de configuración: `{whatsapp_helios}`, `{cuentas_de_cobro}`;
 - `{tasa_bcv}` y `{monto_bs}` (a la tasa del día).
+
+Implementado en 20261002000700 (cimientos; el despacho es de H6/H7):
+
+- `notification_templates.channels text[]` (`email`, `whatsapp_manual`; `app`
+  = las de Ronda, **apagadas**), `default_html`/`html` para el correo y `type`
+  opcional. Las nueve claves de arriba ya están sembradas con texto por
+  defecto.
+- Cola `outbound_messages` (lectura: solo el equipo). Se llena con
+  `helios_enqueue_message(p_template_key, p_profile_id, p_charge_id, p_channel,
+  p_vars jsonb default '{}', p_due_date date default null, p_dedupe_key text
+  default null) → uuid` y `helios_enqueue_charge_receipt(p_charge_id) → uuid`.
+  **Internas** (sin permiso para la API): las llaman `create_patient_charge`,
+  `staff_resend_receipt`, `admin_resend_receipt` y los avisos.
+- Variables que siempre están (las pone la base, el llamador puede pisarlas):
+  `{nombre}`, `{whatsapp_helios}`, `{whatsapp_link}`, `{cuentas_de_cobro}`,
+  `{cuentas_de_cobro_html}`, `{soporte_email}`, `{soporte_horario}`,
+  `{tasa_bcv}`, `{cargo_atraso}`, `{dias_gracia}`, `{dias_suspension}`,
+  `{dias_expulsion}`. Sin WhatsApp o sin cuentas configurados llevan un texto
+  de reserva. Las demás las pasa el llamador (`{clinica}`, `{orden}`,
+  `{cuotas}`, `{monto_cuota}`, `{fecha}`, `{monto}`, `{motivo}`…; la lista
+  exacta por plantilla está en `notification_templates.variables`). Si falta
+  una, `22023` y no se encola.

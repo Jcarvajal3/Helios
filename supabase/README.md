@@ -29,8 +29,20 @@ poda:
 3. `20261001000100…000400`: plpgsql_check y tres arreglos que encontraron la
    verificación y las suites.
 
-Todo el detalle —qué se borró, qué se tocó y por qué, y lo que queda para
-H1…H11— está en `poda/NOTAS.md`.
+4. Fase 1A, cimientos de Helios (`20261002…`):
+
+   | Migración | Qué hace |
+   |---|---|
+   | `000100_el_precio_se_pacta_en_dolares` | H1: `BCV` = dólar (el euro de Ronda archivado como `BCV_EUR`), espejos del dólar, `€` → `$` en funciones y plantillas, niveles (solo el 1 = $350), parámetros nuevos y sus lectores, el mínimo por parámetro (`helios_assert_charge_amount`) |
+   | `000200_el_dia_operativo_empieza_a_medianoche` | H2: `helios_business_date` = día de Caracas; fuera el desfase de 10 h en todas sus copias |
+   | `000300_el_paciente_no_tiene_cuenta` | H3: `profiles` sin Auth, FK del deudor a `profiles`, teléfono no único, datos nuevos del paciente, ayudantes de normalizar/enmascarar, `profile_change_requests`, fuera el acceso `*_read_own` |
+   | `000400_las_clinicas_tienen_categoria_medica` | H8: valores nuevos de `merchant_category` (solos, por ser `add value`) |
+   | `000500_el_personal_de_una_clinica` | H8: ficha médica de la clínica, `merchant_payout_accounts` y sus RPC, sin rol `inventario` |
+   | `000600_el_contacto_de_helios_se_configura` | H11: `platform_contact`, `helios_config_status`, varias cuentas de cobro activas |
+   | `000700_los_mensajes_salen_de_una_cola` | H11 + base de H6/H7: canales de plantilla, plantillas de Helios, `outbound_messages`, `helios_enqueue_message`, `helios_enqueue_charge_receipt`; las plantillas de la app, apagadas |
+
+Todo el detalle de la poda —qué se borró, qué se tocó y por qué— está en
+`poda/NOTAS.md`; el de cada migración de Helios, en su cabecera.
 
 ## Aplicar migraciones nuevas (sin Docker)
 

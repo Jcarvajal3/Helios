@@ -46,6 +46,7 @@ SUITES=(
   due_dates_smoke
   saldo_smoke
   fx_rate_smoke
+  helios_cimientos_smoke
   metricas_cimientos
   metricas_general
   metricas_semana

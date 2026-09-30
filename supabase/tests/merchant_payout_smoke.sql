@@ -38,10 +38,13 @@ declare
   v_failed   boolean;
 begin
   -- --- Fixtures ----------------------------------------------------------
+  -- Helios (H3): el paciente no tiene cuenta en Auth; es solo una fila de `profiles`.
+  insert into public.profiles (id, phone_e164) values
+    (v_ana, '+584140000062');
+
   insert into auth.users (id, instance_id, aud, role, phone, phone_confirmed_at, created_at, updated_at)
   values
     (v_admin,  '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', '584140000061', now(), now(), now()),
-    (v_ana,    '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', '584140000062', now(), now(), now()),
     (v_cajero, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', '584140000063', now(), now(), now());
 
   -- Nivel 3 ($200 de límite) para que un consumo de $100 quepa y los

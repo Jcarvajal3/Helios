@@ -30,16 +30,25 @@ declare
   v_change   public.level_changes%rowtype;
   v_count    integer;
 begin
+  -- Helios (H3): el paciente no tiene cuenta en Auth; es solo una fila de `profiles`.
+  insert into public.profiles (id, phone_e164) values
+    (v_nuevo, '+584140000111'),
+    (v_veterano, '+584140000112'),
+    (v_moroso, '+584140000113');
+
   insert into auth.users (id, instance_id, aud, role, phone, phone_confirmed_at, created_at, updated_at)
   values
-    (v_nuevo,    '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', '584140000111', now(), now(), now()),
-    (v_veterano, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', '584140000112', now(), now(), now()),
-    (v_moroso,   '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', '584140000113', now(), now(), now()),
     (v_cajero,   '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', '584140000114', now(), now(), now());
 
   update public.profiles set status = 'active', full_name = 'Nueva'    where id = v_nuevo;
   update public.profiles set status = 'active', full_name = 'Veterano' where id = v_veterano;
   update public.profiles set status = 'active', full_name = 'Moroso'   where id = v_moroso;
+
+  -- Helios (H1): solo el nivel 1 está activo; los 2-4 son de ejemplo y están
+  -- apagados. Esta suite prueba el MOTOR de niveles, así que los enciende
+  -- dentro de la transacción (con los requisitos que ya tienen: $120/1 mes,
+  -- $360/2, $800/3). El 5 sigue apagado.
+  update public.levels set is_active = true where level between 1 and 4;
 
   -- El veterano y el moroso llevan más de 3 meses registrados.
   update public.profiles set created_at = now() - interval '95 days'
@@ -111,22 +120,20 @@ begin
     v_change.from_level, v_change.to_level,
     v_change.detail->>'paid_usd', v_change.detail->>'months';
 
-  -- --- 5. Y se le avisa ---------------------------------------------------
-  -- Por el nivel 2 en concreto y no por el tipo a secas: desde el 2026-09-09
-  -- llegar al nivel 1 también avisa —es lo que se gana al verificarse— y esta
-  -- prueba activa a los tres perfiles a mano, así que el veterano ya tiene un
-  -- `level_up` del 1 antes de llegar aquí.
+  -- --- 5. Y NO va a la bandeja de la app --------------------------------
+  -- Helios (H11): los avisos de la app de Ronda están apagados (el paciente no
+  -- tiene app). La subida queda en level_changes (test 4), no en notifications.
   select count(*) into v_count from public.notifications
-  where user_id = v_veterano and type = 'level_up' and (data->>'level')::int = 2;
-  if v_count <> 1 then
-    raise exception 'Debía avisarse la subida al nivel 2, hay % avisos', v_count;
+  where user_id = v_veterano and type = 'level_up';
+  if v_count <> 0 then
+    raise exception 'La bandeja de la app está apagada en Helios, hay % avisos', v_count;
   end if;
-  raise notice 'TEST NIVEL 5 OK — subida notificada';
+  raise notice 'TEST NIVEL 5 OK — la subida no escribe en la bandeja de la app';
 
   -- --- 6. No se salta a un nivel inactivo --------------------------------
-  -- €5.000 pagados: cumpliría de sobra cualquier requisito, pero el 5 está
+  -- $5.000 pagados: cumpliría de sobra cualquier requisito, pero el 5 está
   -- marcado is_active = false. Hasta el 2026-09-09 el inactivo de esta prueba
-  -- era el 4; desde que el 4 abrió (€100, €800 pagados + 3 meses) el que hace
+  -- era el 4; desde que el 4 abrió ($100, $800 pagados + 3 meses) el que hace
   -- de tope es el 5.
   insert into public.charges
     (user_id, merchant_id, branch_id, requested_by, amount_usd, idempotency_key,
@@ -202,12 +209,12 @@ begin
   -- --- 10. El progreso dice qué falta ------------------------------------
   v_standing := public.level_standing(v_nuevo);
   if (v_standing->'next_level'->>'missing_spend_usd')::numeric <> 120.00 then
-    raise exception 'A la nueva le faltan €120 para el nivel 2: %', v_standing;
+    raise exception 'A la nueva le faltan $120 para el nivel 2: %', v_standing;
   end if;
   if (v_standing->'next_level'->>'missing_months')::int <> 1 then
     raise exception 'A la nueva le falta 1 mes: %', v_standing;
   end if;
-  raise notice 'TEST NIVEL 10 OK — progreso: faltan €% y % mes(es) para el %',
+  raise notice 'TEST NIVEL 10 OK — progreso: faltan $% y % mes(es) para el %',
     v_standing->'next_level'->>'missing_spend_usd',
     v_standing->'next_level'->>'missing_months',
     v_standing->'next_level'->>'label';

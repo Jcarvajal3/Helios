@@ -55,9 +55,9 @@ declare
   v_limit      numeric := 50.00;
 begin
   -- --- Fixtures ----------------------------------------------------------
-  insert into auth.users (id, instance_id, aud, role, phone, phone_confirmed_at, created_at, updated_at)
-  values (v_customer, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-          '+584140000001', now(), now(), now());
+  -- Helios (H3): el paciente no tiene cuenta en Auth; es solo una fila de `profiles`.
+  insert into public.profiles (id, phone_e164) values
+    (v_customer, '+584140000001');
 
   insert into auth.users (id, instance_id, aud, role, phone, phone_confirmed_at, created_at, updated_at)
   values (v_cajero, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
@@ -85,6 +85,7 @@ begin
 
 
   perform set_config('request.jwt.claims', json_build_object('sub', v_customer::text, 'role', 'authenticated')::text, true);
+  reset role;  -- Helios (H3): el paciente no se autentica; esto corre como el sistema, con sus claims.
   v_result := pg_temp.prueba_cobro(v_customer, v_merchant, v_branch, v_cajero, 20.00, 'smoke-charge-1', 'Consumo');
   v_charge1 := (v_result->>'charge_id')::uuid;
 
@@ -116,6 +117,7 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub', v_cajero::text, 'role', 'authenticated')::text, true);
 
   perform set_config('request.jwt.claims', json_build_object('sub', v_customer::text, 'role', 'authenticated')::text, true);
+  reset role;  -- Helios (H3): el paciente no se autentica; esto corre como el sistema, con sus claims.
 
   v_failed := false;
   begin
@@ -135,9 +137,10 @@ begin
 
   set local role authenticated;
   perform set_config('request.jwt.claims', json_build_object('sub', v_customer::text, 'role', 'authenticated')::text, true);
+  reset role;  -- Helios (H3): el paciente no se autentica; esto corre como el sistema, con sus claims.
 
-  v_quote := (public.quote_installments(array[v_inst1])->>'quote_id')::uuid;
-  v_report := (public.report_payment(v_quote, 'pago_movil', 'Banesco', '100001')->>'report_id')::uuid;
+  v_quote := (pg_temp.quote_installments(array[v_inst1])->>'quote_id')::uuid;
+  v_report := (pg_temp.report_payment(v_quote, 'pago_movil', 'Banesco', '100001')->>'report_id')::uuid;
 
   reset role;
   v_result := public.reconcile_payment(v_report, v_cajero, true, 'conciliado en prueba');
@@ -147,6 +150,7 @@ begin
 
   set local role authenticated;
   perform set_config('request.jwt.claims', json_build_object('sub', v_customer::text, 'role', 'authenticated')::text, true);
+  reset role;  -- Helios (H3): el paciente no se autentica; esto corre como el sistema, con sus claims.
   v_avail := pg_temp.prueba_saldo(v_customer);
 
   if (v_avail->>'available_usd')::numeric <> v_limit - v_financed1 then
@@ -163,8 +167,8 @@ begin
     v_avail->>'available_usd', v_avail->>'amount_to_unlock_usd';
 
   -- --- 4. Pagar la segunda cuota cierra el bloque y libera el límite -----
-  v_quote := (public.quote_installments(array[v_inst2])->>'quote_id')::uuid;
-  v_report := (public.report_payment(v_quote, 'pago_movil', 'Banesco', '100002')->>'report_id')::uuid;
+  v_quote := (pg_temp.quote_installments(array[v_inst2])->>'quote_id')::uuid;
+  v_report := (pg_temp.report_payment(v_quote, 'pago_movil', 'Banesco', '100002')->>'report_id')::uuid;
 
   reset role;
   v_result := public.reconcile_payment(v_report, v_cajero, true, 'conciliado en prueba');
@@ -174,6 +178,7 @@ begin
 
   set local role authenticated;
   perform set_config('request.jwt.claims', json_build_object('sub', v_customer::text, 'role', 'authenticated')::text, true);
+  reset role;  -- Helios (H3): el paciente no se autentica; esto corre como el sistema, con sus claims.
   v_avail := pg_temp.prueba_saldo(v_customer);
 
   if (v_avail->>'available_usd')::numeric <> v_limit then

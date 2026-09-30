@@ -16,6 +16,14 @@
 -- devengo (`ledger.record_advance_settlement`) y la misma y única función que
 -- crea deuda (`helios_assign_debt`). Cuando exista `create_patient_charge`,
 -- las suites deberían pasar a usarla y esto se borra.
+--
+-- Pacientes (H3, 20261002000300): el paciente NO tiene cuenta en Auth. Una
+-- suite crea sus pacientes con `insert into public.profiles (id, phone_e164)`
+-- (nacen `active` y en nivel 1) y solo el PERSONAL va a `auth.users`.
+-- `pg_temp.quote_installments` y `pg_temp.report_payment` envuelven las RPC
+-- de la app (sin permiso para la API desde H3) para que las suites de pago
+-- sigan cotizando y reportando «como el paciente» (con sus claims) hasta que
+-- exista `admin_register_payment` (fase 3).
 -- ============================================================================
 
 /**
@@ -63,9 +71,8 @@ begin
   if v_status is distinct from 'active' then
     raise exception 'Este local no puede cobrar: está %', v_status using errcode = '22023';
   end if;
-  if p_base < 5.00 then
-    raise exception 'El monto mínimo por cobro es 5.00' using errcode = '22023';
-  end if;
+  -- Helios (H1): el mínimo es el parámetro `min_charge_usd`, no los 5 euros de Ronda.
+  perform public.helios_assert_charge_amount(p_base);
 
   select * into v_terms from public.merchant_settlement_terms where merchant_id = p_merchant;
   v_b := public.helios_charge_breakdown(p_base, coalesce(v_terms.commission_pct, 0));
@@ -249,4 +256,36 @@ begin
   values (v_id, 'super_admin', 'Admin de prueba', true);
   return v_id;
 end;
+$$;
+
+/**
+ * `quote_installments` y `report_payment` eran de la app: el deudor cotizaba y
+ * reportaba con SU sesión (`auth.uid()`). Desde H3 la API no puede
+ * ejecutarlas; estas envolturas corren como el dueño de la transacción
+ * (security definer) y respetan los claims que la suite puso, así que
+ * `auth.uid()` sigue siendo el paciente de la prueba.
+ */
+create function pg_temp.quote_installments(p_installment_ids uuid[])
+returns jsonb
+language sql
+security definer
+set search_path = public, pg_temp
+as $$ select public.quote_installments(p_installment_ids) $$;
+
+create function pg_temp.report_payment(
+  p_quote_id       uuid,
+  p_method         text,
+  p_bank           text,
+  p_reference      text,
+  p_payer_document text default null,
+  p_payer_phone    text default null,
+  p_receipt_path   text default null
+)
+returns jsonb
+language sql
+security definer
+set search_path = public, pg_temp
+as $$
+  select public.report_payment(p_quote_id, p_method, p_bank, p_reference,
+                               p_payer_document, p_payer_phone, p_receipt_path)
 $$;

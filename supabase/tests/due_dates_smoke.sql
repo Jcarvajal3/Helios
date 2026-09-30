@@ -85,15 +85,22 @@ begin
   end loop;
   raise notice 'TEST CUOTAS 3 OK — las dos cuotas caen siempre en el mismo día de la semana que la compra';
 
-  -- --- 4. El plazo NO depende de la hora del consumo ----------------------
-  -- El día operativo corre de 10 AM a 10 AM, así que una compra de las 3 de la
-  -- madrugada pertenece a la noche anterior. Lo que no puede pasar es que dos
-  -- consumos del MISMO día operativo tengan plazos distintos.
+  -- --- 4. El día operativo empieza a medianoche (Helios, H2) -------------
+  -- En Ronda corría de 10 AM a 10 AM y una compra de las 3 de la madrugada era
+  -- de la noche anterior. En Helios es el día del calendario de Caracas: las
+  -- 11 PM y las 3 AM son días distintos, y las 00:00 y las 9:59 son el mismo.
   if (select due_1 from public.helios_installment_due_dates(public.helios_business_date('2026-08-22 23:00-04'::timestamptz)))
-     <> (select due_1 from public.helios_installment_due_dates(public.helios_business_date('2026-08-23 03:00-04'::timestamptz))) then
-    raise exception 'Dos consumos de la misma noche (11 PM y 3 AM) deben vencer el mismo día';
+     = (select due_1 from public.helios_installment_due_dates(public.helios_business_date('2026-08-23 03:00-04'::timestamptz))) then
+    raise exception 'Una consulta de las 11 PM y otra de las 3 AM del día siguiente deben vencer en días distintos';
   end if;
-  raise notice 'TEST CUOTAS 4 OK — 11 PM y 3 AM de la misma noche vencen igual';
+  if (select due_1 from public.helios_installment_due_dates(public.helios_business_date('2026-08-23 00:00-04'::timestamptz)))
+     <> (select due_1 from public.helios_installment_due_dates(public.helios_business_date('2026-08-23 09:59-04'::timestamptz))) then
+    raise exception 'Las 00:00 y las 9:59 del mismo día deben vencer igual';
+  end if;
+  if (select due_1 from public.helios_installment_due_dates(public.helios_business_date('2026-08-23 03:00-04'::timestamptz))) <> '2026-08-30' then
+    raise exception 'Una consulta del 23/08 a las 3 AM vence el 30/08';
+  end if;
+  raise notice 'TEST CUOTAS 4 OK — el día operativo empieza a medianoche';
 
   raise notice '=== TODOS LOS TESTS DE VENCIMIENTOS PASARON ===';
 end $$;

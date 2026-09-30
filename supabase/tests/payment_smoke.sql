@@ -35,9 +35,12 @@ declare
   v_recv     numeric;
 begin
   -- --- Fixtures: dos consumos, cuatro cuotas -----------------------------
+  -- Helios (H3): el paciente no tiene cuenta en Auth; es solo una fila de `profiles`.
+  insert into public.profiles (id, phone_e164) values
+    (v_ana, '+584140000031');
+
   insert into auth.users (id, instance_id, aud, role, phone, phone_confirmed_at, created_at, updated_at)
   values
-    (v_ana,    '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', '584140000031', now(), now(), now()),
     (v_cajero, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', '584140000032', now(), now(), now());
 
   update public.profiles set status = 'active' where id = v_ana;
@@ -64,6 +67,7 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub', v_cajero::text, 'role', 'authenticated')::text, true);
 
   perform set_config('request.jwt.claims', json_build_object('sub', v_ana::text, 'role', 'authenticated')::text, true);
+  reset role;  -- Helios (H3): el paciente no se autentica; esto corre como el sistema, con sus claims.
   v_charge1 := (pg_temp.prueba_cobro(v_ana, v_merchant, v_branch, v_cajero, 20.00, 'pay-1', 'Consumo')->>'charge_id')::uuid;
   v_charge2 := (pg_temp.prueba_cobro(v_ana, v_merchant, v_branch, v_cajero, 10.00, 'pay-2', 'Consumo')->>'charge_id')::uuid;
 
@@ -75,7 +79,7 @@ begin
     raise exception 'Esperaba 4 cuotas pendientes, hay %', array_length(v_insts, 1);
   end if;
 
-  v_quote := public.quote_installments(v_insts);
+  v_quote := pg_temp.quote_installments(v_insts);
   v_quote_id := (v_quote->>'quote_id')::uuid;
 
   -- Contra la suma REAL de las cuotas cotizadas, no contra la base del pedido:
@@ -98,7 +102,7 @@ begin
   -- --- 2. No se puede cotizar una cuota ajena ----------------------------
   v_failed := false;
   begin
-    perform public.quote_installments(array[gen_random_uuid()]);
+    perform pg_temp.quote_installments(array[gen_random_uuid()]);
   exception when others then
     v_failed := true;
   end;
@@ -108,7 +112,7 @@ begin
   raise notice 'TEST PAGO 2 OK — no se pueden cotizar cuotas ajenas';
 
   -- --- 3. Reportar el pago con UNA sola referencia ------------------------
-  v_report := public.report_payment(
+  v_report := pg_temp.report_payment(
     v_quote_id, 'pago_movil', 'BNC', '123456', 'V-12345678', '04141234567'
   );
 
@@ -121,7 +125,7 @@ begin
   -- --- 4. Segundo reporte sobre las mismas cuotas: rechazado -------------
   v_failed := false;
   begin
-    perform public.report_payment(v_quote_id, 'pago_movil', 'BNC', '999999', 'V-1', '0414');
+    perform pg_temp.report_payment(v_quote_id, 'pago_movil', 'BNC', '999999', 'V-1', '0414');
   exception when others then
     v_failed := true;
     raise notice 'TEST PAGO 4 OK — segundo reporte rechazado: %', sqlerrm;
@@ -135,7 +139,7 @@ begin
   -- el usuario transfiere el dinero y descubre el rechazo después.
   v_failed := false;
   begin
-    perform public.quote_installments(v_insts);
+    perform pg_temp.quote_installments(v_insts);
   exception when others then
     v_failed := true;
     raise notice 'TEST PAGO 4b OK — cotizar cuotas ya reportadas se rechaza: %', sqlerrm;
@@ -189,6 +193,7 @@ begin
 
   set local role authenticated;
   perform set_config('request.jwt.claims', json_build_object('sub', v_ana::text, 'role', 'authenticated')::text, true);
+  reset role;  -- Helios (H3): el paciente no se autentica; esto corre como el sistema, con sus claims.
   -- Conciliado el reporte, ninguna cuota sigue "en revisión": el estado lo
   -- manda el reporte, no una marca aparte que haya que acordarse de limpiar.
   -- Helios: `my_installments_in_review()` era la vista de la app (podada). Lo
@@ -221,13 +226,14 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub', v_cajero::text, 'role', 'authenticated')::text, true);
 
   perform set_config('request.jwt.claims', json_build_object('sub', v_ana::text, 'role', 'authenticated')::text, true);
-  v_charge3 := (pg_temp.prueba_cobro(v_ana, v_merchant, v_branch, v_cajero, 8.00, 'pay-3', 'Consumo')->>'charge_id')::uuid;
+  reset role;  -- Helios (H3): el paciente no se autentica; esto corre como el sistema, con sus claims.
+  v_charge3 := (pg_temp.prueba_cobro(v_ana, v_merchant, v_branch, v_cajero, 12.00, 'pay-3', 'Consumo')->>'charge_id')::uuid;
 
   select array_agg(id) into v_insts
   from public.installments where user_id = v_ana and status = 'pending';
 
-  v_quote := public.quote_installments(v_insts);
-  v_report := public.report_payment(
+  v_quote := pg_temp.quote_installments(v_insts);
+  v_report := pg_temp.report_payment(
     (v_quote->>'quote_id')::uuid, 'pago_movil', 'BNC', '654321', 'V-12345678', '04141234567'
   );
 

@@ -37,9 +37,10 @@ declare
   v_super    uuid := gen_random_uuid();
 begin
   -- --- Montaje -----------------------------------------------------------
-  insert into auth.users (id, instance_id, aud, role, phone, phone_confirmed_at, created_at, updated_at)
-  values (v_customer, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-          '+584140000030', now(), now(), now());
+  -- Helios (H3): el paciente no tiene cuenta en Auth; es solo una fila de `profiles`.
+  insert into public.profiles (id, phone_e164) values
+    (v_customer, '+584140000030');
+
   insert into auth.users (id, instance_id, aud, role, phone, phone_confirmed_at, created_at, updated_at)
   values (v_cajero, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
           '+584140000031', now(), now(), now());
@@ -73,6 +74,7 @@ begin
 
   set local role authenticated;
   perform set_config('request.jwt.claims', json_build_object('sub', v_customer::text, 'role', 'authenticated')::text, true);
+  reset role;  -- Helios (H3): el paciente no se autentica; esto corre como el sistema, con sus claims.
 
   select coalesce(base_usd, amount_usd) into v_fin_a from public.charges where id = v_charge_a;
   select coalesce(base_usd, amount_usd) into v_fin_b from public.charges where id = v_charge_b;
@@ -94,8 +96,9 @@ begin
 
   set local role authenticated;
   perform set_config('request.jwt.claims', json_build_object('sub', v_customer::text, 'role', 'authenticated')::text, true);
-  v_quote := public.quote_installments(array[v_inst]);
-  v_report := public.report_payment(
+  reset role;  -- Helios (H3): el paciente no se autentica; esto corre como el sistema, con sus claims.
+  v_quote := pg_temp.quote_installments(array[v_inst]);
+  v_report := pg_temp.report_payment(
     (v_quote->>'quote_id')::uuid, 'pago_movil', 'Banesco', '111111', 'V12345678', '+584140000030');
   reset role;
 
@@ -103,6 +106,7 @@ begin
 
   set local role authenticated;
   perform set_config('request.jwt.claims', json_build_object('sub', v_customer::text, 'role', 'authenticated')::text, true);
+  reset role;  -- Helios (H3): el paciente no se autentica; esto corre como el sistema, con sus claims.
   v_avail := pg_temp.prueba_saldo(v_customer);
   reset role;
 
@@ -119,8 +123,9 @@ begin
 
   set local role authenticated;
   perform set_config('request.jwt.claims', json_build_object('sub', v_customer::text, 'role', 'authenticated')::text, true);
-  v_quote := public.quote_installments(array[v_inst]);
-  v_report := public.report_payment(
+  reset role;  -- Helios (H3): el paciente no se autentica; esto corre como el sistema, con sus claims.
+  v_quote := pg_temp.quote_installments(array[v_inst]);
+  v_report := pg_temp.report_payment(
     (v_quote->>'quote_id')::uuid, 'pago_movil', 'Banesco', '222222', 'V12345678', '+584140000030');
   reset role;
 
@@ -128,6 +133,7 @@ begin
 
   set local role authenticated;
   perform set_config('request.jwt.claims', json_build_object('sub', v_customer::text, 'role', 'authenticated')::text, true);
+  reset role;  -- Helios (H3): el paciente no se autentica; esto corre como el sistema, con sus claims.
   v_avail := pg_temp.prueba_saldo(v_customer);
   reset role;
 
@@ -148,6 +154,7 @@ begin
 
   set local role authenticated;
   perform set_config('request.jwt.claims', json_build_object('sub', v_customer::text, 'role', 'authenticated')::text, true);
+  reset role;  -- Helios (H3): el paciente no se autentica; esto corre como el sistema, con sus claims.
   v_avail := pg_temp.prueba_saldo(v_customer);
   reset role;
 
@@ -166,6 +173,7 @@ begin
 
   set local role authenticated;
   perform set_config('request.jwt.claims', json_build_object('sub', v_customer::text, 'role', 'authenticated')::text, true);
+  reset role;  -- Helios (H3): el paciente no se autentica; esto corre como el sistema, con sus claims.
   v_avail := pg_temp.prueba_saldo(v_customer);
   reset role;
 

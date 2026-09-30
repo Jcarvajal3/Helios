@@ -213,3 +213,16 @@ marcados `PODA (Helios)`. Las RPC conservan la forma de su respuesta.
 - Valores de enum de la app (`pending_kyc`, `pending_pin`, `group_charge`,
   `tab_*`, `bits_earned`, `kyc_*`, `waitlist_*`, `merchant_prepaid`,
   `vault_*`…).
+
+## Fase 1A (20261002000100…000700) — qué de lo anterior ya se resolvió
+
+- H3 resolvió el trigger `on_auth_user_created`/`handle_new_user` (borrados),
+  las FK del deudor (ahora a `profiles`), las políticas `*_read_own` (borradas)
+  y dejó `quote_installments(uuid[])` y `report_payment(...)` sin permiso para
+  la API (solo las usan las suites; se podan con `admin_register_payment`).
+- H11 apagó las 22 plantillas de la app (`channels = '{app}'`): `notify()` ya
+  no escribe en `notifications` y los 12 crons de avisos corren sin hacer
+  nada hasta que H7 los lleve a `outbound_messages`.
+- La tasa del euro que trajo la reproducción quedó archivada como `BCV_EUR`;
+  `BCV` es el dólar (H1).
+- `verificar.sql` tras la fase 1A: 0 errores; los mismos 14 avisos aceptados.

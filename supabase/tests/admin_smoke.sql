@@ -33,10 +33,13 @@ declare
   v_compra   jsonb;
 begin
   -- --- Fixtures ----------------------------------------------------------
+  -- Helios (H3): el paciente no tiene cuenta en Auth; es solo una fila de `profiles`.
+  insert into public.profiles (id, phone_e164) values
+    (v_ana, '+584140000042');
+
   insert into auth.users (id, instance_id, aud, role, phone, phone_confirmed_at, created_at, updated_at)
   values
     (v_admin,  '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', '584140000041', now(), now(), now()),
-    (v_ana,    '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', '584140000042', now(), now(), now()),
     (v_cajero, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', '584140000043', now(), now(), now());
 
   update public.profiles set status = 'active' where id in (v_ana, v_cajero);
@@ -57,15 +60,17 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub', v_cajero::text, 'role', 'authenticated')::text, true);
 
   perform set_config('request.jwt.claims', json_build_object('sub', v_ana::text, 'role', 'authenticated')::text, true);
+  reset role;  -- Helios (H3): el paciente no se autentica; esto corre como el sistema, con sus claims.
   v_charge := (pg_temp.prueba_cobro(v_ana, v_merchant, v_branch, v_cajero, 16.00, 'admin-1', 'Consumo')->>'charge_id')::uuid;
 
   select array_agg(id) into v_insts
   from public.installments where user_id = v_ana and status = 'pending';
 
-  v_qid := (public.quote_installments(v_insts)->>'quote_id')::uuid;
-  v_report := (public.report_payment(v_qid, 'pago_movil', 'BNC', '777001', 'V-1', '0414')->>'report_id')::uuid;
+  v_qid := (pg_temp.quote_installments(v_insts)->>'quote_id')::uuid;
+  v_report := (pg_temp.report_payment(v_qid, 'pago_movil', 'BNC', '777001', 'V-1', '0414')->>'report_id')::uuid;
 
   -- --- 1. El operador ve la cola -----------------------------------------
+  set local role authenticated;
   perform set_config('request.jwt.claims', json_build_object('sub', v_admin::text, 'role', 'authenticated')::text, true);
 
   select count(*) into v_seen from public.payment_queue where report_id = v_report;
