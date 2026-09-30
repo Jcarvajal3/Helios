@@ -1,0 +1,443 @@
+import {
+  comoFila,
+  filaONula,
+  filas,
+  numero,
+  numeroONulo,
+  texto,
+  textoONulo,
+} from '@/lib/json'
+import { leerMonto } from '@/lib/montos'
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Nuevo financiamiento: lo que va y viene de las tres RPC del alta.
+//
+//   helios_patient_eligibility  → leerElegibilidad
+//   preview_patient_charge      → leerVistaPrevia
+//   create_patient_charge       → leerFinanciamiento  (helios_charge_for_staff)
+//   staff_resend_receipt        → leerReenvio
+//
+// Puro: los lectores reciben el `unknown` de la RPC y devuelven el tipo bueno
+// (docs/01-CONTRATO-RPC §1.1–1.4). Las llamadas viven en `registroApi.ts`,
+// que es lo único que toca Supabase.
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── 1. Elegibilidad ───────────────────────────────────────────────────────
+
+/**
+ * Las tres respuestas de la consulta de cédula.
+ *
+ * **`no_disponible` no dice por qué, y no es un olvido.** Mora, lista negra,
+ * bloqueo o cupo agotado se contestan igual: una clínica nunca sabe la deuda
+ * de un paciente con otra (plan §5, privacidad entre clínicas). El tipo no
+ * tiene un campo de motivo para que ninguna pantalla pueda enseñarlo.
+ */
+export type Elegibilidad =
+  | { estado: 'nuevo'; minChargeUsd: number; limiteUsd: number }
+  | {
+      estado: 'disponible'
+      disponibleUsd: number
+      minChargeUsd: number
+      nombreEnmascarado: string | null
+      telefonoEnmascarado: string | null
+      emailEnmascarado: string | null
+    }
+  | { estado: 'no_disponible'; mensaje: string; whatsappHelios: string | null }
+
+/** El mínimo del contrato cuando la base no lo manda (§3, `min_charge_usd`). */
+export const MINIMO_POR_DEFECTO = 10
+
+/** El texto neutro de «no disponible» cuando la base no manda el suyo. */
+export const NO_DISPONIBLE_POR_DEFECTO =
+  'No podemos financiar a esta persona. Si tiene dudas, puede escribir a Helios.'
+
+/**
+ * Lee la respuesta de `helios_patient_eligibility`.
+ *
+ * Un `estado` que no es ninguno de los tres es un fallo del contrato y se
+ * lanza: tratarlo como «nuevo» abriría el alta de alguien que la base no ha
+ * dejado pasar, y como «no disponible» le diría que no a un paciente bueno.
+ */
+export function leerElegibilidad(v: unknown): Elegibilidad {
+  const r = comoFila(v)
+  const minimo = numeroONulo(r.min_charge_usd) ?? MINIMO_POR_DEFECTO
+
+  switch (r.estado) {
+    case 'nuevo':
+      return { estado: 'nuevo', minChargeUsd: minimo, limiteUsd: numero(r.limite_usd) }
+    case 'disponible':
+      return {
+        estado: 'disponible',
+        disponibleUsd: numero(r.disponible_usd),
+        minChargeUsd: minimo,
+        nombreEnmascarado: textoONulo(r.nombre_enmascarado),
+        telefonoEnmascarado: textoONulo(r.telefono_enmascarado),
+        emailEnmascarado: textoONulo(r.email_enmascarado),
+      }
+    case 'no_disponible':
+      return {
+        estado: 'no_disponible',
+        mensaje: textoONulo(r.mensaje) ?? NO_DISPONIBLE_POR_DEFECTO,
+        whatsappHelios: textoONulo(r.whatsapp_helios),
+      }
+    default:
+      throw new Error('La consulta de la cédula devolvió una respuesta que el panel no entiende.')
+  }
+}
+
+/** El máximo que se puede financiar hoy: lo disponible o, si es nuevo, el límite. */
+export function maximoParaFinanciar(e: Elegibilidad): number | null {
+  if (e.estado === 'nuevo') return e.limiteUsd
+  if (e.estado === 'disponible') return e.disponibleUsd
+  return null
+}
+
+// ── 2. Monto ──────────────────────────────────────────────────────────────
+
+/**
+ * El monto de la consulta ya leído, o por qué todavía no vale.
+ *
+ * Mismas reglas que la base: libre, con dos decimales como mucho, desde el
+ * mínimo y dentro de lo disponible. El texto del tope repite el de la base
+ * («El monto supera lo disponible para financiar ($X)») para que la
+ * secretaria no lea dos frases distintas para lo mismo.
+ */
+export function leerMontoDeConsulta(
+  escrito: string,
+  limites: { minimo: number; maximo: number | null },
+  formato: (usd: number) => string,
+): { ok: true; usd: number } | { ok: false; problema: string } {
+  if (escrito.trim() === '') return { ok: false, problema: 'Escribe el monto de la consulta.' }
+
+  const usd = leerMonto(escrito)
+  if (usd === null) return { ok: false, problema: 'No entendemos ese monto. Escríbelo como 45 o 45,50.' }
+  if (usd <= 0) return { ok: false, problema: 'El monto tiene que ser mayor que cero.' }
+  if (Math.abs(usd * 100 - Math.round(usd * 100)) > 1e-6) {
+    return { ok: false, problema: 'El monto lleva como mucho dos decimales.' }
+  }
+  if (usd < limites.minimo) {
+    return { ok: false, problema: `El monto mínimo es ${formato(limites.minimo)}.` }
+  }
+  if (limites.maximo !== null && usd > limites.maximo) {
+    return {
+      ok: false,
+      problema: `El monto supera lo disponible para financiar (${formato(limites.maximo)}).`,
+    }
+  }
+  return { ok: true, usd: Math.round(usd * 100) / 100 }
+}
+
+/** El concepto que se propone. Genérico a propósito: viaja en un correo. */
+export const CONCEPTO_SUGERIDO = 'Consulta'
+export const TOPE_CONCEPTO = 80
+
+// ── 3. Vista previa ───────────────────────────────────────────────────────
+
+export type CuotaDelPlan = {
+  sequence: number
+  dueDate: string
+  /** Lo que paga el paciente en esa cuota: su mitad de la consulta más su
+   *  mitad del servicio Helios. */
+  amountUsd: number
+}
+
+export type VistaPrevia = {
+  /** Lo que vale la consulta y lo que se le paga a la clínica. */
+  baseUsd: number
+  feePct: number
+  /** El servicio Helios y su IVA, por separado. NUNCA se suman a `baseUsd`. */
+  feeUsd: number
+  feeVatUsd: number
+  businessDate: string | null
+  cuotas: CuotaDelPlan[]
+  lateFeeUsd: number | null
+  lateFeeGraceDays: number | null
+  /** `false` si no cabe en el disponible del paciente conocido. */
+  cabe: boolean
+  disponibleUsd: number | null
+}
+
+function leerCuotas(v: unknown): CuotaDelPlan[] {
+  return filas(v)
+    .map((c) => ({
+      sequence: numero(c.sequence),
+      dueDate: texto(c.due_date),
+      amountUsd: numero(c.amount_usd),
+    }))
+    .sort((a, b) => a.sequence - b.sequence)
+}
+
+export function leerVistaPrevia(v: unknown): VistaPrevia {
+  const r = comoFila(v)
+  return {
+    baseUsd: numero(r.base_usd),
+    feePct: numeroONulo(r.consumer_fee_pct) ?? 20,
+    feeUsd: numero(r.consumer_fee_usd),
+    feeVatUsd: numero(r.consumer_fee_vat_usd),
+    businessDate: textoONulo(r.business_date),
+    cuotas: leerCuotas(r.installments),
+    lateFeeUsd: numeroONulo(r.late_fee_usd),
+    lateFeeGraceDays: numeroONulo(r.late_fee_grace_days),
+    // Si la base no lo dice, se asume que cabe: la vista previa ya validó el
+    // monto contra el disponible y, si no cupiera, `create_patient_charge`
+    // lo rechaza con su propio texto.
+    cabe: r.cabe === false ? false : true,
+    disponibleUsd: numeroONulo(r.disponible_usd),
+  }
+}
+
+/**
+ * «Servicio Helios 20% + IVA»: el rótulo de la ÚNICA línea donde aparece el
+ * fee en la pantalla de la clínica. Con el porcentaje que manda la base.
+ */
+export function rotuloDelServicio(feePct: number): string {
+  const pct = Number.isInteger(feePct) ? String(feePct) : String(feePct).replace('.', ',')
+  return `Servicio Helios ${pct}% + IVA`
+}
+
+/**
+ * La regla del cargo por atraso, en una frase para leérsela al paciente.
+ * `null` si la base no mandó las cifras: mejor no decir nada que una regla
+ * inventada.
+ */
+export function reglaDelAtraso(
+  p: Pick<VistaPrevia, 'lateFeeUsd' | 'lateFeeGraceDays'>,
+  formato: (usd: number) => string,
+): string | null {
+  if (p.lateFeeUsd === null || p.lateFeeGraceDays === null) return null
+  const dias = p.lateFeeGraceDays === 1 ? '1 día' : `${p.lateFeeGraceDays} días`
+  return `Si una cuota se paga con más de ${dias} de atraso, se suma un cargo de ${formato(
+    p.lateFeeUsd,
+  )} a esa cuota.`
+}
+
+const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado']
+
+/**
+ * 'jueves' para '2026-10-08'. Al paciente se le dice «el jueves 8», no
+ * «el 08/10/26»: es como se apunta una cita.
+ *
+ * En UTC a propósito: una columna `date` no tiene hora ni zona, y construirla
+ * con la hora local del navegador la movería de día.
+ */
+export function diaDeLaSemana(fecha: string): string {
+  const [y = 1970, m = 1, d = 1] = fecha.slice(0, 10).split('-').map(Number)
+  return DIAS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()] ?? ''
+}
+
+// ── 4. El financiamiento creado ───────────────────────────────────────────
+
+/**
+ * Estado del comprobante por correo (plan §7.3).
+ *
+ *   pendiente       en cola; sale en el minuto siguiente
+ *   enviado         el proveedor lo aceptó
+ *   entregado       llegó al buzón
+ *   rebotado        el correo no existe o no acepta: no llegó
+ *   sin_configurar  Helios todavía no tiene el envío de correos listo
+ */
+export type EstadoDelComprobante =
+  | 'pendiente'
+  | 'enviado'
+  | 'entregado'
+  | 'rebotado'
+  | 'sin_configurar'
+
+const ESTADOS_DEL_COMPROBANTE: readonly EstadoDelComprobante[] = [
+  'pendiente',
+  'enviado',
+  'entregado',
+  'rebotado',
+  'sin_configurar',
+]
+
+/** Un estado conocido, o `null`: un estado nuevo no se pinta como otro. */
+export function leerEstadoDelComprobante(v: unknown): EstadoDelComprobante | null {
+  return ESTADOS_DEL_COMPROBANTE.find((e) => e === v) ?? null
+}
+
+/** Cómo se ve cada estado en una insignia. */
+export const COMPROBANTE: Record<
+  EstadoDelComprobante,
+  { texto: string; tone: 'neutral' | 'warning' | 'error' | 'success' }
+> = {
+  pendiente: { texto: 'Pendiente', tone: 'neutral' },
+  enviado: { texto: 'Enviado', tone: 'success' },
+  entregado: { texto: 'Entregado', tone: 'success' },
+  rebotado: { texto: 'Rebotado', tone: 'error' },
+  sin_configurar: { texto: 'Sin configurar', tone: 'warning' },
+}
+
+/**
+ * La frase de la pantalla de éxito sobre el comprobante, con el correo
+ * enmascarado que manda la base (es el REGISTRADO, no el tecleado).
+ */
+export function fraseDelComprobante(
+  estado: EstadoDelComprobante | null,
+  correo: string | null,
+): string {
+  const a = correo ? ` a ${correo}` : ' al correo del paciente'
+  switch (estado) {
+    case 'enviado':
+    case 'entregado':
+      return `Comprobante enviado${a}.`
+    case 'rebotado':
+      return `El correo${correo ? ` ${correo}` : ''} rebotó: el comprobante no llegó. Avisa a Helios para corregirlo.`
+    case 'sin_configurar':
+      return 'El envío de correos de Helios todavía no está configurado: el comprobante saldrá en cuanto lo esté.'
+    case 'pendiente':
+    case null:
+      return `Comprobante en camino${a}. Llega en uno o dos minutos.`
+  }
+}
+
+export type Financiamiento = {
+  id: string
+  orderNumber: number
+  status: string
+  createdAt: string | null
+  businessDate: string | null
+  /** La consulta: lo que se le paga a la clínica. Sin el fee. */
+  merchantSaleUsd: number
+  concept: string | null
+  beneficiaryName: string | null
+  patientName: string | null
+  documentoEnmascarado: string | null
+  emailEnmascarado: string | null
+  cuotas: CuotaDelPlan[]
+  /** Del desglose; el fee solo se enseña como línea aparte. */
+  feePct: number
+  feeUsd: number | null
+  feeVatUsd: number | null
+  receipt: EstadoDelComprobante | null
+  registeredBy: string | null
+  staffCommissionUsd: number | null
+}
+
+export function leerFinanciamiento(v: unknown): Financiamiento {
+  const r = comoFila(v)
+  const paciente = filaONula(r.patient) ?? {}
+  const desglose = filaONula(r.breakdown) ?? {}
+  const recibo = filaONula(r.receipt) ?? {}
+
+  const id = textoONulo(r.id) ?? textoONulo(r.charge_id)
+  if (id === null) throw new Error('El financiamiento se registró pero la respuesta no trae su número.')
+
+  const base = numeroONulo(r.merchant_sale_usd) ?? numero(desglose.base_usd)
+  const fee = numeroONulo(desglose.consumer_fee_usd)
+
+  return {
+    id,
+    orderNumber: numero(r.order_number),
+    status: texto(r.status, 'confirmed'),
+    createdAt: textoONulo(r.created_at),
+    businessDate: textoONulo(r.business_date),
+    merchantSaleUsd: base,
+    concept: textoONulo(r.concept),
+    beneficiaryName: textoONulo(r.beneficiary_name),
+    patientName: textoONulo(paciente.nombre),
+    documentoEnmascarado: textoONulo(paciente.documento_enmascarado),
+    emailEnmascarado: textoONulo(paciente.email_enmascarado),
+    cuotas: leerCuotas(r.installments),
+    feePct: numeroONulo(desglose.consumer_fee_pct) ?? porcentajeDelServicio(base, fee),
+    feeUsd: fee,
+    feeVatUsd: numeroONulo(desglose.consumer_fee_vat_usd),
+    receipt: leerEstadoDelComprobante(recibo.status),
+    registeredBy: textoONulo(r.registered_by),
+    staffCommissionUsd: numeroONulo(r.staff_commission_usd),
+  }
+}
+
+/**
+ * El porcentaje del servicio a partir de sus cifras, para el rótulo del
+ * desglose cuando la respuesta no lo trae (`helios_charge_for_staff` manda
+ * el importe, no el porcentaje). Con una décima: $20 sobre $100 es 20.
+ */
+export function porcentajeDelServicio(baseUsd: number, feeUsd: number | null): number {
+  if (feeUsd === null || baseUsd <= 0) return 20
+  return Math.round((feeUsd / baseUsd) * 1000) / 10
+}
+
+/**
+ * Si lo que devolvió la base es lo que se pidió.
+ *
+ * `create_patient_charge` es idempotente: la misma clave devuelve el MISMO
+ * financiamiento aunque los datos hayan cambiado. Eso protege del doble clic
+ * y de la recarga, pero tiene un caso raro: la respuesta de un alta se
+ * pierde (la red cae justo entonces), la secretaria corrige el monto o la
+ * cédula y vuelve a confirmar. La base contesta con el de antes, y la
+ * pantalla tiene que decirlo en vez de celebrar un alta que no es la que se
+ * pidió.
+ *
+ * Se compara lo que la respuesta deja ver: el monto y los últimos cuatro
+ * dígitos de la cédula enmascarada.
+ */
+export function coincideConLoPedido(
+  f: Pick<Financiamiento, 'merchantSaleUsd' | 'documentoEnmascarado'>,
+  pedido: { amountUsd: number; document: string },
+): boolean {
+  if (Math.abs(f.merchantSaleUsd - pedido.amountUsd) >= 0.005) return false
+
+  const visibles = (f.documentoEnmascarado ?? '').replace(/\D/g, '')
+  if (visibles === '') return true
+  return pedido.document.replace(/\D/g, '').endsWith(visibles)
+}
+
+// ── 5. Reenviar el comprobante ────────────────────────────────────────────
+
+export type Reenvio = { emailEnmascarado: string | null; status: EstadoDelComprobante | null }
+
+export function leerReenvio(v: unknown): Reenvio {
+  const r = comoFila(v)
+  if (r.ok === false) throw new Error('No se pudo reenviar el comprobante.')
+  return {
+    emailEnmascarado: textoONulo(r.email_enmascarado),
+    status: leerEstadoDelComprobante(r.status),
+  }
+}
+
+// ── 6. A qué paso lleva cada error ────────────────────────────────────────
+
+export type PasoDelAlta = 'cedula' | 'datos' | 'monto' | 'confirmar'
+
+/**
+ * Dónde se corrige lo que la base rechazó, para ofrecer el botón que lleva
+ * ahí. `null` si no es un dato de la secretaria (permiso, mantenimiento…):
+ * ahí no hay nada que corregir en el formulario.
+ *
+ * Se decide por el texto, que es el contrato (§1.3): la base lanza casi todo
+ * con el mismo `22023` y lo que cambia es la frase.
+ */
+export function pasoDelError(mensaje: string | undefined, esNuevo: boolean): PasoDelAlta | null {
+  if (!mensaje) return null
+  const m = mensaje.toLowerCase()
+
+  if (m.includes('no podemos financiar')) return 'cedula'
+  if (/monto|disponible para financiar/.test(m)) return 'monto'
+  if (
+    esNuevo &&
+    /mayor de edad|tel[eé]fono|correo|referencia|nombre|apellido|nacimiento|direcci[oó]n|ciudad|estado|sexo/.test(
+      m,
+    )
+  ) {
+    return 'datos'
+  }
+  return null
+}
+
+/** El `errcode` de un error de PostgREST, si lo trae. */
+export function codigoDeError(error: unknown): string | null {
+  if (typeof error !== 'object' || error === null) return null
+  const code = (error as { code?: unknown }).code
+  return typeof code === 'string' && code !== '' ? code : null
+}
+
+/**
+ * Si el error viene de la propia base —una RPC que se negó con su texto— y
+ * no de la red. Solo entonces es seguro decir que no se registró nada: un
+ * fallo de red en pleno alta puede haber llegado a crear el financiamiento.
+ */
+export function esRechazoDeLaBase(error: unknown): boolean {
+  const code = codigoDeError(error)
+  return code !== null && /^[0-9A-Z]{5}$/.test(code)
+}

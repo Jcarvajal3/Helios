@@ -55,9 +55,13 @@ el oscuro se elige en el pie del menú. Logo e isotipo en
 
 ## Qué falta (por fase)
 
-- **Fase 2:** `/registrar` (nuevo financiamiento) y `/comisiones` son
-  marcadores; `/financiamientos` y `/pagos` vienen de Ronda sin adaptar al
-  comprobante ni a las comisiones.
+- **Fase 2 (hecha en el panel):** `/registrar`, `/financiamientos` (+ ficha
+  con reenviar comprobante), `/comisiones`, `/pagos` partido en consultas y
+  comisiones, y `/metricas` en vocabulario médico. Se programó contra
+  `docs/01-CONTRATO-RPC.md` §1: la capa tipada vive en
+  `src/features/merchant/` (lectores puros con sus `*.test.ts` y un
+  `*Api.ts` por pantalla). Falta probarla de punta a punta contra la base
+  con las RPC de la fase 1.
 - **Fase 3:** «Avisos de hoy» en `/admin/avisos`, registrar pagos, alertas de
   H10, y la poda de textos de métricas y del catálogo del super admin que
   todavía hablan de la app de Ronda.

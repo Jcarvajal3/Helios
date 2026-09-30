@@ -13,6 +13,7 @@ import {
   Stat,
   StatGrid,
   formatDay,
+  formatPorcentaje,
   formatUsd,
   formatUsdShort,
 } from '@/components/ui'
@@ -44,13 +45,13 @@ const RANGES = [
  * La recurrencia va SIEMPRE a 30 días y no sigue al selector de arriba.
  *
  * "Vino 4 veces" solo significa algo con una ventana fija: en 7 días es
- * imposible y en 90 lo consigue cualquiera. Que cambiara con el rango haría
- * que el mismo cliente saltara de cubo sin haber hecho nada.
+ * casi imposible y en 90 lo consigue cualquier paciente en control. Que
+ * cambiara con el rango haría que el mismo paciente saltara de cubo sin
+ * haber hecho nada.
  */
 const RECURRENCE_DAYS = 30
 
-/** Los cubos del filtro. `4` es "cuatro o más", que es donde cae la clientela
- *  de verdad fiel y por eso no se corta más arriba. */
+/** Los cubos del filtro. `4` es "cuatro o más": pacientes en tratamiento. */
 const RECURRENCE_TIMES = [
   { value: '2', label: '2 veces' },
   { value: '3', label: '3 veces' },
@@ -122,7 +123,7 @@ function MetricasPage() {
 
       {overview.isLoading && <SkeletonStats className="mt-6" />}
 
-      {overview.data && (
+      {overview.data && !overview.isError && (
         <>
           <StatGrid className="mt-6">
             <Stat
@@ -141,7 +142,7 @@ function MetricasPage() {
               label="Tu parte"
               value={formatUsd(overview.data.netUsd)}
               // Con comisión 0 —lo normal desde el 2026-08-30— la pista decía
-              // "Después de la comisión de Ronda (0%)", que es una resta que no
+              // "Después de la comisión (0%)", que es una resta que no
               // existe y siembra la duda de si existe alguna otra.
               hint={
                 overview.data.commissionPct > 0
@@ -149,11 +150,8 @@ function MetricasPage() {
                   : 'El monto completo de tus consultas: Helios no te cobra comisión'
               }
             />
-            {/* Una orden es un cobro, aunque lo paguen cinco personas: el
-                local hizo UNA venta y sacó UN QR. Se llamaba "Consumos", que
-                se confundía con el número de clientes. */}
             <Stat
-              label="Nro. de órdenes"
+              label="Financiamientos"
               value={String(overview.data.chargeCount)}
               hint={
                 <Delta
@@ -164,15 +162,15 @@ function MetricasPage() {
               }
             />
             <Stat
-              label="Ticket promedio"
+              label="Consulta promedio"
               value={formatUsd(overview.data.avgTicketUsd)}
-              hint="Financiado ÷ nro. de órdenes"
+              hint="Financiado ÷ financiamientos"
             />
           </StatGrid>
 
-          {/* Los días con ventas colgaban de "Ticket promedio", donde parecían
-              parte de esa cuenta y no lo son: el promedio va por orden, no por
-              día. Aquí abajo son lo que siempre fueron, contexto del periodo. */}
+          {/* Los días con financiamientos no son parte del promedio, que va
+              por financiamiento y no por día: aquí abajo son contexto del
+              periodo. */}
           {overview.data.activeDays > 0 && (
             <p className="mt-3 type-label-medium text-on-surface-variant">
               {overview.data.activeDays}{' '}
@@ -187,7 +185,7 @@ function MetricasPage() {
         </>
       )}
 
-      {daily.data && daily.data.some((p) => p.chargeCount > 0) && (
+      {daily.data && !daily.isError && daily.data.some((p) => p.chargeCount > 0) && (
         <div
           className={`mt-6 transition-opacity duration-[var(--duration-medium1)] ${
             daily.isPlaceholderData ? 'opacity-60' : 'opacity-100'
@@ -199,11 +197,11 @@ function MetricasPage() {
 
       {recurrence.isLoading && <SkeletonStats className="mt-8" />}
 
-      {recurrence.data && recurrence.data.customers > 0 && (
+      {recurrence.data && !recurrence.isError && recurrence.data.customers > 0 && (
         <Recurrence data={recurrence.data} />
       )}
 
-      {overview.data?.chargeCount === 0 && (
+      {!overview.isError && overview.data?.chargeCount === 0 && (
         <EmptyState
           title="Todavía no hay financiamientos en este periodo"
           description="En cuanto registres el primero, aquí verás cuánto se financia en tu clínica."
@@ -217,8 +215,8 @@ function MetricasPage() {
  * Comparación contra el periodo anterior de la misma duración.
  *
  * Sin periodo anterior no se inventa un porcentaje: dividir entre cero daría
- * un "+∞%" o un "+100%" que se lee como un crecimiento que nadie tuvo. Un
- * local que abrió hace dos semanas no creció, simplemente no había antes.
+ * un "+∞%" o un "+100%" que se lee como un crecimiento que nadie tuvo. Una
+ * clínica que empezó hace dos semanas no creció, simplemente no había antes.
  */
 function Delta({
   current,
@@ -238,26 +236,25 @@ function Delta({
 
   return (
     <span className={up ? 'text-primary' : 'text-warning'}>
-      {up ? '▲' : '▼'} {Math.abs(pct).toFixed(0)}% vs. los {days} días previos
+      {up ? '▲' : '▼'} {formatPorcentaje(Math.abs(pct))} vs. los {days} días previos
     </span>
   )
 }
 
 /**
- * CUÁNTA DE TU CLIENTELA VUELVE.
+ * CUÁNTOS DE TUS PACIENTES VUELVEN.
  * ══════════════════════════════════════════════════════════════════════════
  *
- * La cifra de arriba —"Vendido"— no distingue entre cien personas que vinieron
- * una vez y veinticinco que vinieron cuatro, y para un bar esas dos noches no
- * se parecen en nada: la segunda tiene clientela y la primera tiene tráfico.
+ * La cifra de arriba —"Financiado"— no distingue entre cien pacientes que
+ * vinieron una vez y veinticinco que vinieron cuatro. Para una clínica son
+ * dos cosas distintas: los segundos están en tratamiento o en control, y
+ * vuelven a financiar con Helios.
  *
- * **Una visita es un pago, y va por persona.** Una cuenta repartida entre
- * cinco son cinco visitas y UNA orden. Las dos cifras son ciertas porque
- * responden a preguntas distintas, y por eso este bloque no puede derivarse
- * del "Nro. de órdenes" de arriba.
+ * **Una visita es un financiamiento de un paciente**, y se cuenta por
+ * persona: por eso este bloque no se deriva de los financiamientos de arriba.
  *
- * En cubos y no en un promedio: "mis clientes vienen 1,8 veces" no se puede
- * accionar; "tengo 12 que vinieron 4 veces o más y me dejaron €840" sí.
+ * En cubos y no en un promedio: "mis pacientes vienen 1,8 veces" no se puede
+ * accionar; "tengo 12 que vinieron 4 veces o más y me dejaron $840" sí.
  */
 function Recurrence({ data }: { data: MerchantRecurrence }) {
   const [times, setTimes] = useState('2')
@@ -290,8 +287,7 @@ function Recurrence({ data }: { data: MerchantRecurrence }) {
       <StatGrid className="mt-4">
         <Stat
           label="Recurrencia"
-          value={`${data.returningPct}%`}
-          tone="success"
+          value={formatPorcentaje(data.returningPct)}
           hint={`${data.returningCustomers} de ${data.customers} ${
             data.customers === 1 ? 'paciente volvió' : 'pacientes volvieron'
           } al menos una vez más`}
@@ -304,12 +300,12 @@ function Recurrence({ data }: { data: MerchantRecurrence }) {
         <Stat
           label="Visitas"
           value={String(bucket.visits)}
-          hint="Cada pago suya cuenta una"
+          hint="Cada financiamiento suyo cuenta una"
         />
         <Stat
           label="Te dejaron"
           value={formatUsd(bucket.saleUsd)}
-          hint="Tu financiamiento, sin el servicio tecnológico Helios"
+          hint="Sus consultas, sin el servicio Helios"
         />
       </StatGrid>
     </div>
@@ -317,14 +313,14 @@ function Recurrence({ data }: { data: MerchantRecurrence }) {
 }
 
 /**
- * Ventas por día operativo. Una serie y hasta noventa barras, dibujadas por
- * el kit de `components/charts`: eje, rejilla, la cifra del mejor día escrita
+ * Lo financiado por día. Una serie y hasta noventa barras, dibujadas por el
+ * kit de `components/charts`: eje, rejilla, la cifra del mejor día escrita
  * encima de su barra y los números en una tabla desplegable.
  *
  * La media va de línea de referencia y se calcula sobre TODOS los días de la
- * ventana, no solo sobre los que vendieron. Un local que abre tres noches por
- * semana tiene una media semanal más baja que la de sus noches, y la que
- * decide si el mes sale son los siete días.
+ * ventana, no solo sobre los que hubo financiamientos. Una clínica que
+ * atiende tres días por semana tiene una media más baja que la de sus días de
+ * consulta, y la que decide si el mes sale son los siete días.
  */
 function DailyChart({ points }: { points: MerchantDayPoint[] }) {
   const total = points.reduce((s, p) => s + p.soldUsd, 0)
@@ -332,18 +328,18 @@ function DailyChart({ points }: { points: MerchantDayPoint[] }) {
 
   return (
     <BarChart
-      title="Financiamientos por día"
+      title="Financiado por día"
       series={[{ key: 'sold', label: 'Financiado' }]}
       points={points.map((p) => ({
         key: p.businessDate,
         label: formatDay(p.businessDate),
         values: [p.soldUsd],
-        note: `${p.chargeCount} ${p.chargeCount === 1 ? 'orden' : 'órdenes'}`,
+        note: `${p.chargeCount} ${p.chargeCount === 1 ? 'financiamiento' : 'financiamientos'}`,
       }))}
       format={formatUsd}
       formatShort={formatUsdShort}
       ejeLabel="Día"
-      unidadLabel="Órdenes"
+      unidadLabel="Financiamientos"
       reference={{ value: media, label: `Media ${formatUsdShort(media)} al día` }}
       summary={
         <>
@@ -357,4 +353,3 @@ function DailyChart({ points }: { points: MerchantDayPoint[] }) {
     />
   )
 }
-
