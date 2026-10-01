@@ -65,6 +65,9 @@ node supabase/poda/aplicar.mjs
 # Suites SQL (cada una hace begin/rollback: no dejan datos)
 bash supabase/tests/run.sh
 
+# ¿Cada llamada RPC del panel existe en la base con esos parámetros?
+node scripts/verificar-contrato.mjs
+
 # Panel
 cd panel && npm run dev           # http://localhost:3000
 npm run build && npm run lint && npx tsc --noEmit
