@@ -661,6 +661,113 @@ begin
   reset role;
   raise notice 'TEST 10 OK — reenvío con límite y lo que ve la clínica';
 
+  -- =========================================================================
+  -- 11. Superadmin: ficha, contacto y propuestas de cambio (docs/01 §2.4)
+  -- =========================================================================
+  set local role authenticated;
+  perform set_config('request.jwt.claims', json_build_object('sub', v_admin::text, 'role', 'authenticated')::text, true);
+  v_j := public.admin_user_detail(v_profile);
+  if v_j->'datos'->>'document' <> 'V12345678' or (v_j->'datos'->>'age')::int <> 30
+     or v_j->'datos'->>'registered_by_name' <> 'Ana Secretaria'
+     or v_j->'datos'->>'registered_merchant_name' <> 'Clínica Prueba PC'
+     or v_j->'datos'->>'reference_phone' <> '+582125551234'
+     or (v_j->'datos'->>'pending_change_requests')::int <> 1
+     or not v_j ? 'credit' or not v_j ? 'installments' then
+    raise exception 'admin_user_detail sin la sección datos: %', v_j->'datos';
+  end if;
+  select * into v_row from public.admin_user_directory(p_search => 'V12345678') d;
+  if v_row.registered_merchant_name <> 'Clínica Prueba PC' or v_row.email_invalid_at is not null then
+    raise exception 'admin_user_directory sin las columnas nuevas: %', to_jsonb(v_row);
+  end if;
+  v_j := public.admin_merchant_detail(v_m);
+  if not (v_j->'terms' ? 'staff_commission_usd') or (v_j->'terms'->>'staff_commission_effective_usd')::numeric <> 0.50 then
+    raise exception 'admin_merchant_detail sin la comisión: %', v_j->'terms';
+  end if;
+  if not (public.admin_merchant_terms_history(v_m)->0 ? 'staff_commission_usd') then
+    raise exception 'admin_merchant_terms_history sin la comisión';
+  end if;
+
+  -- Corregir el contacto: motivo obligatorio, solo campos de contacto.
+  v_failed := false;
+  begin
+    perform public.admin_update_patient_contact(v_profile, '{"city":"Valencia"}', ' ');
+  exception when sqlstate '22023' then
+    v_failed := true;
+  end;
+  if not v_failed then
+    raise exception 'Corregir el contacto sin motivo debía rechazarse';
+  end if;
+  v_failed := false;
+  begin
+    perform public.admin_update_patient_contact(v_profile, '{"first_name":"Otro"}', 'Pidió el paciente');
+  exception when sqlstate '22023' then
+    v_failed := true;
+  end;
+  if not v_failed then
+    raise exception 'El nombre no se cambia como contacto';
+  end if;
+  v_j := public.admin_update_patient_contact(v_profile,
+           '{"city":"Valencia","occupation":"Docente","reference_phone":"0424-999.88.77"}', 'Llamó el paciente');
+  if v_j->'changes'->'city'->>'despues' <> 'Valencia' or v_j->'datos'->>'occupation' <> 'Docente'
+     or v_j->'datos'->>'reference_phone' <> '+584249998877' then
+    raise exception 'admin_update_patient_contact inesperado: %', v_j;
+  end if;
+
+  -- La propuesta de la clínica: lo propuesto y lo actual.
+  select * into v_row from public.admin_profile_change_requests() r where r.profile_id = v_profile;
+  if v_row.proposed->>'phone' <> '+584241112233' or v_row."current"->>'phone' <> '+584141234567'
+     or v_row.merchant_name <> 'Clínica Prueba PC' or v_row.requested_by_name <> 'Laura Gerente'
+     or v_row.status <> 'pendiente' or v_row.resolved_at is not null then
+    raise exception 'admin_profile_change_requests inesperado: %', to_jsonb(v_row);
+  end if;
+  v_x := v_row.id;
+  v_j := public.admin_resolve_profile_change(v_x, true, 'Confirmado por teléfono');
+  if v_j->>'status' <> 'aprobado' then
+    raise exception 'Aprobar debía devolver aprobado: %', v_j;
+  end if;
+  v_failed := false;
+  begin
+    perform public.admin_resolve_profile_change(v_x, false, null);
+  exception when sqlstate '22023' then
+    v_failed := true;
+  end;
+  if not v_failed then
+    raise exception 'Una propuesta revisada no se vuelve a resolver';
+  end if;
+  -- La del otro paciente (sede B), rechazada.
+  select r.id into v_x from public.admin_profile_change_requests() r limit 1;
+  perform public.admin_resolve_profile_change(v_x, false, 'No coincide');
+  if exists (select 1 from public.admin_profile_change_requests()) then
+    raise exception 'No debía quedar ninguna propuesta pendiente';
+  end if;
+  if (select count(*) from public.admin_profile_change_requests(null)) <> 2 then
+    raise exception 'Con estado null debían salir todas';
+  end if;
+
+  -- La secretaria no puede nada de esto.
+  perform set_config('request.jwt.claims', json_build_object('sub', v_cajero::text, 'role', 'authenticated')::text, true);
+  v_failed := false;
+  begin
+    perform public.admin_update_patient_contact(v_profile, '{"city":"X"}', 'motivo');
+  exception when sqlstate '42501' then
+    v_failed := true;
+  end;
+  if not v_failed then
+    raise exception 'La clínica no corrige datos de pacientes';
+  end if;
+  reset role;
+
+  select * into v_row from public.profiles where id = v_profile;
+  if v_row.phone_e164 <> '+584241112233' or v_row.email <> 'otro@correo.com' or v_row.first_name <> 'Jose'
+     or v_row.full_name <> 'Jose Pérez' or v_row.city <> 'Valencia' or v_row.email_invalid_at is not null then
+    raise exception 'Aprobar debía aplicar lo propuesto: %', to_jsonb(v_row);
+  end if;
+  if (select count(*) from audit.admin_actions
+      where target_id = v_profile and action in ('patient.contact_updated', 'patient.change_request_approved')) <> 2 then
+    raise exception 'Las correcciones debían quedar en la bitácora';
+  end if;
+  raise notice 'TEST 11 OK — superadmin: datos, contacto con motivo y propuestas de cambio';
+
   raise notice '=== TODOS LOS TESTS DE NUEVO FINANCIAMIENTO PASARON ===';
 end $$;
 
