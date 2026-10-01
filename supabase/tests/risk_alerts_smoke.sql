@@ -267,15 +267,18 @@ begin
   raise notice 'TEST ALERTA cupo_al_limite_al_estrenar OK';
 
   -- --- consultas_de_cedula_excesivas (límite 3 al día) ----------------------
+  -- Salta al LLEGAR al límite (20261005000100): la consulta que se pasaría
+  -- lanza 22023 y su fila se deshace con el error, así que en el registro
+  -- nunca hay más filas que el límite.
   insert into public.eligibility_lookups (staff_user_id, merchant_id, document_key, result)
-  select v_s4, v_m, 'V' || (10000000 + g), 'nuevo' from generate_series(1, 3) g;
+  select v_s4, v_m, 'V' || (10000000 + g), 'nuevo' from generate_series(1, 2) g;
   if pg_temp.n_alertas('consultas_de_cedula_excesivas', v_s4) <> 0 then
-    raise exception 'consultas_de_cedula_excesivas: 3 consultas no pasan de 3';
+    raise exception 'consultas_de_cedula_excesivas: 2 consultas no llegan a 3';
   end if;
   insert into public.eligibility_lookups (staff_user_id, merchant_id, document_key, result)
-  values (v_s4, v_m, 'V10000004', 'limite');
+  values (v_s4, v_m, 'V10000003', 'nuevo');
   if pg_temp.n_alertas('consultas_de_cedula_excesivas', v_s4) <> 1 then
-    raise exception 'consultas_de_cedula_excesivas: 4 consultas pasan de 3';
+    raise exception 'consultas_de_cedula_excesivas: 3 consultas llegan al límite de 3';
   end if;
   -- Una consulta rechazada por el límite basta.
   insert into public.eligibility_lookups (staff_user_id, merchant_id, document_key, result)

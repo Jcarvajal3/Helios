@@ -12,6 +12,7 @@ import {
   cambioDeDatos,
   cambiosDelPaciente,
   edadEn,
+  fijoAE164,
   leerCambioPropuesto,
   leerDatosDelPaciente,
   movilAE164,
@@ -104,7 +105,11 @@ igual('sin teléfono no', cambioDeDatos(datos, { ...borrador, phone: ' ' }).ok, 
 igual('un fijo no', cambioDeDatos(datos, { ...borrador, phone: '0212 5551234' }).ok, false)
 igual('sin correo no', cambioDeDatos(datos, { ...borrador, email: '' }).ok, false)
 igual('correo mal escrito no', cambioDeDatos(datos, { ...borrador, email: 'jose@gmail' }).ok, false)
-igual('referencia con un fijo no', cambioDeDatos(datos, { ...borrador, reference_phone: '0212 5551234' }).ok, false)
+igual('referencia con un fijo sí', cambioDeDatos(datos, { ...borrador, reference_phone: '0212 5551234' }).ok, true)
+igual('referencia con un número cualquiera no', cambioDeDatos(datos, { ...borrador, reference_phone: '123' }).ok, false)
+igual('referencia igual al paciente no', cambioDeDatos(datos, { ...borrador, reference_phone: borrador.phone }).ok, false)
+igual('un fijo a E.164', fijoAE164('0212 555 12 34'), '+582125551234')
+igual('un móvil no es fijo', fijoAE164('0414 1234567'), null)
 
 // ── Cambios propuestos ─────────────────────────────────────────────────────
 

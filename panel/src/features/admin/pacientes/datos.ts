@@ -129,13 +129,30 @@ export function movilAE164(valor: string): string | null {
   return PREFIJOS_MOVILES.includes(nacional.slice(0, 3)) ? `+58${nacional}` : null
 }
 
+/**
+ * Un fijo venezolano a E.164: `0212 555 12 34` → `+582125551234`. Solo vale
+ * para el contacto de referencia, que puede ser la casa de la madre (lo mismo
+ * acepta la base en `helios_patient_field`).
+ */
+export function fijoAE164(valor: string): string | null {
+  const digitos = valor.replace(/\D/g, '')
+  const nacional = digitos.startsWith('58') ? digitos.slice(2) : digitos.replace(/^0/, '')
+  return /^2\d{9}$/.test(nacional) ? `+58${nacional}` : null
+}
+
+/** El teléfono de la referencia: un móvil o un fijo. */
+function referenciaAE164(valor: string): string | null {
+  return movilAE164(valor) ?? fijoAE164(valor)
+}
+
 const CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 
 /** El valor tal como se guardaría, para comparar con lo de antes. */
 function normalizar(campo: CampoEditable, valor: string): string | null {
   const v = valor.trim()
   if (v === '') return null
-  if (campo === 'phone' || campo === 'reference_phone') return movilAE164(v) ?? v
+  if (campo === 'phone') return movilAE164(v) ?? v
+  if (campo === 'reference_phone') return referenciaAE164(v) ?? v
   if (campo === 'email') return v.toLowerCase()
   return v
 }
@@ -158,8 +175,11 @@ export function cambioDeDatos(antes: DatosDelPaciente, b: BorradorDeDatos): Camb
   }
   if (b.email.trim() === '') return { ok: false, motivo: 'El correo es obligatorio: ahí le llega el comprobante.' }
   if (!CORREO.test(b.email.trim())) return { ok: false, motivo: 'El correo no parece un correo.' }
-  if (b.reference_phone.trim() !== '' && !movilAE164(b.reference_phone)) {
-    return { ok: false, motivo: 'El teléfono de la referencia tiene que ser un móvil venezolano.' }
+  if (b.reference_phone.trim() !== '' && !referenciaAE164(b.reference_phone)) {
+    return { ok: false, motivo: 'El teléfono de la referencia tiene que ser un móvil o un fijo venezolano.' }
+  }
+  if (b.reference_phone.trim() !== '' && referenciaAE164(b.reference_phone) === movilAE164(b.phone)) {
+    return { ok: false, motivo: 'El teléfono de la referencia tiene que ser distinto del del paciente.' }
   }
 
   const payload: Partial<Record<CampoEditable, string | null>> = {}

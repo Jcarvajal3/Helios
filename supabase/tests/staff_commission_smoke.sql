@@ -377,6 +377,12 @@ begin
      or (select status from public.charges where id = v_ch_c) <> 'reverted' then
     raise exception 'La reversa debía revertir la comisión y borrar su liquidación pendiente';
   end if;
+  -- La reversa también calla sus avisos (20261005000100): ni comprobante, ni
+  -- bienvenida, ni recordatorios de una deuda que ya no existe.
+  if exists (select 1 from public.outbound_messages where charge_id = v_ch_c and status = 'pendiente')
+     or not exists (select 1 from public.outbound_messages where charge_id = v_ch_c and status = 'cancelado') then
+    raise exception 'La reversa debía cancelar los mensajes pendientes del financiamiento';
+  end if;
   if (select sum(e.debit) - sum(e.credit)
       from ledger.transactions t join ledger.entries e on e.transaction_id = t.id
       join ledger.accounts a on a.id = e.account_id
