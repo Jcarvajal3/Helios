@@ -47,6 +47,9 @@ SUITES=(
   saldo_smoke
   fx_rate_smoke
   helios_cimientos_smoke
+  patient_charge_smoke
+  eligibility_smoke
+  staff_commission_smoke
   metricas_cimientos
   metricas_general
   metricas_semana
