@@ -1,11 +1,10 @@
 import { useState } from 'react'
-import type { ReactNode } from 'react'
 import { useMutation } from '@tanstack/react-query'
 
 import { LogoPicker } from '@/components/LogoPicker'
 import { useToast } from '@/components/Toast'
-import { Button, Card, Chip, ErrorBox, Input, Seccion, formatPhone } from '@/components/ui'
-import { CATEGORIAS_CLINICA, MERCHANT_CATEGORY_LABEL, setMerchantProfile } from '@/features/admin/api'
+import { Button, Card, Chip, ErrorBox, Input, Seccion } from '@/components/ui'
+import { CATEGORIAS_CLINICA, MERCHANT_CATEGORY_LABEL, cambiosDeDatos, setMerchantProfile } from '@/features/admin/api'
 import type { DatosDeLaClinica, MerchantCategory, MerchantProfile } from '@/features/admin/api'
 import { validateTaxId } from '@/features/admin/merchantProfile'
 import { SOLO_SUPER_ADMIN, useIsSuperAdmin } from '@/features/admin/role'
@@ -38,6 +37,11 @@ export function Perfil({
   const [city, setCity] = useState(initial.city ?? '')
   const [logoUrl, setLogoUrl] = useState<string | null>(initial.logoUrl)
   const [taxId, setTaxId] = useState(initial.taxId ?? '')
+  const [specialty, setSpecialty] = useState(datos.specialty ?? '')
+  const [mpps, setMpps] = useState(datos.mppsNumber ?? '')
+  const [phone, setPhone] = useState(datos.phone ?? '')
+  const [email, setEmail] = useState(datos.email ?? '')
+  const [address, setAddress] = useState(datos.address ?? '')
 
   const taxIdError = taxId.trim() === '' ? null : validateTaxId(taxId)
 
@@ -49,40 +53,54 @@ export function Perfil({
     taxId: taxId.trim() || null,
   }
 
+  const cambios = cambiosDeDatos(datos, {
+    specialty,
+    mppsNumber: mpps,
+    phone,
+    email,
+    address,
+  })
+  const datosCambiados = Object.values(cambios).some((v) => v !== null)
+  const correoInvalido = email.trim() !== '' && !/^[^s@]+@[^s@]+.[^s@]{2,}$/.test(email.trim())
+
   const dirty =
     profile.category !== initial.category ||
     profile.city !== initial.city ||
     profile.logoUrl !== initial.logoUrl ||
-    profile.taxId !== initial.taxId
+    profile.taxId !== initial.taxId ||
+    datosCambiados
 
   const mutation = useMutation({
-    mutationFn: () => setMerchantProfile({ merchantId, profile }),
+    mutationFn: () => setMerchantProfile({ merchantId, profile, datos: cambios }),
     onSuccess: () => {
       avisar('Perfil de la clínica guardado')
       onDone()
     },
   })
 
-  const bloqueo = !isSuperAdmin ? SOLO_SUPER_ADMIN : !dirty ? 'No has cambiado nada.' : taxIdError || undefined
+  const bloqueo = !isSuperAdmin
+    ? SOLO_SUPER_ADMIN
+    : !dirty
+      ? 'No has cambiado nada.'
+      : taxIdError || (correoInvalido ? 'El correo de la clínica no es válido.' : undefined)
 
   return (
     <div className="flex flex-col gap-shell-gap-block">
       <Seccion
         titulo="Datos de la clínica"
-        info="Los datos que se pusieron en el alta: especialidad, registro del MPPS y cómo contactarla. Salen en el comprobante del paciente."
+        info="Especialidad, registro del MPPS y cómo contactarla. Salen en el comprobante del paciente. Dejar un campo vacío lo borra."
       >
         <Card>
-          <dl className="grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2">
-            <Dato rotulo="Especialidad">{datos.specialty ?? '—'}</Dato>
-            <Dato rotulo="Número del MPPS">{datos.mppsNumber ?? '—'}</Dato>
-            <Dato rotulo="Teléfono">{datos.phone ? formatPhone(datos.phone) : '—'}</Dato>
-            <Dato rotulo="Correo">{datos.email ?? '—'}</Dato>
-            <Dato rotulo="Dirección">{datos.address ?? '—'}</Dato>
-          </dl>
-          {/* TODO(contrato §2.5): editarlos cuando haya RPC; hoy solo se ponen en el alta. */}
-          <p className="mt-4 type-panel-caption text-on-surface-variant">
-            Se ponen al dar de alta la clínica. Para corregirlos, pídeselo al equipo técnico.
-          </p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Input id={`specialty-${merchantId}`} label="Especialidad" value={specialty} onChange={setSpecialty} placeholder="Medicina interna" />
+            <Input id={`mpps-${merchantId}`} label="Número del MPPS (opcional)" value={mpps} onChange={setMpps} placeholder="12345" />
+            <Input id={`phone-${merchantId}`} label="Teléfono" value={phone} onChange={setPhone} inputMode="tel" placeholder="0212 1234567" />
+            <div>
+              <Input id={`email-${merchantId}`} label="Correo" value={email} onChange={setEmail} placeholder="recepcion@clinica.com" />
+              {correoInvalido && <p className="mt-1 type-panel-caption text-error">Ese correo no es válido.</p>}
+            </div>
+            <Input id={`address-${merchantId}`} label="Dirección" value={address} onChange={setAddress} placeholder="Av. Principal, Torre Médica, piso 3" className="sm:col-span-2" />
+          </div>
         </Card>
       </Seccion>
 
@@ -124,7 +142,7 @@ export function Perfil({
               motivoApagado={mutation.isPending ? undefined : bloqueo}
               onClick={() => mutation.mutate()}
             >
-              {mutation.isPending ? 'Guardando…' : 'Guardar el perfil'}
+              {mutation.isPending ? 'Guardando…' : 'Guardar los cambios'}
             </Button>
           </div>
         </Card>
@@ -133,11 +151,3 @@ export function Perfil({
   )
 }
 
-function Dato({ rotulo, children }: { rotulo: string; children: ReactNode }) {
-  return (
-    <div className="flex flex-col gap-1">
-      <dt className="type-panel-label text-on-surface-variant">{rotulo}</dt>
-      <dd className="type-panel-body text-on-surface">{children}</dd>
-    </div>
-  )
-}

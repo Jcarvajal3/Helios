@@ -230,11 +230,24 @@ export async function saveLevelConfig(config: {
 
 // ── Cuenta de cobro ────────────────────────────────────────────────────────
 
+/** Cómo paga el paciente a esa cuenta: cada método exige sus datos (contrato §2.3). */
+export type MetodoDeCobro = 'pago_movil' | 'transferencia' | 'zelle'
+
+export const METODOS_DE_COBRO: Array<{ value: MetodoDeCobro; label: string }> = [
+  { value: 'pago_movil', label: 'Pago Móvil' },
+  { value: 'transferencia', label: 'Transferencia' },
+  { value: 'zelle', label: 'Zelle' },
+]
+
 export type PaymentDestination = {
   id: string
+  method: MetodoDeCobro
+  /** Vacío si el método no lo usa (Zelle). */
   bankName: string
   rif: string
   phone: string
+  accountNumber: string | null
+  email: string | null
   holderName: string | null
   isActive: boolean
   createdAt: string
@@ -254,9 +267,12 @@ export async function fetchPaymentDestinations(): Promise<PaymentDestination[]> 
     .map(comoFila)
     .map((row) => ({
       id: String(row.id),
-      bankName: String(row.bank_name),
-      rif: String(row.rif),
-      phone: String(row.phone),
+      method: leerMetodo(row.method),
+      bankName: textoONulo(row.bank_name) ?? '',
+      rif: textoONulo(row.rif) ?? '',
+      phone: textoONulo(row.phone) ?? '',
+      accountNumber: textoONulo(row.account_number),
+      email: textoONulo(row.email),
       holderName: textoONulo(row.holder_name),
       isActive: Boolean(row.is_active),
       createdAt: String(row.created_at),
@@ -265,15 +281,28 @@ export async function fetchPaymentDestinations(): Promise<PaymentDestination[]> 
     }))
 }
 
+/** Un método que no se conoce se lee como Pago Móvil, el único que hubo en Ronda. */
+export function leerMetodo(valor: unknown): MetodoDeCobro {
+  return valor === 'transferencia' || valor === 'zelle' ? valor : 'pago_movil'
+}
+
 /**
- * Da de alta una cuenta de cobro, o cambia el orden o el estado de una que ya
- * existe (contrato §2.3). En Helios puede haber varias activas: activar una
- * ya no retira las demás. La cuenta se reconoce por banco + RIF + teléfono.
+ * Da de alta una cuenta de cobro (sin `id`) o edita una que ya existe (con
+ * `id`): orden, estado o datos (contrato §2.3). En Helios puede haber varias
+ * activas: activar una ya no retira las demás.
+ *
+ * ⚠️ Al editar, la base reescribe TODOS los datos de la cuenta con lo que
+ * llega: hay que mandarla completa (`datosDe(cuenta)`), o se borran el número
+ * de cuenta o el correo.
  */
 export async function setPaymentDestination(params: {
+  id?: string
+  method: MetodoDeCobro
   bankName: string
   rif: string
   phone: string
+  accountNumber?: string | null
+  email?: string | null
   holderName?: string
   /** El motivo del diálogo: va a la bitácora (`payment_destination.set`). */
   note?: string | null
@@ -290,8 +319,26 @@ export async function setPaymentDestination(params: {
     p_note: params.note || null,
     p_sort_order: params.sortOrder ?? null,
     p_is_active: params.isActive ?? true,
+    p_id: params.id ?? null,
+    p_method: params.method,
+    p_account_number: params.accountNumber || null,
+    p_email: params.email || null,
   })
   if (error) throw error
+}
+
+/** Los datos de una cuenta tal cual, para editar solo su orden o su estado. */
+export function datosDe(cuenta: PaymentDestination) {
+  return {
+    id: cuenta.id,
+    method: cuenta.method,
+    bankName: cuenta.bankName,
+    rif: cuenta.rif,
+    phone: cuenta.phone,
+    accountNumber: cuenta.accountNumber,
+    email: cuenta.email,
+    holderName: cuenta.holderName ?? undefined,
+  }
 }
 
 // ── Equipo de Ronda ────────────────────────────────────────────────────────

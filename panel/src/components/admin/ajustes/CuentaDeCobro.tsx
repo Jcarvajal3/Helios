@@ -13,6 +13,7 @@ import {
   IconButton,
   Input,
   Seccion,
+  Select,
   SkeletonTable,
   Table,
   Td,
@@ -22,8 +23,8 @@ import {
 import { enumerar, esCuentaDeRelleno } from '@/features/admin/ajustesReglas'
 import { CLAVE_ESTADO_CONFIGURACION } from '@/features/admin/contacto/api'
 import { moverCuenta, ordenarCuentas, siguienteOrden } from '@/features/admin/contacto/contacto'
-import { fetchPaymentDestinations, setPaymentDestination } from '@/features/admin/ops'
-import type { PaymentDestination } from '@/features/admin/ops'
+import { METODOS_DE_COBRO, datosDe, fetchPaymentDestinations, setPaymentDestination } from '@/features/admin/ops'
+import type { MetodoDeCobro, PaymentDestination } from '@/features/admin/ops'
 import { SOLO_SUPER_ADMIN, useIsSuperAdmin } from '@/features/admin/role'
 import { describeError } from '@/lib/supabase'
 
@@ -41,8 +42,10 @@ type Decision =
  * comprobante las listan todas, en ese orden. Dar de alta una nueva ya no
  * retira las demás. Todo lo exige el servidor a un super admin y pide motivo.
  *
- * La cuenta se reconoce por banco + RIF + teléfono (`admin_set_payment_destination`
- * con `p_sort_order` y `p_is_active`, contrato §2.3).
+ * Cada cuenta se edita por su id (`admin_set_payment_destination` con `p_id`,
+ * contrato §2.3), mandándola completa: la base reescribe todos sus datos.
+ * Cada método pide lo suyo: Pago Móvil banco + RIF + teléfono; transferencia
+ * banco + RIF + cuenta de 20 dígitos + titular; Zelle correo + titular.
  */
 export function CuentaDeCobro() {
   const avisar = useToast()
@@ -50,9 +53,12 @@ export function CuentaDeCobro() {
   const isSuperAdmin = useIsSuperAdmin()
   const query = useQuery({ queryKey: ['payment-destinations'], queryFn: fetchPaymentDestinations })
 
+  const [method, setMethod] = useState<MetodoDeCobro>('pago_movil')
   const [bank, setBank] = useState('')
   const [rif, setRif] = useState('')
   const [phone, setPhone] = useState('')
+  const [account, setAccount] = useState('')
+  const [email, setEmail] = useState('')
   const [holder, setHolder] = useState('')
   const [decision, setDecision] = useState<Decision | null>(null)
 
@@ -68,9 +74,12 @@ export function CuentaDeCobro() {
     mutationFn: async ({ d, nota }: { d: Decision; nota: string }) => {
       if (d.tipo === 'alta') {
         return setPaymentDestination({
-          bankName: bank.trim(),
-          rif: rif.trim(),
-          phone: phone.trim(),
+          method,
+          bankName: method === 'zelle' ? '' : bank.trim(),
+          rif: method === 'zelle' ? '' : rif.trim(),
+          phone: method === 'pago_movil' ? phone.trim() : '',
+          accountNumber: method === 'transferencia' ? soloDigitos(account) : null,
+          email: method === 'zelle' ? email.trim() : null,
           holderName: holder.trim() || undefined,
           note: nota,
           sortOrder: siguienteOrden(query.data ?? []),
@@ -78,10 +87,7 @@ export function CuentaDeCobro() {
         })
       }
       return setPaymentDestination({
-        bankName: d.cuenta.bankName,
-        rif: d.cuenta.rif,
-        phone: d.cuenta.phone,
-        holderName: d.cuenta.holderName ?? undefined,
+        ...datosDe(d.cuenta),
         note: nota,
         sortOrder: d.tipo === 'activar' ? siguienteOrden(query.data ?? []) : d.cuenta.sortOrder,
         isActive: d.tipo === 'activar',
@@ -89,13 +95,15 @@ export function CuentaDeCobro() {
     },
     onSuccess: (_, { d }) => {
       if (d.tipo === 'alta') {
-        avisar(`Cuenta de ${bank.trim()} activa. Los mensajes nuevos ya la enseñan.`)
+        avisar(`Cuenta de ${nombreDeCuenta({ method, bankName: bank.trim() })} activa. Los mensajes nuevos ya la enseñan.`)
         setBank('')
         setRif('')
         setPhone('')
+        setAccount('')
+        setEmail('')
         setHolder('')
       } else {
-        avisar(d.tipo === 'activar' ? `Cuenta de ${d.cuenta.bankName} activa` : `Cuenta de ${d.cuenta.bankName} retirada`)
+        avisar(d.tipo === 'activar' ? `Cuenta de ${nombreDeCuenta(d.cuenta)} activa` : `Cuenta de ${nombreDeCuenta(d.cuenta)} retirada`)
       }
       setDecision(null)
       refrescar()
@@ -109,10 +117,7 @@ export function CuentaDeCobro() {
       if (!cambios) return
       for (const { cuenta, sortOrder } of cambios) {
         await setPaymentDestination({
-          bankName: cuenta.bankName,
-          rif: cuenta.rif,
-          phone: cuenta.phone,
-          holderName: cuenta.holderName ?? undefined,
+          ...datosDe(cuenta),
           note: 'Cambio de orden',
           sortOrder,
           isActive: true,
@@ -122,23 +127,23 @@ export function CuentaDeCobro() {
     onSettled: refrescar,
   })
 
+  const digitosCuenta = soloDigitos(account)
   const faltan = [
-    !bank.trim() && 'el banco',
-    !rif.trim() && 'la cédula o el RIF',
-    !phone.trim() && 'el teléfono o el número de cuenta',
+    method !== 'zelle' && !bank.trim() && 'el banco',
+    method !== 'zelle' && !rif.trim() && 'la cédula o el RIF',
+    method === 'pago_movil' && !phone.trim() && 'el teléfono',
+    method === 'transferencia' && digitosCuenta.length !== 20 && 'el número de cuenta (20 dígitos)',
+    method === 'zelle' && !CORREO.test(email.trim()) && 'un correo válido',
+    method !== 'pago_movil' && !holder.trim() && 'el titular',
   ].filter((f): f is string => typeof f === 'string')
-  const repetida = cuentas.some(
-    (c) =>
-      c.bankName.trim().toLowerCase() === bank.trim().toLowerCase() &&
-      c.rif.trim().toUpperCase() === rif.trim().toUpperCase() &&
-      c.phone.trim() === phone.trim(),
-  )
+  const claveNueva = claveDeCuenta({ method, bankName: bank, rif, phone, accountNumber: digitosCuenta, email })
+  const repetida = cuentas.some((c) => claveDeCuenta(c) === claveNueva)
 
   const motivoApagado = !isSuperAdmin
     ? SOLO_SUPER_ADMIN
     : faltan.length > 0
       ? `${faltan.length === 1 ? 'Falta' : 'Faltan'} ${enumerar(faltan)}.`
-      : esCuentaDeRelleno(rif)
+      : method !== 'zelle' && esCuentaDeRelleno(rif)
         ? 'Un RIF de ceros no es una cuenta.'
         : repetida
           ? 'Esa cuenta ya existe: actívala desde la lista.'
@@ -162,7 +167,7 @@ export function CuentaDeCobro() {
           titulo="Cuentas de cobro"
           info="Las activas salen en el comprobante y en los avisos, en este orden. Las retiradas se conservan: un pago se coteja contra la cuenta que estaba activa ese día."
         >
-          <Table headers={['Orden', 'Banco', 'RIF', 'Teléfono o cuenta', 'Titular', 'Pagos', 'Estado', '']}>
+          <Table headers={['Orden', 'Método', 'Banco', 'RIF', 'Teléfono, cuenta o correo', 'Titular', 'Pagos', 'Estado', '']}>
             {cuentas.map((d) => {
               const activasOrdenadas = cuentas.filter((c) => c.isActive)
               const puesto = activasOrdenadas.findIndex((c) => c.id === d.id)
@@ -191,9 +196,10 @@ export function CuentaDeCobro() {
                       '—'
                     )}
                   </Td>
-                  <Td className="font-medium">{d.bankName}</Td>
-                  <Td className="font-mono type-panel-caption">{d.rif}</Td>
-                  <Td className="font-mono type-panel-caption">{d.phone}</Td>
+                  <Td>{etiquetaDeMetodo(d.method)}</Td>
+                  <Td className="font-medium">{d.bankName || '—'}</Td>
+                  <Td className="font-mono type-panel-caption">{d.rif || '—'}</Td>
+                  <Td className="font-mono type-panel-caption">{dondeSePaga(d)}</Td>
                   <Td className="text-on-surface-variant">{d.holderName ?? '—'}</Td>
                   <Td className="tabular-nums text-on-surface-variant">{d.reportCount}</Td>
                   <Td>
@@ -233,17 +239,49 @@ export function CuentaDeCobro() {
       >
         <Card>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <Input id="dest-bank" label="Banco o medio" value={bank} onChange={setBank} placeholder="Banesco" />
-            <Input id="dest-rif" label="Cédula o RIF" value={rif} onChange={setRif} placeholder="J-123456789" />
+            <Select id="dest-method" label="Método" value={method} options={METODOS_DE_COBRO} onChange={setMethod} />
+            {method !== 'zelle' && (
+              <Input id="dest-bank" label="Banco" value={bank} onChange={setBank} placeholder="Banesco" />
+            )}
+            {method !== 'zelle' && (
+              <Input id="dest-rif" label="Cédula o RIF" value={rif} onChange={setRif} placeholder="J-123456789" />
+            )}
+            {method === 'pago_movil' && (
+              <Input
+                id="dest-phone"
+                label="Teléfono del Pago Móvil"
+                value={phone}
+                onChange={setPhone}
+                inputMode="tel"
+                placeholder="0414 1234567"
+              />
+            )}
+            {method === 'transferencia' && (
+              <Input
+                id="dest-account"
+                label="Número de cuenta (20 dígitos)"
+                value={account}
+                onChange={setAccount}
+                inputMode="numeric"
+                placeholder="0134 0000 00 0000000000"
+              />
+            )}
+            {method === 'zelle' && (
+              <Input
+                id="dest-email"
+                label="Correo del Zelle"
+                value={email}
+                onChange={setEmail}
+                placeholder="pagos@helios.com"
+              />
+            )}
             <Input
-              id="dest-phone"
-              label="Teléfono (Pago Móvil) o número de cuenta"
-              value={phone}
-              onChange={setPhone}
-              inputMode="tel"
-              placeholder="0414 1234567"
+              id="dest-holder"
+              label={method === 'pago_movil' ? 'Titular (opcional)' : 'Titular'}
+              value={holder}
+              onChange={setHolder}
+              placeholder="Helios C.A."
             />
-            <Input id="dest-holder" label="Titular (opcional)" value={holder} onChange={setHolder} placeholder="Helios C.A." />
           </div>
           <Button
             className="mt-4"
@@ -269,12 +307,12 @@ export function CuentaDeCobro() {
           }
           summary={
             decision.tipo === 'alta'
-              ? `${bank.trim()} (${rif.trim()}, ${phone.trim()}) se suma a las cuentas activas: los mensajes y comprobantes nuevos la enseñan desde que confirmes.`
+              ? `${etiquetaDeMetodo(method)} ${nombreDeCuenta({ method, bankName: bank.trim() })} (${dondeSePaga({ method, phone: phone.trim(), accountNumber: digitosCuenta, email: email.trim() })}) se suma a las cuentas activas: los mensajes y comprobantes nuevos la enseñan desde que confirmes.`
               : decision.tipo === 'activar'
-                ? `${decision.cuenta.bankName} (${decision.cuenta.rif}) vuelve a salir en los mensajes, al final de la lista.`
+                ? `${nombreDeCuenta(decision.cuenta)} (${decision.cuenta.rif}) vuelve a salir en los mensajes, al final de la lista.`
                 : activas.length <= 1
-                  ? `${decision.cuenta.bankName} es la única cuenta activa: al retirarla, los pacientes no sabrán a dónde pagar.`
-                  : `${decision.cuenta.bankName} (${decision.cuenta.rif}) deja de salir en los mensajes. Los pagos ya hechos a ella se siguen cotejando.`
+                  ? `${nombreDeCuenta(decision.cuenta)} es la única cuenta activa: al retirarla, los pacientes no sabrán a dónde pagar.`
+                  : `${nombreDeCuenta(decision.cuenta)} (${decision.cuenta.rif}) deja de salir en los mensajes. Los pagos ya hechos a ella se siguen cotejando.`
           }
           reasonPlaceholder={decision.tipo === 'retirar' ? 'Cerramos esa cuenta' : 'Cuenta nueva de Helios'}
           confirmLabel={decision.tipo === 'retirar' ? 'Retirar' : 'Activar'}
@@ -289,4 +327,44 @@ export function CuentaDeCobro() {
       )}
     </div>
   )
+}
+
+const CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
+
+function soloDigitos(valor: string): string {
+  return valor.replace(/\D/g, '')
+}
+
+function etiquetaDeMetodo(m: MetodoDeCobro): string {
+  return METODOS_DE_COBRO.find((x) => x.value === m)?.label ?? m
+}
+
+/** Cómo se nombra una cuenta en un aviso: el banco, o «Zelle» si no tiene. */
+function nombreDeCuenta(c: { method: MetodoDeCobro; bankName: string }): string {
+  return c.method === 'zelle' ? 'Zelle' : c.bankName
+}
+
+/** El dato al que se paga: teléfono, número de cuenta o correo, según el método. */
+function dondeSePaga(c: {
+  method: MetodoDeCobro
+  phone?: string
+  accountNumber?: string | null
+  email?: string | null
+}): string {
+  if (c.method === 'transferencia') return c.accountNumber || '—'
+  if (c.method === 'zelle') return c.email || '—'
+  return c.phone || '—'
+}
+
+/** Dos cuentas son la misma si coinciden método y destino. */
+function claveDeCuenta(c: {
+  method: MetodoDeCobro
+  bankName: string
+  rif: string
+  phone: string
+  accountNumber?: string | null
+  email?: string | null
+}): string {
+  const norm = (x: string | null | undefined) => (x ?? '').trim().toLowerCase().replace(/\s+/g, '')
+  return [c.method, norm(c.bankName), norm(c.rif), norm(c.phone), soloDigitos(c.accountNumber ?? ''), norm(c.email)].join('|')
 }

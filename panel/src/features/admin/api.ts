@@ -1117,8 +1117,7 @@ export type MerchantProfile = {
 
 /**
  * Los datos médicos y de contacto de una clínica (contrato §2.5). Se ponen en
- * el alta; la ficha los enseña. TODO(contrato): no hay RPC para editarlos
- * después (`admin_set_merchant_profile` no los recibe).
+ * el alta y se corrigen desde la ficha (`admin_set_merchant_profile`).
  */
 export type DatosDeLaClinica = {
   specialty: string | null
@@ -1180,9 +1179,29 @@ export async function fetchMerchantDetail(merchantId: string): Promise<MerchantD
   }
 }
 
+/**
+ * Para los datos médicos, la base entiende `null` = no tocar y `''` =
+ * borrar (contrato §2.5). `cambiosDeDatos` traduce el formulario a eso.
+ */
+export function cambiosDeDatos(antes: DatosDeLaClinica, despues: DatosDeLaClinica) {
+  const campo = (a: string | null, d: string | null): string | null => {
+    const nuevo = (d ?? '').trim()
+    return nuevo === (a ?? '').trim() ? null : nuevo
+  }
+  return {
+    p_specialty: campo(antes.specialty, despues.specialty),
+    p_mpps_number: campo(antes.mppsNumber, despues.mppsNumber),
+    p_phone: campo(antes.phone, despues.phone),
+    p_email: campo(antes.email, despues.email),
+    p_address: campo(antes.address, despues.address),
+  }
+}
+
 export async function setMerchantProfile(params: {
   merchantId: string
   profile: MerchantProfile
+  /** Los datos médicos ya traducidos con `cambiosDeDatos`. Sin ellos, no se tocan. */
+  datos?: ReturnType<typeof cambiosDeDatos>
 }): Promise<void> {
   const { error } = await supabase.rpc('admin_set_merchant_profile', {
     p_merchant_id: params.merchantId,
@@ -1192,6 +1211,7 @@ export async function setMerchantProfile(params: {
     p_logo_url: params.profile.logoUrl,
     p_social_url: params.profile.socialUrl,
     p_tax_id: params.profile.taxId,
+    ...(params.datos ?? {}),
   })
   if (error) throw error
 }
