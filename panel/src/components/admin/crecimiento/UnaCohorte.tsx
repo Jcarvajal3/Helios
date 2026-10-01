@@ -168,7 +168,7 @@ function Historia({
           <Stat
             label="Financiado desde que entraron (sin fee)"
             value={formatUsd(fila.everFinancedUsd)}
-            info="Sin el service fee: todo lo financiado a esta cohorte desde que entró (en un grupo, la parte de cada uno)."
+            info="Sin el service fee: todo lo financiado a esta cohorte desde que entró."
             hint={`${formatUsd(porPersona)} sin fee por paciente de la cohorte`}
           />
         </StatGrid>

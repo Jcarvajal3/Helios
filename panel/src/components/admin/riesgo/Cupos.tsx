@@ -162,7 +162,7 @@ export function Cupos({
         <Stat
           label="Exposición"
           value={t ? formatUsd(t.exposicion) : ''}
-          info="Sin el service fee: el financiado de cada cuota pendiente que no se ha dado por perdida, de todos (también fuera de los niveles activos). Es la parte facturada de «Por cobrar» en Global › Resumen."
+          info="Sin el service fee: el financiado de cada cuota pendiente que no se ha dado por perdida, de todos (también fuera de los niveles activos). Es la parte financiada de «Por cobrar» en Global › Resumen."
           estado={estado}
           onReintentar={reintentar}
         />

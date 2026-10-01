@@ -151,32 +151,18 @@ const RASGOS: ReadonlyArray<{
   {
     clave: 'mujeres',
     rotulo: 'Mujeres',
-    ayuda: 'Sobre quien tiene el sexo en su verificación de identidad.',
+    ayuda: 'Sobre quien tiene el sexo registrado (lo pone la clínica al registrarlo).',
     celda: (g) => celdaPct(g.sexo.F, g.sexo.F + g.sexo.M),
   },
-  {
-    clave: 'ios',
-    rotulo: 'Con iPhone',
-    ayuda: 'Sobre quien tiene el teléfono conocido (Android o iPhone), de su verificación o de la app.',
-    celda: (g) => celdaPct(g.plataforma.ios, g.plataforma.android + g.plataforma.ios),
-  },
+  // Fuera «Con iPhone», «Se financió en grupo» y «Sin avisos»: los tres
+  // salían de la app de Ronda (el aparato, los grupos y el push). Los datos
+  // se siguen leyendo (`plataforma`, `enGrupo`, `sinAvisos`) por si la base
+  // los manda, pero en Helios no dicen nada.
   {
     clave: 'nuevos',
     rotulo: 'Menos de 4 semanas en Helios',
     ayuda: 'Su primer financiamiento en Helios, en cualquier clínica, fue hace menos de cuatro semanas.',
     celda: (g) => celdaPct(g.nuevos, g.personas),
-  },
-  {
-    clave: 'grupo',
-    rotulo: 'Se financió en grupo',
-    ayuda: 'Alguna vez puso su parte en un financiamiento de grupo.',
-    celda: (g) => celdaPct(g.enGrupo, g.personas),
-  },
-  {
-    clave: 'avisos',
-    rotulo: 'Sin avisos',
-    ayuda: 'Ningún teléfono suyo recibe avisos push: los recordatorios no le llegan.',
-    celda: (g) => celdaPct(g.sinAvisos, g.personas),
   },
   {
     clave: 'consumo',
