@@ -201,6 +201,43 @@ export const cobranza = [
   },
   {
     tipo: 'accion',
+    id: 'registrar-pago',
+    titulo: 'Registrar un pago recibido por WhatsApp',
+    descripcion:
+      'El paciente pagó y mandó la captura: elegir sus cuotas (lo vencido primero), copiar la referencia y el monto en bolívares y subir la captura. Queda en Pagos reportados para aprobarlo.',
+    espacio: 'cobranza',
+    sinonimos: [
+      'registrar pago',
+      'pago por whatsapp',
+      'captura',
+      'comprobante de pago',
+      'pagó por pago móvil',
+      'cargar un pago',
+      'doble control',
+    ],
+    destino: { to: '/admin/cobros' },
+  },
+  {
+    tipo: 'accion',
+    id: 'mandar-avisos-de-hoy',
+    titulo: 'Mandar los avisos de hoy',
+    descripcion:
+      'Recorrer la cola de avisos de WhatsApp del día uno a uno: abrir el chat con el texto ya escrito y marcarlo enviado u omitido.',
+    espacio: 'cobranza',
+    sinonimos: ['avisos de hoy', 'recordatorios', 'wa.me', 'cola de whatsapp', 'mensajes del día', 'marcar enviado'],
+    destino: { to: '/admin/avisos', search: { cola: true } },
+  },
+  {
+    tipo: 'accion',
+    id: 'reenviar-comprobante',
+    titulo: 'Reenviar el comprobante a un paciente',
+    descripcion: 'Volver a mandar el comprobante del financiamiento por correo, corrigiendo el correo si rebotó.',
+    espacio: 'cobranza',
+    sinonimos: ['correo rebotado', 'comprobante', 'reenviar correo', 'email', 'no le llegó el correo'],
+    destino: { to: '/admin/avisos', search: { vista: 'correos', estado: 'rebotados' } },
+  },
+  {
+    tipo: 'accion',
     id: 'aprobar-pago',
     titulo: 'Aprobar un pago reportado',
     descripcion: 'Comprobar un pago contra el banco y aplicarlo a las cuotas del paciente, o rechazarlo.',

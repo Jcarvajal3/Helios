@@ -1,6 +1,7 @@
 import {
   Banknote,
   CalendarDays,
+  Contact,
   FileText,
   Layers,
   Power,
@@ -95,12 +96,33 @@ export const ajustes = [
   {
     tipo: 'pantalla',
     id: 'ajustes-cuenta-de-cobro',
-    titulo: 'Cuenta de cobro',
-    descripcion: 'La cuenta de Pago Móvil a la que transfieren los pacientes, y las anteriores.',
+    titulo: 'Cuentas de cobro',
+    descripcion:
+      'Las cuentas a las que transfieren los pacientes (puede haber varias activas, en orden), y las retiradas.',
     espacio: 'ajustes',
-    sinonimos: ['pago móvil', 'cuenta bancaria', 'rif', 'destino de pagos', 'a dónde pagan'],
+    sinonimos: ['cuenta de cobro', 'pago móvil', 'cuenta bancaria', 'zelle', 'rif', 'destino de pagos', 'a dónde pagan'],
     destino: { to: '/admin/ajustes', search: { tab: 'cobro' } },
     icono: Wallet,
+  },
+  {
+    tipo: 'pantalla',
+    id: 'ajustes-contacto',
+    titulo: 'Contacto',
+    descripcion:
+      'El WhatsApp de Helios, el correo y el horario de soporte, y el remitente de los correos: lo que lee el paciente en el comprobante y en los avisos.',
+    espacio: 'ajustes',
+    sinonimos: [
+      'whatsapp de helios',
+      'número de helios',
+      'soporte',
+      'correo de soporte',
+      'horario',
+      'remitente',
+      'resend',
+      'configuración incompleta',
+    ],
+    destino: { to: '/admin/ajustes', search: { tab: 'contacto' } },
+    icono: Contact,
   },
   {
     tipo: 'pantalla',

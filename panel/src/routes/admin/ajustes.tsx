@@ -4,6 +4,7 @@ import { MaintenanceTab } from '@/components/MaintenanceTab'
 import { Niveles } from '@/components/admin/Niveles'
 import { Bitacora } from '@/components/admin/ajustes/Bitacora'
 import type { FiltrosBitacora } from '@/components/admin/ajustes/Bitacora'
+import { Contacto } from '@/components/admin/ajustes/Contacto'
 import { CuentaDeCobro } from '@/components/admin/ajustes/CuentaDeCobro'
 import { Equipo } from '@/components/admin/ajustes/Equipo'
 import { Feriados } from '@/components/admin/ajustes/Feriados'
@@ -56,6 +57,7 @@ function AjustesPage() {
           />
         )}
         {tab === 'cobro' && <CuentaDeCobro />}
+        {tab === 'contacto' && <Contacto />}
         {tab === 'terminos' && <Terminos />}
         {tab === 'equipo' && <Equipo />}
         {tab === 'seguridad' && <Seguridad />}

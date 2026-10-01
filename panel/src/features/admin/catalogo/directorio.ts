@@ -77,6 +77,26 @@ export const directorio = [
   // ── Acciones sobre un paciente ───────────────────────────────────────────
   {
     tipo: 'accion',
+    id: 'editar-contacto-paciente',
+    titulo: 'Corregir el contacto de un paciente',
+    descripcion:
+      'Cambiar su teléfono, correo, dirección o su contacto de referencia desde la ficha, pestaña Datos. Pide motivo y queda en la bitácora.',
+    espacio: 'directorio',
+    sinonimos: ['editar contacto', 'cambiar teléfono', 'cambiar correo', 'correo inválido', 'referencia', 'dirección'],
+    destino: { to: '/admin/pacientes' },
+  },
+  {
+    tipo: 'accion',
+    id: 'revisar-cambios-propuestos',
+    titulo: 'Revisar los cambios propuestos por las clínicas',
+    descripcion:
+      'Cuando una clínica registra a un paciente conocido con otros datos, no se sobrescribe nada: el cambio espera aquí para aprobarlo o rechazarlo.',
+    espacio: 'directorio',
+    sinonimos: ['cambios propuestos', 'datos distintos', 'aprobar cambio', 'propuesta de cambio'],
+    destino: { to: '/admin/pacientes', search: { vista: 'cambios' } },
+  },
+  {
+    tipo: 'accion',
     id: 'cambiar-nivel-persona',
     titulo: 'Cambiar el nivel de un paciente',
     descripcion: 'Subir o bajar a mano el nivel, y con él el cupo, desde la ficha del paciente.',

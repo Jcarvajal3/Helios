@@ -15,6 +15,7 @@ export type PestanaAjustes =
   | 'niveles'
   | 'feriados'
   | 'cobro'
+  | 'contacto'
   | 'terminos'
   | 'equipo'
   | 'seguridad'
@@ -45,7 +46,15 @@ export const GRUPOS_AJUSTES: ReadonlyArray<GrupoAjustes> = [
       // una regla del crédito que se toca pocas veces, como los parámetros.
       { value: 'niveles', label: 'Niveles y cupos' },
       { value: 'feriados', label: 'Feriados' },
-      { value: 'cobro', label: 'Cuenta de cobro' },
+    ],
+  },
+  {
+    // Lo que el paciente lee en el comprobante y en cada aviso: a dónde
+    // pagar y a quién escribir (plan H11).
+    titulo: 'Lo que ve el paciente',
+    secciones: [
+      { value: 'cobro', label: 'Cuentas de cobro' },
+      { value: 'contacto', label: 'Contacto' },
     ],
   },
   {
@@ -94,7 +103,7 @@ export function rotuloDePestana(pestana: PestanaAjustes): string {
 }
 
 /** Las tablas anchas; los formularios se leen mejor estrechos. */
-export const PESTANAS_ANCHAS: ReadonlyArray<PestanaAjustes> = ['bitacora', 'parametros']
+export const PESTANAS_ANCHAS: ReadonlyArray<PestanaAjustes> = ['bitacora', 'parametros', 'cobro']
 
 /**
  * Lo que Ajustes guarda en la URL.

@@ -4,6 +4,7 @@ import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { useAnfitrionDeCharla } from '@/components/admin/asistente'
 import { CharlaDeInicio } from '@/components/admin/inicio/CharlaDeInicio'
 import { CifrasDeHoy } from '@/components/admin/inicio/CifrasDeHoy'
+import { ConfiguracionIncompleta } from '@/components/admin/inicio/ConfiguracionIncompleta'
 import { DiaOperativo } from '@/components/admin/inicio/DiaOperativo'
 import { Heroe } from '@/components/admin/inicio/Heroe'
 import { Pendiente } from '@/components/admin/inicio/Pendiente'
@@ -74,6 +75,7 @@ function InicioPage() {
   return (
     <div className="flex flex-1 flex-col gap-7">
       <DiaOperativo />
+      <ConfiguracionIncompleta />
       <Pendiente />
       <CifrasDeHoy hoy={hoy} desde={TARJETAS_EN_LA_FILA} />
       <Heroe onSeguirLaConversacion={irALaCharla} conAsistente={conAsistente} />

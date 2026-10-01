@@ -9,7 +9,14 @@
  * por separado.
  */
 import type { Parametro } from './parametros'
-import { CLAVES_SIN_USO, QUE_DECIDE, agruparParametros, nombreDelParametro } from './parametrosPantalla'
+import {
+  CLAVES_SIN_USO,
+  QUE_DECIDE,
+  agruparParametros,
+  formatValorParametro,
+  leerValorParametro,
+  nombreDelParametro,
+} from './parametrosPantalla'
 
 let fallos = 0
 
@@ -60,6 +67,47 @@ comprueba(
   'su explicación dice las tres cosas que decide',
   explica,
 )
+
+console.log('\n── Los parámetros de Helios (contrato §3) ────────────────────')
+{
+  const de = (key: string, unit: string | null, grupo: Parametro['grupo'] = null, label: string | null = null): Parametro => ({
+    ...fila(key, ''),
+    label,
+    unit,
+    grupo,
+  })
+  const grupos = agruparParametros([
+    de('staff_commission_usd', '$', 'producto'),
+    de('min_charge_usd', '$'),
+    de('payment_four_eyes', null),
+    de('alert_staff_share_pct', '%', 'umbral'),
+    de('eligibility_lookups_per_staff_day', 'consultas'),
+    de('late_fee_usd', '$', 'producto'),
+  ])
+  comprueba(
+    grupos.map((g) => g.grupo).join(',') === 'producto,financiamiento,control,alertas',
+    'comisión y mínimo, controles y alertas: cada uno en su grupo, aunque la base diga otro',
+    grupos.map((g) => g.grupo).join(','),
+  )
+  comprueba(
+    grupos[1]?.filas.map((f) => f.key).join(',') === 'staff_commission_usd,min_charge_usd',
+    'los financiamientos llevan la comisión y el mínimo',
+  )
+  comprueba(formatValorParametro(0.5, '$', 'staff_commission_usd') === '$0,50', 'la comisión en dólares', formatValorParametro(0.5, '$', 'staff_commission_usd'))
+  comprueba(formatValorParametro(3000, null, 'alert_merchant_exposure_usd') === '$3.000,00', 'un _usd sin unidad también es dólares', formatValorParametro(3000, null, 'alert_merchant_exposure_usd'))
+  comprueba(formatValorParametro(1, null, 'payment_four_eyes') === 'Activado', 'el doble control es un interruptor')
+  comprueba(formatValorParametro(0, null, 'payment_four_eyes') === 'Apagado', 'apagado es 0')
+  comprueba(!leerValorParametro('2', null, 'payment_four_eyes').ok, 'un interruptor no acepta 2')
+  comprueba(leerValorParametro('1', null, 'payment_four_eyes').ok, 'un interruptor acepta 1')
+  comprueba(!leerValorParametro('2,5', 'consultas').ok, 'las consultas se cuentan enteras')
+  comprueba(formatValorParametro(1, 'consultas') === '1 consulta', 'en singular', formatValorParametro(1, 'consultas'))
+  comprueba(
+    nombreDelParametro(de('payment_four_eyes', null)) === 'Doble control de pagos',
+    'sin rótulo en la base, el del panel y no la clave',
+  )
+  comprueba(nombreDelParametro(de('min_charge_usd', '$', null, 'Mínimo')) === 'Mínimo', 'con rótulo en la base, el de la base')
+  comprueba((QUE_DECIDE.staff_commission_usd ?? '').includes('lunes'), 'la comisión dice cuándo se paga')
+}
 
 console.log(fallos === 0 ? '\nTODO BIEN' : `\n${fallos} FALLOS`)
 process.exit(fallos === 0 ? 0 : 1)
