@@ -76,7 +76,7 @@ console.log('\n── Los parámetros de Helios (contrato §3) ─────�
     unit,
     grupo,
   })
-  const grupos = agruparParametros([
+  const deHelios = agruparParametros([
     de('staff_commission_usd', '$', 'producto'),
     de('min_charge_usd', '$'),
     de('payment_four_eyes', null),
@@ -85,12 +85,12 @@ console.log('\n── Los parámetros de Helios (contrato §3) ─────�
     de('late_fee_usd', '$', 'producto'),
   ])
   comprueba(
-    grupos.map((g) => g.grupo).join(',') === 'producto,financiamiento,control,alertas',
+    deHelios.map((g) => g.grupo).join(',') === 'producto,financiamiento,control,alertas',
     'comisión y mínimo, controles y alertas: cada uno en su grupo, aunque la base diga otro',
-    grupos.map((g) => g.grupo).join(','),
+    deHelios.map((g) => g.grupo).join(','),
   )
   comprueba(
-    grupos[1]?.filas.map((f) => f.key).join(',') === 'staff_commission_usd,min_charge_usd',
+    deHelios[1]?.filas.map((f) => f.key).join(',') === 'staff_commission_usd,min_charge_usd',
     'los financiamientos llevan la comisión y el mínimo',
   )
   comprueba(formatValorParametro(0.5, '$', 'staff_commission_usd') === '$0,50', 'la comisión en dólares', formatValorParametro(0.5, '$', 'staff_commission_usd'))
