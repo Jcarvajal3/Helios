@@ -84,7 +84,7 @@ export type Cohorte = {
   consumos: number
   /** El consumo, sin el fee: dato secundario (va en el desglose del total a cobrar). */
   consumoUsd: number
-  /** Personas con alguna cuota de esos consumos (en un grupo, todas). */
+  /** Pacientes con alguna cuota de esos financiamientos. */
   personas: number
   /** El total a cobrar: la cuota 1 + la 2, con su desglose. */
   aCobrar: ACobrar

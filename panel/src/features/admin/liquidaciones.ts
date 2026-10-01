@@ -13,6 +13,7 @@ export const MOTIVO_DE_LIQUIDACION: Record<SettlementReason, string> = {
   advance: 'Adelanto',
   scheduled_installment: 'Cuota por fecha',
   on_collection: 'Cuota cobrada',
+  staff_commission: 'Comisión del personal',
 }
 
 export type PayoutMethod = 'pago_movil' | 'transferencia' | 'zelle' | 'usdt' | 'efectivo'

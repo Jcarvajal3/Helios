@@ -61,13 +61,18 @@ export function columnasDeTransferencias({ conLocal }: { conLocal: boolean }): A
       key: 'monto',
       header: 'Monto',
       type: 'number',
-      info: 'Lo transferido a la clínica: su parte del financiamiento (financiado sin fee) menos la comisión de la clínica. Debajo, en bolívares.',
+      info: 'Lo transferido a la clínica: sus consultas (financiado sin fee, menos la comisión de la clínica) más las comisiones de su personal. Debajo, partido y en bolívares.',
       sort: (p) => p.amountUsd,
       sortDir: 'desc',
       csv: (p) => csvDinero(p.amountUsd),
       cell: (p) => (
         <>
           <span className="font-semibold">{formatUsd(p.amountUsd)}</span>
+          {p.desglose && (
+            <span className="block whitespace-nowrap type-panel-caption font-normal text-on-surface-variant">
+              consultas {formatUsd(p.desglose.consultasUsd)} + comisiones {formatUsd(p.desglose.comisionesUsd)}
+            </span>
+          )}
           {p.amountVes !== null && (
             <span className="block type-panel-caption font-normal text-on-surface-variant">
               {formatVes(p.amountVes)}

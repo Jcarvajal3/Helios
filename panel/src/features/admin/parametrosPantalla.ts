@@ -11,19 +11,58 @@ import { leerMonto } from '@/lib/montos'
 // leer lo que alguien escribe en el campo.
 // ═══════════════════════════════════════════════════════════════════════════
 
+/**
+ * Los grupos en pantalla. Los cuatro de la base (`business_parameter_catalog`)
+ * y tres del panel para los parámetros de Helios (contrato §3), que se
+ * reparten por clave con `GRUPO_POR_CLAVE`: así salen juntos aunque la base
+ * los catalogue en otro grupo o en ninguno.
+ */
+export type IdGrupoEnPantalla = GrupoParametro | 'financiamiento' | 'control' | 'alertas'
+
 export type GrupoEnPantalla = {
-  grupo: GrupoParametro | null
+  grupo: IdGrupoEnPantalla | null
   titulo: string
   /** Una línea: qué decide el grupo y a quién afecta. */
   ayuda: string
 }
 
-/** Los grupos, en el orden en que se leen: primero lo que cambia la app. */
+/** Los parámetros de Helios, por el grupo en que se leen. */
+export const GRUPO_POR_CLAVE: Readonly<Record<string, IdGrupoEnPantalla | undefined>> = {
+  min_charge_usd: 'financiamiento',
+  staff_commission_usd: 'financiamiento',
+  receipt_resends_per_day: 'financiamiento',
+  payment_four_eyes: 'control',
+  eligibility_lookups_per_staff_day: 'control',
+  alert_charges_per_merchant_day: 'alertas',
+  alert_new_patients_per_merchant_day: 'alertas',
+  alert_staff_share_pct: 'alertas',
+  alert_fpd_merchant_pct: 'alertas',
+  alert_fpd_min_cases: 'alertas',
+  alert_merchant_exposure_usd: 'alertas',
+  alert_first_charge_limit_pct: 'alertas',
+}
+
+/** Los grupos, en el orden en que se leen: primero lo que paga el paciente. */
 export const GRUPOS_DE_PARAMETROS: ReadonlyArray<GrupoEnPantalla> = [
   {
     grupo: 'producto',
     titulo: 'Reglas del crédito',
     ayuda: 'Lo que paga el paciente y los plazos del estado automático. Un cambio aquí afecta a todos los pacientes.',
+  },
+  {
+    grupo: 'financiamiento',
+    titulo: 'Financiamientos y comisión',
+    ayuda: 'El monto mínimo de un financiamiento, lo que gana el personal de la clínica por cada uno y cuántas veces al día puede reenviar el comprobante.',
+  },
+  {
+    grupo: 'control',
+    titulo: 'Controles',
+    ayuda: 'El doble control de los pagos registrados y el límite de consultas de cédula que protege la base de pacientes.',
+  },
+  {
+    grupo: 'alertas',
+    titulo: 'Umbrales de las alertas',
+    ayuda: 'Desde dónde salta cada alerta de riesgo sobre clínicas y pacientes. Ninguna bloquea nada: solo avisan.',
   },
   {
     grupo: 'umbral',
@@ -61,11 +100,18 @@ export function agruparParametros(
   filas: ReadonlyArray<Parametro>,
 ): Array<GrupoEnPantalla & { filas: Parametro[] }> {
   const vivas = filas.filter((f) => !CLAVES_SIN_USO.has(f.key))
+  const grupoDe = (f: Parametro): IdGrupoEnPantalla | null => GRUPO_POR_CLAVE[f.key] ?? f.grupo
   return GRUPOS_DE_PARAMETROS.map((g) => ({
     ...g,
-    filas: vivas.filter((f) => f.grupo === g.grupo),
+    filas: vivas.filter((f) => grupoDe(f) === g.grupo),
   })).filter((g) => g.filas.length > 0)
 }
+
+/**
+ * Los parámetros que son un interruptor (0 apagado, 1 encendido). Se pintan
+ * «Activado» o «Apagado» y solo aceptan 0 o 1.
+ */
+export const INTERRUPTORES: ReadonlySet<string> = new Set(['payment_four_eyes'])
 
 /**
  * El rótulo en pantalla cuando el de la base no es el que usa el panel. La
@@ -81,9 +127,28 @@ const ROTULO_EN_PANTALLA: Record<string, string | undefined> = {
   late_fee_grace_days: 'Días de gracia',
 }
 
+/**
+ * El rótulo de los parámetros de Helios cuando el catálogo de la base no
+ * trae uno (contrato §3): mejor un nombre que la clave en inglés.
+ */
+const ROTULO_SI_FALTA: Record<string, string | undefined> = {
+  min_charge_usd: 'Monto mínimo por financiamiento',
+  staff_commission_usd: 'Comisión por financiamiento',
+  eligibility_lookups_per_staff_day: 'Consultas de cédula por persona y día',
+  payment_four_eyes: 'Doble control de pagos',
+  receipt_resends_per_day: 'Reenvíos del comprobante por día',
+  alert_charges_per_merchant_day: 'Financiamientos por clínica y día',
+  alert_new_patients_per_merchant_day: 'Pacientes nuevos por clínica y día',
+  alert_staff_share_pct: 'Altas de una sola persona en la semana',
+  alert_fpd_merchant_pct: 'Impago de la primera cuota por clínica',
+  alert_fpd_min_cases: 'Casos mínimos para juzgar el impago',
+  alert_merchant_exposure_usd: 'Deuda viva por clínica',
+  alert_first_charge_limit_pct: 'Cupo usado al estrenar',
+}
+
 /** Cómo se llama un parámetro en pantalla: el rótulo del panel, el de la base o la clave. */
 export function nombreDelParametro(p: Pick<Parametro, 'key' | 'label'>): string {
-  return ROTULO_EN_PANTALLA[p.key] ?? p.label ?? p.key
+  return ROTULO_EN_PANTALLA[p.key] ?? p.label ?? ROTULO_SI_FALTA[p.key] ?? p.key
 }
 
 /** Qué decide cada parámetro, para su `InfoDot`. Sin cifras: esas son el valor. */
@@ -112,6 +177,26 @@ export const QUE_DECIDE: Record<string, string | undefined> = {
   meta_cobro_a_tiempo_pct: 'El porcentaje de cuotas cobradas a tiempo que se quiere alcanzar.',
   meta_personas_activas_semana: 'Los pacientes con algún financiamiento en la semana que se quieren alcanzar.',
   meta_locales_activos: 'Las clínicas con financiamientos que se quieren tener.',
+  min_charge_usd: 'El monto más bajo que una clínica puede financiar, sin el fee.',
+  staff_commission_usd:
+    'Lo que gana quien registra un financiamiento confirmado. Se paga a la clínica en la transferencia del lunes y ella se la entrega a su personal. Una clínica puede tener la suya en su ficha › Condiciones; lo ya devengado no cambia.',
+  eligibility_lookups_per_staff_day:
+    'Cuántas cédulas puede consultar una persona de una clínica en un día. Pasado el límite no puede consultar más hasta mañana y salta la alerta «Demasiadas consultas de cédula»: protege la base de pacientes.',
+  payment_four_eyes:
+    'Encendido (1), quien registra un pago no puede aprobarlo: lo aprueba otra persona del equipo o un super admin. Recomendado en cuanto el equipo tenga más de una persona.',
+  receipt_resends_per_day: 'Cuántas veces al día puede la clínica reenviar el comprobante de un mismo financiamiento.',
+  alert_charges_per_merchant_day: 'Salta «Ráfaga de financiamientos» cuando una clínica registra más que esto en un día.',
+  alert_new_patients_per_merchant_day:
+    'Salta «Ráfaga de pacientes nuevos» cuando una clínica da de alta más pacientes nuevos que esto en un día.',
+  alert_staff_share_pct:
+    'Salta «Altas concentradas en una persona» cuando, en una clínica con varias personas, una sola registra más de este porcentaje de los financiamientos de la semana.',
+  alert_fpd_merchant_pct:
+    'Salta «Impago de la primera cuota en una clínica» cuando sus pacientes no pagan la primera cuota por encima de este porcentaje.',
+  alert_fpd_min_cases: 'Los casos mínimos para juzgar el impago de la primera cuota de una clínica: con menos, no salta.',
+  alert_merchant_exposure_usd:
+    'Salta «Exposición alta en una clínica» cuando la deuda viva de sus financiamientos pasa de este monto.',
+  alert_first_charge_limit_pct:
+    'Salta «Cupo casi entero en el primer financiamiento» cuando un paciente nuevo usa más de este porcentaje de su cupo en su primer financiamiento.',
 }
 
 /** Las unidades que no admiten decimales, con su nombre largo. */
@@ -121,6 +206,12 @@ const UNIDADES_ENTERAS: Record<string, string | undefined> = {
   personas: 'personas',
   locales: 'locales',
   consumos: 'consumos',
+  pacientes: 'pacientes',
+  clínicas: 'clínicas',
+  financiamientos: 'financiamientos',
+  consultas: 'consultas',
+  reenvíos: 'reenvíos',
+  casos: 'casos',
 }
 
 /** El singular de las unidades que cuentan cosas: «1 día», no «1 días». */
@@ -129,18 +220,27 @@ const SINGULAR: Record<string, string | undefined> = {
   personas: 'persona',
   locales: 'local',
   consumos: 'consumo',
+  pacientes: 'paciente',
+  clínicas: 'clínica',
+  financiamientos: 'financiamiento',
+  consultas: 'consulta',
+  reenvíos: 'reenvío',
+  casos: 'caso',
 }
 
 /**
  * Un valor con su unidad, para leer. `null` es «Sin definir», nunca un cero:
  * una meta sin fijar no es una meta de cero.
  */
-export function formatValorParametro(valor: number | null, unidad: string | null): string {
+export function formatValorParametro(valor: number | null, unidad: string | null, clave?: string): string {
   if (valor === null) return 'Sin definir'
+  if (clave !== undefined && INTERRUPTORES.has(clave)) return valor === 1 ? 'Activado' : 'Apagado'
   // El dinero de Helios es el dólar: la unidad de un monto en el catálogo de
   // parámetros es '$' (o 'USD'). La de Ronda era '€' y se acepta mientras la
-  // base no la porte, pintada en dólares: el importe guardado ya es USD.
+  // base no la porte, pintada en dólares: el importe guardado ya es USD. Una
+  // clave `_usd` sin unidad en el catálogo también es un monto.
   if (unidad === '$' || unidad === 'USD' || unidad === '€') return formatUsd(valor)
+  if (!unidad && clave?.endsWith('_usd')) return formatUsd(valor)
 
   // Con todos sus decimales: un fee de 2,125 % no es uno de 2,1 %.
   const cifra = valor.toLocaleString('es-VE', { maximumFractionDigits: 4 })
@@ -156,12 +256,15 @@ export type LecturaDeValor = { ok: true; valor: number } | { ok: false; motivo: 
  * aplica `admin_set_business_parameter` y alguna más: el servidor acepta
  * «2,5 días», pero el estado automático cuenta días enteros.
  */
-export function leerValorParametro(texto: string, unidad: string | null): LecturaDeValor {
+export function leerValorParametro(texto: string, unidad: string | null, clave?: string): LecturaDeValor {
   if (texto.trim() === '') return { ok: false, motivo: 'Escribe el valor nuevo.' }
 
   const valor = leerMonto(texto)
   if (valor === null) {
     return { ok: false, motivo: 'El valor no se entiende. Escríbelo con coma decimal, por ejemplo 2,5.' }
+  }
+  if (clave !== undefined && INTERRUPTORES.has(clave) && valor !== 0 && valor !== 1) {
+    return { ok: false, motivo: 'Este parámetro es un interruptor: 1 lo enciende y 0 lo apaga.' }
   }
   if (valor < 0) return { ok: false, motivo: 'Un parámetro no puede ser negativo.' }
   if (unidad === '%' && valor > 100) {

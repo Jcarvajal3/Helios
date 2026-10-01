@@ -43,7 +43,7 @@ console.log('── Nivel 1: las pestañas ────────────�
   const pestanas = enlacesDePestanas(aqui)
   igual(
     pestanas.map((p) => p.rotulo),
-    ['Semana', 'Cobros', 'Riesgo', 'Caja', 'Clínicas', 'Gente', 'Global'],
+    ['Semana', 'Cobros', 'Riesgo', 'Caja', 'Clínicas', 'Pacientes', 'Global'],
     'las siete, en su orden',
   )
   igual(

@@ -64,7 +64,10 @@ export function recurrentes(l: FilaLocal): number {
   return Math.max(0, l.personas - l.nuevas)
 }
 
-/** Qué parte de sus consumos fue en grupo, de 0 a 100. Nulo sin consumos. */
+/**
+ * Qué parte de sus consumos fue en grupo, de 0 a 100. Nulo sin consumos.
+ * Heredado de Ronda: en Helios no hay grupos y la tabla ya no lo enseña.
+ */
 export function pctEnGrupo(l: FilaLocal): number | null {
   return l.consumos > 0 ? (l.consumosEnGrupo / l.consumos) * 100 : null
 }

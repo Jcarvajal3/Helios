@@ -239,6 +239,11 @@ export type PaymentDestination = {
   isActive: boolean
   createdAt: string
   reportCount: number
+  /**
+   * El orden en que la ven los pacientes (Helios: puede haber varias
+   * activas). `null` si la base no lo manda.
+   */
+  sortOrder: number | null
 }
 
 export async function fetchPaymentDestinations(): Promise<PaymentDestination[]> {
@@ -256,9 +261,15 @@ export async function fetchPaymentDestinations(): Promise<PaymentDestination[]> 
       isActive: Boolean(row.is_active),
       createdAt: String(row.created_at),
       reportCount: Number(row.report_count),
+      sortOrder: numeroONulo(row.sort_order),
     }))
 }
 
+/**
+ * Da de alta una cuenta de cobro, o cambia el orden o el estado de una que ya
+ * existe (contrato §2.3). En Helios puede haber varias activas: activar una
+ * ya no retira las demás. La cuenta se reconoce por banco + RIF + teléfono.
+ */
 export async function setPaymentDestination(params: {
   bankName: string
   rif: string
@@ -266,6 +277,10 @@ export async function setPaymentDestination(params: {
   holderName?: string
   /** El motivo del diálogo: va a la bitácora (`payment_destination.set`). */
   note?: string | null
+  /** El puesto en que la ven los pacientes. */
+  sortOrder?: number | null
+  /** Sin él, activa. */
+  isActive?: boolean
 }): Promise<void> {
   const { error } = await supabase.rpc('admin_set_payment_destination', {
     p_bank_name: params.bankName,
@@ -273,6 +288,8 @@ export async function setPaymentDestination(params: {
     p_phone: params.phone,
     p_holder_name: params.holderName ?? null,
     p_note: params.note || null,
+    p_sort_order: params.sortOrder ?? null,
+    p_is_active: params.isActive ?? true,
   })
   if (error) throw error
 }

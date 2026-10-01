@@ -13,9 +13,9 @@ import type { Desglose } from '@/features/admin/metricas/lectura'
 // palabras son las del vocabulario de Métricas: «Facturado (sin fee)» y
 // «Service fee + IVA», iguales que en Semana › Resumen.
 //
-//   lineaDelDesglose(d)   'Facturado €1.152,00 (sin fee) · service fee + IVA €267,26'
-//   desgloseCorto(d)      'facturado €1.152,00 · fee + IVA €267,26'
-//   desgloseEnFrase(d)    'facturado €1.152,00 + service fee + IVA €267,26'
+//   lineaDelDesglose(d)   'Facturado $1.152,00 (sin fee) · service fee + IVA $267,26'
+//   desgloseCorto(d)      'facturado $1.152,00 · fee + IVA $267,26'
+//   desgloseEnFrase(d)    'facturado $1.152,00 + service fee + IVA $267,26'
 //
 // Puro: se prueba en `desglose.test.ts`.
 // ═══════════════════════════════════════════════════════════════════════════

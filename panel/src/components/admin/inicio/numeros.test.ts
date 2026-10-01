@@ -86,7 +86,7 @@ console.log('\n── Bloquea la operación ────────────
   )
   comprueba(
     bloqueoDeCuenta([{ isActive: true, rif: 'J-000000000' }])?.texto ===
-      'La cuenta de cobro activa es la de relleno.',
+      'La única cuenta de cobro activa es la de relleno.',
     'la cuenta de relleno también bloquea',
   )
   comprueba(
@@ -95,6 +95,13 @@ console.log('\n── Bloquea la operación ────────────
       { isActive: true, rif: 'J-412345678' },
     ]) === null,
     'una cuenta activa de verdad no bloquea',
+  )
+  comprueba(
+    bloqueoDeCuenta([
+      { isActive: true, rif: 'J-000000000' },
+      { isActive: true, rif: 'J-412345678' },
+    ]) === null,
+    'con varias activas (Helios), basta una de verdad aunque siga la de relleno',
   )
   comprueba(
     bloqueoDeCuenta([{ isActive: false, rif: 'J-412345678' }]) !== null,

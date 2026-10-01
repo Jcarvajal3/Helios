@@ -49,17 +49,21 @@ export function bloqueoDeTasa(fx: Pick<FxStatus, 'rate' | 'isStale' | 'ageHours'
   }
 }
 
-/** La cuenta a la que transfiere la gente: que haya una activa y que no sea la de relleno. */
+/**
+ * Las cuentas a las que transfieren los pacientes: que haya al menos una
+ * activa que no sea la de relleno (en Helios puede haber varias activas).
+ */
 export function bloqueoDeCuenta(
   cuentas: ReadonlyArray<Pick<PaymentDestination, 'isActive' | 'rif'>>,
 ): Bloqueo | null {
-  const activa = cuentas.find((c) => c.isActive)
-  if (activa && !esCuentaDeRelleno(activa.rif)) return null
+  const activas = cuentas.filter((c) => c.isActive)
+  if (activas.some((c) => !esCuentaDeRelleno(c.rif))) return null
   return {
     id: 'cuenta',
-    texto: activa
-      ? 'La cuenta de cobro activa es la de relleno.'
-      : 'No hay ninguna cuenta de cobro activa.',
+    texto:
+      activas.length > 0
+        ? 'La única cuenta de cobro activa es la de relleno.'
+        : 'No hay ninguna cuenta de cobro activa.',
     detalle: 'Los pacientes no tienen una cuenta válida a la que transferir.',
     arreglo: { rotulo: 'Configurar la cuenta', destino: { to: '/admin/ajustes', search: { tab: 'cobro' } } },
   }

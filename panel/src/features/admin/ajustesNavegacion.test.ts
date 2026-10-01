@@ -23,12 +23,12 @@ function comprueba(ok: boolean, titulo: string, detalle = '') {
 }
 
 console.log('── Las secciones ─────────────────────────────────────────────')
-comprueba(PESTANAS_AJUSTES.length === 10, 'diez secciones', String(PESTANAS_AJUSTES.length))
+comprueba(PESTANAS_AJUSTES.length === 11, 'once secciones', String(PESTANAS_AJUSTES.length))
 for (const podada of ['promociones', 'version', 'eliminaciones', 'qa']) {
   comprueba(!PESTANAS_AJUSTES.includes(podada as never), `${podada} ya no es de Ajustes`)
 }
 comprueba(
-  GRUPOS_AJUSTES[0]?.secciones.map((s) => s.value).join() === 'tasa,parametros,niveles,feriados,cobro',
+  GRUPOS_AJUSTES[0]?.secciones.map((s) => s.value).join() === 'tasa,parametros,niveles,feriados',
   'Niveles y cupos es una regla, junto a los parámetros',
   GRUPOS_AJUSTES[0]?.secciones.map((s) => s.value).join(),
 )
@@ -37,8 +37,8 @@ comprueba(
   'ninguna sección se repite',
 )
 comprueba(
-  GRUPOS_AJUSTES.map((g) => g.titulo).join(',') === 'Reglas,El comprobante,Equipo,Registro,Emergencia',
-  'los cinco grupos, en su orden',
+  GRUPOS_AJUSTES.map((g) => g.titulo).join(',') === 'Reglas,Lo que ve el paciente,El comprobante,Equipo,Registro,Emergencia',
+  'los seis grupos, en su orden',
   GRUPOS_AJUSTES.map((g) => g.titulo).join(','),
 )
 comprueba(
@@ -46,7 +46,11 @@ comprueba(
     'mantenimiento',
   'solo Mantenimiento va en rojo',
 )
-comprueba(rotuloDePestana('cobro') === 'Cuenta de cobro', 'el rótulo de una sección')
+comprueba(rotuloDePestana('cobro') === 'Cuentas de cobro', 'el rótulo de una sección')
+comprueba(
+  GRUPOS_AJUSTES[1]?.secciones.map((s) => s.value).join() === 'cobro,contacto',
+  'las cuentas y el contacto: lo que ve el paciente',
+)
 comprueba(rotuloDePestana('terminos') === 'Condiciones', 'los términos son las condiciones del comprobante')
 
 console.log('\n── ?tab= ──────────────────────────────────────────────────────')

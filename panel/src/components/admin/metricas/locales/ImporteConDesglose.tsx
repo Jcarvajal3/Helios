@@ -3,7 +3,7 @@ import type { Desglose } from '@/features/admin/metricas/lectura'
 
 /**
  * Un importe que se paga en cuotas (lo vencido, lo vivo), con sus dos partes
- * debajo: «€108,20» y «consumo €87,82 + service fee €20,38».
+ * debajo: «$108,20» y «consumo $87,82 + service fee $20,38».
  *
  * Es la regla del fee: una cifra con el service fee dentro no se enseña nunca
  * sin sus sumandos. En una celda de tabla va alineado a la derecha.

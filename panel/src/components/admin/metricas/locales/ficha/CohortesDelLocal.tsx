@@ -55,7 +55,7 @@ export function CohortesDelLocal({ d, local }: { d: LocalesDeLaSemana; local: st
       >
         <Leyenda />
         {filas.every((f) => f.cuota1 === null && f.cuota2 === null) ? (
-          <p className="type-panel-body text-panel-muted">Esta clínica no vendió en estas ocho semanas.</p>
+          <p className="type-panel-body text-panel-muted">Esta clínica no financió nada en estas ocho semanas.</p>
         ) : (
           <Table headers={CABECERAS}>
             {filas.map((f) => (

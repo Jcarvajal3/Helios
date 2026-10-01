@@ -9,7 +9,7 @@ export const MOTIVO_CAJA =
 
 /** El capital comprometido y su semáforo. */
 export const MOTIVO_CAPITAL =
-  'El capital es uno para todas las clínicas y su semáforo mide si alcanza para todos. Quita la clínica de arriba para verlo.'
+  'El capital es uno para todas las clínicas y su semáforo mide si alcanza para todas. Quita la clínica de arriba para verlo.'
 
 /** La proyección guardada cada lunes y el saldo del banco. */
 export const MOTIVO_BANCO =

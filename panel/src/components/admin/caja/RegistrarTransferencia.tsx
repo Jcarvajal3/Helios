@@ -8,13 +8,17 @@ import {
   ConfirmDialog,
   InfoDot,
   Input,
+  NoSePudoLeer,
   Select,
   formatDay,
   formatUsd,
   hoyCaracas,
 } from '@/components/ui'
 import { AdjuntarComprobante } from '@/components/admin/caja/AdjuntarComprobante'
+import { DatosParaCopiar } from '@/components/admin/ficha-local/CuentaDePago'
 import { reportMerchantPayout, uploadPayoutReceipt } from '@/features/admin/api'
+import { consultaCuentaDePago } from '@/features/admin/clinicas/api'
+import type { ConsultasYComisiones } from '@/features/admin/clinicas/clinicas'
 import { fetchFxHistory } from '@/features/admin/fx'
 import {
   METODOS_DE_PAGO,
@@ -50,6 +54,7 @@ export function RegistrarTransferencia({
   merchantName,
   settlementIds,
   totalUsd,
+  desglose,
   onRegistrado,
 }: {
   merchantId: string
@@ -57,11 +62,15 @@ export function RegistrarTransferencia({
   settlementIds: string[]
   /** Lo que FALTA de las liquidaciones marcadas: el máximo que se puede pagar. */
   totalUsd: number
+  /** Lo marcado, partido en consultas y comisiones del personal (plan §6). */
+  desglose?: ConsultasYComisiones
   onRegistrado: () => void
 }) {
   const queryClient = useQueryClient()
   const isSuperAdmin = useIsSuperAdmin()
   const avisar = useToast()
+  // A dónde se transfiere: con botones para copiar cada dato en el banco.
+  const cuenta = useQuery(consultaCuentaDePago(merchantId))
 
   const [metodo, setMetodo] = useState<PayoutMethod>('pago_movil')
   const [referencia, setReferencia] = useState('')
@@ -174,6 +183,21 @@ export function RegistrarTransferencia({
         />
       </div>
 
+      <div className="rounded-panel-control border border-panel-hairline p-4">
+        <p className="mb-2 type-panel-label text-on-surface-variant">Cuenta de pago de la clínica</p>
+        {cuenta.isError ? (
+          <NoSePudoLeer onReintentar={() => void cuenta.refetch()} />
+        ) : cuenta.data === undefined ? (
+          <p className="type-panel-caption text-on-surface-variant">Leyendo…</p>
+        ) : cuenta.data ? (
+          <DatosParaCopiar cuenta={cuenta.data} />
+        ) : (
+          <p className="type-panel-body text-warning">
+            La clínica no tiene cuenta de pago. Ponla en su ficha, pestaña «Cuenta de pago».
+          </p>
+        )}
+      </div>
+
       <div className="grid gap-3 md:grid-cols-3">
         <Select
           id={`medio-${merchantId}`}
@@ -262,6 +286,12 @@ export function RegistrarTransferencia({
           {settlementIds.length}{' '}
           {settlementIds.length === 1 ? 'liquidación marcada' : 'liquidaciones marcadas'}
           {parcial && `, por ${formatUsd(totalUsd)}`}
+          {desglose && (
+            <span className="block type-panel-caption">
+              Consultas {formatUsd(desglose.consultasUsd)} + Comisiones del personal{' '}
+              {formatUsd(desglose.comisionesUsd)}
+            </span>
+          )}
         </span>
         <span className="type-panel-figure text-on-surface">{formatUsd(euros)}</span>
       </div>
@@ -290,6 +320,9 @@ export function RegistrarTransferencia({
               {parcial
                 ? `Cubre parte de las ${settlementIds.length} liquidaciones marcadas, de la más antigua a la más nueva. La última que alcance queda parcial y vuelve a salir en el próximo cierre por lo que falte.`
                 : `Cubre ${settlementIds.length} ${settlementIds.length === 1 ? 'liquidación' : 'liquidaciones'} por completo.`}{' '}
+              {desglose &&
+                !parcial &&
+                `Son ${formatUsd(desglose.consultasUsd)} de consultas y ${formatUsd(desglose.comisionesUsd)} de comisiones del personal, que la clínica le entrega a quien registró cada financiamiento. `}
               Al confirmar se escribe el asiento en el libro y baja «Por pagar a clínicas».
               {comprobante && ' El comprobante se guarda con el pago.'}
             </p>

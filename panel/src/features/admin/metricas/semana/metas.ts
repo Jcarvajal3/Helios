@@ -13,7 +13,7 @@ import type { CifrasDePeriodo } from './tipos'
 //
 // Las definiciones de las metas (qué parámetro, en qué sentido se cumplen,
 // cómo se escribe el número) son las del Resumen (`resumen/medirMetas.ts`);
-// la cifra que se mide es la misma de la tabla. Las metas son de todo Ronda:
+// la cifra que se mide es la misma de la tabla. Las metas son de todo Helios:
 // con un local elegido no se miden (la pestaña enseña `NoSeParte`).
 //
 // Puro: se prueba en `metas.test.ts`.

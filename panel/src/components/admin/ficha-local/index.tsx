@@ -7,8 +7,11 @@ import { usePageTitle } from '@/components/layouts/PageAction'
 import { ErrorBox, SkeletonList, Tabs } from '@/components/ui'
 import { fetchMerchantDetail, fetchMerchants } from '@/features/admin/api'
 import type { MerchantDetail, MerchantRow } from '@/features/admin/api'
+import { valorDe } from '@/features/admin/parametros'
 import { useParametros } from '@/features/admin/useParametros'
+import { AlertasDeLaClinica } from './Alertas'
 import { Cabecera } from './Cabecera'
+import { CuentaDePago } from './CuentaDePago'
 import { CarrilLocal } from './Carril'
 import { LoVendido, useCifrasDelLocal } from './Cifras'
 import type { VentanaLocal } from './Cifras'
@@ -27,16 +30,25 @@ export type { VentanaLocal } from './Cifras'
  * se le paga, con qué condiciones y quién cobra en su nombre.
  */
 
-export type PestanaLocal = 'resumen' | 'perfil' | 'condiciones' | 'personal'
+export type PestanaLocal = 'resumen' | 'perfil' | 'condiciones' | 'cuenta' | 'personal' | 'alertas'
 
 /** En el orden de las pestañas. Sirve también para validar la URL. */
-export const PESTANAS_LOCAL: ReadonlyArray<PestanaLocal> = ['resumen', 'perfil', 'condiciones', 'personal']
+export const PESTANAS_LOCAL: ReadonlyArray<PestanaLocal> = [
+  'resumen',
+  'perfil',
+  'condiciones',
+  'cuenta',
+  'personal',
+  'alertas',
+]
 
 const ROTULO: Record<PestanaLocal, string> = {
   resumen: 'Resumen',
   perfil: 'Perfil',
   condiciones: 'Condiciones',
+  cuenta: 'Cuenta de pago',
   personal: 'Personal',
+  alertas: 'Alertas',
 }
 
 const PESTANAS = PESTANAS_LOCAL.map((value) => ({ value, label: ROTULO[value] }))
@@ -155,17 +167,26 @@ function FichaLocal({
         )}
 
         {tab === 'perfil' && (
-          <Perfil merchantId={merchantId} initial={detalle.profile} onDone={refrescar} />
+          <Perfil merchantId={merchantId} initial={detalle.profile} datos={detalle.datos} onDone={refrescar} />
         )}
 
         {tab === 'condiciones' && (
-          <Condiciones merchantId={merchantId} initial={detalle.terms} onDone={refrescar} />
+          <Condiciones
+            merchantId={merchantId}
+            initial={detalle.terms}
+            comisionGlobal={valorDe(parametros.data, 'staff_commission_usd')}
+            onDone={refrescar}
+          />
         )}
+
+        {tab === 'cuenta' && <CuentaDePago merchantId={merchantId} />}
 
         {/* La misma pantalla que ve el gerente en el panel de su local.
             Quién puede hacer qué lo decide el servidor, no desde dónde se
             abre. */}
         {tab === 'personal' && <PersonalDelLocal merchantId={merchantId} />}
+
+        {tab === 'alertas' && <AlertasDeLaClinica merchantId={merchantId} />}
       </MarcoDeFicha>
 
       {estado.dialogo}

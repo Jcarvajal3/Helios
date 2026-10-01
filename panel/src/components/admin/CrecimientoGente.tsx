@@ -100,7 +100,7 @@ export function CrecimientoGente({
           titulo="Pacientes que se financiaron"
           valor={String(o.activeUsers.count)}
           delta={cambio(o.activeUsers)}
-          info="Pacientes distintos con una cuota en un financiamiento de la ventana: en un financiamiento de grupo cuenta cada integrante que pagó su parte."
+          info="Pacientes distintos con un financiamiento en la ventana."
           pie={`${o.orders.count} ${o.orders.count === 1 ? 'financiamiento' : 'financiamientos'} · ${formatUsd(o.spend.financedUsd)} financiado (sin fee)`}
           link={{
             to: '/admin/financiamientos',
@@ -180,7 +180,6 @@ function QuienLlega({ o }: { o: GrowthOverview }) {
           key: d.day,
           label: formatDayShort(d.day),
           values: o.registered ? [d.registered ?? 0, d.activated] : [d.activated],
-          note: d.requested ? `${d.requested} pidieron el código ese día` : undefined,
         })),
       )}
       area
@@ -189,11 +188,11 @@ function QuienLlega({ o }: { o: GrowthOverview }) {
       format={cuenta}
       formatShort={cuenta}
       ejeLabel="Día"
-      unidadLabel={o.registered ? 'Pidieron el código' : 'Nota'}
+      unidadLabel={o.registered ? 'Registros' : 'Nota'}
       footnote={
         conLocal
           ? 'Acumulado desde el primer día de la ventana. Un paciente nuevo en la clínica puede haberse financiado antes en otro.'
-          : 'Acumulado desde el primer día de la ventana. Un registro cuenta el día en que se aprobó su verificación. El primer financiamiento es el de cada paciente, sea cual sea el día en que se registró: por eso puede haber más primeros financiamientos que registros.'
+          : 'Acumulado desde el primer día de la ventana. Un registro cuenta el día en que una clínica lo registró. El primer financiamiento es el de cada paciente, sea cual sea el día en que se registró: por eso puede haber más primeros financiamientos que registros.'
       }
       empty={conLocal ? 'Nadie llegó a la clínica en esta ventana.' : 'Nadie se registró ni hizo su primer financiamiento en esta ventana.'}
     />

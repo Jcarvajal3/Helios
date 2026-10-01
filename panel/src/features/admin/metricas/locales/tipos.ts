@@ -60,12 +60,12 @@ export type FilaLocal = {
   /** Consumo de la semana, sin el service fee. */
   consumoUsd: number
   consumos: number
-  /** `null` sin consumos: un ticket de €0 no existe. */
+  /** `null` sin consumos: un ticket de $0 no existe. */
   ticketMedioUsd: number | null
   /** La semana anterior a la misma altura (los mismos días si la elegida está en curso). */
   consumoAnteriorUsd: number
   consumosAnteriores: number
-  /** Personas con cuota: en un grupo, cada integrante. */
+  /** Pacientes distintos con cuota. */
   personas: number
   /** Las que consumieron en ESTE local por primera vez esta semana. */
   nuevas: number

@@ -32,7 +32,7 @@ const HORIZONTE_POR_DEFECTO = '4'
  * Solo lo de la semana sigue a la semana elegida; el balance, el capital y
  * la proyección son de hoy, y cada bloque lo dice. Con un local, lo del local
  * se parte (lo que deben por sus consumos, lo que se le debe y se le
- * transfirió) y la caja no, que es de todo Ronda.
+ * transfirió) y la caja no, que es de todo Helios.
  */
 export function PestanaCaja({
   sub,

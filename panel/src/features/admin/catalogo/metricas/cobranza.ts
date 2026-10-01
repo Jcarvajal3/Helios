@@ -1,7 +1,7 @@
 import type { Entrada } from '../tipos'
 
 /**
- * Las cifras y los términos NUEVOS de Métricas › Cobranza y riesgo, para la
+ * Las cifras y los términos NUEVOS de Métricas › Riesgo, para la
  * búsqueda (Ctrl K) y el asistente.
  *
  * Las cifras que ya existían (tasa de mora, impago, punto de empate, cobro a
@@ -17,7 +17,7 @@ export const metricasCobranza = [
     tipo: 'cifra',
     id: 'vencido-sin-pagar-de-la-semana',
     titulo: 'Vencido en cartera al corte de la semana',
-    descripcion: 'Lo vencido y sin pagar al cierre de la semana elegida, con su desglose y la gente que lo debe.',
+    descripcion: 'Lo vencido y sin pagar al cierre de la semana elegida, con su desglose y los pacientes que lo deben.',
     espacio: 'metricas',
     sinonimos: ['vencido sin pagar de la semana', 'vencido al cierre', 'vencido de la semana', 'deuda vencida de la semana', 'mora de la semana'],
     destino: { to: '/admin/metricas', search: { vista: 'mora' } },
@@ -40,14 +40,14 @@ export const metricasCobranza = [
       'spd',
     ],
     destino: { to: '/admin/metricas', search: { vista: 'cobros', sub: 'impago-por-cuota', cuota: '2' } },
-    que: 'De la cuota 2 de cada paciente en cada financiamiento, qué parte seguía sin pagar el último día de la gracia; vence una semana después de la 1 y cuenta también a quien tampoco pagó la 1. Se parte por semana, mes, clínica, nivel, pacientes en el financiamiento o primer financiamiento, con la cuota 1 al lado. Los montos son financiamiento, sin el service fee.',
+    que: 'De la cuota 2 de cada paciente en cada financiamiento, qué parte seguía sin pagar el último día de la gracia; vence una semana después de la 1 y cuenta también a quien tampoco pagó la 1. Se parte por semana, mes, clínica, nivel o primer financiamiento, con la cuota 1 al lado. Los montos son financiamiento, sin el service fee.',
     rpc: 'admin_first_payment_default',
   },
   {
     tipo: 'cifra',
     id: 'deudores-por-comportamiento',
     titulo: 'Pacientes con deuda vencida, por perfil de pago',
-    descripcion: 'A quién llamar primero y por qué: la gente en mora repartida por cómo paga, con su prioridad.',
+    descripcion: 'A quién llamar primero y por qué: los pacientes en mora repartidos por cómo pagan, con su prioridad.',
     espacio: 'cobranza',
     sinonimos: [
       'perfil de deudor',
@@ -60,18 +60,18 @@ export const metricasCobranza = [
       'morosos',
     ],
     destino: { to: '/admin/cobranza' },
-    que: 'Cada paciente con algo vencido cae en un solo perfil (ninguna cuota pagada, promesa de pago incumplida, sin respuesta a las gestiones, atrasos repetidos, vencido con pagos previos, atraso de pocos días con buen historial), y aparte las que están al día con riesgo de atraso. Cada perfil con su gente, lo que debe vencido con su desglose, el atraso medio y lo que se ha recuperado de gente así; Son las tarjetas de arriba de Por cobrar: pulsar una acota la lista a ese perfil.',
+    que: 'Cada paciente con algo vencido cae en un solo perfil (ninguna cuota pagada, promesa de pago incumplida, sin respuesta a las gestiones, atrasos repetidos, vencido con pagos previos, atraso de pocos días con buen historial), y aparte los que están al día con riesgo de atraso. Cada perfil con sus pacientes, lo que deben vencido con su desglose, el atraso medio y lo que se ha recuperado de pacientes así. Son las tarjetas de arriba de Por cobrar: pulsar una acota la lista a ese perfil.',
     rpc: 'admin_deudores_por_perfil',
   },
   {
     tipo: 'cifra',
     id: 'recuperacion-por-perfil-de-deudor',
     titulo: 'Recuperación por perfil de deudor',
-    descripcion: 'Cuánto se ha cobrado, en la historia, de la gente de cada perfil de deudor.',
+    descripcion: 'Cuánto se ha cobrado, en la historia, de los pacientes de cada perfil de deudor.',
     espacio: 'cobranza',
     sinonimos: ['recuperación histórica', 'cuánto se recupera', 'tasa de recuperación por perfil'],
     destino: { to: '/admin/cobranza' },
-    que: 'De lo que debía vencido la gente cada vez que encajó en un perfil, la parte que pagó en el mes siguiente. Solo cuentan las veces con ese mes ya cumplido.',
+    que: 'De lo que debían vencido los pacientes cada vez que encajaron en un perfil, la parte que pagaron en el mes siguiente. Solo cuentan las veces con ese mes ya cumplido.',
     rpc: 'admin_deudores_por_perfil',
   },
 
@@ -104,7 +104,7 @@ export const metricasCobranza = [
     espacio: 'cobranza',
     sinonimos: ['sin respuesta', 'no contesta', 'ilocalizable', 'silencioso'],
     destino: { to: '/admin/cobranza', search: { perfil: 'sin_respuesta' } },
-    definicion: 'Quien tiene dos gestiones o más desde que le venció lo más viejo sin promesa ni un pago reportado en las 72 horas siguientes, y más de una semana de atraso. Prioridad alta.',
+    definicion: 'Quien tiene dos gestiones o más desde que le venció lo más viejo sin promesa ni un pago registrado en las 72 horas siguientes, y más de una semana de atraso. Prioridad alta.',
   },
   {
     tipo: 'termino',
@@ -120,7 +120,7 @@ export const metricasCobranza = [
     tipo: 'termino',
     id: 'perfil-paga-tarde-pero-paga',
     titulo: 'Vencido, con pagos previos',
-    descripcion: 'Perfil de deudor: el resto de la gente en mora que ya ha pagado otras veces.',
+    descripcion: 'Perfil de deudor: el resto de los pacientes en mora que ya han pagado otras veces.',
     espacio: 'cobranza',
     sinonimos: ['paga tarde, pero paga', 'paga con atraso', 'tardío'],
     destino: { to: '/admin/cobranza', search: { perfil: 'paga_tarde_pero_paga' } },
@@ -164,7 +164,7 @@ export const metricasCobranza = [
       'cuota 2 tras pagar la 1',
     ],
     destino: { to: '/admin/metricas', search: { vista: 'cobros', sub: 'impago-por-cuota', cuota: '2' } },
-    que: 'De las cuotas 2 ya maduras de quien había pagado la cuota 1 del mismo financiamiento el día en que se juzga la 2 (al acabar su gracia), qué parte seguía sin pagar. Separa a quien empieza pagando y se cae de quien nunca pagó, que el impago de la cuota 2 cuenta junto. Va sobre cuotas y se parte por semana, mes, clínica, nivel, pacientes en el financiamiento o primer financiamiento. Los montos son financiamiento, sin el service fee.',
+    que: 'De las cuotas 2 ya maduras de quien había pagado la cuota 1 del mismo financiamiento el día en que se juzga la 2 (al acabar su gracia), qué parte seguía sin pagar. Separa a quien empieza pagando y se cae de quien nunca pagó, que el impago de la cuota 2 cuenta junto. Va sobre cuotas y se parte por semana, mes, clínica, nivel o primer financiamiento. Los montos son financiamiento, sin el service fee.',
     rpc: 'admin_first_payment_default',
   },
 ] as const satisfies ReadonlyArray<Entrada>

@@ -6,10 +6,10 @@ import { BloqueGeneral } from './BloqueGeneral'
 import type { LecturaGeneral } from './lectura'
 
 /**
- * «Por cada €100 financiados», desde el primer día: lo que entra por el
+ * «Por cada $100 financiados», desde el primer día: lo que entra por el
  * service fee y por los cargos por atraso y el margen que queda después del
  * impago (lo perdido no lleva línea: es el «Impago (%)» del bloque Riesgo).
- * Los cien euros son el denominador, no una línea.
+ * Los cien dólares son el denominador, no una línea.
  *
  * Debajo, qué parte de ese consumo ya cerró su ciclo de cobro: hasta
  * entonces lo perdido puede crecer y el margen es provisional.

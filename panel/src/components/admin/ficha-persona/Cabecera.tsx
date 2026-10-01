@@ -12,6 +12,7 @@ import {
   whatsappNumber,
 } from '@/components/ui'
 import type { UserDetail } from '@/features/admin/users'
+import { BotonRegistrarPago } from '@/components/admin/pagos/RegistrarPago'
 import { BotonAnotarGestion } from './CobranzaGestion'
 import { BotonWhatsAppCobranza, useCasoDeCobranza } from './CobranzaWhatsApp'
 
@@ -53,11 +54,17 @@ export function Cabecera({
             </span>
           )}
           {user.isTest && <Badge>Cuenta de prueba</Badge>}
+          {user.datos.emailInvalidAt && (
+            <Badge tone="error" icono>
+              Correo inválido
+            </Badge>
+          )}
         </>
       }
       datos={[
         user.phone ? formatPhone(user.phone) : null,
         user.document ? formatDocument(user.document) : null,
+        user.datos.registeredMerchantName ? `Registrado en ${user.datos.registeredMerchantName}` : null,
         `Alta el ${formatDateTime(user.createdAt)}`,
       ]}
       acciones={<Contacto user={user} />}
@@ -95,6 +102,7 @@ function Contacto({ user }: { user: UserDetail }) {
       ) : (
         <BotonWhatsAppCobranza userId={user.userId} persona={fila.data ?? undefined} principal />
       )}
+      <BotonRegistrarPago paciente={{ userId: user.userId, nombre: user.fullName }} />
       <BotonAnotarGestion userId={user.userId} nombre={user.fullName ?? 'este paciente'} />
     </>
   )

@@ -2,7 +2,7 @@ import type { Entrada } from '../tipos'
 
 /**
  * Las cifras, acciones y términos de la pestaña Semana de Métricas, para la
- * búsqueda (Ctrl K) y el asistente. Solo lo NUEVO de la pestaña: el consumo,
+ * búsqueda (Ctrl K) y el asistente. Solo lo NUEVO de la pestaña: el financiado,
  * el service fee y las metas de la semana ya están en `gerencia.ts`
  * (`financiado-de-la-semana`, `ingreso-por-servicio`, `metas-del-negocio`), y
  * la mora, el cobro a tiempo y la caja de hoy en los archivos de su equipo.
@@ -27,7 +27,7 @@ export const metricasSemana = [
       'cobro a tiempo por semana',
     ],
     destino: { to: '/admin/metricas', search: { vista: 'semana', sub: 'rendimiento' } },
-    que: 'Facturación, ingreso de Helios, cobro, riesgo, gente y caja de las últimas 8, 12 o 26 semanas (de lunes a domingo, por día operativo), de todas las clínicas o de uno. La semana elegida va al final y se compara con la anterior; si está en curso, con la anterior hasta el mismo momento. El total financiado va sin el service fee; el importe de las cuotas va con su financiado y su service fee + IVA en filas aparte.',
+    que: 'Financiamiento, ingreso de Helios, cobro, riesgo, pacientes y caja de las últimas 8, 12 o 26 semanas (de lunes a domingo, por día operativo), de todas las clínicas o de una. La semana elegida va al final y se compara con la anterior; si está en curso, con la anterior hasta el mismo momento. El total financiado va sin el service fee; el importe de las cuotas va con su financiado y su service fee + IVA en filas aparte.',
     rpc: 'admin_metricas_semanas',
   },
   {
@@ -80,7 +80,7 @@ export const metricasSemana = [
       'resumen de la semana',
     ],
     destino: { to: '/admin/metricas' },
-    que: 'Sin el service fee: la suma de los financiamientos confirmados de la semana (de lunes a domingo, por día operativo; la semana en curso, hasta ahora), de todas las clínicas o de uno. Es la fila «Total financiado» de Semana › Rendimiento. Se compara con la semana anterior a la misma altura y va junto al service fee + IVA y al total a cobrar, que suman con él.',
+    que: 'Sin el service fee: la suma de los financiamientos confirmados de la semana (de lunes a domingo, por día operativo; la semana en curso, hasta ahora), de todas las clínicas o de una. Es la fila «Total financiado» de Semana › Rendimiento. Se compara con la semana anterior a la misma altura y va junto al service fee + IVA y al total a cobrar, que suman con él.',
     rpc: 'admin_metricas_semana_resumen',
   },
   {
@@ -102,7 +102,7 @@ export const metricasSemana = [
     espacio: 'metricas',
     sinonimos: ['total a cobrar', 'financiamiento más fee', 'financiamiento + fee', 'lo que se cobra de la semana', 'financiado más fee'],
     destino: { to: '/admin/metricas' },
-    que: 'Lo que la gente paga en sus dos cuotas por los financiamientos de la semana: el total financiado (sin fee) más el service fee y su IVA. No es un total suelto: se enseña siempre con sus dos sumandos al lado, en la tarjeta, en la tabla y en el CSV.',
+    que: 'Lo que los pacientes pagan en sus dos cuotas por los financiamientos de la semana: el total financiado (sin fee) más el service fee y su IVA. No es un total suelto: se enseña siempre con sus dos sumandos al lado, en la tarjeta, en la tabla y en el CSV.',
     rpc: 'admin_metricas_semana_resumen',
   },
   {
@@ -111,9 +111,9 @@ export const metricasSemana = [
     titulo: 'Financiamientos de la semana',
     descripcion: 'Cuántos financiamientos se confirmaron en la semana, frente a la semana anterior.',
     espacio: 'metricas',
-    sinonimos: ['número de financiamientos', 'nro. financiamientos', 'cuántos financiamientos', 'cuentas de la semana', 'transacciones'],
+    sinonimos: ['número de financiamientos', 'nro. financiamientos', 'cuántos financiamientos', 'consultas de la semana', 'transacciones'],
     destino: { to: '/admin/metricas' },
-    que: 'Los financiamientos confirmados de la semana (de lunes a domingo, por día operativo), de todas las clínicas o de uno, sin los de prueba. Un financiamiento de grupo es uno solo, pague cuanta gente pague. Se compara con la semana anterior a la misma altura.',
+    que: 'Los financiamientos confirmados de la semana (de lunes a domingo, por día operativo), de todas las clínicas o de una, sin los de prueba. Se compara con la semana anterior a la misma altura.',
     rpc: 'admin_metricas_semana_resumen',
   },
   {
@@ -122,9 +122,9 @@ export const metricasSemana = [
     titulo: 'Pacientes que se financiaron en la semana',
     descripcion: 'Los pacientes distintos con cuota en los financiamientos de la semana, frente a la semana anterior.',
     espacio: 'metricas',
-    sinonimos: ['nro. pacientes', 'pacientes de la semana', 'pacientes de la semana', 'gente que se financió', 'pacientes de la semana'],
+    sinonimos: ['nro. pacientes', 'pacientes de la semana', 'se financiaron en la semana'],
     destino: { to: '/admin/metricas' },
-    que: 'Los pacientes distintos con cuota en los financiamientos de la semana, de todas las clínicas o de uno: en un grupo, cada una, no solo quien abrió la cuenta. Quien vino dos días o a dos clínicas cuenta una vez. Se compara con la semana anterior a la misma altura.',
+    que: 'Los pacientes distintos con cuota en los financiamientos de la semana, de todas las clínicas o de una. Quien vino dos días o a dos clínicas cuenta una vez. Se compara con la semana anterior a la misma altura.',
     rpc: 'admin_metricas_semana_resumen',
   },
 ] as const satisfies ReadonlyArray<Entrada>

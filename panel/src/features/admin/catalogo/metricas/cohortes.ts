@@ -7,8 +7,8 @@ import type { Entrada } from '../tipos'
  *
  * Cohortes habla en lo que hay que COBRAR (Javier, 27-09): el total a cobrar
  * de una semana es la cuota 1 + la cuota 2, con el service fee dentro y
- * siempre con su desglose (consumo sin fee + service fee). Los nombres viejos
- * («del consumo ya volvió», «la cuota 1, semana a semana») quedan como
+ * siempre con su desglose (financiado sin fee + service fee). Los nombres viejos
+ * («del financiamiento ya volvió», «la cuota 1, semana a semana») quedan como
  * sinónimos para que la búsqueda los siga encontrando.
  *
  * `impago-por-cosecha` y `curvas-de-cosecha` (en `catalogo/riesgo.ts`) ya
@@ -27,7 +27,6 @@ export const metricasCohortes = [
       'cuánto hay que cobrar de la semana',
       'financiamiento más fee',
       'financiamiento + fee',
-      'financiamiento, sin servicio',
       'por cobrar de una semana',
       'lo que falta por cobrar de la semana',
       'vencido de la semana',
@@ -85,7 +84,7 @@ export const metricasCohortes = [
     espacio: 'metricas',
     sinonimos: ['cómo se fue cobrando la cuota', 'curva de cobro', 'ritmo de cobro', 'días desde el vencimiento', 'pagan antes de vencer'],
     destino: { to: '/admin/metricas', search: { vista: 'cobros' } },
-    que: 'Para cada día desde el vencimiento de cada cuota (antes y después), la parte de lo que se cobra en ella (financiamiento más service fee) que ya estaba pagada, contando el día en que el paciente reportó el pago. Se compara con la media de las cuatro semanas anteriores, solo en los días que todas ya cerraron. El día en que acaba la gracia es lo cobrado a tiempo.',
+    que: 'Para cada día desde el vencimiento de cada cuota (antes y después), la parte de lo que se cobra en ella (financiamiento más service fee) que ya estaba pagada, contando el día en que se registró el pago. Se compara con la media de las cuatro semanas anteriores, solo en los días que todas ya cerraron. El día en que acaba la gracia es lo cobrado a tiempo.',
     rpc: 'admin_metricas_cohorte',
   },
   {

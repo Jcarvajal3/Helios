@@ -9,7 +9,7 @@
  * estuviera entera, o un «no hay dato» que se vuelve un cero.
  */
 import type { CortesDeTramo } from '@/features/admin/tramos'
-import { describirAlerta, filtrarAlertas, leerAlertas } from './alertas'
+import { alertasDeLaClinica, describirAlerta, filtrarAlertas, leerAlertas } from './alertas'
 import { cosechaEnCurso, leerCosechas, leerCurvas, rangoDelMes, rotuloDeMes, seriesDeCurvas } from './cosechas'
 import {
   filaDeLaMismaClave,
@@ -428,6 +428,75 @@ console.log('\n── Las alertas ───────────────�
       filtrarAlertas(a.filas, { estado: 'todas', gravedad: 'media' }).length === 0,
     'la gravedad filtra',
   )
+}
+
+console.log('\n── Las alertas de Helios (H10) ──────────────────────────────')
+{
+  const a = leerAlertas({
+    counts: { rafaga_de_altas: { total: 1, unreviewed: 1, unreviewed_high: 1 } },
+    rows: [
+      {
+        alert_key: 'rafaga:m1:2026-10-05',
+        kind: 'rafaga_de_altas',
+        severity: 'alta',
+        subject_type: 'clinica',
+        subject_id: 'm1',
+        subject_name: 'Clínica Norte',
+        first_seen_at: '2026-10-05T15:00:00Z',
+        detail: { charge_count: 14, threshold: 10, business_date: '2026-10-05' },
+        reviewed: false,
+      },
+      {
+        alert_key: 'tel:u1',
+        kind: 'telefono_repetido',
+        subject_type: 'paciente',
+        subject_id: 'u1',
+        subject_name: 'José Pérez',
+        detail: { phone_e164: '+584141234567', patient_count: 3 },
+      },
+      {
+        alert_key: 'sec:s1',
+        kind: 'secretaria_concentrada',
+        severity: 'media',
+        subject_type: 'personal',
+        subject_id: 's1',
+        subject_name: 'Carla',
+        detail: { merchant_id: 'm1', merchant_name: 'Clínica Norte', share_pct: 91.4 },
+      },
+      { alert_key: 'x', kind: 'consultas_de_cedula_excesivas', subject_type: 'personal', subject_id: 's2', detail: {} },
+    ],
+  })
+  comprueba(a.filas.length === 4, 'los tipos nuevos se leen')
+  const [rafaga, tel, sec, cedulas] = a.filas
+  comprueba(rafaga.sujeto.tipo === 'clinica' && rafaga.personaId === null, 'una de clínica no tiene paciente')
+  comprueba(rafaga.detectadaEn === '2026-10-05T15:00:00Z', 'detectada: first_seen_at')
+  comprueba(
+    describirAlerta(rafaga.detalle) === 'Registró 14 financiamientos el 05/10/26; el umbral es 10.',
+    'la ráfaga se cuenta',
+    describirAlerta(rafaga.detalle),
+  )
+  comprueba(tel.gravedad === 'media', 'sin gravedad, la de su tipo')
+  comprueba(tel.personaId === 'u1', 'una de paciente enlaza al paciente')
+  comprueba(
+    describirAlerta(tel.detalle).includes('está en 3 pacientes'),
+    'el teléfono repetido dice en cuántos',
+    describirAlerta(tel.detalle),
+  )
+  comprueba(
+    describirAlerta(sec.detalle) === 'Registró el 91 % de los financiamientos de la semana de Clínica Norte.',
+    'la concentración, en porcentaje',
+    describirAlerta(sec.detalle),
+  )
+  comprueba(
+    describirAlerta(cedulas.detalle) === 'Hizo consultas de cédula.',
+    'sin detalle, sin cifras inventadas',
+    describirAlerta(cedulas.detalle),
+  )
+  comprueba(
+    alertasDeLaClinica(a.filas, 'm1').map((x) => x.clave).join() === 'rafaga:m1:2026-10-05,sec:s1',
+    'las de una clínica: suyas y de su personal',
+  )
+  comprueba(a.recuentos.rafaga_de_altas.pendientesAltas === 1, 'el recuento de un tipo nuevo')
 }
 
 

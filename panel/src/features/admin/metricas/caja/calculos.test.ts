@@ -22,7 +22,7 @@ import { textoDeDesglose } from '@/features/admin/metricas/formato'
 
 let fallos = 0
 
-/** Las dos partes de lo cobrado tal como van en la frase y en el globo: «consumo €X + service fee €Y». */
+/** Las dos partes de lo cobrado tal como van en la frase y en el globo: «consumo $X + service fee $Y». */
 function dosPartes(financedUsd: number, feeUsd: number): string {
   return textoDeDesglose({ financedUsd, feeUsd }).replace('Financiamiento', 'financiamiento')
 }

@@ -68,7 +68,7 @@ export function CuposDeHoy({ local, nombreLocal }: { local: string | null; nombr
       </p>
       <Cupos
         consulta={consulta}
-        gente={local === null ? undefined : `La gente que se ha financiado en ${nombreLocal ?? 'esta clínica'}`}
+        gente={local === null ? undefined : `Los pacientes que se han financiado en ${nombreLocal ?? 'esta clínica'}`}
       />
     </div>
   )

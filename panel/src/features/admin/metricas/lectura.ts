@@ -32,7 +32,7 @@ export function leerHoyUsado(v: unknown): string | null {
 
 /**
  * Un importe que se paga en cuotas, siempre con sus dos partes. Nunca se
- * enseña `payableUsd` suelto: va con «Consumo € + service fee €»
+ * enseña `payableUsd` suelto: va con «Consumo $ + service fee $»
  * (`textoDeDesglose`).
  */
 export type Desglose = {

@@ -70,13 +70,8 @@ const conLocal = celdas(
 )
 igual(
   conLocal.find((l) => l[1] === 'Registros'),
-  ['Gente', 'Registros', 'no se parte por clínica', '', '', '', ''],
+  ['Pacientes', 'Registros', 'no se parte por clínica', '', '', '', ''],
   'lo que no se parte por clínica va vacío, no en cero',
-)
-igual(
-  conLocal.find((l) => l[1] === 'Solicitaron el código'),
-  ['Gente', 'Solicitaron el código', 'no se parte por clínica', '', '', '', ''],
-  'quien pidió el código tampoco se parte por clínica',
 )
 
 console.log('── Nombre ────────────────────────────────────────────────────')

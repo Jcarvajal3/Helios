@@ -38,7 +38,8 @@ export const DIMENSIONES_PRIMERA_CUOTA: ReadonlyArray<{
   { value: 'semana', label: 'Semana' },
   { value: 'local', label: 'Clínica' },
   { value: 'nivel', label: 'Nivel' },
-  { value: 'grupo', label: 'Pacientes en el financiamiento' },
+  // 'grupo' (cuántos pagaban el financiamiento) era de Ronda: en Helios
+  // siempre es uno, y no se ofrece. El tipo lo conserva por la base.
   { value: 'primera_compra', label: 'Primer financiamiento' },
 ]
 

@@ -330,6 +330,8 @@ export function senalesDe(fila: FilaParaSenales, ctx: ContextoDeSenales): Senal[
   }
 
   // ── La app ───────────────────────────────────────────────────────────────
+  // Heredado de Ronda: en Helios no hay app, la base no manda `ultimaApertura`
+  // ni el estado de los avisos push, y estas señales no salen.
   if (h.ultimaApertura) {
     const dia = diaOperativo(new Date(h.ultimaApertura))
     const desdeQueVencio = h.vencidaDesde !== null && dia < h.vencidaDesde
@@ -436,7 +438,7 @@ export const ROTULO_INTENCION: Record<Intencion, string> = {
 }
 
 export const QUE_ES_LA_INTENCION =
-  'La suma de sus señales: las verdes (entró a pagar, promete, abrió el aviso o la app) suman; las rojas (no abre, no contesta, promesa rota, sin avisos, nunca pagó) restan. Un pago en revisión cuenta como que quiere pagar.'
+  'La suma de sus señales: las verdes (registró un pago, promete, contesta) suman; las rojas (no contesta, promesa rota, nunca pagó) restan. Un pago registrado sin aprobar cuenta como que quiere pagar.'
 
 /**
  * Lo que dicen sus señales, juntas: la suma de sus pesos. Con un pago en

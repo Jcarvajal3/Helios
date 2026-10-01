@@ -8,10 +8,10 @@ import type { Desglose } from '@/features/admin/metricas/lectura'
  * en pequeño. Es la condición de la excepción que aprobó Javier para
  * Cohortes: el total lleva el fee dentro, pero sus dos sumandos se ven.
  *
- * `linea`: la cifra y debajo «Facturado €X (sin fee) · service fee + IVA €Y»
- * (una tarjeta). `compacta`: la cifra y debajo «facturado €X · fee + IVA €Y»
- * (una fila con sitio). `celda`: la cifra y debajo «facturado €X» y «fee +
- * IVA €Y» en dos líneas (una tabla ancha: la columna mide lo que la cifra, no
+ * `linea`: la cifra y debajo «Facturado $X (sin fee) · service fee + IVA $Y»
+ * (una tarjeta). `compacta`: la cifra y debajo «facturado $X · fee + IVA $Y»
+ * (una fila con sitio). `celda`: la cifra y debajo «facturado $X» y «fee +
+ * IVA $Y» en dos líneas (una tabla ancha: la columna mide lo que la cifra, no
  * la frase).
  */
 export function ImporteDeCuota({
@@ -72,7 +72,7 @@ export function ImporteDeCuota({
 }
 
 /**
- * «Facturado €X (sin fee) · service fee + IVA €Y» (el texto de `lineaDelDesglose`),
+ * «Facturado $X (sin fee) · service fee + IVA $Y» (el texto de `lineaDelDesglose`),
  * partida por el punto: si no cabe en una línea, baja entera la segunda
  * parte y no se separa una cifra de su nombre.
  */

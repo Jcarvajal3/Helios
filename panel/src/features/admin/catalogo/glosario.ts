@@ -9,8 +9,8 @@ import type { Entrada } from './tipos'
  * escriben como número: cambian desde Ajustes sin tocar esto.
  *
  * El vocabulario de las cifras (Javier, 27-09) está aquí entero, con el
- * nombre que se usa en pantalla: Usuarios, Registros, Solicitaron el código,
- * Consumos, Facturado (sin fee), Service fee + IVA, Service fee sin IVA,
+ * nombre que se usa en pantalla: Pacientes, Registros, Financiamientos,
+ * Financiado (sin fee), Service fee + IVA, Service fee sin IVA,
  * Total a cobrar, Cuota 1 / Cuota 2, Cobrado (a tiempo, con atraso), Vencido,
  * Por vencer, Perdido, Mora (%), Ticket medio (sin fee) y Días de gracia. Los
  * ids viejos se quedan (los Recientes guardados apuntan a ellos).
@@ -33,47 +33,47 @@ export const glosario = [
     tipo: 'termino',
     id: 'usuario',
     titulo: 'Paciente',
-    descripcion: 'Un paciente con cuenta en Helios; en las cifras de financiamiento y de cobro, contada por sus cuotas.',
+    descripcion: 'Un paciente que una clínica registró en Helios; en las cifras de financiamiento y de cobro, contado por sus cuotas.',
     espacio: 'directorio',
-    sinonimos: ['pacientes', 'paciente', 'pacientes', 'gente', 'paciente', 'pacientes que se financiaron', 'pacientes con deuda vencida'],
+    sinonimos: ['pacientes', 'gente', 'usuario', 'pacientes que se financiaron', 'pacientes con deuda vencida'],
     destino: { to: '/admin/pacientes' },
     definicion:
-      'Un paciente con cuenta en Helios. En toda cifra de financiamiento, deuda o cobro se cuenta por sus cuotas (installments.user_id), nunca por quien abrió la cuenta: en un financiamiento de grupo cuenta cada paciente que tiene su parte. Así se leen «Pacientes que se financiaron», «Pacientes con deuda vencida» o «Pacientes nuevos en la clínica» (su primera cuota en esa clínica es de ese día o semana). Las cuentas de prueba no cuentan.',
+      'Un paciente que una clínica registró en Helios: la secretaria o el administrador lo da de alta en el mismo paso que su primer financiamiento. No tiene app, ni cuenta, ni contraseña. En toda cifra de financiamiento, deuda o cobro se cuenta por sus cuotas (installments.user_id). Así se leen «Pacientes que se financiaron», «Pacientes con deuda vencida» o «Pacientes nuevos en la clínica» (su primera cuota en esa clínica es de ese día o semana). Las cuentas de prueba no cuentan.',
   },
   {
     tipo: 'termino',
     id: 'registro',
     titulo: 'Registro',
-    descripcion: 'Un paciente con la verificación de identidad aprobada.',
+    descripcion: 'Un paciente dado de alta por una clínica.',
     espacio: 'gerencia',
-    sinonimos: ['registros', 'registrado', 'verificados', 'altas'],
+    sinonimos: ['registros', 'registrado', 'altas', 'alta de paciente', 'pacientes registrados'],
     destino: { to: '/admin/metricas', search: { vista: 'gente' } },
     definicion:
-      'Un paciente cuenta como registro cuando se aprueba su verificación de identidad, y su día de registro es el día operativo de esa aprobación. Quien pidió el código por SMS y no llegó a verificarse no es un registro: cuenta en «Solicitaron el código» (y en «Confirmaron el teléfono» si lo metió). Por eso «Registros» y «Verificados» son la misma cifra.',
+      'Un paciente cuenta como registro cuando una clínica lo da de alta, y su día de registro es el día operativo de esa alta. La secretaria o el administrador lo registra en el mismo paso que su primer financiamiento, así que nace activo y con nivel 1: no hay app, ni código, ni verificación de identidad que esperar.',
   },
   {
     tipo: 'termino',
     id: 'cohorte-de-registro',
     titulo: 'Cohorte de registro',
-    descripcion: 'Los pacientes que se registraron en el mismo periodo, seguidos en el tiempo.',
+    descripcion: 'Los pacientes registrados en el mismo periodo, seguidos en el tiempo.',
     espacio: 'gerencia',
     sinonimos: ['retención', 'cohortes de registro', 'vuelven'],
     destino: { to: '/admin/metricas', search: { vista: 'gente', sub: 'retencion' } },
     definicion:
-      'Los pacientes que se registraron (se les aprobó la verificación de identidad) en el mismo día, semana o mes, seguidos en el tiempo. Todas las cifras de una cohorte de registro son sobre esos mismos pacientes, por muchos que entren después. Se ven en Métricas › Gente › Retención.',
+      'Los pacientes que las clínicas registraron en el mismo día, semana o mes, seguidos en el tiempo. Todas las cifras de una cohorte de registro son sobre esos mismos pacientes, por muchos que entren después. Se ven en Métricas › Pacientes › Retención.',
   },
 
-  // ── El consumo y su dinero ─────────────────────────────────────────────
+  // ── El financiamiento y su dinero ──────────────────────────────────────
   {
     tipo: 'termino',
     id: 'consumos-termino',
     titulo: 'Financiamientos',
-    descripcion: 'El número de financiamientos confirmados: cada cuenta cobrada en una clínica, sea de uno o de un grupo.',
+    descripcion: 'El número de financiamientos confirmados: cada consulta que una clínica financió por Helios.',
     espacio: 'directorio',
-    sinonimos: ['número de financiamientos', 'cuentas', 'cargos', 'transacciones', 'nro. financiamientos'],
+    sinonimos: ['número de financiamientos', 'consultas', 'cargos', 'transacciones', 'nro. financiamientos'],
     destino: { to: '/admin/financiamientos' },
     definicion:
-      'Cuántos financiamientos confirmados hubo: cada cuenta que una clínica cobró por Helios y el paciente confirmó, por el día operativo del financiamiento. Un financiamiento de grupo es uno solo, aunque lo paguen varios pacientes. Los anulados, revertidos o pendientes de confirmar no cuentan, y los de prueba tampoco.',
+      'Cuántos financiamientos confirmados hubo: cada consulta que una clínica registró y financió por Helios, por el día operativo del financiamiento. Los anulados o revertidos no cuentan, y los de prueba tampoco.',
   },
   {
     tipo: 'termino',
@@ -86,7 +86,6 @@ export const glosario = [
       'total financiado',
       'financiamiento',
       'financiamiento (sin fee)',
-      'financiado',
       'financed',
       'financiamiento sin servicio',
       'sin fee',
@@ -100,7 +99,7 @@ export const glosario = [
     // El id se queda (Recientes guardados); el nombre es el que usa Javier.
     id: 'servicio-ronda',
     titulo: 'Service fee + IVA',
-    descripcion: 'Lo que el paciente paga a Helios por financiar su financiamiento, con su IVA. Donde no cabe, «fee».',
+    descripcion: 'Lo que el paciente paga a Helios por financiarle la consulta, con su IVA. Donde no cabe, «fee».',
     espacio: 'caja',
     sinonimos: [
       'service fee',
@@ -117,7 +116,7 @@ export const glosario = [
     ],
     destino: { to: '/admin/metricas', search: { vista: 'caja' } },
     definicion:
-      'Lo que el paciente paga a Helios por financiar su financiamiento: un porcentaje sobre el financiado, fijado en los parámetros del negocio, más el IVA que lo grava; en cada cuota es la cuota menos su parte de financiamiento (payable − financed). Va dentro de las cuotas y nunca se suma al financiado en un total suelto: se enseña como línea aparte de un desglose («financiamiento $X · fee $Y») o repartido en las cuotas. «Service fee + IVA» lleva el IVA dentro; lo que gana Helios es el «Service fee sin IVA», y el IVA solo es el «IVA del service fee». No es la comisión de la clínica, que es lo que Helios le cobra a la clínica.',
+      'Lo que el paciente paga a Helios por financiarle la consulta: un porcentaje sobre el financiado, fijado en los parámetros del negocio, más el IVA que lo grava; en cada cuota es la cuota menos su parte de financiamiento (payable − financed). Va dentro de las cuotas y nunca se suma al financiado en un total suelto: se enseña como línea aparte de un desglose («financiamiento $X · fee $Y») o repartido en las cuotas. «Service fee + IVA» lleva el IVA dentro; lo que gana Helios es el «Service fee sin IVA», y el IVA solo es el «IVA del service fee». No es la comisión de la clínica, que es lo que Helios le cobra a la clínica.',
   },
   {
     tipo: 'termino',
@@ -150,7 +149,7 @@ export const glosario = [
     sinonimos: ['ticket', 'ticket medio', 'ticket promedio', 'gasto por financiamiento'],
     destino: { to: '/admin/metricas', search: { vista: 'semana' } },
     definicion:
-      'El financiado (sin fee) de un periodo ÷ el número de financiamientos confirmados de ese periodo. En un financiamiento de grupo es el de la cuenta entera, no el de cada paciente.',
+      'El financiado (sin fee) de un periodo ÷ el número de financiamientos confirmados de ese periodo.',
   },
   {
     tipo: 'termino',
@@ -183,7 +182,7 @@ export const glosario = [
     sinonimos: ['escalera de niveles', 'categoría'],
     destino: { to: '/admin/ajustes', search: { tab: 'niveles' } },
     definicion:
-      'El escalón que fija el cupo de un paciente. El estado automático lo sube al nivel más alto cuyos requisitos cumple, gasto pagado y antigüedad, y lo baja cuando el atraso llega a los días de suspensión. El equipo también puede cambiarlo a mano desde su ficha.',
+      'El escalón que fija el cupo de un paciente. Todo paciente nace con el nivel 1. El estado automático lo sube al nivel más alto cuyos requisitos cumple, gasto pagado y antigüedad, y lo baja cuando el atraso llega a los días de suspensión. El equipo también puede cambiarlo a mano desde su ficha.',
   },
 
   // ── Las cuotas y su estado ─────────────────────────────────────────────
@@ -196,7 +195,7 @@ export const glosario = [
     sinonimos: ['cuota', 'cuotas', 'plazo', 'vencimiento', 'pago en cuotas', 'primera cuota', 'segunda cuota'],
     destino: { to: '/admin/cobranza' },
     definicion:
-      'Cada financiamiento se paga en dos cuotas por paciente. La cuota 1 vence un intervalo de cuotas después del financiamiento y la cuota 2, otro intervalo después de la 1; el intervalo es un parámetro del negocio. El monto de cada cuota es financiamiento + service fee (su parte de financiado más su parte del fee con su IVA) y se enseña con ese desglose. En un financiamiento de grupo cada paciente tiene sus propias cuotas 1 y 2.',
+      'Cada financiamiento se paga en dos cuotas. La cuota 1 vence un intervalo de cuotas después del financiamiento y la cuota 2, otro intervalo después de la 1; el intervalo es un parámetro del negocio. El monto de cada cuota es financiamiento + service fee (su parte de financiado más su parte del fee con su IVA) y se enseña con ese desglose.',
   },
   {
     tipo: 'termino',
@@ -229,7 +228,7 @@ export const glosario = [
     sinonimos: ['pagado', 'cobrado a tiempo', 'cobrado con atraso', 'cobrado tarde', 'pagada a tiempo', 'a tiempo'],
     destino: { to: '/admin/metricas', search: { vista: 'cobros' } },
     definicion:
-      'Las cuotas pagadas, en financiamiento + service fee con su desglose. «Cobrado a tiempo» son las pagadas como tarde el último día de gracia (vencimiento + días de gracia) y «Cobrado con atraso», las pagadas después. El día del pago es el día operativo en que el paciente REPORTÓ el pago, no el de su aprobación. «Cobrado a tiempo (%)» es la parte a tiempo de las cuotas cuyo plazo ya terminó.',
+      'Las cuotas pagadas, en financiamiento + service fee con su desglose. «Cobrado a tiempo» son las pagadas como tarde el último día de gracia (vencimiento + días de gracia) y «Cobrado con atraso», las pagadas después. El día del pago es el día operativo en que se REGISTRÓ el pago, no el de su aprobación. «Cobrado a tiempo (%)» es la parte a tiempo de las cuotas cuyo plazo ya terminó.',
   },
   {
     tipo: 'termino',
@@ -303,12 +302,12 @@ export const glosario = [
     tipo: 'termino',
     id: 'estado-automatico',
     titulo: 'Estado automático',
-    descripcion: 'El proceso que cada mañana recalcula el estado de cada cuenta según su atraso.',
+    descripcion: 'El proceso que cada día recalcula el estado de cada cuenta según su atraso.',
     espacio: 'cobranza',
     sinonimos: ['motor', 'motor de mora'],
     destino: { to: '/admin/cobranza' },
     definicion:
-      'El proceso que cada mañana, al cambiar el día operativo, recalcula el estado de cada cuenta según su atraso: congela, bloquea, baja de nivel, pone los cargos por atraso y expulsa, y devuelve a activa a quien ya no tiene cuotas vencidas. Por eso una sanción del equipo no se pone cambiando el estado, sino con un bloqueo manual.',
+      'El proceso que cada día, al empezar el día operativo, recalcula el estado de cada cuenta según su atraso: congela, bloquea, baja de nivel, pone los cargos por atraso y expulsa, y devuelve a activa a quien ya no tiene cuotas vencidas. Por eso una sanción del equipo no se pone cambiando el estado, sino con un bloqueo manual.',
   },
   {
     tipo: 'termino',
@@ -319,29 +318,29 @@ export const glosario = [
     sinonimos: ['bloquear', 'sanción'],
     destino: { to: '/admin/pacientes' },
     definicion:
-      'Una sanción que pone alguien del equipo, aparte del estado de la cuenta, para que el estado automático no la deshaga a la mañana siguiente. El paciente ve el mensaje en la app y solo alguien del equipo la levanta.',
+      'Una sanción que pone alguien del equipo, aparte del estado de la cuenta, para que el estado automático no la deshaga al día siguiente. Mientras dura, ninguna clínica puede financiar al paciente (solo ve «No disponible», sin el motivo), y solo alguien del equipo la levanta.',
   },
   {
     tipo: 'termino',
     id: 'pago-reportado',
     titulo: 'Pago reportado',
-    descripcion: 'El aviso de un paciente de que transfirió, a la espera de aprobarse.',
+    descripcion: 'Un pago que el equipo registró con el comprobante del paciente, a la espera de aprobarse.',
     espacio: 'cobranza',
-    sinonimos: ['reporte de pago', 'cobro', 'aprobar un pago'],
+    sinonimos: ['pago registrado', 'registrar pago', 'comprobante de pago', 'reporte de pago', 'cobro', 'aprobar un pago'],
     destino: { to: '/admin/cobros' },
     definicion:
-      'El aviso que manda un paciente desde la app diciendo que transfirió, con el banco, la referencia y el monto. Se aprueba cuando se comprueba contra el extracto del banco, y entonces salda sus cuotas; si no se comprueba, se rechaza.',
+      'El paciente paga por Pago Móvil o transferencia y manda el comprobante por WhatsApp; alguien del equipo lo registra desde su ficha, con el banco, la referencia, la fecha y el monto, y cae en Pagos reportados. Se aprueba cuando se comprueba contra el extracto del banco, y entonces salda sus cuotas; si no se comprueba, se rechaza.',
   },
   {
     tipo: 'termino',
     id: 'abono-sin-dueno',
     titulo: 'Abono sin dueño',
-    descripcion: 'Dinero que entró al banco y no corresponde a ningún pago reportado.',
+    descripcion: 'Dinero que entró al banco y no corresponde a ningún pago registrado.',
     espacio: 'cobranza',
     sinonimos: ['depósito sin reportar', 'sin dueño', 'dinero sin reclamar'],
     destino: { to: '/admin/cobros', search: { vista: 'abonos' } },
     definicion:
-      'Un ingreso que aparece en el extracto del banco y no corresponde a ningún pago reportado: alguien transfirió y no lo reportó, escribió mal la referencia o pagó por otro paciente. Se asigna a quien corresponda o se descarta.',
+      'Un ingreso que aparece en el extracto del banco y no corresponde a ningún pago registrado: un paciente transfirió y no mandó el comprobante, se registró con la referencia mal escrita o alguien pagó por otro paciente. Se asigna a quien corresponda o se descarta.',
   },
   {
     tipo: 'termino',
@@ -355,7 +354,7 @@ export const glosario = [
       'El archivo de movimientos que se descarga del banco y se importa en el panel. Sirve para comprobar que cada pago reportado existió y para encontrar los abonos sin dueño. Cada abono se identifica por banco, referencia, fecha y monto, así que importarlo dos veces no duplica nada.',
   },
 
-  // ── Caja y locales ─────────────────────────────────────────────────────
+  // ── Caja y clínicas ────────────────────────────────────────────────────
   {
     tipo: 'termino',
     id: 'liquidacion',
@@ -400,17 +399,17 @@ export const glosario = [
     sinonimos: ['prueba', 'test', 'clínica de prueba'],
     destino: { to: '/admin/pacientes', search: { prueba: true } },
     definicion:
-      'Una cuenta o una clínica marcada como prueba. No cuenta en ninguna cifra ni en ninguna cola y no recibe promociones, pero sigue en las listas con su etiqueta, y sus financiamientos y pagos se escriben en el libro marcados como prueba.',
+      'Una cuenta o una clínica marcada como prueba. No cuenta en ninguna cifra ni en ninguna cola, pero sigue en las listas con su etiqueta, y sus financiamientos y pagos se escriben en el libro marcados como prueba.',
   },
   {
     tipo: 'termino',
     id: 'marca-interna',
     titulo: 'Marca interna',
-    descripcion: 'Una bandera sobre una cuenta que avisa si su cédula vuelve a registrarse.',
+    descripcion: 'Una bandera sobre una cuenta que impide que una clínica vuelva a financiar esa cédula.',
     espacio: 'directorio',
     sinonimos: ['lista negra', 'blacklist'],
     destino: { to: '/admin/pacientes', search: { marca: true } },
     definicion:
-      'Una bandera sobre una cuenta que sobrevive a cualquier cambio de estado, también a la expulsión. Si esa cédula vuelve a registrarse, salta un aviso en la cola de verificaciones.',
+      'Una bandera sobre una cuenta que sobrevive a cualquier cambio de estado, también a la expulsión. Si una clínica vuelve a buscar esa cédula para financiarla, Helios no la financia: la clínica solo ve «No disponible», sin el motivo.',
   },
 ] as const satisfies ReadonlyArray<Entrada>

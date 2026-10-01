@@ -3,7 +3,7 @@ import { BookOpen, Landmark } from 'lucide-react'
 import type { Entrada } from './tipos'
 
 /**
- * Caja y contabilidad: el dinero que sale hacia los locales, la caja y el libro.
+ * Caja y contabilidad: el dinero que sale hacia las clínicas, la caja y el libro.
  *
  * Dinero (el balance, la proyección y el banco) pasó a Métricas › Caja; sus
  * cifras siguen aquí, con el destino en su pestaña.
@@ -155,9 +155,9 @@ export const caja = [
     titulo: 'Por pagar a clínicas',
     descripcion: 'Lo que se les debe a las clínicas y todavía no se ha transferido.',
     espacio: 'caja',
-    sinonimos: ['deuda con clínicas', 'deuda con clínicas', 'liquidaciones pendientes'],
+    sinonimos: ['deuda con clínicas', 'liquidaciones pendientes'],
     destino: { to: '/admin/pagos-clinicas' },
-    que: 'Lo que Helios les debe a las clínicas (sin los de prueba) por lo que ya se financiaron sus pacientes y todavía no se ha transferido, partido en atrasado, este cierre y por vencer.',
+    que: 'Lo que Helios les debe a las clínicas (sin las de prueba) por lo que ya se financiaron sus pacientes y todavía no se ha transferido, partido en atrasado, este cierre y por vencer.',
     rpc: 'admin_merchant_payables',
   },
   {
@@ -259,11 +259,11 @@ export const caja = [
     tipo: 'cifra',
     id: 'tiempo-hasta-aprobar',
     titulo: 'Tiempo hasta aprobar un pago',
-    descripcion: 'Cuánto se tarda, en mediana, desde que el paciente reporta un pago hasta que se aprueba.',
+    descripcion: 'Cuánto se tarda, en mediana, desde que se registra un pago hasta que se aprueba.',
     espacio: 'caja',
     sinonimos: ['tiempo de conciliación', 'demora de la cola', 'cuánto tarda aprobar'],
     destino: { to: '/admin/contabilidad', search: { vista: 'cierre' } },
-    que: 'La mediana y el percentil noventa del tiempo entre el reporte de un pago y su aprobación (ponerlo en revisión no para el reloj).',
+    que: 'La mediana y el percentil noventa del tiempo entre el registro de un pago y su aprobación (ponerlo en revisión no para el reloj).',
     rpc: 'admin_reconciliation_health',
   },
   {

@@ -14,7 +14,7 @@ export type CifraConTendenciaProps<
   TOptions = unknown,
 > = {
   titulo: string
-  /** La cifra ya escrita («€912,40», «81 %»). Solo se pinta con `estado` en `listo`. */
+  /** La cifra ya escrita («$912,40», «81 %»). Solo se pinta con `estado` en `listo`. */
   valor: string
   /**
    * El cambio frente a la semana anterior (a la misma altura si la elegida
@@ -28,7 +28,7 @@ export type CifraConTendenciaProps<
    * `business_parameters` (`senalPorUmbral` de `features/admin/umbrales`).
    */
   senal?: SenalDeCifra
-  /** Una línea debajo: «Meta semanal €1.000 · va al 91 %», o el desglose de una cuota. */
+  /** Una línea debajo: «Meta semanal $1.000 · va al 91 %», o el desglose de una cuota. */
   pie?: ReactNode
   /** Las N semanas de la cifra en barras mínimas; la elegida en el tono del área. */
   chispa?: Omit<ChispaProps, 'alto'>

@@ -16,12 +16,17 @@ import {
   puestoDe,
   resumirAbonos,
   resumirAlertasAltas,
+  resumirAvisosDeHoy,
+  resumirCambiosPropuestos,
   resumirCartera,
+  resumirCorreosRebotados,
   resumirPagosALocales,
   resumirPagosReportados,
   resumirPromesasDeHoy,
   tieneTrabajo,
 } from './colas'
+import { leerAviso } from '@/features/admin/avisos/avisos'
+import type { Aviso } from '@/features/admin/avisos/avisos'
 import type { FilaParaLaCola, Lectura, Plazo } from './colas'
 
 let fallos = 0
@@ -241,6 +246,40 @@ console.log('\n── Riesgo ─────────────────
   comprueba(r.detalle === 'Además hay 2 de gravedad media sin revisar', 'dice cuántas medias esperan', String(r.detalle))
   const sinMedias = resumirAlertasAltas({ pendientesAltas: 1, pendientesMedias: 0, revisadas: 0 })
   comprueba(sinMedias.detalle === null, 'sin medias pendientes no dice nada más', String(sinMedias.detalle))
+}
+
+console.log('\n── Avisos, correos y cambios propuestos ──────────────────────')
+{
+  const aviso = (id: string, templateKey: string, status: Aviso['status'], extra: Partial<Aviso> = {}): Aviso => ({
+    ...leerAviso({ id, template_key: templateKey, status, channel: 'whatsapp_manual', created_at: '2026-10-08T12:00:00Z' }),
+    ...extra,
+  })
+  const hoy = resumirAvisosDeHoy([
+    aviso('a', 'cuota_hoy', 'pendiente'),
+    aviso('b', 'bienvenida', 'pendiente'),
+    aviso('c', 'cuota_hoy', 'enviado'),
+  ])
+  comprueba(hoy.cantidad === 2 && hoy.plazo === 'hoy', 'los avisos por mandar son de hoy', String(hoy.cantidad))
+  comprueba(hoy.ids.join() === 'b,a', 'en el orden de la pantalla: la bienvenida antes que la cuota', hoy.ids.join())
+  comprueba(
+    hoy.detalle === 'Por mandar por WhatsApp: Bienvenida, La cuota vence hoy',
+    'dice qué hay que mandar',
+    String(hoy.detalle),
+  )
+  comprueba(resumirAvisosDeHoy([]).detalle === null, 'sin avisos no dice nada')
+
+  const correo = (id: string, chargeId: string, lastEvent: Aviso['lastEvent'], createdAt: string) =>
+    aviso(id, 'comprobante_financiamiento', 'enviado', { channel: 'email', chargeId, lastEvent, createdAt, profileId: `p-${chargeId}` })
+  const rebotes = resumirCorreosRebotados([
+    correo('e1', 'c1', 'bounced', '2026-10-01T10:00:00Z'),
+    correo('e2', 'c1', 'delivered', '2026-10-02T10:00:00Z'),
+    correo('e3', 'c2', 'bounced', '2026-10-03T10:00:00Z'),
+  ])
+  comprueba(rebotes.cantidad === 1 && rebotes.ids.join() === 'p-c2', 'un rebote corregido ya no cuenta', rebotes.ids.join())
+
+  const cambios = resumirCambiosPropuestos([{ profileId: 'u1' }, { profileId: 'u1' }, { profileId: 'u2' }])
+  comprueba(cambios.cantidad === 3 && cambios.ids.join() === 'u1,u2', 'los cambios se cuentan todos y se recorren por paciente')
+  comprueba(cambios.plazo === 'puede_esperar', 'un cambio de datos puede esperar')
 }
 
 console.log('\n── El orden de la lista ─────────────────────────────────────')

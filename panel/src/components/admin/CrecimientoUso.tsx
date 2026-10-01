@@ -71,7 +71,7 @@ export function CrecimientoUso({ rango, local }: { rango: Rango; local: string |
           <Stat
             label="Financiado por paciente, mediana (sin fee)"
             value={formatUsd(b.perUser.p50FinancedUsd)}
-            info="Sin el service fee. Se suma lo financiado por cada paciente en la ventana (en un grupo, su parte) y se toma la mediana: la mitad gastó esto o menos. Al lado, la media."
+            info="Sin el service fee. Se suma lo financiado por cada paciente en la ventana y se toma la mediana: la mitad gastó esto o menos. Al lado, la media."
             hint={`Media ${formatUsd(b.perUser.avgFinancedUsd)}`}
           />
           <Stat
@@ -88,7 +88,7 @@ export function CrecimientoUso({ rango, local }: { rango: Rango; local: string |
             value={formatUsd(tablero.data?.spend.perOrderUsd ?? 0)}
             estado={estadoDeConsulta(tablero)}
             onReintentar={() => void tablero.refetch()}
-            info="Sin el service fee: el financiado entre el número de financiamientos de la ventana (un financiamiento de grupo cuenta una vez, entero)."
+            info="Sin el service fee: el financiado entre el número de financiamientos de la ventana."
             hint="Financiado entre financiamientos"
             link={{ to: '/admin/financiamientos', search: periodo }}
           />
@@ -96,7 +96,7 @@ export function CrecimientoUso({ rango, local }: { rango: Rango; local: string |
             // El mismo nombre que en Resumen: es el mismo número.
             label="Pacientes que se financiaron"
             value={String(b.activeUsers)}
-            info="Pacientes distintos con una cuota en un financiamiento de la ventana: en un financiamiento de grupo cuenta cada integrante que pagó su parte."
+            info="Pacientes distintos con un financiamiento en la ventana."
             hint={`Pacientes distintos en ${days} ${days === 1 ? 'día' : 'días'}`}
             link={{ to: '/admin/financiamientos', search: periodo }}
           />
@@ -127,7 +127,7 @@ export function CrecimientoUso({ rango, local }: { rango: Rango; local: string |
             formatShort={cuenta}
             ejeLabel="Tramo"
             empty="Nadie se financió en esta ventana."
-            footnote="Sin el service fee: cada paciente va en el tramo de lo que se le facturó en la ventana (en un grupo, su parte). Los tramos son fijos en dólares, no percentiles: cuanto más larga la ventana, más a la derecha se corre la gente sin haber cambiado de hábito."
+            footnote="Sin el service fee: cada paciente va en el tramo de lo que se le financió en la ventana. Los tramos son fijos en dólares, no percentiles: cuanto más larga la ventana, más a la derecha se corre la gente sin haber cambiado de hábito."
           />
 
           <BarChart
@@ -154,7 +154,7 @@ export function CrecimientoUso({ rango, local }: { rango: Rango; local: string |
 
         <ChartCard
           titulo="Registros por estado de la cuenta"
-          info="Todos los registros (pacientes verificados), por el estado de su cuenta hoy: no sigue a la ventana. Quien pidió el código y no se verificó no está aquí. Cada estado abre el directorio filtrado por él."
+          info="Todos los pacientes registrados por las clínicas, por el estado de su cuenta hoy: no sigue a la ventana. Cada estado abre el directorio filtrado por él."
         >
           {b.statuses ? (
             <UsuariosPorEstado filas={b.statuses.map((s) => ({ estado: s.status, personas: s.users }))} />

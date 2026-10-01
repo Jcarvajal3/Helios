@@ -6,8 +6,8 @@ import { pasoDeLaSemana, periodoDelPaso } from '@/features/admin/metricas/cobran
 import { Bloque, FilaDeCifra } from './piezas'
 
 /**
- * El paso entre tramos de la semana elegida: del lunes a las 10:00 a su cierre
- * (o a ahora, si está en curso), cuánta gente se puso al día, mejoró, empeoró
+ * El paso entre tramos de la semana elegida: del lunes a medianoche a su cierre
+ * (o a ahora, si está en curso), cuántos pacientes se pusieron al día, mejoró, empeoró
  * o entró en mora. La mora por tramo es la foto; esto es el movimiento. La
  * matriz entera va plegada debajo.
  */

@@ -49,8 +49,8 @@ export function FichaDelLocal({
       <div className="flex flex-col gap-4">
         {volver}
         <EmptyState
-          title="Esta clínica no está entre los de Helios"
-          description="Puede ser una clínica de prueba, uno que ya no existe o un enlace mal copiado. Elige otro arriba."
+          title="Esta clínica no está entre las de Helios"
+          description="Puede ser una clínica de prueba, una que ya no existe o un enlace mal copiado. Elige otra arriba."
         />
       </div>
     )

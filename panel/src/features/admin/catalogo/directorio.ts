@@ -17,17 +17,14 @@ export const directorio = [
     tipo: 'pantalla',
     id: 'personas',
     titulo: 'Pacientes',
-    descripcion: 'Todas las cuentas de paciente, con su ficha: cupo, identidad, financiamientos, pagos e historial.',
+    descripcion: 'Todos los pacientes que registraron las clínicas, con su ficha: cupo, datos, financiamientos, pagos e historial.',
     espacio: 'directorio',
     sinonimos: [
       'pacientes',
       'paciente',
-      'paciente',
-      'pacientes',
-      'paciente',
       'padrón',
       'buscar paciente',
-      'buscar paciente',
+      'registrar pago',
       'teléfono',
       'cédula',
       'ficha',
@@ -77,14 +74,34 @@ export const directorio = [
     icono: ReceiptText,
   },
 
-  // ── Acciones sobre un usuario ────────────────────────────────────────────
+  // ── Acciones sobre un paciente ───────────────────────────────────────────
+  {
+    tipo: 'accion',
+    id: 'editar-contacto-paciente',
+    titulo: 'Corregir el contacto de un paciente',
+    descripcion:
+      'Cambiar su teléfono, correo, dirección o su contacto de referencia desde la ficha, pestaña Datos. Pide motivo y queda en la bitácora.',
+    espacio: 'directorio',
+    sinonimos: ['editar contacto', 'cambiar teléfono', 'cambiar correo', 'correo inválido', 'referencia', 'dirección'],
+    destino: { to: '/admin/pacientes' },
+  },
+  {
+    tipo: 'accion',
+    id: 'revisar-cambios-propuestos',
+    titulo: 'Revisar los cambios propuestos por las clínicas',
+    descripcion:
+      'Cuando una clínica registra a un paciente conocido con otros datos, no se sobrescribe nada: el cambio espera aquí para aprobarlo o rechazarlo.',
+    espacio: 'directorio',
+    sinonimos: ['cambios propuestos', 'datos distintos', 'aprobar cambio', 'propuesta de cambio'],
+    destino: { to: '/admin/pacientes', search: { vista: 'cambios' } },
+  },
   {
     tipo: 'accion',
     id: 'cambiar-nivel-persona',
     titulo: 'Cambiar el nivel de un paciente',
     descripcion: 'Subir o bajar a mano el nivel, y con él el cupo, desde la ficha del paciente.',
     espacio: 'directorio',
-    sinonimos: ['subir de nivel', 'bajar de nivel', 'cupo de un paciente', 'cupo de un paciente', 'aumentar cupo'],
+    sinonimos: ['subir de nivel', 'bajar de nivel', 'cupo de un paciente', 'aumentar cupo'],
     destino: { to: '/admin/pacientes' },
     soloSuperAdmin: true,
   },
@@ -102,7 +119,7 @@ export const directorio = [
     tipo: 'accion',
     id: 'congelar-cuenta',
     titulo: 'Congelar o suspender una cuenta',
-    descripcion: 'Cambiar el estado de la cuenta a mano. El estado automático lo revisa cada mañana.',
+    descripcion: 'Cambiar el estado de la cuenta a mano. El estado automático lo revisa cada día.',
     espacio: 'directorio',
     sinonimos: ['congelar', 'descongelar', 'suspender', 'levantar la suspensión', 'reactivar cuenta'],
     destino: { to: '/admin/pacientes' },
@@ -122,7 +139,7 @@ export const directorio = [
     tipo: 'accion',
     id: 'poner-marca-interna',
     titulo: 'Poner o quitar la marca interna',
-    descripcion: 'Marcar una cuenta para que salte un aviso si su cédula vuelve a registrarse.',
+    descripcion: 'Marcar una cuenta para que ninguna clínica pueda volver a financiar esa cédula.',
     espacio: 'directorio',
     sinonimos: ['lista negra', 'blacklist', 'marcar cuenta'],
     destino: { to: '/admin/pacientes', search: { marca: true } },
@@ -149,14 +166,14 @@ export const directorio = [
     soloSuperAdmin: true,
   },
 
-  // ── Acciones sobre un local ──────────────────────────────────────────────
+  // ── Acciones sobre una clínica ───────────────────────────────────────────
   {
     tipo: 'accion',
     id: 'dar-de-alta-local',
     titulo: 'Dar de alta una clínica',
     descripcion: 'Crear una clínica nueva con sus datos fiscales, su categoría y su ciudad.',
     espacio: 'directorio',
-    sinonimos: ['nueva clínica', 'crear clínica', 'alta de clínica', 'añadir clínica', 'nuevo bar'],
+    sinonimos: ['nueva clínica', 'crear clínica', 'alta de clínica', 'añadir clínica', 'nuevo consultorio'],
     destino: { to: '/admin/clinicas' },
     soloSuperAdmin: true,
   },
@@ -190,7 +207,7 @@ export const directorio = [
     soloSuperAdmin: true,
   },
 
-  // ── Acciones sobre un consumo ────────────────────────────────────────────
+  // ── Acciones sobre un financiamiento ─────────────────────────────────────
   {
     tipo: 'accion',
     id: 'anular-consumo',
@@ -216,10 +233,10 @@ export const directorio = [
     tipo: 'cifra',
     id: 'rendimiento-de-los-locales',
     titulo: 'Rendimiento de las clínicas',
-    descripcion: 'Qué clínica facturó más en la semana, con cuántos pacientes, cuántos nuevos y frente a la anterior.',
+    descripcion: 'Qué clínica financió más en la semana, con cuántos pacientes, cuántos nuevos y frente a la anterior.',
     espacio: 'directorio',
     sinonimos: [
-      'quién vendió más',
+      'qué clínica financió más',
       'ranking de clínicas',
       'financiamientos por clínica',
       'mejor clínica',
@@ -229,7 +246,7 @@ export const directorio = [
       'mejor día',
     ],
     destino: { to: '/admin/metricas', search: { vista: 'locales' } },
-    que: 'Por clínica y en la semana elegida: el financiado (sin fee), los financiamientos, el ticket medio (sin fee), los pacientes (contados por sus cuotas) y cuántos eran nuevos en esa clínica, los días con financiamientos, la parte en grupo y la mejor día, con el cambio frente a la semana anterior a la misma altura; las clínicas activos que no vendieron también salen.',
+    que: 'Por clínica y en la semana elegida: el financiado (sin fee), los financiamientos, el ticket medio (sin fee), los pacientes (contados por sus cuotas) y cuántos eran nuevos en esa clínica, los días con financiamientos y el mejor día, con el cambio frente a la semana anterior a la misma altura; las clínicas activas que no financiaron nada también salen.',
     rpc: 'admin_metricas_locales',
   },
 ] as const satisfies ReadonlyArray<Entrada>

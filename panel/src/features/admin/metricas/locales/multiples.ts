@@ -124,7 +124,7 @@ export function pequenosMultiplos(d: LocalesDeLaSemana, n = SEMANAS_DE_MULTIPLOS
   }
 }
 
-/** La cifra de la barra más alta, escrita: «€563,50 · Terraza, 21–27 sep». */
+/** La cifra de la barra más alta, escrita: «$563,50 · Terraza, 21–27 sep». */
 export function textoDeCima(cima: Multiplos['cima']): string | null {
   if (!cima || cima.valor <= 0) return null
   return `${formatUsd(cima.valor)} · ${cima.nombre}, ${semanaCorta(cima.semana)}`

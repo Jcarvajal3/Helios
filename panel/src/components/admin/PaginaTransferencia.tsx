@@ -115,12 +115,19 @@ export function PaginaTransferencia({
                   {
                     label: 'Transferido',
                     value: formatUsd(payout.amountUsd),
-                    hint:
+                    info: 'Sus consultas (financiado sin fee, menos la comisión de la clínica) más las comisiones de su personal, que la clínica le entrega a quien registró cada financiamiento.',
+                    hint: [
+                      payout.desglose
+                        ? `Consultas ${formatUsd(payout.desglose.consultasUsd)} + Comisiones del personal ${formatUsd(payout.desglose.comisionesUsd)}`
+                        : null,
                       payout.amountVes != null
                         ? `${formatVes(payout.amountVes)}${
                             payout.fxRate != null ? ` a ${formatBcvRate(payout.fxRate)}` : ''
                           }`
-                        : undefined,
+                        : null,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ') || undefined,
                   },
                 ]}
               />

@@ -79,7 +79,7 @@ export function etiquetaDeSemana(s: Pick<SemanaDeCaja, 'lunes' | 'domingo'>): st
 
 /**
  * El rótulo de una semana con las dos partes de lo cobrado: «14–20 sep
- * (consumo €723,97 + service fee €168,01)». Es el título del globo de la
+ * (consumo $723,97 + service fee $168,01)». Es el título del globo de la
  * chispa de «Entró de cuotas»: tampoco ahí va un importe en cuotas sin sus
  * partes.
  */

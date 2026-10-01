@@ -3,6 +3,8 @@ import { resizeToThumbnail } from '@/features/admin/resizeImage'
 import { comoFila, comoLista, numeroONulo, textoONulo } from '@/lib/json'
 import { unoDe } from '@/lib/busqueda'
 import type { PayoutMethod } from '@/features/admin/liquidaciones'
+import { leerConsultasYComisiones } from '@/features/admin/clinicas/clinicas'
+import type { ConsultasYComisiones } from '@/features/admin/clinicas/clinicas'
 
 export type PlatformRole = 'operador' | 'super_admin'
 
@@ -177,6 +179,15 @@ export type QueueItem = {
   statementMatchesAvailable: number
   /** El movimiento del extracto que respaldó la aprobación; `null` si ninguno. */
   statementLine: MovimientoDelExtracto | null
+  /**
+   * Quién del equipo lo registró (Helios: el paciente no reporta, lo registra
+   * el equipo con `admin_register_payment`). `null` si la base no lo manda.
+   * Con el doble control, esa persona no puede aprobarlo.
+   */
+  registeredById?: string | null
+  registeredByName?: string | null
+  /** La ruta de la captura en `payment-receipts`, si se subió. */
+  receiptPath?: string | null
   /** Qué salda este pago, agrupado por compra. */
   purchases: QueuePurchase[]
   lateFees: QueueLateFee[]
@@ -253,6 +264,9 @@ export function aQueueItem(raw: unknown): QueueItem {
     // Sin el campo (una base sin la migración 145000), todos cuentan como libres.
     statementMatchesAvailable: numeroONulo(row.statement_matches_available) ?? Number(row.statement_matches),
     statementLine: leerMovimiento(row.statement_line),
+    registeredById: textoONulo(row.registered_by),
+    registeredByName: textoONulo(row.registered_by_name),
+    receiptPath: textoONulo(row.receipt_path),
     purchases: comoLista(row.purchases).map((compra) => {
       const p = comoFila(compra)
       return {
@@ -375,9 +389,9 @@ export type MerchantRow = {
    *  todas las noches del que vendió mucho hace un año y ya no abre. */
   sales30d: number
   financed30d: number
-  /** Los cuatro para la pantalla de Buscar de la app (Figma 20:3182). Sin
-   *  ellos el comercio no aparece filtrable por categoría ni ciudad, y sale
-   *  sin logo — por eso hace falta poder ponerlos al crear, no solo después. */
+  /** La categoría médica, la ciudad y el logo (opcional). `handle` y
+   *  `socialUrl` son columnas heredadas de Ronda, de la app que Helios no
+   *  tiene: se leen pero no se enseñan ni se editan. */
   category: MerchantCategory | null
   city: string | null
   handle: string | null
@@ -422,9 +436,13 @@ export async function createMerchant(params: {
   legalName?: string
   category?: MerchantCategory
   city?: string
-  handle?: string
   logoUrl?: string
-  socialUrl?: string
+  /** Los de Helios (contrato §2.5). */
+  specialty?: string
+  mppsNumber?: string
+  phone?: string
+  email?: string
+  address?: string
 }): Promise<void> {
   const { error } = await supabase.rpc('admin_create_merchant', {
     p_name: params.name,
@@ -432,9 +450,15 @@ export async function createMerchant(params: {
     p_tax_id: params.taxId,
     p_category: params.category ?? null,
     p_city: params.city ?? null,
-    p_handle: params.handle ?? null,
+    // Helios no tiene app: sin usuario en redes ni red social.
+    p_handle: null,
     p_logo_url: params.logoUrl ?? null,
-    p_social_url: params.socialUrl ?? null,
+    p_social_url: null,
+    p_specialty: params.specialty ?? null,
+    p_mpps_number: params.mppsNumber ?? null,
+    p_phone: params.phone ?? null,
+    p_email: params.email ?? null,
+    p_address: params.address ?? null,
   })
   if (error) throw error
 }
@@ -478,6 +502,11 @@ export type MerchantPayable = {
    *  del gerente que llama. */
   lastPayoutOn: string | null
   lastPayoutUsd: number | null
+  /**
+   * Lo del próximo cierre partido en consultas y comisiones del personal
+   * (contrato §2.5). `null` si la base no lo manda.
+   */
+  desglose?: ConsultasYComisiones | null
 }
 
 export async function fetchMerchantPayables(): Promise<MerchantPayable[]> {
@@ -501,10 +530,12 @@ export async function fetchMerchantPayables(): Promise<MerchantPayable[]> {
     totalPendingUsd: Number(row.total_pending_usd ?? 0),
     lastPayoutOn: (row.last_payout_on as string | null) ?? null,
     lastPayoutUsd: row.last_payout_usd == null ? null : Number(row.last_payout_usd),
+    desglose: leerConsultasYComisiones(row),
   }))
 }
 
-export type SettlementReason = 'advance' | 'scheduled_installment' | 'on_collection'
+/** `staff_commission`: la comisión del personal de la clínica (plan §6), que se paga en la misma transferencia. */
+export type SettlementReason = 'advance' | 'scheduled_installment' | 'on_collection' | 'staff_commission'
 
 export type SettlementStatus = 'pending' | 'partial' | 'paid'
 
@@ -738,6 +769,8 @@ export type Payout = {
   lineas: number
   primerVencimiento: string | null
   ultimoVencimiento: string | null
+  /** Consultas y comisiones del personal, si la base las manda. */
+  desglose?: ConsultasYComisiones | null
 }
 
 export type PayoutFilters = {
@@ -781,6 +814,7 @@ function mapPayout(row: Record<string, unknown>): Payout {
     lineas: Number(row.lineas ?? 0),
     primerVencimiento: (row.primer_vencimiento as string | null) ?? null,
     ultimoVencimiento: (row.ultimo_vencimiento as string | null) ?? null,
+    desglose: leerConsultasYComisiones(row),
   }
 }
 
@@ -822,6 +856,8 @@ export type PayoutDetail = {
     status: 'active' | 'paused' | 'terminated'
   }
   items: PayoutItem[]
+  /** Consultas y comisiones del personal: de la base, o de las líneas. */
+  desglose?: ConsultasYComisiones | null
 }
 
 export async function fetchPayoutDetail(payoutId: string): Promise<PayoutDetail> {
@@ -831,6 +867,20 @@ export async function fetchPayoutDetail(payoutId: string): Promise<PayoutDetail>
   if (error) throw error
 
   const raw = data as Record<string, any>
+  const items: PayoutItem[] = ((raw.items ?? []) as Array<Record<string, any>>).map((item) => ({
+    settlementId: String(item.settlement_id),
+    reason: item.reason as SettlementReason,
+    status: item.status as SettlementStatus,
+    appliedUsd: Number(item.applied_usd ?? 0),
+    settlementUsd: Number(item.settlement_usd ?? 0),
+    paidUsd: Number(item.paid_usd ?? 0),
+    pendingUsd: Number(item.pending_usd ?? 0),
+    dueDate: String(item.due_date),
+    runDate: String(item.run_date),
+    chargeId: item.charge_id ?? null,
+    orderNumber: item.order_number == null ? null : Number(item.order_number),
+    chargeDate: item.charge_date ?? null,
+  }))
 
   return {
     id: String(raw.id),
@@ -852,20 +902,11 @@ export async function fetchPayoutDetail(payoutId: string): Promise<PayoutDetail>
       isTest: Boolean(raw.merchant?.is_test),
       status: raw.merchant?.status as 'active' | 'paused' | 'terminated',
     },
-    items: ((raw.items ?? []) as Array<Record<string, any>>).map((item) => ({
-      settlementId: String(item.settlement_id),
-      reason: item.reason as SettlementReason,
-      status: item.status as SettlementStatus,
-      appliedUsd: Number(item.applied_usd ?? 0),
-      settlementUsd: Number(item.settlement_usd ?? 0),
-      paidUsd: Number(item.paid_usd ?? 0),
-      pendingUsd: Number(item.pending_usd ?? 0),
-      dueDate: String(item.due_date),
-      runDate: String(item.run_date),
-      chargeId: item.charge_id ?? null,
-      orderNumber: item.order_number == null ? null : Number(item.order_number),
-      chargeDate: item.charge_date ?? null,
-    })),
+    items,
+    desglose: leerConsultasYComisiones(
+      raw,
+      items.map((i) => ({ reason: i.reason, amountUsd: i.appliedUsd })),
+    ),
   }
 }
 
@@ -1045,6 +1086,11 @@ export type MerchantTerms = {
   perInstallmentPct: number
   commissionPct: number
   policy: SettlementPolicy
+  /**
+   * La comisión por financiamiento que se le paga al personal de esta
+   * clínica (plan §6). `null`: usa el parámetro global `staff_commission_usd`.
+   */
+  staffCommissionUsd: number | null
 }
 
 export type MerchantStaff = {
@@ -1069,8 +1115,22 @@ export type MerchantProfile = {
   taxId: string | null
 }
 
+/**
+ * Los datos médicos y de contacto de una clínica (contrato §2.5). Se ponen en
+ * el alta; la ficha los enseña. TODO(contrato): no hay RPC para editarlos
+ * después (`admin_set_merchant_profile` no los recibe).
+ */
+export type DatosDeLaClinica = {
+  specialty: string | null
+  mppsNumber: string | null
+  phone: string | null
+  email: string | null
+  address: string | null
+}
+
 export type MerchantDetail = {
   profile: MerchantProfile
+  datos: DatosDeLaClinica
   terms: MerchantTerms
   staff: MerchantStaff[]
   /** Lo devengado y todavía sin transferir. Cerrar un comercio con esto por
@@ -1094,11 +1154,19 @@ export async function fetchMerchantDetail(merchantId: string): Promise<MerchantD
       socialUrl: (raw.profile.social_url as string | null) ?? null,
       taxId: (raw.profile.tax_id as string | null) ?? null,
     },
+    datos: {
+      specialty: textoONulo(raw.profile.specialty),
+      mppsNumber: textoONulo(raw.profile.mpps_number),
+      phone: textoONulo(raw.profile.phone),
+      email: textoONulo(raw.profile.email),
+      address: textoONulo(raw.profile.address),
+    },
     terms: {
       upfrontPct: Number(raw.terms.upfront_pct),
       perInstallmentPct: Number(raw.terms.per_installment_pct),
       commissionPct: Number(raw.terms.commission_pct),
       policy: raw.terms.policy as SettlementPolicy,
+      staffCommissionUsd: numeroONulo(raw.terms.staff_commission_usd),
     },
     staff: (raw.staff as Array<Record<string, unknown>>).map((s) => ({
       userId: String(s.user_id),
@@ -1188,6 +1256,7 @@ export async function setSettlementTerms(params: {
     p_per_installment_pct: params.terms.perInstallmentPct,
     p_commission_pct: params.terms.commissionPct,
     p_policy: params.terms.policy,
+    p_staff_commission_usd: params.terms.staffCommissionUsd,
     p_effective_from: params.effectiveFrom ?? null,
     p_note: params.note ?? null,
   })
@@ -1201,6 +1270,8 @@ export type TermsHistoryRow = {
   perInstallmentPct: number
   commissionPct: number
   policy: SettlementPolicy
+  /** `null`: el global de su momento. */
+  staffCommissionUsd: number | null
   effectiveFrom: string
   note: string | null
   createdAt: string
@@ -1223,6 +1294,7 @@ export async function fetchMerchantTermsHistory(
     perInstallmentPct: Number(row.per_installment_pct),
     commissionPct: Number(row.commission_pct),
     policy: row.policy as SettlementPolicy,
+    staffCommissionUsd: numeroONulo(row.staff_commission_usd),
     effectiveFrom: String(row.effective_from),
     note: (row.note as string | null) ?? null,
     createdAt: String(row.created_at),

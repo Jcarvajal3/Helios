@@ -7,12 +7,12 @@ import { OPCIONES_DE_VENTANA, textoDeLaVentana } from '@/features/admin/metricas
 import type { VentanaGente } from '@/features/admin/metricas/gente/ventana'
 
 const COMO_SE_CUENTA =
-  'Todos los importes de Gente son financiado, sin el service fee: la suma de los financiamientos confirmados, y en un financiamiento de grupo la parte de cada paciente. El día es el operativo, de 10 de la mañana a 10 de la mañana. La ventana acaba el domingo de la semana elegida arriba (o hoy, si está en curso).'
+  'Todos los importes de Pacientes son financiado, sin el service fee: la suma de los financiamientos confirmados. El día es el operativo, de medianoche a medianoche, hora de Caracas. La ventana acaba el domingo de la semana elegida arriba (o hoy, si está en curso).'
 
 /**
- * La ventana de Resumen, Uso y Grupos: cuántas semanas se miran, acabando en
+ * La ventana de Resumen y Uso: cuántas semanas se miran, acabando en
  * la semana elegida arriba. Debajo, los días que USÓ la base (puede haber
- * recortado el «desde» al primer día de Ronda) y contra qué se comparan las
+ * recortado el «desde» al primer día de Helios) y contra qué se comparan las
  * flechas, una sola vez.
  *
  * Los días usados salen del tablero, con la misma clave que Resumen y Uso:

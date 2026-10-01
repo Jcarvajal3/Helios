@@ -91,7 +91,7 @@ function Cifras({ s, parametros }: { s: MerchantStats; parametros: Parametros | 
         titulo="Cobrado a tiempo, histórico (%)"
         valor={c.onTimePct === null ? '—' : formatPct(c.onTimePct)}
         senal={senalPorUmbralAlto(c.onTimePct, umbralCobroATiempo(parametros), pctEntero)}
-        info="De todas las cuotas de financiamientos en esta clínica cuyo plazo ya terminó (el vencimiento más los días de gracia), las pagadas dentro de él. Un pago cuenta el día en que se reportó."
+        info="De todas las cuotas de financiamientos en esta clínica cuyo plazo ya terminó (el vencimiento más los días de gracia), las pagadas dentro de él. Un pago cuenta el día en que se registró."
         pie={c.dueCount > 0 ? `${c.onTimeCount} de ${c.dueCount} cuotas con el plazo cerrado` : 'Ninguna cuota ha cerrado su plazo'}
       />
       <CifraConTendencia

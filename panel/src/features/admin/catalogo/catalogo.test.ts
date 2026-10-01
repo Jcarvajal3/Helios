@@ -64,7 +64,7 @@ console.log('── El catálogo está bien formado ─────────�
 
   // Las cifras del negocio no se escriben como número: cambian sin tocar esto.
   const conCifraEscrita = CATALOGO.filter((e) =>
-    /\b\d+ d[ií]as\b|€\s?\d/.test(
+    /\b\d+ d[ií]as\b|\$\s?\d/.test(
       `${e.descripcion} ${e.tipo === 'termino' ? e.definicion : ''} ${e.tipo === 'cifra' ? e.que : ''}`,
     ),
   ).map((e) => e.id)
@@ -169,7 +169,7 @@ console.log('\n── Métricas ────────────────
     '«resumen» (nombre viejo) encuentra Métricas › Semana › Resumen',
     buscarEnCatalogo('resumen').pantallas.map((p) => p.id).join(', '),
   )
-  comprueba(primera('crecimiento') === 'metricas-gente', '«crecimiento» lleva a Métricas › Gente', String(primera('crecimiento')))
+  comprueba(primera('crecimiento') === 'metricas-gente', '«crecimiento» lleva a Métricas › Pacientes', String(primera('crecimiento')))
   comprueba(
     primera('riesgo de credito') === 'metricas-mora',
     '«riesgo de credito» lleva a Métricas › Riesgo',

@@ -38,7 +38,7 @@ function usuarios(n: number): string {
   return `${n} ${n === 1 ? 'paciente' : 'pacientes'}`
 }
 
-/** Un importe que se cobra con su desglose: «€45,20 (facturado €36,70 + service fee + IVA €8,50)». */
+/** Un importe que se cobra con su desglose: «$45,20 (facturado $36,70 + service fee + IVA $8,50)». */
 export function importeConDesglose(d: Desglose): Trozo[] {
   return [{ cifra: formatUsd(d.payableUsd) }, ` (${desgloseEnFrase(d)})`]
 }
@@ -187,8 +187,8 @@ function trozosDeCuotaEnEjemplo(q: CuotaDeCohorte, hoy: string): Trozo[] {
  * «Cómo se lee» la tabla comparada, con los números de una semana de verdad:
  * «cada fila es lo que hay que cobrar de lo consumido una semana: la cuota 1
  * más la cuota 2, cada una con su service fee. En la del 14 al 20 de
- * septiembre hay que cobrar €1.419,26 (consumo €1.152,00 sin fee + service
- * fee €267,26) y ya se cobró el 43 % (el 58 % de la cuota 1 y el 28 % de la
+ * septiembre hay que cobrar $1.419,26 (consumo $1.152,00 sin fee + service
+ * fee $267,26) y ya se cobró el 43 % (el 58 % de la cuota 1 y el 28 % de la
  * cuota 2).»
  */
 export function comoSeLee(c: Cohorte | null, hoy: string): Trozo[] {

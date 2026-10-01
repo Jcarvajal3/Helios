@@ -11,6 +11,8 @@ import { ESTADOS_PERSONA } from '@/features/admin/estados'
 import { leerConsumosDePersona } from '@/features/admin/directorio/consumosDePersona'
 import type { ConsumoDePersona } from '@/features/admin/directorio/consumosDePersona'
 import { comoMotivoSinDisponible } from '@/features/admin/directorio/cupo'
+import { leerDatosDelPaciente } from '@/features/admin/pacientes/datos'
+import type { DatosDelPaciente } from '@/features/admin/pacientes/datos'
 import type { MotivoSinDisponible } from '@/features/admin/directorio/cupo'
 
 /**
@@ -88,6 +90,10 @@ export type UserRow = {
    *  que la deuda de hoy, que puede ser de esta noche. */
   onTimePaid: number
   onTimeTotal: number
+  /** La clínica que lo registró (Helios: el paciente nace en una clínica). */
+  registeredMerchantName?: string | null
+  /** Cuándo rebotó su correo. `null` si el correo sirve (o si la base no lo manda). */
+  emailInvalidAt?: string | null
 }
 
 /** Las dos partes de una deuda, o `null` si la base no manda el facturado. */
@@ -187,6 +193,8 @@ function leerUsuario(row: Record<string, unknown>): UserRow {
     lastMerchantName: (row.last_merchant_name as string | null) ?? null,
     onTimePaid: Number(row.on_time_paid ?? 0),
     onTimeTotal: Number(row.on_time_total ?? 0),
+    registeredMerchantName: textoONulo(row.registered_merchant_name),
+    emailInvalidAt: textoONulo(row.email_invalid_at),
   })
 }
 
@@ -198,6 +206,8 @@ export type UserDetail = {
   phone: string | null
   document: string | null
   birthDate: string | null
+  /** La pestaña Datos: lo que tecleó la clínica al registrarlo (contrato §2.4). */
+  datos: DatosDelPaciente
   status: ProfileStatus
   level: number
   isBlacklisted: boolean
@@ -346,6 +356,7 @@ export async function fetchUserDetail(userId: string): Promise<UserDetail> {
     phone: textoONulo(raw.phone_e164),
     document: textoONulo(raw.document_number),
     birthDate: textoONulo(raw.birth_date),
+    datos: leerDatosDelPaciente(raw),
     // La base lo guarda en un enum (`profile_status`): viene uno de la lista.
     status: texto(raw.status) as ProfileStatus,
     level: numero(raw.level),

@@ -60,9 +60,13 @@ el oscuro se elige en el pie del menú. Logo e isotipo en
   comisiones, y `/metricas` en vocabulario médico. Se programó contra
   `docs/01-CONTRATO-RPC.md` §1: la capa tipada vive en
   `src/features/merchant/` (lectores puros con sus `*.test.ts` y un
-  `*Api.ts` por pantalla). Falta probarla de punta a punta contra la base
-  con las RPC de la fase 1.
-- **Fase 3:** «Avisos de hoy» en `/admin/avisos`, registrar pagos, alertas de
-  H10, y la poda de textos de métricas y del catálogo del super admin que
-  todavía hablan de la app de Ronda.
+  `*Api.ts` por pantalla).
+- **Fase 3 (hecha en el panel, contra `docs/01-CONTRATO-RPC.md` §2-§4):**
+  registrar pagos, Avisos de hoy y Correos, Ajustes › Contacto y varias
+  cuentas de cobro, datos y cambios propuestos del paciente, clínicas
+  médicas con cuenta de pago y comisión propia, consultas y comisiones en
+  Pagos a clínicas, alertas de H10. Pendiente: editar el texto de los avisos
+  automáticos (no hay RPC).
+- **Pendiente de las dos:** probarlas de punta a punta contra la base con las
+  RPC de la fase 1.
 - **Fase 4:** `/soporte` y `/legal/privacidad` son marcadores sin razón social.

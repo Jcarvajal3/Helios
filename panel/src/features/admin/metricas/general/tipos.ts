@@ -6,7 +6,7 @@ import type { Desglose } from '@/features/admin/metricas/lectura'
 // Lo global del negocio desde el primer día. Cada importe lleva su clase en
 // el tipo: un `Desglose` es lo que se paga en cuotas (payable) y trae SIEMPRE
 // su consumo y su service fee (IVA incluido); lo demás (`…Usd` suelto) es
-// consumo sin fee, o el service fee de Ronda sin IVA (`servicioUsd`), o un
+// consumo sin fee, o el service fee de Helios sin IVA (`servicioUsd`), o un
 // cargo por atraso, y ninguno se suma con otro.
 //
 // `null` es «no se parte por el local elegido» (registros, caja…) o «no hay
@@ -15,23 +15,26 @@ import type { Desglose } from '@/features/admin/metricas/lectura'
 
 export type GenteGeneral = {
   /**
-   * Registros: personas con la verificación de identidad aprobada. Quien pidió
-   * el código y no se verificó no es un registro. `null` con local.
+   * Registros: pacientes que una clínica dio de alta (con su primer
+   * financiamiento). `null` con clínica.
    */
   registros: number | null
-  /** La misma cifra que `registros`: todo registro está verificado. `null` con local. */
+  /** La misma cifra que `registros` (heredada de Ronda: allí era el KYC aprobado). `null` con clínica. */
   verificados: number | null
-  /** Registros que han consumido alguna vez. `null` con local. */
+  /** Registros que se han financiado alguna vez. `null` con clínica. */
   hanComprado: number | null
   /** `hanComprado` sobre `registros`, de 0 a 100. `null` con local o sin registros. */
   hanCompradoPct: number | null
-  /** Personas con cuota de un consumo de los últimos `ventanaDias` días (del local, si lo hay). */
+  /** Pacientes con cuota de un financiamiento de los últimos `ventanaDias` días (de la clínica, si la hay). */
   activos: number
-  /** Personas con cuota en dos noches distintas o más (en ese local, si lo hay). */
+  /** Pacientes con cuota en dos días distintos o más (en esa clínica, si la hay). */
   repiten: number
-  /** Pidieron el código por SMS, se verificaran o no: la boca del embudo. `null` con local. */
+  /**
+   * Heredado de Ronda (pidieron el código por SMS). En Helios no hay app ni
+   * código: la pantalla ya no lo enseña. `null` con clínica.
+   */
   solicitaron: number | null
-  /** De ellas, las que metieron el código (o ya están verificadas). `null` con local. */
+  /** Heredado de Ronda (confirmaron el teléfono). No se enseña. `null` con clínica. */
   telefonoConfirmado: number | null
 }
 
@@ -41,9 +44,9 @@ export type ConsumoGeneral = {
   consumos: number
   /** Consumo ÷ consumos. `null` sin consumos. */
   ticketUsd: number | null
-  /** Personas distintas con cuota (en un grupo, cada una). */
+  /** Pacientes distintos con cuota. */
   personas: number
-  /** Locales que han vendido alguna vez. `null` con local. */
+  /** Clínicas que han financiado alguna vez. `null` con clínica. */
   locales: number | null
   /** Locales con ventas en los últimos `ventanaDias` días. `null` con local. */
   localesActivos: number | null
@@ -65,7 +68,7 @@ export type DineroGeneral = {
   vencido: CuotasConDesglose
   /** Las cuotas pagadas desde el primer día. */
   cobrado: Desglose & { cuotas: number }
-  /** El service fee de Ronda SIN IVA: su ingreso. Nunca sumado al consumo. */
+  /** El service fee de Helios SIN IVA: su ingreso. Nunca sumado al consumo. */
   servicioUsd: number
   /** Los cargos por atraso: ingreso aparte, sin IVA. */
   cargos: { devengadoUsd: number; cobradoUsd: number; cargos: number }
@@ -92,7 +95,7 @@ export type RiesgoGeneral = {
   moraPct: number | null
   /** Consumo perdido ÷ consumo. `null` sin consumo. */
   impagoPct: number | null
-  /** El impago con el que Ronda ni gana ni pierde. `null` sin ventas. */
+  /** El impago con el que Helios ni gana ni pierde. `null` sin ventas. */
   empatePct: number | null
   /** La cuota 1 y la cuota 2, en ese orden. */
   aTiempo: CobroATiempo[]
@@ -108,7 +111,7 @@ export type PorCadaCien = {
   cargosUsd: number
   /** Consumo perdido y sin pagar. */
   perdidoUsd: number
-  /** Cada cifra por cada 100 € de consumo. `null` sin consumo. */
+  /** Cada cifra por cada $100 financiados. `null` sin financiamientos. */
   por100: { servicioUsd: number; cargosUsd: number; perdidoUsd: number; margenUsd: number } | null
 }
 

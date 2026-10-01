@@ -63,7 +63,7 @@ export function Bloque<T>({
 }
 
 /**
- * «Facturado €146,72 (sin fee) · service fee + IVA €34,04»: la línea que
+ * «Facturado $146,72 (sin fee) · service fee + IVA $34,04»: la línea que
  * acompaña SIEMPRE a una suma de cuotas (la regla del fee).
  */
 export function LineaDeDesglose({ desglose, className = '' }: { desglose: Desglose; className?: string }) {

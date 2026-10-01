@@ -21,7 +21,7 @@ function llevaVentana(sub: SubpestanaGente): boolean {
 }
 
 /**
- * Métricas › Gente: ¿quién llega, quién consume y quién vuelve?
+ * Métricas › Pacientes: ¿quién llega, quién se financia y quién vuelve?
  * ══════════════════════════════════════════════════════════════════════════
  *
  * Lo que era Crecimiento (Resumen, Uso y las cohortes de registro,

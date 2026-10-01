@@ -17,6 +17,7 @@ import {
   Td,
   Tr,
   formatDay,
+  formatUsd,
   hoyCaracas,
 } from '@/components/ui'
 import { fetchMerchantTermsHistory, setSettlementTerms } from '@/features/admin/api'
@@ -34,17 +35,21 @@ const politica = (p: SettlementPolicy) => (p === 'scheduled' ? 'por fecha' : 'po
 
 /**
  * Las condiciones de liquidación: cuánto se le adelanta, cuánto por cuota, su
- * comisión y cuándo se le paga. Tienen fecha: cada consumo se liquida con las
- * vigentes su noche. Cambiarlas lo exige el servidor a un super admin, y el
+ * comisión, lo que gana su personal por financiamiento y cuándo se le paga.
+ * Tienen fecha: cada financiamiento se liquida con las
+ * vigentes su día. Cambiarlas lo exige el servidor a un super admin, y el
  * diálogo pide el motivo porque mueve el dinero que se le transfiere al local.
  */
 export function Condiciones({
   merchantId,
   initial,
+  comisionGlobal,
   onDone,
 }: {
   merchantId: string
   initial: MerchantTerms
+  /** El parámetro `staff_commission_usd`: lo que vale si la clínica no tiene la suya. */
+  comisionGlobal: number | null
   onDone: () => void
 }) {
   const avisar = useToast()
@@ -56,6 +61,10 @@ export function Condiciones({
   const [perInstallment, setPerInstallment] = useState(formatoMontoEditable(initial.perInstallmentPct))
   const [commission, setCommission] = useState(formatoMontoEditable(initial.commissionPct))
   const [policy, setPolicy] = useState<SettlementPolicy>(initial.policy)
+  // Vacío = usa el global (`null` en la base).
+  const [comisionPersonal, setComisionPersonal] = useState(
+    initial.staffCommissionUsd === null ? '' : formatoMontoEditable(initial.staffCommissionUsd),
+  )
   const [desde, setDesde] = useState(hoyCaracas())
   const [confirmando, setConfirmando] = useState(false)
 
@@ -70,7 +79,15 @@ export function Condiciones({
     perInstallmentPct: leerMonto(perInstallment) ?? NaN,
     commissionPct: leerMonto(commission) ?? NaN,
     policy,
+    staffCommissionUsd: comisionPersonal.trim() === '' ? null : (leerMonto(comisionPersonal) ?? NaN),
   }
+  const comisionOk =
+    nums.staffCommissionUsd === null ||
+    (Number.isFinite(nums.staffCommissionUsd) && nums.staffCommissionUsd >= 0)
+  const textoComision = (v: number | null) =>
+    v === null
+      ? `la global${comisionGlobal !== null ? ` (${formatUsd(comisionGlobal)})` : ''}`
+      : formatUsd(v)
 
   // La comisión NO entra en esta suma: los tramos reparten el neto del
   // consumo (adelanto + dos cuotas = 100 %) y la comisión es lo que Ronda le
@@ -99,6 +116,8 @@ export function Condiciones({
       ? 'El adelanto más dos veces lo de cada cuota tiene que dar 100.'
       : !Number.isFinite(nums.commissionPct)
         ? 'La comisión de la clínica no es una cifra válida.'
+        : !comisionOk
+          ? 'La comisión por financiamiento no es una cifra válida (vacía = la global).'
         : !desdeOk
           ? 'La fecha de vigencia no puede ser anterior a hoy.'
           : undefined
@@ -155,6 +174,31 @@ export function Condiciones({
         </div>
       </div>
 
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-1.5">
+          <span className="type-panel-label text-on-surface-variant">Comisión por financiamiento</span>
+          <InfoDot
+            title="Comisión por financiamiento"
+            what="Lo que gana quien registra cada financiamiento confirmado en esta clínica. Se paga a la clínica en la transferencia del lunes, junto con las consultas, y ella se la entrega a su personal. Vacía, usa el valor global de Ajustes › Parámetros."
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <Input
+            id={`comision-personal-${merchantId}`}
+            value={comisionPersonal}
+            onChange={setComisionPersonal}
+            inputMode="decimal"
+            placeholder={comisionGlobal !== null ? `${formatoMontoEditable(comisionGlobal)} (la global)` : 'La global'}
+            error={!comisionOk}
+            hint={
+              nums.staffCommissionUsd === null
+                ? `Vacía: usa la global${comisionGlobal !== null ? `, hoy ${formatUsd(comisionGlobal)}` : ''}.`
+                : 'En dólares, por financiamiento confirmado.'
+            }
+          />
+        </div>
+      </div>
+
       <div className="grid grid-cols-2 gap-3">
         <Input
           id={`desde-${merchantId}`}
@@ -183,12 +227,13 @@ export function Condiciones({
       {confirmando && (
         <ConfirmDialog
           title="Cambiar las condiciones"
-          summary={`Desde el ${formatDay(desde)}, ${nums.upfrontPct} % de adelanto, ${nums.perInstallmentPct} % por cuota y ${nums.commissionPct} % de comisión de la clínica, con liquidación ${politica(policy)}.`}
+          summary={`Desde el ${formatDay(desde)}, ${nums.upfrontPct} % de adelanto, ${nums.perInstallmentPct} % por cuota y ${nums.commissionPct} % de comisión de la clínica, con liquidación ${politica(policy)}. Comisión por financiamiento: ${textoComision(nums.staffCommissionUsd)}.`}
           detail={
             <p className="type-panel-body text-on-surface-variant">
               Antes: {initial.upfrontPct} % / {initial.perInstallmentPct} % / {initial.commissionPct} %,{' '}
-              {politica(initial.policy)}. Los financiamientos anteriores a esa fecha se siguen liquidando
-              con las suyas.
+              {politica(initial.policy)}, comisión por financiamiento {textoComision(initial.staffCommissionUsd)}. Los
+              financiamientos anteriores a esa fecha se siguen liquidando con las suyas: la comisión ya
+              devengada no cambia.
             </p>
           }
           nivel="sensible"
@@ -241,6 +286,9 @@ function Historia({
             <Td className="whitespace-nowrap tabular-nums type-panel-caption">
               {h.upfrontPct} % + {h.perInstallmentPct} % × 2
               <span className="block text-on-surface-variant">comisión {h.commissionPct} %</span>
+              <span className="block text-on-surface-variant">
+                por financiamiento {h.staffCommissionUsd === null ? 'la global' : formatUsd(h.staffCommissionUsd)}
+              </span>
             </Td>
             <Td className="type-panel-caption text-on-surface-variant">
               {h.policy === 'scheduled' ? 'Por fecha' : 'Por cobranza'}

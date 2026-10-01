@@ -11,7 +11,7 @@ export const metricasCaja = [
     tipo: 'cifra',
     id: 'entro-de-cuotas',
     titulo: 'Cobrado en cuotas en la semana (financiamiento + fee)',
-    descripcion: 'Lo que pagó la gente por sus cuotas en una semana: el financiamiento más el service fee, con las dos partes.',
+    descripcion: 'Lo que pagaron los pacientes por sus cuotas en una semana: el financiamiento más el service fee, con las dos partes.',
     espacio: 'metricas',
     sinonimos: [
       'entró de cuotas',
@@ -34,7 +34,7 @@ export const metricasCaja = [
     espacio: 'metricas',
     sinonimos: ['salió a las clínicas', 'transferido en la semana', 'pagado a clínicas', 'salidas de caja', 'liquidado'],
     destino: { to: '/admin/metricas', search: { vista: 'caja' } },
-    que: 'Calculado de las transferencias registradas en Pagos a clínicas en la semana elegida, por el día operativo de su asiento: su neto, sin el service fee. Con una clínica, lo que se le transfirió a él.',
+    que: 'Calculado de las transferencias registradas en Pagos a clínicas en la semana elegida, por el día operativo de su asiento: su neto, sin el service fee. Con una clínica, lo que se le transfirió a ella.',
     rpc: 'admin_metricas_caja',
   },
   {
@@ -64,7 +64,7 @@ export const metricasCaja = [
     tipo: 'cifra',
     id: 'cargos-por-atraso-cobrados',
     titulo: 'Cargos por atraso cobrados en la semana',
-    descripcion: 'Los cargos por atraso que la gente pagó en una semana.',
+    descripcion: 'Los cargos por atraso que los pacientes pagaron en una semana.',
     espacio: 'metricas',
     sinonimos: ['mora cobrada', 'multas cobradas', 'penalizaciones cobradas'],
     destino: { to: '/admin/metricas', search: { vista: 'caja' } },

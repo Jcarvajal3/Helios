@@ -3,13 +3,13 @@ import type { Rango } from '@/components/ui'
 import { domingoDe } from '@/features/admin/semana'
 
 // ═══════════════════════════════════════════════════════════════════════════
-// La ventana de Métricas › Gente: cuántas semanas se miran, acabando en la
+// La ventana de Métricas › Pacientes: cuántas semanas se miran, acabando en la
 // semana elegida arriba.
 //
-// Resumen, Uso y Grupos cuentan lo que pasó en un tramo de días. En vez de un
+// Resumen y Uso cuentan lo que pasó en un tramo de días. En vez de un
 // rango de fechas propio, el tramo acaba el domingo de la semana global (o
 // hoy, si está en curso) y dura una semana, cuatro, doce o todo lo que lleva
-// Ronda. Así «esta semana» dice lo mismo aquí que en la pestaña Semana.
+// Helios. Así «esta semana» dice lo mismo aquí que en la pestaña Semana.
 //
 // Puro: se prueba en `ventana.test.ts`. Los días van como 'YYYY-MM-DD' y se
 // suman con `sumarDias` (`Date.UTC` por dentro).
@@ -31,7 +31,7 @@ export const OPCIONES_DE_VENTANA: ReadonlyArray<{ value: VentanaGente; label: st
 /**
  * Cuántas semanas pide «desde el inicio». La base recorta el «desde» al
  * primer día con actividad, y su serie diaria no pasa de 366 días: con
- * cincuenta y dos semanas cabe entera. Cuando Ronda cumpla un año, «desde el
+ * cincuenta y dos semanas cabe entera. Cuando Helios cumpla un año, «desde el
  * inicio» enseñará el último año (lo dice `textoDeLaVentana`).
  */
 export const SEMANAS_DESDE_EL_INICIO = 52
@@ -69,7 +69,7 @@ export function comparacionDeLaVentana(ventana: VentanaGente, aMedias: boolean):
 
 /**
  * La línea que dice qué días se están mirando, con los que USÓ la base (que
- * puede haber recortado el «desde» al primer día de Ronda o el «hasta» a
+ * puede haber recortado el «desde» al primer día de Helios o el «hasta» a
  * hoy): «Del 1 al 26 de septiembre de 2026 · 26 días».
  */
 export function textoDeLaVentana(usado: Rango, dias: number): string {

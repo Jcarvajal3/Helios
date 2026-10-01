@@ -140,7 +140,7 @@ const REGISTRO = {
           'Todas las semanas comparadas: lo que hay que cobrar y cómo va, y la curva y las clínicas de la elegida.',
         carpeta: 'cohortes',
       },
-      // Sigue cada semana de consumo como Semanas: por eso está
+      // Sigue cada semana de financiamientos como Semanas: por eso está
       // aquí y no en Riesgo, que es la foto de la cartera al corte.
       {
         id: 'impago-por-cuota',
@@ -210,24 +210,24 @@ const REGISTRO = {
     tono: 'gerencia',
     periodo: 'semana',
     local: 'filtra',
-    pregunta: '¿Cuánto se factura en cada clínica y cómo pagan sus pacientes?',
+    pregunta: '¿Cuánto se financia en cada clínica y cómo pagan sus pacientes?',
     descripcion: 'Lo financiado (sin fee) en cada clínica en la semana y cómo pagan sus pacientes. Pulsa una clínica para ver su ficha.',
     carpeta: 'locales',
     subpestanas: [],
   },
   gente: {
-    titulo: 'Gente',
+    titulo: 'Pacientes',
     tono: 'gerencia',
     periodo: 'semana',
     local: 'parcial',
-    pregunta: '¿Cuántos solicitaron el código, se registraron, se financiaron y volvieron a financiarse?',
-    descripcion: 'Solicitudes del código, registros, pacientes que se financiaron y retención.',
+    pregunta: '¿Cuántos pacientes registraron las clínicas, cuántos se financiaron y cuántos volvieron a financiarse?',
+    descripcion: 'Pacientes registrados por las clínicas, pacientes que se financiaron y retención.',
     carpeta: 'gente',
     subpestanas: [
       {
         id: 'resumen',
         titulo: 'Resumen',
-        descripcion: 'Cuántos solicitaron el código, se registraron y se financiaron en la ventana, y hasta qué escalón del embudo llegaron.',
+        descripcion: 'Cuántos pacientes registraron las clínicas y cuántos se financiaron en la ventana.',
         carpeta: 'gente',
       },
       {
@@ -239,7 +239,7 @@ const REGISTRO = {
       {
         id: 'retencion',
         titulo: 'Retención',
-        descripcion: 'Los pacientes que se registraron en el mismo periodo: cuántos siguen financiándose en las semanas siguientes.',
+        descripcion: 'Los pacientes registrados en el mismo periodo: cuántos siguen financiándose en las semanas siguientes.',
         carpeta: 'gente',
       },
     ],

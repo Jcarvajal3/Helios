@@ -106,10 +106,10 @@ export function Parametros() {
                           lee no tiene con qué contar. */}
                       {p.value === null ? (
                         <Badge tone="warning" icono>
-                          {formatValorParametro(p.value, p.unit)}
+                          {formatValorParametro(p.value, p.unit, p.key)}
                         </Badge>
                       ) : (
-                        formatValorParametro(p.value, p.unit)
+                        formatValorParametro(p.value, p.unit, p.key)
                       )}
                     </Td>
                     <Td className="whitespace-nowrap text-on-surface-variant">
@@ -122,7 +122,7 @@ export function Parametros() {
                         // Un cambio programado no es una alarma: se escribe en
                         // blanco, como cualquier otro valor.
                         <span className="text-on-surface">
-                          {formatValorParametro(p.nextValue, p.unit)} el {formatDay(p.nextFrom)}
+                          {formatValorParametro(p.nextValue, p.unit, p.key)} el {formatDay(p.nextFrom)}
                         </span>
                       )}
                     </Td>
@@ -189,7 +189,7 @@ function HistoriaDelParametro({ parametro }: { parametro: Parametro }) {
           className="grid grid-cols-[7rem_8rem_minmax(0,1fr)] gap-3 type-panel-body"
         >
           <span className="tabular-nums font-medium text-on-surface">
-            {formatValorParametro(v.value, parametro.unit)}
+            {formatValorParametro(v.value, parametro.unit, parametro.key)}
           </span>
           <span className="whitespace-nowrap text-on-surface-variant">
             desde el {formatDay(v.effectiveFrom)}
@@ -226,7 +226,7 @@ function EditarParametro({
   const [texto, setTexto] = useState(formatoMontoEditable(parametro.value))
   const [desde, setDesde] = useState(hoy)
 
-  const lectura = leerValorParametro(texto, parametro.unit)
+  const lectura = leerValorParametro(texto, parametro.unit, parametro.key)
 
   const mutation = useMutation({
     mutationFn: (params: { valor: number; nota: string }) =>
@@ -240,7 +240,7 @@ function EditarParametro({
       // Con la fecha: un parámetro se puede programar, y «guardado» sin el
       // desde no distingue lo que ya rige de lo que regirá el lunes.
       avisar(
-        `${nombre}: ${formatValorParametro(params.valor, parametro.unit)} desde el ${formatDay(desde || hoy)}.`,
+        `${nombre}: ${formatValorParametro(params.valor, parametro.unit, parametro.key)} desde el ${formatDay(desde || hoy)}.`,
       )
       void queryClient.invalidateQueries({ queryKey: CLAVE_PARAMETROS })
       onClose()
@@ -274,7 +274,7 @@ function EditarParametro({
             hint={
               parametro.value === null
                 ? 'Todavía no tiene valor.'
-                : `Ahora vale ${formatValorParametro(parametro.value, parametro.unit)} desde el ${formatDay(parametro.effectiveFrom)}.`
+                : `Ahora vale ${formatValorParametro(parametro.value, parametro.unit, parametro.key)} desde el ${formatDay(parametro.effectiveFrom)}.`
             }
             autoFocus
           />

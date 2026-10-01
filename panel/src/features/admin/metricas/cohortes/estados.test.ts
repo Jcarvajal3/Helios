@@ -123,7 +123,7 @@ console.log('\n── Qué es cada estado ────────────�
 {
   const texto = queEsCadaEstado()
   igual(texto.startsWith('Cobrado a tiempo: pagada'), true, 'empieza por el primer estado')
-  igual(/día operativo del reporte/.test(texto), true, 'a tiempo se juzga por el día del reporte')
+  igual(/día operativo del registro del pago/.test(texto), true, 'a tiempo se juzga por el día en que se registró el pago')
 }
 
 console.log('\n── El plazo de una cuota ──────────────────────────────────────')

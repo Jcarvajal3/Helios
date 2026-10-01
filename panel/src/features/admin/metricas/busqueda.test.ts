@@ -79,7 +79,7 @@ igual(
 )
 igual(
   PESTANAS.map((p) => p.titulo),
-  ['Semana', 'Cobros', 'Riesgo', 'Caja', 'Clínicas', 'Gente', 'Global'],
+  ['Semana', 'Cobros', 'Riesgo', 'Caja', 'Clínicas', 'Pacientes', 'Global'],
   'con sus rótulos',
 )
 igual(PESTANA_POR_DEFECTO, 'semana', 'Semana es la de por defecto')
