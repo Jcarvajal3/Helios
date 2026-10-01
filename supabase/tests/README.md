@@ -56,7 +56,14 @@ de `min_charge_usd` (0).
 | `saldo_smoke` | ✓ | `prueba_cobro`/`prueba_saldo` |
 | `fx_rate_smoke` | ✓ | — |
 | `helios_cimientos_smoke` | ✓ | **Nueva** (fase 1A): tasa BCV en dólares, niveles, parámetros y lectores, mínimo, día a medianoche (00:00 y 10:00), paciente sin Auth y FK, ayudantes, ficha y cuenta de pago de la clínica (RLS), contacto + `helios_config_status`, varias cuentas de cobro, la cola y el comprobante |
+| `patient_charge_smoke` | ✓ | **Nueva** (1B, H4): paciente nuevo (vista previa, alta, cuotas +7/+14 desde la medianoche, una línea libre, asiento de 4 patas, comisión, comprobante + bienvenida, términos v1, bitácora), idempotencia, conocido con datos distintos → propuesta de cambio, doble gasto y cupo agotado, edad y validaciones, lista negra/expulsado/bloqueado/moroso con el mismo texto neutro, clínica pausada y mantenimiento, reglas de sede, consulta previa obligatoria, reenvío con límite, lo que ve la clínica, y el superadmin (`datos`, corregir contacto, aprobar/rechazar propuestas) |
+| `eligibility_smoke` | ✓ | **Nueva** (1B, H4): formatos de cédula, enmascarado, «no disponible» idéntico para todos los motivos, límite diario por persona y su bitácora, permisos y estados, RLS del personal |
+| `staff_commission_smoke` | ✓ | **Nueva** (1B, H5): devengo, global vs. pactada con vigencia, 0 = sin comisión, cierre del lunes, el cron no descuenta la comisión de la mitad, transferencia parcial y entera, reparto consultas/comisiones, lo que ve la clínica, reversa antes y después de pagar |
 | `metricas_cimientos`, `metricas_general`, `metricas_semana`, `metricas_semana_resumen`, `metricas_locales`, `metricas_cobranza` | ✓ | `prueba_admin()`; sin `admin_nights`; las dos primeras envueltas en begin/rollback. Son de «mirar a ojo»: con la base vacía solo prueban que las RPC contestan y los permisos |
+| `email_dispatch_smoke` | ✓ | **Nueva** (1C, H6): el comprobante (contenido, fee aparte, sin total), despacho a Resend con la clave y la llamada HTTP **sustituidas dentro de la transacción** (sin clave/sin remitente = no-op, 2xx, 4xx, 429/5xx con espera creciente, rendirse al 6.º, 401 corta el lote), estado (delivered → bounced → `email_invalid_at`, alerta, historial «rebotado»), `admin_resend_receipt`, crons |
+| `reminders_smoke` | ✓ | **Nueva** (1C, H7): los 5 momentos por fecha en sus días (medianoche), dedupe, suma por paciente y fecha, el pago registrado cancela los avisos de su fecha, `pago_recibido`, `cuenta_congelada` solo en la transición, +7 en Cobranza, la cola del equipo, crons y reprogramación |
+| `register_payment_smoke` | ✓ | **Nueva** (1C): `admin_register_payment` (validaciones, lo vencido primero, tasa del día del pago, candidatos del extracto, bitácora), cola de pagos con quién registró y la captura, doble control, `pago_recibido`/`pago_rechazado`, bucket `payment-receipts` |
+| `risk_alerts_smoke` | ✓ | **Nueva** (1C, H10): cada alerta nueva en su umbral y no antes (umbrales bajados dentro de la prueba), revisar, contadores |
 
 Varias suites de Ronda estaban en rojo contra el esquema final de Ronda (se
 quedaron atrás de renombres: `admin_add_merchant_staff`,
@@ -68,8 +75,7 @@ mismos arreglos a Ronda.
 
 | Suite | Por qué | Cuándo |
 |---|---|---|
-| `notifications_smoke` | Prueba avisos de grupo, `my_notifications()` y la cola de push | H7 (avisos por WhatsApp/correo en `outbound_messages`) |
-| `facturacion.test.mjs` | Node + `pg` con `SUPABASE_DB_URL`, y usa `confirm_charge` | H4 (reescribir contra `create_patient_charge`) |
+| `facturacion.test.mjs` | Node + `pg` con `SUPABASE_DB_URL` (sin Docker no hay URL directa de la base), y usa `confirm_charge` | Cuando haya una URL de la base (o reescribirla en SQL contra `create_patient_charge`) |
 | `metricas_cohortes` | Necesita cohortes con datos (`'null' - 'cuotas'` revienta con la base vacía) | Con la semilla de métricas (docs/00 §9) |
 | `metricas_gente-caja` | Usa `admin_growth_funnel` (el embudo de KYC, podado) y datos | Al rehacer Métricas › Gente (H3) |
 | `metricas_coherencia*.sql` | Baterías de coherencia contra datos de dev, no pruebas en begin/rollback. Varias usan `admin_nights` (podada) | Al revisar métricas (H2: el día a medianoche) |
@@ -85,3 +91,5 @@ En la fase 1A (H3): `profile_smoke` (`my_purchases()`, grupos y métodos de
 pago: la app) y `nivel_cero_smoke` (se nacía en el nivel 0 y el KYC/PIN daba
 el 1); lo que seguía valiendo —el nivel 0 inactivo, nacer activo en el 1— está
 en `helios_cimientos_smoke`.
+En la fase 1C (H7): `notifications_smoke` (avisos de grupo, `my_notifications()`
+y la cola de push: la app); los avisos de Helios están en `reminders_smoke`.

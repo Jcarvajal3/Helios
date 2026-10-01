@@ -41,10 +41,21 @@ clínica (`gerente` o `cajero`).
 
 - `p_document`: `"V12345678"` o `"E12345678"`. Si viene `"12345678"` se toma
   como V. Se normaliza con `normalize_document`.
-- Límite: `eligibility_lookups_per_staff_day` (60) por usuario y día. Pasado
-  el límite lanza `22023` "Llegaste al límite de consultas de hoy" y crea la
-  alerta `consultas_de_cedula_excesivas`.
-- Cada llamada queda en `eligibility_lookups`.
+- Límite: `eligibility_lookups_per_staff_day` (60) por usuario y día operativo.
+  Pasado el límite lanza `22023` "Llegaste al límite de consultas de hoy.
+  Inténtalo mañana." (implementado en 20261003000400).
+- Cada llamada que responde queda en `eligibility_lookups` (`result` =
+  `nuevo` | `disponible` | `no_disponible`, `document_key` normalizada). La
+  rechazada por el límite **no** queda anotada (el error deshace la
+  transacción): la alerta `consultas_de_cedula_excesivas` se dispara cuando
+  alguien **llega** al límite (`count >= helios_eligibility_lookups_per_staff_day()`).
+- Otros errores: `22023` "Cédula inválida" (lo que no sea V/E + 6-9 dígitos);
+  `42501` "No tienes permiso para consultar en esta clínica".
+- `disponible` exige además que el disponible sea ≥ `min_charge_usd`; si no, es
+  `no_disponible` (cupo agotado, sin decirlo). `no_disponible` trae siempre
+  exactamente esas tres claves y el mismo texto, sea cual sea el motivo. Sin
+  WhatsApp configurado: "No podemos financiar a esta persona. Si tiene dudas,
+  puede escribir a Helios." y `whatsapp_helios` null.
 
 ```jsonc
 // Paciente nuevo
@@ -66,12 +77,20 @@ clínica (`gerente` o `cajero`).
 ```
 
 Si la plataforma está en **mantenimiento** o la clínica **no está activa**,
-lanza `55000` con el texto de `helios_spend_block`.
+lanza `55000` con el texto de `helios_spend_block` ("La clínica está pausada"
+/ "La clínica ya no opera con Helios" si está terminada).
 
 ### 1.2 `preview_patient_charge(p_merchant_id uuid, p_document text, p_amount_usd numeric) → jsonb`
 
 Vista previa sin efectos. Valida el monto (≥ `min_charge_usd`, ≤ 2 decimales)
 y, si el paciente existe, que quepa en su disponible.
+
+- Anti-enumeración: si viene `p_document`, quien llama tiene que haber
+  consultado esa cédula en esa clínica (`helios_patient_eligibility`) en las
+  últimas 24 h; si no, `22023` "Primero consulta la cédula del paciente".
+  `p_document` null = paciente nuevo.
+- Un conocido que no puede financiar devuelve `disponible_usd` 0 y `cabe`
+  false (nunca el motivo). Un nuevo trae además `limite_usd`.
 
 ```jsonc
 {
@@ -125,7 +144,31 @@ sobrescribir nada.
 }
 ```
 
-Respuesta: `helios_charge_for_staff(id)`.
+Implementado en 20261003000400 (+ 000500). Precisiones:
+
+- Sede: el `gerente` registra en cualquier sede activa de su clínica (null =
+  la principal); el `cajero`, solo en la suya (null = la suya; otra → `42501`
+  "No tienes permiso para registrar en esa sede"). Una sede de otra clínica o
+  inactiva → `22023`.
+- Igual que la vista previa, exige haber consultado la cédula en las últimas
+  24 h ("Primero consulta la cédula del paciente").
+- `reference_phone` acepta móvil **o fijo** venezolano (02XX…), se guarda en
+  E.164 y no puede ser el teléfono del paciente. `sex` admite minúsculas.
+- `p_concept` vacío → se guarda "Consulta" (es también el nombre de la única
+  línea de `charge_items`).
+- La misma clave usada en otra clínica → `22023`.
+- Al crear: comprobante (correo) + `bienvenida` (WhatsApp manual) encolados,
+  comisión devengada, bitácora `charge.created`.
+
+Respuesta: `helios_charge_for_staff(id)` (también se puede llamar sola: el
+gerente ve los de su clínica, la secretaria los suyos, el equipo todos; si no,
+`P0002`). Además de lo de abajo trae `confirmed_at`, `merchant_id`,
+`merchant_name`, `branch_id`, `branch_name`, `breakdown.consumer_fee_pct` y
+`receipt.{sent_at, last_event, email_enmascarado}`. `receipt.status` añade
+`fallido` (el despacho se rindió o se canceló); `rebotado` cubre también «el
+paciente no tiene correo» o «su correo ya había rebotado». `registered_by` es
+"Nombre (Secretaria)" o "Nombre (Administrador)". `staff_commission_usd` es
+null si no hubo comisión.
 
 ```jsonc
 {
@@ -165,23 +208,41 @@ Solo personal de esa clínica, 3 veces al día por financiamiento. Encola otro
 { "ok": true, "email_enmascarado": "j***@gmail.com", "status": "pendiente" }
 ```
 
+El gerente reenvía cualquiera de su clínica; la secretaria, los que registró
+(si no, `P0002`). Pasado el límite: `22023` "Ya reenviaste este comprobante 3
+veces hoy. Inténtalo mañana" (cuentan los reenvíos del día, no el original).
+Queda en la bitácora (`charge.receipt_resent`).
+
 ### 1.5 Cambian de forma (heredadas)
 
-- `merchant_transactions(p_from date, p_to date)`: cada fila añade
-  `concept`, `beneficiary_name`, `receipt_status`, `staff_commission_usd` y
-  `registered_by_name`. `merchant_sale_usd` sigue siendo la base sin fee.
-  Desaparece `payer_count` (era de grupos).
+Implementado en 20261003000500 y 000600.
+
+- `merchant_transactions(p_from date, p_to date, p_limit int default 500)`:
+  cada fila añade `concept`, `beneficiary_name`, `receipt_status`,
+  `staff_commission_usd` y `registered_by_name`. `merchant_sale_usd` sigue
+  siendo la base sin fee. Desaparece `payer_count` (era de grupos).
 - `merchant_charge_detail(p_charge_id uuid)`: añade `concept`,
-  `beneficiary_name`, `receipt` (`{status, sent_at, last_event}`),
-  `staff_commission_usd`, `commission_staff_name`. **No** incluye el estado de
-  pago de las cuotas del paciente, solo sus fechas y cuándo se paga a la
-  clínica (`paid_to_merchant_on`).
-- `merchant_settlement_outlook()` y las transferencias recibidas
-  (`merchant_payouts`, `merchant_payout_items`): cada ítem trae
-  `reason` ∈ {`scheduled_installment`, `staff_commission`}, y la transferencia
-  trae `consultas_usd` y `comisiones_usd`.
+  `beneficiary_name`, `receipt` (`{status, sent_at, last_event, email_enmascarado}`),
+  `staff_commission_usd`, `commission_staff_name` e `installments`
+  (`[{sequence, due_date, run_date, paid_to_merchant_on}]`: **no** incluye el
+  estado de pago ni el monto de las cuotas del paciente). `payouts` añade
+  `kind` = `staff_commission` (su monto lo ve también la secretaria).
+- `merchant_settlement_outlook()` añade `next_run_consultas_usd`,
+  `next_run_comisiones_usd`, `consultas_usd` y `comisiones_usd` (lo devengado
+  y sin transferir, partido), `last_payout_on`, `last_payout_usd`.
+- Las transferencias recibidas se siguen leyendo de las tablas (RLS del
+  gerente): `merchant_payouts` gana las columnas `consultas_usd` y
+  `comisiones_usd`; cada `merchant_payout_items` → `settlements.reason` ∈
+  {`advance`, `scheduled_installment`, `staff_commission`}.
 - `merchant_sales_by_staff(p_from, p_to)`: se mantiene y añade
   `commission_usd`.
+- `merchant_sales_export` / `merchant_sales_export_items`: las columnas
+  `*_eur` pasan a `*_usd` (`base_usd`, `vat_usd`, `sale_usd`,
+  `consumer_fee_usd`, `consumer_fee_vat_usd`, `charged_to_customer_usd`,
+  `merchant_fee_usd`, `merchant_fee_vat_usd`, `net_to_merchant_usd`,
+  `settled_usd`, `paid_usd`; `unit_price_usd`, `line_total_usd`), y el export
+  añade al final `concept`, `beneficiary_name`, `staff_commission_usd`.
+  `settled_usd`/`paid_usd` no cuentan la comisión.
 
 ### 1.6 Comisiones (nuevas)
 
@@ -199,7 +260,13 @@ Solo personal de esa clínica, 3 veces al día por financiamiento. Encola otro
 El `gerente` ve todas; el `cajero`, solo su fila.
 
 `merchant_commission_items(p_from date, p_to date, p_staff_user_id uuid default null) → table`:
-`charge_id, order_number, created_at, amount_usd, status ('devengada'|'pagada'|'revertida'), payout_id, paid_on`.
+`charge_id, order_number, created_at, amount_usd, status ('devengada'|'pagada'|'revertida'), payout_id, paid_on, staff_user_id, staff_name, business_date`.
+
+Implementado en 20261003000500. El rango es el día operativo del
+financiamiento. `merchant_commissions` no cuenta las revertidas; `paid_usd`
+cuenta también lo pagado en transferencias parciales. Una comisión pasa a
+`pagada` cuando su liquidación queda pagada entera. `paid_on` solo viene si
+está `pagada`.
 
 ---
 
@@ -235,7 +302,20 @@ admin_register_payment(
 
 Queda en la cola de "Pagos reportados" y se aprueba con
 `admin_reconcile_payment` (heredada). Si `payment_four_eyes = 1`, quien
-registró no puede aprobarlo (`42501`), salvo un `super_admin`.
+registró no puede aprobarlo (`42501`, el mensaje dice «doble control»), salvo
+un `super_admin`.
+
+Implementado en 20261004000300. Además de lo de arriba devuelve
+`installments_usd`, `installment_count`, `declared_amount_ves` (= `p_amount_ves`)
+y `diferencia_ves` (declarado − esperado; null sin monto en Bs). La cotización
+en Bs va **a la tasa BCV del día `p_paid_on`**, y el cruce con el extracto mira
+±5 días alrededor de `p_paid_on`. `p_bank` y `p_amount_ves` son obligatorios
+para `pago_movil` y `transferencia`; la referencia, salvo en `efectivo`.
+`p_receipt_path` es la ruta dentro del bucket privado `payment-receipts` (solo el
+equipo sube y lee). Cada ítem de `admin_payment_queue` / `admin_payment_report`
+añade `registered_by`, `registered_by_name`, `paid_on`, `declared_amount_ves`,
+`note`, `receipt_path`, `receipt` (`{bucket, path}` para `createSignedUrl`, o
+null), `four_eyes` y `can_approve` (si quien mira puede aprobarlo).
 
 ### 2.2 Avisos (cola de WhatsApp manual + correos)
 
@@ -249,17 +329,29 @@ registró no puede aprobarlo (`42501`), salvo un `super_admin`.
 | rendered_text | texto final para pegar o abrir con `wa.me` |
 | status | `pendiente`, `enviado`, `omitido`, `fallido` |
 | created_at, sent_at, sent_by_name | |
+| whatsapp_url, recipient, last_error | (además) el `wa.me` con el texto, el destinatario al encolar y el motivo de omitido/cancelado |
+
+Con `p_day` null = hoy, y hoy incluye además lo que siga `pendiente` de días
+anteriores. `p_channel` null = todos.
 
 `admin_mark_outbound(p_id uuid, p_status text, p_note text default null) → void`.
 Operador o super_admin. `enviado` también escribe en `collection_contacts`
-(canal whatsapp). `omitido` exige nota.
+(canal whatsapp, `outcome = mensaje_enviado`). `omitido` exige nota. Solo desde
+`pendiente` (marcar lo que ya está así no hace nada); `enviado` solo en
+WhatsApp (los correos los manda el sistema).
 
 `admin_outbound_history(p_channel text, p_status text, p_q text, p_limit int, p_offset int) → table`.
-Incluye los correos: `email`, `provider_id`, `last_event`, `attempts`.
+Incluye los correos: `email`, `provider_id`, `last_event`, `attempts` (y
+`subject`, `last_event_at`, `next_attempt_at`, `last_error`), y `total_count` en
+cada fila para paginar. Defaults: todo null, `p_limit` 50, `p_offset` 0.
+`p_status` acepta además `rebotado` (last_event bounced/complained) y
+`entregado` (delivered/opened/clicked).
 
 `admin_resend_receipt(p_charge_id uuid, p_email text default null) → jsonb`.
 Si viene `p_email`, además corrige el correo del paciente (queda en la
-bitácora).
+bitácora) y limpia `email_invalid_at`. Operador o super_admin. Devuelve
+`{ok, message_id, status, email_enmascarado, email_changed, last_error}`
+(`status` `omitido` si el paciente no tiene correo o el suyo rebotó).
 
 ### 2.3 Contacto de Helios y cuentas de cobro
 
@@ -303,7 +395,33 @@ bitácora).
   reference_*. El motivo es obligatorio y queda en la bitácora. Operador o
   super_admin.
 - `admin_profile_change_requests(p_status text default 'pendiente') → table`
-  y `admin_resolve_profile_change(p_id uuid, p_approve boolean, p_note text)`.
+  y `admin_resolve_profile_change(p_id uuid, p_approve boolean, p_note text default null)`.
+
+Implementado en 20261003000700 y 000800. Precisiones:
+
+- `admin_user_detail(p_user_id)` conserva el nombre heredado del parámetro.
+  `datos` es un objeto; además de lo de arriba trae `document_key`,
+  `first_name`, `last_name`, `full_name`, `registered_by`,
+  `registered_merchant_id` y `pending_change_requests` (int).
+- `admin_update_patient_contact`: solo las claves que vienen; `null`/`''`
+  borra los opcionales; `phone` y `email` no se borran; la referencia no puede
+  ser el teléfono del paciente; un correo nuevo borra `email_invalid_at`.
+  Motivo < 3 caracteres → `22023`; clave no editable → `22023`. Devuelve
+  `{ok, changes: {campo: {antes, despues}}, datos}`. Bitácora
+  `patient.contact_updated`.
+- `admin_profile_change_requests` (null = todas): `id, profile_id,
+  patient_name, document_number, merchant_id, merchant_name, requested_by,
+  requested_by_name, field_changes ({campo: {antes, propuesto}}), proposed
+  ({campo: valor}), current ({campo: valor de hoy}), status, reviewed_by,
+  reviewed_by_name, reviewed_at, resolved_at, resolved_by_name, note,
+  created_at`. Los campos usan las claves de `p_patient` (`phone`, no
+  `phone_e164`).
+- `admin_resolve_profile_change`: aprobar aplica lo propuesto con las mismas
+  validaciones del registro; una ya revisada → `22023`. Devuelve
+  `{ok, id, status, changes}`. Bitácora `patient.change_request_approved` /
+  `_rejected`.
+- `admin_user_directory(...)` (heredada) añade al final
+  `registered_merchant_name` y `email_invalid_at`.
 
 ### 2.5 Clínicas
 
@@ -344,9 +462,53 @@ bitácora).
   línea trae `reason`, y los totales se separan en `consultas_usd` y
   `comisiones_usd`.
 
+Implementado en 20261003000500 y 000800. Precisiones:
+
+- Firma final (va al final, con default; la vieja de 7 argumentos se borró, la
+  de 5 con `settlement_policy` sigue delegando):
+  `admin_set_settlement_terms(p_merchant_id uuid, p_upfront_pct numeric,
+  p_per_installment_pct numeric, p_commission_pct numeric, p_policy text,
+  p_effective_from date default null, p_note text default null,
+  p_staff_commission_usd numeric default null) → jsonb`. Entre $0 y $100,
+  como mucho 2 decimales (`22023`); 0 = sin comisión. Como cada fila de
+  condiciones es completa, **llamarla sin `p_staff_commission_usd` deja la
+  clínica con la comisión global**: el panel tiene que mandar el valor vigente
+  si no quiere cambiarlo. Devuelve también `staff_commission_usd`.
+- La comisión de un financiamiento: la pactada vigente el día del
+  financiamiento (`merchant_terms.staff_commission_usd`) o, si es null, el
+  parámetro global vigente ese día. Se guarda como instantánea en
+  `charges.staff_commission_usd`.
+- `admin_merchant_detail.terms` añade `staff_commission_usd` (pactada, null =
+  global) y `staff_commission_effective_usd` (la de hoy).
+  `admin_merchant_terms_history` añade `staff_commission_usd` por fila.
+- `admin_merchant_payables()`: cada clínica trae `consultas_usd` /
+  `comisiones_usd` (devengado sin transferir) y los
+  `next_run_consultas_usd` / `next_run_comisiones_usd` de la previsión.
+- `admin_payout_detail`: `consultas_usd`, `comisiones_usd`, y en cada ítem
+  `reason`, `staff_user_id`, `staff_name` (las de comisión).
+  `admin_merchant_payouts`: cada fila trae `consultas_usd`, `comisiones_usd`.
+  `admin_report_merchant_payout` los guarda en la transferencia y los devuelve.
+- `admin_reverse_charge` revierte también la comisión (asiento espejo,
+  `staff_commissions.status = 'revertida'`, se borra su liquidación
+  pendiente) y devuelve `staff_commission_reverted_usd`. Si ya se transfirió
+  algo a la clínica (consultas o comisión) se sigue bloqueando.
+- `admin_charge_detail` añade `concept`, `beneficiary_name`, `registered_by`,
+  `registered_by_name`, `terms_version`, `receipt`, `staff_commission`
+  (`{id, amount_usd, staff_user_id, staff_name, status, settlement_id, created_at}`
+  o null), `messages` (la cola de ese financiamiento) y `user.document_number`
+  / `user.email`. `admin_charges` añade al final `concept`,
+  `beneficiary_name`, `registered_by_name`, `staff_commission_usd`,
+  `document_number`.
+- H9: `terms_versions` gana `id uuid` (único; la clave sigue siendo
+  `version`); `charges.terms_version_id` apunta a la vigente al registrar. Se
+  sembró la v1 (condiciones en USD) porque la tabla estaba vacía.
+
 ### 2.6 Alertas
 
-`admin_risk_alerts(...)` (heredada) añade estos `kind`:
+`admin_risk_alerts(p_limit int default 200, p_kinds text[] default null, p_subject_id uuid default null)`
+(heredada; `p_subject_id` filtra las de un paciente, clínica o persona del
+personal) añade estos `kind` (`consumo_sobre_cupo` sigue; `cuenta_relacionada` se
+va: la cédula ya es única):
 
 - `telefono_repetido`, `correo_repetido`, `correo_rebotado`;
 - `rafaga_de_altas`, `rafaga_de_pacientes_nuevos`, `secretaria_concentrada`;
@@ -357,6 +519,15 @@ Cada fila trae:
 - `kind`, `severity` (`alta`/`media`), `subject_type` (`paciente`/`clinica`/`personal`), `subject_id`, `subject_name`;
 - `detail jsonb`, `first_seen_at`;
 - `reviewed`: se marca con `admin_review_risk_alert`, que es heredada.
+- por compatibilidad: `alert_key` (lo que recibe `admin_review_risk_alert`),
+  `user_id`, `full_name`, `user_status`, `detected_at`, `merchant_id`,
+  `reviewed_at`, `reviewed_by_name`, `review_note`.
+
+Claves de `detail` (donde aplican): `phone_e164`, `email`, `patient_count`,
+`charge_count`, `threshold`, `share_pct`, `merchant_id`, `merchant_name`, `fpd_pct`,
+`cases`, `exposure_usd`, `reference`, `used_pct`, `lookups`, `staff_name`. Las de
+sujeto `personal` siempre traen `merchant_id`. La respuesta trae además
+`thresholds`. Implementado en 20261004000400.
 
 ---
 
@@ -375,6 +546,7 @@ Cada fila trae:
 | `alert_fpd_merchant_pct` / `alert_fpd_min_cases` | 25 / 5 | alerta `impago_primera_cuota_clinica` |
 | `alert_merchant_exposure_usd` | 3000 | alerta `exposicion_clinica` |
 | `alert_first_charge_limit_pct` | 90 | alerta `cupo_al_limite_al_estrenar` |
+| `alert_staff_share_min_charges` | 5 | mínimo de la semana para `secretaria_concentrada` (20261004000400) |
 
 Sembrados en 20261002000100 con vigencia desde 2026-09-30 (más una fila de
 `late_fee_usd` = 2 en dólares). Lectores (`stable security definer`, para
@@ -398,6 +570,14 @@ equipo si se llaman directo desde la API. La regla del monto vive en
 | `cargo_por_atraso_d4` | whatsapp_manual | +4 días |
 | `pago_recibido` / `pago_rechazado` | whatsapp_manual | al conciliar o rechazar |
 | `cuenta_congelada` | whatsapp_manual | al pasar a `frozen` |
+
+Despacho (20261004000100/000200): crons `helios_aviso_cuota_manana` (19:00),
+`helios_aviso_cuota_hoy` (08:00), `helios_aviso_cuota_vencida_d1` (08:05) y
+`helios_aviso_cargo_por_atraso_d4` (10:30, detrás de la mora y solo con el cargo
+ya cobrado), hora de Caracas, editables con `admin_set_notification_schedule`;
++7 días = Cobranza, sin mensaje. Un aviso por paciente y fecha de vencimiento;
+un pago registrado o conciliado cancela los pendientes de esa fecha. Correo:
+`helios_email_dispatch` (cada minuto) y `helios_email_status` (cada 15 min).
 
 Variables disponibles:
 - del paciente: `{nombre}`;

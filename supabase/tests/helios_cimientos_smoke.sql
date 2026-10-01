@@ -449,11 +449,11 @@ begin
      or v_row.next_attempt_at is null or v_row.charge_id <> v_charge then
     raise exception 'El comprobante debía encolarse por correo al correo registrado: %', to_jsonb(v_row) - 'html';
   end if;
-  if v_row.subject not like 'Tu financiamiento en Consultorio <Sol> & Luna: 2 cuotas de $61.60' then
+  if v_row.subject not like 'Tu financiamiento en Consultorio <Sol> & Luna — 2 cuotas de $61.60' then
     raise exception 'Asunto inesperado: %', v_row.subject;
   end if;
   if position('Monto de la consulta: $100.00' in v_row.rendered_text) = 0
-     or position('Servicio Helios (20 % + IVA): $23.20' in v_row.rendered_text) = 0
+     or position('Servicio Helios (20 % + IVA) de $23.20' in v_row.rendered_text) = 0
      or position('Cuota 2: $61.60' in v_row.rendered_text) = 0
      or position('Registró: Ana' in v_row.rendered_text) = 0
      or position('V-****5678' in v_row.rendered_text) = 0

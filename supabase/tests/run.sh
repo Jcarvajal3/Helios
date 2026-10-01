@@ -56,6 +56,10 @@ SUITES=(
   metricas_semana_resumen
   metricas_locales
   metricas_cobranza
+  email_dispatch_smoke
+  reminders_smoke
+  register_payment_smoke
+  risk_alerts_smoke
 )
 if [ "$#" -gt 0 ]; then SUITES=("$@"); fi
 

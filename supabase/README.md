@@ -41,6 +41,29 @@ poda:
    | `000600_el_contacto_de_helios_se_configura` | H11: `platform_contact`, `helios_config_status`, varias cuentas de cobro activas |
    | `000700_los_mensajes_salen_de_una_cola` | H11 + base de H6/H7: canales de plantilla, plantillas de Helios, `outbound_messages`, `helios_enqueue_message`, `helios_enqueue_charge_receipt`; las plantillas de la app, apagadas |
 
+5. Fase 1B, registrar un financiamiento y la comisión (`20261003…`):
+
+   | Migración | Qué hace |
+   |---|---|
+   | `000100_las_consultas_de_cedula_quedan_anotadas` | `eligibility_lookups` (límite diario y alerta de consultas) |
+   | `000200_la_comision_tiene_cuenta_en_el_libro` | Valores de enum `commission_expense`, `staff_commission` (asiento y liquidación) |
+   | `000300_el_financiamiento_guarda_sus_terminos_y_su_comision` | H9: `terms_versions.id` + v1; `charges.concept/beneficiary_name/terms_version_id/staff_commission_usd/commission_staff_id`; `merchant_terms.staff_commission_usd`; `staff_commissions` (+ trigger a `pagada`); `merchant_payouts.consultas_usd/comisiones_usd`; `helios_staff_commission_for` |
+   | `000400_registrar_un_financiamiento` | H4: `helios_patient_eligibility`, `preview_patient_charge`, `create_patient_charge`, `staff_resend_receipt`, `helios_charge_for_staff` (jsonb), devengo de la comisión |
+   | `000500_la_comision_se_liquida_los_lunes` | H5: el techo del cron y de la previsión sin la comisión, previsión y transferencias partidas, reversa de la comisión, `admin_set_settlement_terms(…, p_staff_commission_usd)`, `merchant_commissions`, `merchant_commission_items` |
+   | `000600_la_clinica_ve_sus_financiamientos` | `merchant_transactions`, `merchant_charge_detail`, `merchant_sales_by_staff`, exportación en `*_usd`, `admin_charge_detail`, `admin_charges` |
+   | `000700_los_datos_del_paciente_se_cuidan_en_helios` | `admin_user_detail.datos`, `admin_update_patient_contact`, `admin_profile_change_requests`, `admin_resolve_profile_change` |
+   | `000800_el_superadmin_ve_la_ficha_completa` | `admin_user_directory` (+2 columnas), comisión en `admin_merchant_detail`/`admin_merchant_terms_history`, propuestas con `proposed`/`current` |
+
+6. Fase 1C, correo, avisos, pagos y alertas (`20261004…`):
+
+   | Migración | Qué hace |
+   |---|---|
+   | `000100_el_comprobante_sale_por_correo` | H6: despacho a Resend desde la base (cron cada minuto, reintentos, `Idempotency-Key`), estado cada 15 min (rebote → `email_invalid_at`), el comprobante nuevo, `admin_resend_receipt`. Sin el secreto `resend_api_key` en Vault no hace nada |
+   | `000200_los_avisos_los_manda_una_persona` | H7: 5 momentos por vencimiento en `outbound_messages` (crons `helios_aviso_*`; fuera los 12 de Ronda), cancelar al pagar, `pago_recibido`/`pago_rechazado`/`cuenta_congelada`, la cola del equipo |
+   | `000300_el_equipo_registra_los_pagos` | `admin_register_payment`, bucket `payment-receipts`, doble control en `admin_reconcile_payment`, cruce con el extracto por la fecha del pago |
+   | `000400_las_alertas_de_las_clinicas` | H10: las alertas nuevas de `admin_risk_alerts` |
+   | `000500_el_historial_de_correos_dice_los_rebotados` | `admin_outbound_history(p_status => 'rebotado')` y `'entregado'` |
+
 Todo el detalle de la poda —qué se borró, qué se tocó y por qué— está en
 `poda/NOTAS.md`; el de cada migración de Helios, en su cabecera.
 
