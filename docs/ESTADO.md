@@ -20,9 +20,21 @@ Actualizado el 2026-10-01.
 
 El código está en GitHub (`origin/main`).
 
-## En curso
+## Prueba de punta a punta
 
-- **Suite de punta a punta** `supabase/tests/recorrido_completo_smoke.sql`. Sigue un financiamiento entero: alta en la clínica, comprobante, avisos, pago por WhatsApp, conciliación, mora con cargo, segundo pago, cierre del lunes con comisión y transferencia.
+✅ `supabase/tests/recorrido_completo_smoke.sql` sigue un financiamiento entero contra Helios. Paso por paso:
+
+1. Alta en la clínica.
+2. Asientos contables.
+3. Comprobante enviado (con Resend simulado).
+4. Avisos.
+5. Pago registrado por el equipo y conciliado contra el extracto.
+6. Mora: congelada el día 1 y cargo de $2 el día 4.
+7. Segundo pago.
+8. Cierre del lunes con 100 + 0,50 de comisión.
+9. Transferencia y bitácora.
+
+Al final la caja sube exactamente 24,70 (fee 20 + IVA 3,20 + cargo 2 − comisión 0,50) y el libro cuadra. Con ella son **27/27 suites en verde**.
 
 ## Para probar el panel en el navegador
 

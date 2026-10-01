@@ -60,6 +60,7 @@ SUITES=(
   reminders_smoke
   register_payment_smoke
   risk_alerts_smoke
+  recorrido_completo_smoke
 )
 if [ "$#" -gt 0 ]; then SUITES=("$@"); fi
 
