@@ -713,12 +713,22 @@ Implementado en 20261002000700 (cimientos; el despacho es de H6/H7):
   exacta por plantilla está en `notification_templates.variables`). Si falta
   una, `22023` y no se encola.
 
-### 4.1 Cambios del 2026-10-05 (pendientes de implementar)
+### 4.1 Cambios del 2026-10-05
+
+Implementado en 20261005000300 (canal, plantillas, bienvenida) y
+20261005000400 (despacho). Los avisos al médico y `recipient_staff_id` van con
+el bot (pendientes).
 
 - `notification_templates.channels` admite `whatsapp` (automático por la
   API). Columnas nuevas: `wa_template_name` (nombre aprobado en Meta; null =
-  solo texto libre), `wa_template_lang` (`es`) y `wa_template_params text[]`
-  (las variables de `{{1}}`, `{{2}}`… en orden).
+  solo texto libre), `wa_template_lang` (`es`), `wa_template_params text[]`
+  (las variables de `{{1}}`, `{{2}}`… en orden) y `wa_buttons jsonb`
+  (`[{id, title}]`, botones de respuesta rápida; el `id` admite variables,
+  p. ej. `confirmar:{charge_id}`, y es lo que vuelve en el webhook).
+- Al encolar un mensaje `whatsapp`, `outbound_messages.wa_template` guarda la
+  plantilla ya resuelta (`{name, language, params[], buttons[{id, title}]}`),
+  con las variables aplanadas a una línea. Toda plantilla recibe además la
+  variable `{charge_id}`.
 - `confirmar_financiamiento`: `wa_template_name = 'helios_confirmar_financiamiento'`,
   `wa_template_params = {nombre, clinica, monto_consulta, cargo_servicio, iva_cargo_servicio, cuotas_linea}`
   (`{cargo_servicio}` = `consumer_fee_usd`, `{iva_cargo_servicio}` = `consumer_fee_vat_usd`).
@@ -744,9 +754,12 @@ Implementado en 20261002000700 (cimientos; el despacho es de H6/H7):
   libre**: si su ventana de 24 h está cerrada se omiten y el resultado queda en
   el panel): `orden_aceptada`, `orden_rechazada`, `orden_vencida`. Variables:
   `{paciente}` (nombre de pila), `{orden}`, `{hora}`.
-- `outbound_messages` gana `recipient_staff_id` (el destinatario es una persona
-  del personal en lugar de un paciente), `wa_message_id`, `wa_status`
-  (`sent` | `delivered` | `read` | `failed`) y `wa_error`.
+- En WhatsApp, `outbound_messages` usa las columnas del correo: `provider_id`
+  = el id del mensaje (wamid), `last_event` = `sent` | `delivered` | `read` |
+  `failed` y `last_error`. Un mensaje que la API no puede mandar pero una
+  persona sí pasa a `channel = 'whatsapp_manual'` («Avisos de hoy») con el
+  motivo en `last_error`. Con el bot ganará `recipient_staff_id` (el
+  destinatario es una persona del personal en lugar de un paciente).
 
 ---
 
@@ -789,12 +802,20 @@ Las del webhook **no lanzan** errores de negocio: devuelven
   `{ok: false, reason: no_pendiente|vencida|otro_telefono|no_disponible}`. En
   `no_disponible` (la revalidación falló) la orden queda `declined`, al paciente
   no se le dice el motivo y la clínica ve el texto neutro de siempre.
-- `helios_whatsapp_status(p_wa_message_id text, p_status text, p_error jsonb, p_at timestamptz) → void`.
+- `helios_whatsapp_status(p_wa_message_id text, p_status text, p_error jsonb default null, p_at timestamptz default null) → boolean`
+  (implementado en 20261005000400). Solo avanza (sent < delivered < read); un
+  `failed` deja el mensaje `fallido` con el motivo. Devuelve si encontró el
+  mensaje.
 - `helios_whatsapp_text(p_to text, p_text text, p_staff_user_id uuid default null) → uuid`.
   Encola un texto libre para la conversación del bot y lo despacha al momento.
   Si la ventana del número está cerrada, `22023`.
 
 ### 5.3 Crons
+
+Implementados en 20261005000300 (vencer) y 20261005000400 (despacho, con
+`helios_dispatch_whatsapp_batch(p_limit)` y la costura de red
+`helios_d360_request`). Un teléfono sin WhatsApp (131026) deja el mensaje
+`fallido`; lo demás que la API no puede mandar va a la cola manual.
 
 - `helios_whatsapp_dispatch()`: cada 10 s. Ventana abierta → texto; cerrada →
   plantilla; sin plantilla o tras 3 fallos → `whatsapp_manual`. Sin

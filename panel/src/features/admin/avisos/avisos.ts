@@ -16,8 +16,9 @@ import { comoFila, numero, numeroONulo, texto, textoONulo } from '@/lib/json'
 // `api.ts`.
 // ═══════════════════════════════════════════════════════════════════════════
 
-export type CanalAviso = 'whatsapp_manual' | 'email'
-export const CANALES: readonly CanalAviso[] = ['whatsapp_manual', 'email']
+/** `whatsapp` sale solo por la API (360dialog); `whatsapp_manual` lo manda una persona. */
+export type CanalAviso = 'whatsapp_manual' | 'email' | 'whatsapp'
+export const CANALES: readonly CanalAviso[] = ['whatsapp_manual', 'email', 'whatsapp']
 
 export type EstadoAviso = 'pendiente' | 'enviado' | 'omitido' | 'fallido'
 export const ESTADOS_AVISO: readonly EstadoAviso[] = ['pendiente', 'enviado', 'omitido', 'fallido']
@@ -46,7 +47,8 @@ export const PLANTILLAS: ReadonlyArray<{
   cuando: string
 }> = [
   { clave: 'comprobante_financiamiento', rotulo: 'Comprobante del financiamiento', canal: 'Correo', cuando: 'Al confirmar el financiamiento, y al reenviarlo' },
-  { clave: 'bienvenida', rotulo: 'Bienvenida', canal: 'WhatsApp', cuando: 'Al confirmar el financiamiento' },
+  { clave: 'confirmar_financiamiento', rotulo: 'Confirma tu financiamiento', canal: 'WhatsApp automático (plantilla de Meta)', cuando: 'Al registrar el financiamiento: el paciente acepta con Sí' },
+  { clave: 'bienvenida', rotulo: 'Bienvenida', canal: 'WhatsApp (automático si el paciente aceptó por WhatsApp)', cuando: 'Al confirmar el financiamiento' },
   { clave: 'cuota_manana', rotulo: 'La cuota vence mañana', canal: 'WhatsApp y correo', cuando: 'La víspera del vencimiento, a las 19:00' },
   { clave: 'cuota_hoy', rotulo: 'La cuota vence hoy', canal: 'WhatsApp', cuando: 'El día del vencimiento, a las 08:00' },
   { clave: 'cuota_vencida_d1', rotulo: 'Cuota vencida', canal: 'WhatsApp', cuando: 'Un día después del vencimiento' },
