@@ -4,7 +4,7 @@
 > 0% inicial · 2 cuotas semanales (7 y 14 días) · nivel 1 = **$350** · anclado al **dólar BCV**.
 > Hermano de Ronda: mismo núcleo (libro contable, mora, liquidaciones, conciliación, paneles), sin nada de la app.
 
-Fecha: 2026-09-30 · Fuente: Ronda-panel @ `f3b5c6a` (2026-09-29) y Ronda-app/supabase @ `20260929140000` (354 migraciones).
+Fecha: 2026-09-30 (actualizado el 2026-10-05: WhatsApp por la API, el "Sí" del paciente y el bot del médico, §5.1 y §15) · Fuente: Ronda-panel @ `f3b5c6a` (2026-09-29) y Ronda-app/supabase @ `20260929140000` (354 migraciones).
 
 ---
 
@@ -14,9 +14,9 @@ Helios es **Ronda sin la app**. Se reutiliza tal cual el 70-80% del backend y de
 
 | # | Ronda | Helios |
 |---|---|---|
-| 1 | El cliente se registra en la app (OTP, PIN, KYC Didit) y "reclama" el cobro escaneando un QR | **La secretaria registra al paciente y la consulta en un solo paso.** No hay QR, ni PIN, ni KYC, ni login del paciente. Al confirmar, al paciente le llega **por correo un comprobante del financiamiento** con sus cuotas, fechas e instrucciones de pago |
+| 1 | El cliente se registra en la app (OTP, PIN, KYC Didit) y "reclama" el cobro escaneando un QR | **La clínica registra al paciente y la consulta en un solo paso**, desde el panel o **desde WhatsApp** (el bot del médico, §15). No hay QR, ni KYC, ni login del paciente. El paciente **acepta respondiendo "Sí" a un WhatsApp de Helios** (§5.1); solo entonces existe la deuda y le llega **por correo el comprobante** con sus cuotas, fechas e instrucciones de pago |
 | 2 | El cliente reporta sus pagos desde la app | **El paciente paga y manda el comprobante por WhatsApp al equipo Helios**, que lo **registra en el superadmin**. Desde ahí sigue la misma cola de conciliación de Ronda |
-| 3 | Avisos por push (Expo) | **Avisos por WhatsApp operados por el equipo**: una cola diaria de mensajes con plantillas y un enlace `wa.me` de un clic. La automatización con WhatsApp Cloud API queda para la fase 2 |
+| 3 | Avisos por push (Expo) | **WhatsApp por la API (360dialog)** para la confirmación del paciente, la bienvenida y el bot del médico (§15). Los recordatorios de cuotas siguen en la **cola diaria operada por el equipo** (enlace `wa.me` de un clic) hasta que Meta apruebe sus plantillas |
 | 4 | — | **Comisión a la secretaria** ($0,50, modificable) por cada financiamiento confirmado. Se devenga al confirmar y **se paga dentro de la liquidación semanal a la clínica** |
 
 Además cambian estas cosas:
@@ -38,7 +38,14 @@ Además cambian estas cosas:
 | Tema | Decisión | Origen |
 |---|---|---|
 | Moneda | **Dólar BCV.** Precios, límites, deuda y cargos en USD, cobrados en Bs a la tasa BCV del dólar del día de pago | Javier, 2026-09-30 |
-| Aceptación del paciente | **Solo la registra la secretaria.** Sin OTP, sin enlace, sin documento firmado. Al confirmar se envía al **correo del paciente** un comprobante del financiamiento | Javier, 2026-09-30 |
+| Aceptación del paciente | ~~Solo la registra la secretaria~~ (2026-09-30). **Sustituida:** el paciente acepta respondiendo **"Sí"** a un WhatsApp de Helios con el resumen de la orden. Sin "Sí" no hay deuda (§5.1) | Javier, 2026-10-05 |
+| Plazo para aceptar | La orden espera el "Sí" **2 horas**. Si vence, la clínica la **reenvía** (nuevo plazo de 2 h, mismas fechas recalculadas) | Javier, 2026-10-05 |
+| Cupo durante la espera | La orden pendiente **reserva el cupo** del paciente hasta que acepte, rechace o venza | Javier, 2026-10-05 |
+| Panel y WhatsApp | El panel web **también exige el "Sí"**: un solo modelo para los dos canales | Javier, 2026-10-05 |
+| Canal del médico | Los médicos registran y consultan **desde WhatsApp** (muchos no tienen secretaria ni computador) | Javier, 2026-10-02 |
+| Identidad del médico | El equipo de Helios **registra su número**; escribir desde ese número lo identifica. **PIN** solo para operaciones de dinero. Nunca usuario y clave por chat | Javier, 2026-10-02 |
+| Alta de paciente nuevo por WhatsApp | El médico manda **todos los datos en un solo mensaje**; el bot los interpreta (Claude), pide lo que falte y muestra un resumen antes de confirmar | Javier, 2026-10-02 |
+| Proveedor de WhatsApp | **360dialog**, **un solo número con coexistencia**: la app WhatsApp Business para el equipo y la API para el bot y los envíos automáticos | Javier, 2026-10-05 |
 | Pago y reporte del paciente | **Por WhatsApp al equipo Helios**, que registra el pago en el superadmin | Javier, 2026-09-30 |
 | Comisión de la secretaria | **Se suma a la liquidación de la clínica**, y la clínica se la entrega a su personal | Javier, 2026-09-30 |
 | Antifraude | **Solo alertas automáticas.** Los topes por clínica, la retención de liquidaciones y el expediente con fotos se evaluarán después (§14) | Javier, 2026-09-30 |
@@ -76,8 +83,9 @@ Además cambian estas cosas:
 sequenceDiagram
   autonumber
   participant P as Paciente
-  participant S as Secretaria (panel clínica)
+  participant S as Secretaria (panel) o médico (bot de WhatsApp)
   participant DB as Supabase (RPC)
+  participant W as WhatsApp de Helios (360dialog)
   participant H as Equipo Helios (superadmin)
   participant C as Clínica
 
@@ -87,11 +95,17 @@ sequenceDiagram
   S->>S: Datos del paciente + monto y concepto
   S->>DB: preview_patient_charge(...)
   DB-->>S: Desglose, 2 cuotas con fechas
-  S->>P: Le muestra el plan en pantalla y lo confirma de palabra
-  S->>DB: create_patient_charge(..., idempotency_key)
-  Note over DB: Crea o bloquea al paciente, valida el cupo,<br/>asiento de 4 patas, cuotas, devengo de la<br/>comisión, alertas de riesgo
+  S->>DB: create_patient_charge(..., idempotency_key) [+ PIN si es el bot]
+  Note over DB: Orden PENDIENTE: crea o bloquea al paciente,<br/>valida y reserva el cupo, vence en 2 h.<br/>Todavía no hay deuda
+  DB->>W: Plantilla "confirmar financiamiento" (Sí / No)
+  W->>P: Resumen de la orden: consulta, servicio Helios, cuotas
+  P->>W: Sí
+  W->>DB: Webhook → helios_patient_decision(sí)
+  Note over DB: CONFIRMADA: asiento de 4 patas, cuotas,<br/>devengo de la comisión, alertas de riesgo
   DB->>P: Correo con el comprobante del financiamiento
-  H->>P: Bienvenida + instrucciones de pago (WhatsApp)
+  DB->>W: Bienvenida + cuotas + cómo pagar (texto libre: la ventana de 24 h está abierta)
+  W->>P: Bienvenida
+  DB-->>S: José aceptó, financiamiento nº 1042 confirmado
   loop Recordatorios (cola diaria)
     H->>P: Aviso por WhatsApp (wa.me + plantilla)
   end
@@ -117,8 +131,25 @@ sequenceDiagram
    - Opcional: ocupación.
 3. **Monto y concepto**: **monto libre** en dólares (≥ `min_charge_usd`, máx. 2 decimales, y dentro del disponible) y un concepto corto opcional ("Consulta", "Consulta + eco"). **No hay catálogo** (D-H4). Opcional: "paciente atendido", si es distinto del titular (el menor que se atendió).
 4. **Vista previa** (`preview_patient_charge`): monto de la consulta, 2 cuotas con fechas y el monto de cada una. El fee aparece **solo dentro de las cuotas o como línea aparte**, nunca sumado en un total (regla de Ronda).
-5. **Confirmar**: `create_patient_charge`. A partir de aquí la deuda existe.
-6. **Comprobante por correo**: se envía solo, en segundos (§7.3). La pantalla de éxito dice "Comprobante enviado a j\*\*\*@gmail.com" y tiene un botón **"Reenviar comprobante"**. Si el correo rebota, Helios recibe una alerta y la clínica ve el aviso "El correo del paciente no es válido" en el detalle del financiamiento.
+5. **Enviar al paciente**: `create_patient_charge` crea la **orden pendiente** y Helios le manda al paciente un WhatsApp con el resumen y dos botones, **Sí, acepto** / **No** (§5.1). La pantalla pasa a **"Esperando al paciente"**, con la cuenta atrás de 2 horas y el teléfono enmascarado al que se envió ("0414-\*\*\*-\*\*67"). Todavía no hay deuda.
+6. **El paciente responde**:
+   - **Sí** → el financiamiento queda **confirmado** y la pantalla lo muestra al instante. A partir de aquí la deuda existe.
+   - **No** → la orden queda **rechazada** y se libera el cupo. Si fue un error, se registra otra.
+   - **Sin respuesta en 2 h** → la orden **vence** y se libera el cupo. Botón **"Reenviar al paciente"**: revalida cupo y elegibilidad, recalcula las fechas y abre otras 2 h.
+7. **Comprobante por correo**: al confirmarse se envía solo, en segundos (§7.3), junto con la bienvenida por WhatsApp. La pantalla dice "Comprobante enviado a j\*\*\*@gmail.com" y tiene un botón **"Reenviar comprobante"**. Si el correo rebota, Helios recibe una alerta y la clínica ve el aviso "El correo del paciente no es válido" en el detalle del financiamiento.
+
+**Interruptor de puesta en marcha:** el parámetro `patient_confirmation_required` arranca en **0**: mientras Meta no apruebe la plantilla, `create_patient_charge` confirma al instante como hasta ahora y la bienvenida va a la cola manual. Con **1** se activa el flujo de arriba, para el panel y para el bot a la vez.
+
+### 2.2 Paso a paso por WhatsApp (el bot del médico)
+
+El mismo flujo, conversado. El detalle técnico está en §15.
+
+1. El médico escribe al WhatsApp de Helios desde **su número registrado**. La primera vez el bot le pide **crear un PIN** de 4 dígitos (dos veces). Después le ofrece botones: **Nuevo financiamiento**, **Mis financiamientos**, **Ayuda**.
+2. **Cédula** → la misma respuesta que en el panel (nuevo / disponible $X con nombre enmascarado / no disponible, sin motivo).
+3. **Paciente conocido**: pide monto y concepto ("80 consulta"). **Paciente nuevo**: pide **todos los datos en un solo mensaje** (el bot le ofrece una plantilla para copiar, no obligatoria). Claude los interpreta; el bot **pregunta solo lo que falte** y nunca inventa un dato.
+4. **Resumen**: datos del paciente (con el **correo bien visible**, porque ahí llega el comprobante), monto de la consulta, línea "Servicio Helios 20 % + IVA" y las 2 cuotas con fechas. Botones **Confirmar** / **Corregir**.
+5. **Confirmar** → el bot pide el **PIN** → orden pendiente → WhatsApp al paciente. El bot avisa "Esperando la respuesta de José (vence a las 16:40)".
+6. El bot le avisa al médico cuando el paciente **acepta**, **rechaza** o la orden **vence** (con botón **Reenviar**).
 
 ---
 
@@ -130,7 +161,9 @@ sequenceDiagram
 |---|---|
 | Web (clínica + superadmin) | **TanStack Start** (Vite 8, TanStack Router y Query, React 19, Tailwind v4), el mismo kit de UI propio de Ronda |
 | Backend | **Supabase Postgres 17**: RLS + RPC `security definer`, `pg_cron`, `http`, Storage y Auth (email + contraseña y MFA TOTP) |
-| API | **Ninguna.** Igual que el panel de Ronda: cliente de Supabase con clave publicable, RLS y RPC. No hay Hono ni server functions |
+| API | **Ninguna para el panel.** Igual que el panel de Ronda: cliente de Supabase con clave publicable, RLS y RPC. No hay Hono ni server functions |
+| WhatsApp | **360dialog** (Cloud API de Meta), un solo número con coexistencia. Salida: cola `outbound_messages` + `pg_cron` + `http` (como el correo). Entrada: **una Edge Function, `whatsapp-webhook`** (la única pieza con runtime propio, §15) |
+| IA del bot | **Claude** (`claude-opus-5-5`, ajustable), solo desde la Edge Function: interpreta la intención del médico y extrae los datos del paciente a un esquema fijo. No toca la base: lo que extrae pasa por las mismas RPC |
 | Deploy | Vercel (panel, preset Nitro) y Supabase (dos proyectos: `Helios` y `Helios-dev`) |
 | Observabilidad | Sentry (panel) |
 | Asistente IA (fase 5) | Edge Function `admin-asistente` portada de Ronda |
@@ -156,7 +189,7 @@ Helios/                          ← repo git (GitHub: Helios)
 │   ├── tests/                   ← suites SQL (patrón de Ronda) + run.sh
 │   ├── seed.sql                 ← clínica demo, personal, admin local
 │   ├── bootstrap_superadmin.sql
-│   └── functions/               ← (fase 5) admin-asistente
+│   └── functions/               ← whatsapp-webhook (§15); (fase 5) admin-asistente
 ├── scripts/
 │   └── portar-de-ronda.mjs      ← transforma una migración de Ronda al vocabulario de Helios
 ├── .github/workflows/ci.yml     ← panel (tipos, lint, tests) + BD (supabase start + tests SQL)
@@ -381,7 +414,7 @@ Orden, todo en una sola transacción:
 8. **Devengo de la clínica**: `ledger.record_advance_settlement` (que no hace nada con `upfront_pct = 0`).
 9. **Comisión** de la secretaria (§6).
 10. `INSERT charges` directamente en `status = 'confirmed'`, con `requested_by`, `terms_version_id` y `business_date`.
-11. **Mensajes**: `comprobante_financiamiento` (email, sale en el siguiente minuto) y `bienvenida` (WhatsApp manual) en `outbound_messages`.
+11. **Mensajes**: `comprobante_financiamiento` (email, sale en el siguiente minuto) y `bienvenida` (WhatsApp manual) en `outbound_messages`. Con `patient_confirmation_required = 1`, el paso 10 crea la orden en `pending` y los pasos 6-9 y 11 pasan al "Sí" del paciente (§5.1).
 12. `audit`. Las alertas de H10 se calculan al vuelo; no hace falta dispararlas aquí.
 
 Complementos:
@@ -392,6 +425,31 @@ Complementos:
   - El personal de la clínica **no tiene lectura directa** sobre `profiles`, `installments` ni `payment_reports` (solo RPC). Del paciente, la clínica ve lo que ella misma registró.
 - **`preview_patient_charge(...)`**: solo lectura; el desglose y las fechas que se imprimen.
 - **Anulación**: la clínica **no** anula (regla de Ronda). Si la consulta no se prestó, lo pide a Helios y un admin usa `admin_reverse_charge`, que Ronda ya rechaza si hay pagos o liquidaciones pagadas.
+
+### 5.1 La orden pendiente y el "Sí" del paciente (2026-10-05)
+
+Con `patient_confirmation_required = 1`, `create_patient_charge` se parte en dos. Es **volver al modelo de Ronda** (`request_charge` + `confirm_charge`), con el "Sí" por WhatsApp en lugar del PIN de la app. La base ya tiene `charge_status = 'pending'` y `charges.expires_at`; se reutilizan.
+
+**Paso 1 — `create_patient_charge` crea la orden pendiente.** Hace los pasos 1-5 de arriba (idempotencia, autorización, monto, paciente, cupo) y además:
+- `INSERT charges` en **`status = 'pending'`**, con `expires_at = now() + patient_confirmation_minutes` (120) y `business_date` = el día operativo del envío.
+- **Una sola orden pendiente por paciente.** Si ya tiene otra esperando respuesta → `22023` "Este paciente tiene otra solicitud esperando su respuesta…" (sin decir de qué clínica).
+- El paciente **nuevo** se crea ya aquí (hace falta su teléfono para escribirle). Si rechaza o la orden vence, el perfil queda sin deuda.
+- Encola la plantilla **`confirmar_financiamiento`** por el canal `whatsapp`. Al paciente **conocido** se le escribe a su **teléfono registrado**, nunca al tecleado: es la defensa contra usar la cédula de otra persona.
+- **No** crea asiento, cuotas, comisión, comprobante ni bienvenida.
+
+**Reserva de cupo.** Las órdenes pendientes vigentes ocupan cupo: `available_usd` resta, además de `helios_credit_used_usd`, la nueva `helios_credit_reserved_usd(paciente)` (la suma de `base_usd` de sus órdenes `pending` con `expires_at > now()`). Así la elegibilidad muestra el disponible real y dos sedes no pueden gastar el mismo cupo mientras se espera.
+
+**Paso 2 — `helios_patient_decision` (la llama el webhook).**
+- **Sí**: en una transacción, con el paciente bloqueado (`FOR UPDATE`), **revalida** lo que pudo cambiar en la espera (lista negra, bloqueo, `can_take_debt`, mantenimiento, clínica activa, cupo) y hace los pasos 6-9, 11 y 12 de arriba: asiento, `helios_assign_debt`, devengo, comisión, `status = 'confirmed'`, `confirmed_at`, comprobante por correo y **bienvenida por WhatsApp** (texto libre, porque la respuesta del paciente abrió la ventana de 24 h). Si la revalidación falla, la orden queda rechazada con el mismo texto neutro de siempre y se avisa a la clínica.
+- **No**: `status = 'declined'`.
+- Las **fechas de las cuotas** salen del `business_date` de la orden: son las que vio el paciente en el mensaje, aunque conteste pasada la medianoche.
+- Solo vale si el número que responde es el **teléfono registrado del paciente** y la orden sigue `pending` y sin vencer. Es idempotente por el id del mensaje de WhatsApp.
+
+**Vencimiento.** Un cron cada minuto pasa a **`expired`** las órdenes `pending` con `expires_at < now()`. Se añaden al enum `charge_status` los valores **`declined`** y **`expired`**.
+
+**Reenvío.** `staff_resend_confirmation(charge_id)` (panel) y el botón **Reenviar** del bot. Sobre una orden **vencida**: revalida elegibilidad y cupo, recalcula `business_date` y las fechas, abre otras 2 h y manda otra plantilla. Sobre una **pendiente**: solo reenvía el mensaje, sin alargar el plazo. Límite `confirmation_resends_per_day` (3). Si el paciente cambió de teléfono, Helios lo corrige con `admin_update_patient_contact` y la clínica reenvía.
+
+**Lo que cuenta solo al confirmarse:** la comisión, las alertas de H10 (`rafaga_de_altas`, `cupo_al_limite_al_estrenar`, `exposicion_clinica`…), las métricas y la liquidación. Los números de orden se asignan al crear la orden pendiente, así que las rechazadas y vencidas dejan huecos en la numeración (es aceptable).
 
 ---
 
@@ -461,6 +519,7 @@ Hay además un **camino alternativo, que ya existe en Ronda**: si el paciente pa
   - Cada financiamiento genera unos 2 vencimientos × 2-3 avisos ≈ **5 mensajes**, más la bienvenida.
   - Con 100 financiamientos por semana son unos **85-90 mensajes al día**: manejable para una persona.
   - A partir de unos **300 por semana** conviene la fase de WhatsApp Cloud API (§11, fase 6). Solo cambia el *transporte* (`outbound_messages` → API) y **se mantienen las plantillas**. Plantillas categoría *utility*; hay que empezar ya la verificación del Business Manager, que tarda semanas.
+- **2026-10-05:** la **bienvenida** deja esta cola: sale sola por la API al confirmarse el financiamiento (§5.1, §15). Los recordatorios pasan a la API plantilla a plantilla en la fase 7. Todo mensaje que la API no pueda entregar **cae a esta cola** como `whatsapp_manual`, así que nada se pierde.
 - **Recordatorio por email** además del WhatsApp (automático, sin trabajo humano): el aviso de la víspera también sale por correo, usando la misma cola que el comprobante (§7.3). Se puede apagar por plantilla.
 
 ### 7.3 El comprobante por correo
@@ -513,9 +572,9 @@ Es el único documento que recibe el paciente, así que tiene que estar completo
 
 | Ruta | Roles | Pantalla | Origen en Ronda |
 |---|---|---|---|
-| `/registrar` | administrador, secretaria | **Nuevo financiamiento** (§2.1): cédula → datos → servicios → vista previa → confirmar → "comprobante enviado" | nuevo (reemplaza a `/facturar`) |
-| `/financiamientos` | administrador, secretaria (solo los suyos) | Historial por día, resumen, "quién registró", estado del comprobante (enviado/rebotado), CSV (administrador) | `/transacciones` |
-| `/financiamientos/$id` | administrador, secretaria | Detalle: servicios, cuotas (sin estado de pago del paciente), fechas en que se le paga a la clínica, **reenviar comprobante** | `/transacciones/$id` |
+| `/registrar` | administrador, secretaria | **Nuevo financiamiento** (§2.1): cédula → datos → servicios → vista previa → enviar al paciente → **"Esperando al paciente"** (cuenta atrás, se actualiza sola) → confirmado / rechazado / vencido (**reenviar**) → "comprobante enviado" | nuevo (reemplaza a `/facturar`) |
+| `/financiamientos` | administrador, secretaria (solo los suyos) | Historial por día, resumen, "quién registró", **estado de la orden** (esperando, confirmado, rechazado, vencido), estado del comprobante (enviado/rebotado), CSV (administrador; solo confirmados) | `/transacciones` |
+| `/financiamientos/$id` | administrador, secretaria | Detalle: servicios, cuotas (sin estado de pago del paciente), fechas en que se le paga a la clínica, **reenviar al paciente** (pendiente o vencida), **reenviar comprobante** (confirmada) | `/transacciones/$id` |
 | `/comisiones` | administrador (todas), secretaria (las suyas) | Comisiones por persona y semana; pagadas y por pagar | **nuevo** (base: `merchant_sales_by_staff`) |
 | `/metricas` | administrador | KPIs, serie diaria, recurrencia, sin el perfil nocturno | `/metricas` |
 | `/pagos` | administrador | Lo devengado, próximo lunes, transferencias recibidas (consultas + comisiones) | `/liquidaciones` |
@@ -528,7 +587,7 @@ Es el único documento que recibe el paciente, así que tiene que estar completo
 
 | Área | Cambios respecto a Ronda |
 |---|---|
-| **Inicio** | Igual. Las colas pasan a ser: pagos por aprobar, **avisos de hoy**, abonos sin dueño, alertas, **correos rebotados** y el aviso de **configuración incompleta** (H11) |
+| **Inicio** | Igual. Las colas pasan a ser: pagos por aprobar, **avisos de hoy**, abonos sin dueño, alertas, **correos rebotados** y el aviso de **configuración incompleta** (H11, que ahora mira también la API de WhatsApp) |
 | **Métricas** | Igual, podando las pestañas de grupos, noches, KYC y push. "Locales" pasa a "Clínicas" y "Gente" a "Pacientes" |
 | **Por cobrar (cobranza)** | Igual (cartera por tramos, morosos, semana, calendario, promesas, plantillas de WhatsApp) |
 | **Pagos registrados** | Igual + botón **"Registrar pago"** (§7.1) + importar extracto + abonos sin dueño |
@@ -537,7 +596,7 @@ Es el único documento que recibe el paciente, así que tiene que estar completo
 | **Pagos a clínicas** | Igual (cierre de los lunes, histórico, registrar transferencia con comprobante) + **desglose de comisiones** + **cuenta destino de la clínica** |
 | **Contabilidad** | Igual (libro, cierre de mes, exportación) + cuenta `commission_expense` |
 | **Pacientes** | Ficha con pestañas resumen, **datos y referencia** (en lugar de identidad), financiamientos, pagos, cobranza e historial. Acciones: registrar pago, bloquear, congelar, lista negra, condonar cargo, WhatsApp, **editar datos de contacto** (auditado) y aprobar cambios propuestos por la clínica |
-| **Clínicas** | Alta (categoría médica, especialidad, RIF, MPPS), perfil, condiciones (incluida la comisión propia), **cuenta de pago**, personal, estado (activa/pausada/terminada), sus alertas |
+| **Clínicas** | Alta (categoría médica, especialidad, RIF, MPPS), perfil, condiciones (incluida la comisión propia), **cuenta de pago**, personal, estado (activa/pausada/terminada), sus alertas. En el personal: **WhatsApp del bot** (registrar o revocar el número de cada persona, ver si tiene PIN y **resetearlo**), con bitácora (§15) |
 | **Financiamientos** | Igual que Consumos: detalle, reversa |
 | **Ajustes** | Se quedan: tasa BCV, parámetros (+ comisión, mínimo, umbrales de alertas, doble control), niveles, feriados, **cuentas de cobro** (varias), **condiciones del comprobante** (en lugar de términos), equipo, seguridad MFA, bitácora, mantenimiento. Nuevo: **Contacto** (WhatsApp, email de soporte, horario, remitente de los correos). Se van: versión de la app, eliminaciones, QA |
 | **Asistente IA** | Fase 5 (opcional) |
@@ -563,7 +622,10 @@ Es el único documento que recibe el paciente, así que tiene que estar completo
   - `staff_commission`: devengo, pago del lunes, reversa y cambio de parámetro con vigencia;
   - `register_payment`: doble control y cruce con el extracto;
   - `outbound_messages`: comprobante encolado al confirmar, reintentos, rebote → alerta, avisos generados por fecha y cancelados al pagar (con el `http` simulado);
-  - `risk_alerts`: cada alerta de H10 se dispara en su umbral y no antes.
+  - `risk_alerts`: cada alerta de H10 se dispara en su umbral y no antes;
+  - `patient_confirmation`: orden pendiente sin deuda, reserva de cupo (dos sedes a la vez), una sola pendiente por paciente, "Sí" del teléfono registrado y no de otro, revalidación al aceptar (lista negra o mora surgidas en la espera), "No", vencimiento, reenvío con fechas recalculadas, idempotencia por id de mensaje, y el interruptor en 0 que conserva el comportamiento de hoy;
+  - `whatsapp`: despacho a 360dialog con el `http` simulado (plantilla fuera de la ventana de 24 h, texto libre dentro), reintentos, caída a la cola manual, estados de entrega;
+  - `bot`: número no registrado o revocado, PIN (creación, intentos, bloqueo, reseteo), y que cada `bot_*` aplique exactamente las reglas de rol, sede, límites y privacidad del panel.
 - **`plpgsql_check`** sobre todas las funciones, con cero errores, como paso de CI.
 - **CI** (GitHub Actions), mejorando lo que hoy hace Ronda, que no corre las pruebas de BD en CI:
   1. `panel`: `npm ci` → typecheck → lint → tests (`tsx`).
@@ -582,7 +644,9 @@ Es el único documento que recibe el paciente, así que tiene que estar completo
 | Storage | `payment-receipts` (privado: capturas de pagos de pacientes), `merchant-receipts` (privado: transferencias a clínicas), `merchant-logos` (público) |
 | Vercel | Proyecto `helios-panel`; dominio por definir (p. ej. `app.helios.…`); variables `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_ENTORNO`, `VITE_SENTRY_DSN` |
 | Sentry | Proyecto `helios-panel` con subida de sourcemaps (como Ronda) |
-| WhatsApp | Un número de WhatsApp Business para Helios (fase 1: app de WhatsApp Business; fase 6: Cloud API) |
+| WhatsApp | **360dialog**, un solo número con **coexistencia** (la app WhatsApp Business para el equipo; la API para el bot y los envíos). Hay que abrir la app al menos cada 13 días. Mientras Meta aprueba: el **sandbox** de 360dialog (`waba-sandbox.360dialog.io`, solo escribe al teléfono de quien pidió la clave). Secretos en Vault: `d360_api_key` y `d360_base_url` (sandbox o producción) |
+| Edge Function | `whatsapp-webhook` (§15). Secretos de la función: `ANTHROPIC_API_KEY` y `WHATSAPP_WEBHOOK_TOKEN` (el secreto que va en la URL del webhook). Se despliega con el CLI, sin Docker |
+| Anthropic | Una API key para el bot (console.anthropic.com), solo en los secretos de la Edge Function |
 | Email (**obligatorio**) | **Resend** con dominio propio verificado (SPF, DKIM, DMARC). Dev usa un remitente de pruebas y una lista de destinatarios permitidos, para no escribir nunca a un paciente real desde dev |
 | Bootstrap | `bootstrap_superadmin.sql` (patrón de Ronda) para el primer super_admin; el resto desde Ajustes › Equipo |
 | Entornos locales | `.env.dev` / `.env.prod` en `panel/` (patrón de Ronda); banner "DEV" cuando no es producción |
@@ -601,7 +665,8 @@ Estimación para una persona con asistencia de IA, en semanas de trabajo efectiv
 | **3 — Superadmin operativo** | Registrar pago (+ doble control), avisos de hoy (H7), alertas H10, pagos a clínicas con comisiones, ficha de paciente y de clínica adaptadas, Ajustes › Contacto y cuentas de cobro, poda de métricas y vocabulario | Ciclo completo en dev: alta → comprobante → avisos → pago por WhatsApp → conciliación → lunes → transferencia | 2 |
 | **4 — Endurecimiento y piloto** | Prueba de extremo a extremo con fechas simuladas (mora día 1/4/30/60), revisión de RLS y RPC (la clínica no puede leer a pacientes ajenos ni enumerar cédulas), textos legales, `/soporte` y privacidad, carga inicial en prod, formación del equipo y de 1-2 clínicas piloto | Piloto en producción con límites bajos por clínica | 1 |
 | **5 — Asistente IA** (opcional) | Portar `admin-asistente` + vistas `asistente.*` + `mapa.json` | — | 0,5-1 |
-| **6 — WhatsApp automático** (cuando el volumen lo pida) | Cloud API: transporte de `outbound_messages`, plantillas *utility* aprobadas, webhooks de entrega | — | 1-1,5 |
+| **6 — WhatsApp y bot del médico** (adelantada al 2026-10-05) | B: orden pendiente y "Sí" (§5.1) con el interruptor en 0. C: panel "Esperando al paciente". D: despacho a 360dialog. E: `whatsapp-webhook`. F: bot del médico (números, PIN, conversación, Claude). G: punta a punta en el sandbox y paso a producción cuando Meta apruebe. B y C no esperan a Meta (el "Sí" se simula en las suites SQL) | Con el sandbox: un médico registra por WhatsApp, el paciente (el mismo teléfono de prueba) acepta y le llegan la bienvenida y el comprobante | 2-2,5 |
+| **7 — Recordatorios automáticos** | Plantillas *utility* para `cuota_manana`, `cuota_hoy`, `cuota_vencida_d1`, `cargo_por_atraso_d4`, `pago_recibido`/`pago_rechazado` y `cuenta_congelada`; pasan del canal manual al automático, plantilla a plantilla | La cola de "Avisos de hoy" queda solo para los fallidos | 0,5 |
 
 **Total hasta el piloto: unas 8 semanas.** Las fases 0-1 son el camino crítico; la 2 y la 3 se pueden solapar.
 
@@ -621,12 +686,16 @@ Estimación para una persona con asistencia de IA, en semanas de trabajo efectiv
 
 | Riesgo | Por qué importa en Helios | Mitigación |
 |---|---|---|
-| **Clínica o secretaria que da de alta pacientes falsos** | Sin KYC ni consentimiento digital, Helios paga el 100% a la clínica aunque el paciente no pague, y la secretaria cobra comisión por cada alta. Es el fraude #1 que ya identificó Ronda, aquí agravado | **Por ahora (decidido):** las alertas automáticas de H10, el comprobante por correo con "si no reconoces este financiamiento, escríbenos", cédula única y lista negra. Las medidas que bloquean están en §14, listas para activarse si las alertas muestran un patrón |
-| **Datos de contacto malos** | La cobranza depende 100% del teléfono, el WhatsApp y el correo, y nadie los verifica | Validación de formato, email escrito dos veces, contacto de referencia obligatorio, alerta por correo rebotado, y bienvenida por WhatsApp el mismo día: si no llega, se marca el teléfono y se avisa a la clínica |
+| **Clínica o secretaria que da de alta pacientes falsos** | Sin KYC ni consentimiento digital, Helios paga el 100% a la clínica aunque el paciente no pague, y la secretaria cobra comisión por cada alta. Es el fraude #1 que ya identificó Ronda, aquí agravado | **Desde el 2026-10-05, el "Sí" del paciente** desde su teléfono registrado: sin él no hay deuda, ni pago a la clínica, ni comisión. Además, las alertas automáticas de H10, el comprobante por correo con "si no reconoces este financiamiento, escríbenos", cédula única y lista negra. Queda el caso del paciente **nuevo** con un teléfono que controla la propia clínica: lo cubren las alertas (`telefono_repetido`, ráfagas) y las medidas de §14 |
+| **Datos de contacto malos** | La cobranza depende 100% del teléfono, el WhatsApp y el correo | **El "Sí" verifica el teléfono**: sin un WhatsApp que responda no hay financiamiento. Además, validación de formato, email confirmado (dos veces en el panel; destacado en el resumen del bot), contacto de referencia obligatorio y alerta por correo rebotado |
+| **Teléfono del médico robado o clonado** | El número registrado identifica al médico | **PIN** en toda operación de dinero (5 intentos y bloqueo; reseteo solo por Helios), revocación inmediata desde el superadmin, y el "Sí" del paciente: con el teléfono del médico solo no se crea deuda |
+| **El bot interpreta mal un dato** | Un correo o una cédula mal leídos llegan al comprobante o a la persona equivocada | Claude solo extrae a un esquema fijo y no corrige datos; el bot pregunta lo que falte, muestra un resumen que el médico confirma, y las RPC revalidan todo. El "Sí" del paciente es la última barrera |
+| **Dependencia de 360dialog y Meta** | Si el número se bloquea, ni el bot ni las confirmaciones funcionan | Plantillas *utility* y solo a pacientes que piden financiar (calidad alta), soporte de 360dialog, y el interruptor `patient_confirmation_required` para volver al registro sin "Sí" desde el panel en una emergencia |
+| **Datos personales en terceros** | Cédula, dirección y teléfono pasan por 360dialog, Meta y Anthropic | Aviso de privacidad y consentimiento revisados por un abogado antes del piloto; nada clínico en los mensajes; el PIN nunca llega a Claude |
 | **Operación manual (pagos y avisos por WhatsApp)** | No escala y se presta a errores | Doble control, cruce con el extracto, cola diaria con estado, y la fase 6 lista para automatizar sin cambiar el modelo |
 | **Deriva entre Ronda y Helios** | Los arreglos de un lado no llegan al otro | Mismos nombres en la base + `portar-de-ronda.mjs` + suites compartidas |
 | **Datos sensibles de salud** | El nombre del servicio puede revelar un diagnóstico ("consulta oncológica"), y ahora viaja por correo | El concepto es opcional y se recomienda genérico ("Consulta"), no se guarda información clínica y las capturas de pago van en buckets privados con URL firmada. Hay que revisar el hábeas data (art. 28 CRBV) con un abogado |
-| **Prueba débil de la deuda** | Sin firma ni aceptación digital, lo único que prueba que el paciente aceptó es que la secretaria lo registró y que el correo le llegó | Se guarda el HTML exacto enviado, la versión de las condiciones y el estado de entrega. Revisar con un abogado si es suficiente para cobrar judicialmente |
+| **Prueba débil de la deuda** | Sin firma, la aceptación tiene que poder demostrarse | **El "Sí" por WhatsApp** desde el teléfono registrado: se guardan el texto exacto enviado, el id y la hora de la respuesta, y la versión de las condiciones; además el HTML del comprobante y su estado de entrega. Revisar con un abogado si es suficiente para cobrar judicialmente |
 | **Regulación del crédito** | Mismo punto que en Ronda (SUDEBAN, protección al consumidor), más la ley de servicios médicos (IVA exento en el precio de la consulta; el fee de Helios sí lleva IVA) | Revisión legal del comprobante, de las condiciones y de la facturación por cuenta de terceros **antes del piloto** |
 
 ---
@@ -648,7 +717,19 @@ Estimación para una persona con asistencia de IA, en semanas de trabajo efectiv
 | D-H11 | ¿Topes por clínica? | **Solo alertas** con umbrales configurables (H10); nada bloquea |
 | — | ¿Cuántos avisos por vencimiento? | **5** (§7.2) |
 
-### 13.2 Abiertas (con propuesta por defecto)
+### 13.2 Resueltas el 2026-10-05 (WhatsApp y bot)
+
+| # | Pregunta | Decisión |
+|---|---|---|
+| D-H14 | ¿Cómo acepta el paciente? | Respondiendo **"Sí"** a un WhatsApp de Helios; sin "Sí" no hay deuda (§5.1) |
+| D-H15 | ¿Cuánto espera la orden? | **2 horas**; si vence, la clínica la reenvía |
+| D-H16 | ¿La orden pendiente reserva cupo? | **Sí** |
+| D-H17 | ¿El panel también exige el "Sí"? | **Sí**, un solo modelo |
+| D-H18 | ¿Cómo se identifica el médico en WhatsApp? | **Número registrado por Helios + PIN** para el dinero; sin usuario y clave por chat, sin códigos de vinculación |
+| D-H19 | ¿Alta de paciente nuevo por WhatsApp? | **Un solo mensaje** con todos los datos; el bot interpreta, pregunta lo que falte y pide confirmación |
+| D-H20 | ¿Proveedor y números? | **360dialog**, **un número con coexistencia** |
+
+### 13.3 Abiertas (con propuesta por defecto)
 
 Ninguna bloquea empezar la fase 0. Se aplica la propuesta mientras no se diga otra cosa.
 
@@ -672,4 +753,105 @@ Decidido el 2026-09-30: por ahora **solo alertas**. Esto queda diseñado para ac
 | **Retención de la liquidación** | No se le paga a la clínica un financiamiento sin expediente aprobado | Bajo, una vez exista el expediente |
 | **Clínicas nuevas `on_collection`** | Durante sus primeros meses, a la clínica se le paga solo lo que el paciente ya pagó | Muy bajo: la política ya existe en el esquema de Ronda; es un cambio de condiciones por clínica |
 | **Comisión al pagar la 1ª cuota** | La secretaria solo gana si el paciente paga | Bajo: cambia el momento del devengo (§6) |
-| **Consentimiento por OTP** | El paciente dicta un código recibido por WhatsApp o SMS | Alto: proveedor de SMS o WhatsApp API |
+| ~~Consentimiento por OTP~~ | **Hecho de otra forma (2026-10-05):** el paciente acepta con "Sí" por WhatsApp (§5.1) | — |
+
+---
+
+## 15. WhatsApp por la API y el bot del médico (2026-10-05)
+
+Decidido en las conversaciones del 2026-10-02 y 05 (§13.2). Muchos médicos no tienen secretaria ni computador, y algunos son mayores: WhatsApp es su panel. El bot es **otra puerta al mismo backend**, no un sistema aparte: llama a las mismas RPC con las mismas reglas.
+
+### 15.1 Piezas
+
+```mermaid
+flowchart LR
+  M[Médico] <--> W[WhatsApp de Helios<br/>360dialog, coexistencia]
+  P[Paciente] <--> W
+  E[Equipo Helios<br/>app WhatsApp Business] <--> W
+  W -- webhook --> F[Edge Function<br/>whatsapp-webhook]
+  F -- intención y extracción --> A[Claude]
+  F -- "RPC bot_* y helios_* (service_role)" --> DB[(Supabase)]
+  DB -- outbound_messages --> D[helios_whatsapp_dispatch<br/>pg_cron cada 10 s + http]
+  D --> W
+```
+
+- **Salida** (todo lo que va a un paciente): por la cola `outbound_messages`, como el correo. Queda el texto exacto enviado como prueba.
+- **Entrada**: la Edge Function recibe cada evento, lo guarda y lo enruta (§15.3).
+- **Respuestas del bot al médico**: las manda la Edge Function al momento (es una conversación) y quedan en el registro de mensajes.
+- **El equipo** sigue atendiendo a los pacientes (comprobantes de pago, dudas) desde la app WhatsApp Business del mismo número.
+
+### 15.2 Salida: el canal `whatsapp`
+
+- `notification_templates.channels` admite `whatsapp` (automático) además de `whatsapp_manual` y `email`. Cada plantilla de WhatsApp lleva `wa_template_name`, `wa_template_lang` y `wa_template_params` (qué variable va en `{{1}}`, `{{2}}`…).
+- **La ventana de 24 h decide el formato.** `whatsapp_contacts.last_inbound_at` guarda cuándo escribió cada número por última vez:
+  - dentro de la ventana → se envía el `rendered_text` como **texto libre** (admite saltos de línea, cuentas de cobro, etc.);
+  - fuera → la **plantilla aprobada** con sus variables;
+  - fuera y sin plantilla aprobada → el mensaje pasa a `whatsapp_manual` ("Avisos de hoy").
+- `helios_whatsapp_dispatch()`: `pg_cron` cada **10 segundos** (el paciente está en el consultorio esperando), `http` a `{d360_base_url}/messages` con la cabecera `D360-API-KEY` y el formato de la Cloud API. Tres reintentos con espera creciente; si se rinde, el mensaje **cae a la cola manual** y queda `fallido`.
+- **Sin `d360_api_key` en Vault** todo mensaje `whatsapp` cae a la cola manual. Por eso el código puede estar en producción antes de que Meta apruebe.
+- Estados de entrega (`sent`, `delivered`, `read`, `failed`) desde el webhook: `outbound_messages.wa_message_id`, `wa_status`, `wa_error`. Un `failed` en la plantilla de confirmación se le avisa a la clínica ("No pudimos escribirle al paciente: revise el teléfono con Helios").
+
+### 15.3 Entrada: `whatsapp-webhook`
+
+- Edge Function (Deno) en `supabase/functions/whatsapp-webhook`, sin verificación de JWT. La URL lleva un secreto propio (`?token=…` = `WHATSAPP_WEBHOOK_TOKEN`); sin él responde 401.
+- Guarda cada evento crudo en `whatsapp_inbound`, con el **id del mensaje como clave única**: los reintentos de 360dialog no repiten nada. Responde 200 enseguida.
+- **Enrutado, en este orden:**
+  1. **Estados de entrega** → `helios_whatsapp_status(...)`.
+  2. **Botón de la plantilla de confirmación** (payload `confirmar:<charge_id>` o `rechazar:<charge_id>`) → `helios_patient_decision(...)`.
+  3. **Número registrado de personal** → el bot (§15.4).
+  4. **Texto "sí" / "no"** de un paciente con **exactamente una** orden pendiente (lista cerrada: *si, sí, acepto, no*) → `helios_patient_decision(...)`. Nada más se interpreta.
+  5. **Todo lo demás → nada.** Lo atiende una persona desde la app. El bot **nunca** le contesta a un paciente fuera de la confirmación.
+- Cada mensaje entrante actualiza `whatsapp_contacts.last_inbound_at`.
+
+### 15.4 El bot del médico
+
+**Identidad.**
+- `staff_whatsapp_numbers`: número (E.164, único entre los activos), persona (`merchant_users` activo, `gerente` o `cajero`) y clínica; quién lo registró, y la revocación con motivo. Lo administra un `super_admin` desde la ficha de la clínica, con bitácora. **Por ahora un número sirve a una sola clínica.**
+- Un número que no está registrado, o revocado, no tiene bot (cae al paso 5 de §15.3).
+
+**PIN.**
+- `staff_pins`: hash bcrypt (`pgcrypto`), intentos fallidos, bloqueo. **4 dígitos**, sin los triviales (0000, 1111, 1234…).
+- La primera vez que el médico escribe, el bot le pide crearlo (dos veces). El equipo de Helios, que acaba de registrar el número, lo confirma por llamada.
+- Se pide **al confirmar cada orden** (lo único que acaba creando deuda). Consultar y reenviar no lo piden.
+- **5 fallos → bloqueado** hasta que Helios lo resetee (`admin_reset_staff_pin`, con motivo y bitácora).
+- El mensaje con el PIN se guarda **tachado** en `whatsapp_inbound` y **nunca** pasa por Claude.
+
+**Ejecutar como la persona.** Los `bot_*` son RPC solo para `service_role`. Resuelven el número → la persona, fijan `request.jwt.claims` en la transacción (`sub` = esa persona) y llaman a la RPC del panel. Así `auth.uid()` es el médico y se aplican **exactamente** las reglas del panel: rol y sede, límite de 60 cédulas, privacidad entre clínicas, idempotencia. La bitácora anota además `canal = whatsapp`.
+
+**Conversación.**
+- `whatsapp_sessions` (número → estado y datos de la operación en curso). **30 minutos** sin actividad la reinician.
+- Pasos: menú → cédula → (monto | datos del paciente nuevo) → resumen → PIN → esperando al paciente.
+- Botones de respuesta (máx. 3) y listas (máx. 10) para que casi nada haya que escribirlo.
+- **v1:** nuevo financiamiento, mis financiamientos (los últimos 10 con su estado), reenviar al paciente, reenviar comprobante, ayuda.
+- **Después:** "¿cuánto me pagan el lunes?" (`merchant_settlement_outlook`), comisiones y notas de voz.
+
+**Claude.** Dos usos, nada más:
+1. **Intención** de un texto libre fuera de un paso guiado (nuevo financiamiento, mis financiamientos, ayuda, otra cosa).
+2. **Extracción** de los datos del paciente nuevo, con salida estructurada al esquema de `p_patient` más monto, concepto y paciente atendido.
+   - Reglas: **no inventar ni corregir** (cédulas, nombres, teléfonos y correos tal cual), fechas en `dd/mm/aaaa`, estado de una lista cerrada.
+   - **Qué falta lo calcula el código**, no el modelo. Las RPC revalidan todo.
+   - A Claude solo llegan el mensaje del médico y el esquema: nunca el PIN ni datos de otros pacientes.
+
+### 15.5 La plantilla para Meta
+
+La única que hace falta para arrancar. La bienvenida va como texto libre (§5.1).
+
+- Nombre: `helios_confirmar_financiamiento` · Categoría: **Utility** · Idioma: español.
+- Cuerpo (las variables no admiten saltos de línea):
+
+  > Hola, {{1}}. {{2}} registró a tu nombre un financiamiento con Helios para pagar tu consulta en 2 cuotas, sin inicial.
+  >
+  > Detalle:
+  > • Consulta: ${{3}}
+  > • Cargo por servicio de Helios (20 %): ${{4}}
+  > • IVA del cargo por servicio (16 %): ${{5}}
+  >
+  > Tus cuotas, que ya incluyen el cargo por servicio y su IVA: {{6}}
+  >
+  > ¿Aceptas? Tienes 2 horas para responder. Si no reconoces esta solicitud, responde No.
+
+- Pie: `Helios · Financiamiento de consultas médicas`.
+- Botones de respuesta rápida: **Sí, acepto** · **No**. El payload de cada botón se fija al enviar: `confirmar:<charge_id>` / `rechazar:<charge_id>`.
+- Ejemplo para Meta: {{1}} `José`, {{2}} `Consultorio Demo`, {{3}} `100.00`, {{4}} `20.00`, {{5}} `3.20`, {{6}} `$61.60 el 12/10 y $61.60 el 19/10`.
+- **El cargo por servicio va desglosado y dicho con todas las letras** (decidido por Javier, 2026-10-05): consulta, cargo y su IVA en líneas separadas, y las cuotas aparte. Ningún total suma el fee (regla de Ronda).
+- Los porcentajes (20 % y 16 %) están escritos en la plantilla: si cambian `consumer_fee_pct` o `vat_pct`, hay que editar la plantilla y volver a mandarla a aprobación.

@@ -52,7 +52,9 @@ clínica (`gerente` o `cajero`).
 - Otros errores: `22023` "Cédula inválida" (lo que no sea V/E + 6-9 dígitos);
   `42501` "No tienes permiso para consultar en esta clínica".
 - `disponible` exige además que el disponible sea ≥ `min_charge_usd`; si no, es
-  `no_disponible` (cupo agotado, sin decirlo). `no_disponible` trae siempre
+  `no_disponible` (cupo agotado, sin decirlo). **(2026-10-05)** El disponible
+  descuenta también las **órdenes pendientes vigentes** del paciente
+  (`helios_credit_reserved_usd`, §5.1 del plan). `no_disponible` trae siempre
   exactamente esas tres claves y el mismo texto, sea cual sea el motivo. Sin
   WhatsApp configurado: "No podemos financiar a esta persona. Si tiene dudas,
   puede escribir a Helios." y `whatsapp_helios` null.
@@ -199,6 +201,60 @@ Errores típicos (`22023` salvo que se indique):
 
 Idempotente: la misma `p_idempotency_key` devuelve el mismo financiamiento.
 
+#### 1.3.1 Con la confirmación del paciente (2026-10-05, pendiente de implementar)
+
+Con `patient_confirmation_required = 1` (el parámetro arranca en 0 y entonces
+todo sigue como arriba). La firma **no cambia**. Lo que cambia:
+
+- Crea la orden en **`status = 'pending'`** con `expires_at` (+120 min) y
+  encola la plantilla `confirmar_financiamiento` (canal `whatsapp`). **No**
+  crea deuda, comisión, comprobante ni bienvenida: eso pasa con el "Sí" del
+  paciente (`helios_patient_decision`, §5).
+- El paciente nuevo **sí** se crea aquí. Al conocido se le escribe a su
+  teléfono **registrado**.
+- La respuesta (`helios_charge_for_staff`) trae `status` = `pending` y añade:
+
+  ```jsonc
+  "expires_at": "2026-10-05T16:40:00-04:00",
+  "confirmation": {
+    "status": "enviada",            // por_enviar | enviada | entregada | leida | fallida | aceptada | rechazada | vencida
+    "telefono_enmascarado": "0414-***-**67",
+    "sent_at": "…", "answered_at": null,
+    "resends_today": 0
+  }
+  ```
+  `installments` ya viene con las fechas y montos que vio el paciente;
+  `receipt.status` es `sin_enviar` hasta que acepte.
+- Errores nuevos (`22023`):
+
+  | Mensaje | Cuándo |
+  |---|---|
+  | "Este paciente tiene otra solicitud esperando su respuesta. Inténtalo cuando la responda o venza" | Ya tiene una orden `pending` vigente (en cualquier clínica; no se dice cuál) |
+  | "No podemos escribirle a este paciente por WhatsApp. Escribe a Helios" | La API de WhatsApp no está configurada (con el interruptor en 1) |
+
+- **Estados de `charges.status`:** `pending` (esperando al paciente),
+  `confirmed`, `declined` (dijo No, o la revalidación al aceptar falló),
+  `expired` (venció sin respuesta), `voided`, `reverted`. Se añaden al enum
+  `declined` y `expired`.
+- `helios_charge_for_staff(id)` se puede llamar sola para refrescar la
+  pantalla "Esperando al paciente" (el panel la consulta cada pocos segundos
+  mientras esté `pending`).
+
+#### 1.3.2 `staff_resend_confirmation(p_charge_id uuid) → jsonb` (2026-10-05)
+
+Reenvía al paciente la plantilla de confirmación. Mismos permisos que
+`staff_resend_receipt` (el gerente, cualquiera de su clínica; la secretaria,
+las que registró; si no, `P0002`).
+
+- Orden **`pending`**: solo reenvía el mensaje, **sin** alargar el plazo.
+- Orden **`expired`**: revalida elegibilidad y cupo (con el mismo texto neutro
+  si ya no se puede), recalcula `business_date` y las fechas de las cuotas,
+  pone `expires_at` = ahora + 120 min y vuelve a `pending`.
+- Otro estado → `22023` "Este financiamiento ya no se puede reenviar".
+- Límite `confirmation_resends_per_day` (3) por orden y día: `22023` "Ya
+  reenviaste esta solicitud 3 veces hoy".
+- Devuelve `helios_charge_for_staff(id)`. Bitácora `charge.confirmation_resent`.
+
 ### 1.4 `staff_resend_receipt(p_charge_id uuid) → jsonb`
 
 Solo personal de esa clínica, 3 veces al día por financiamiento. Encola otro
@@ -221,6 +277,9 @@ Implementado en 20261003000500 y 000600.
   cada fila añade `concept`, `beneficiary_name`, `receipt_status`,
   `staff_commission_usd` y `registered_by_name`. `merchant_sale_usd` sigue
   siendo la base sin fee. Desaparece `payer_count` (era de grupos).
+  **(2026-10-05)** Añade `status` y `expires_at`: el historial muestra también
+  las órdenes pendientes, rechazadas y vencidas. Los totales del día, las
+  métricas, las comisiones y la exportación cuentan **solo** las confirmadas.
 - `merchant_charge_detail(p_charge_id uuid)`: añade `concept`,
   `beneficiary_name`, `receipt` (`{status, sent_at, last_event, email_enmascarado}`),
   `staff_commission_usd`, `commission_staff_name` e `installments`
@@ -380,7 +439,7 @@ bitácora) y limpia `email_invalid_at`. Operador o super_admin. Devuelve
   ```
   Datos obligatorios por método: Pago Móvil banco + RIF/C.I. + teléfono;
   transferencia banco + RIF/C.I. + cuenta + titular; Zelle correo + titular.
-- `helios_config_status() → jsonb`: `{whatsapp: bool, cuentas_de_cobro: int, resend: bool, remitente: bool}`. La usa el aviso de "configuración incompleta" del Inicio. Exige `is_platform_admin()`. `resend` = existe en Vault un secreto llamado `resend_api_key` (no lee su valor); `remitente` = hay `sender_name` y `sender_email`.
+- `helios_config_status() → jsonb`: `{whatsapp: bool, cuentas_de_cobro: int, resend: bool, remitente: bool}`. **(2026-10-05)** Añade `whatsapp_api: bool` (existen en Vault `d360_api_key` y `d360_base_url`) y `whatsapp_sandbox: bool` (la URL es la del sandbox). La usa el aviso de "configuración incompleta" del Inicio. Exige `is_platform_admin()`. `resend` = existe en Vault un secreto llamado `resend_api_key` (no lee su valor); `remitente` = hay `sender_name` y `sender_email`.
 
 ### 2.4 Pacientes
 
@@ -529,6 +588,31 @@ Claves de `detail` (donde aplican): `phone_e164`, `email`, `patient_count`,
 sujeto `personal` siempre traen `merchant_id`. La respuesta trae además
 `thresholds`. Implementado en 20261004000400.
 
+### 2.7 WhatsApp del personal (bot del médico, 2026-10-05)
+
+Leer: `is_platform_admin()`. Escribir: `helios_assert_super_admin()`, con
+bitácora.
+
+- `admin_staff_whatsapp(p_merchant_id uuid default null) → table`:
+  `id, phone_e164, user_id, staff_name, role, merchant_id, merchant_name,
+  has_pin, pin_locked, last_inbound_at, created_at, created_by_name,
+  revoked_at, revoked_by_name, revoke_reason`. Null = todas las clínicas.
+- `admin_set_staff_whatsapp(p_user_id uuid, p_merchant_id uuid, p_phone text) → jsonb`.
+  La persona tiene que ser personal activo (`gerente` o `cajero`) de esa
+  clínica. El teléfono es un móvil venezolano y se guarda en E.164. Si el
+  número ya está activo para otra persona → `22023` "Ese número ya está
+  registrado para {nombre}". Una persona con un número activo que recibe otro:
+  el anterior se revoca solo ("cambio de número"). Bitácora
+  `staff.whatsapp_set`.
+- `admin_revoke_staff_whatsapp(p_id uuid, p_reason text) → jsonb`. Motivo
+  obligatorio. Borra la sesión del bot de ese número. Bitácora
+  `staff.whatsapp_revoked`.
+- `admin_reset_staff_pin(p_user_id uuid, p_reason text) → jsonb`. Borra el PIN
+  y el bloqueo; el bot pedirá crear otro en el próximo mensaje. Bitácora
+  `staff.pin_reset`.
+- Dar de baja a una persona (`merchant_staff_update` → inactiva) revoca su
+  número.
+
 ---
 
 ## 3. Parámetros nuevos (`business_parameters`)
@@ -547,6 +631,11 @@ sujeto `personal` siempre traen `merchant_id`. La respuesta trae además
 | `alert_merchant_exposure_usd` | 3000 | alerta `exposicion_clinica` |
 | `alert_first_charge_limit_pct` | 90 | alerta `cupo_al_limite_al_estrenar` |
 | `alert_staff_share_min_charges` | 5 | mínimo de la semana para `secretaria_concentrada` (20261004000400) |
+| `patient_confirmation_required` | 0 | 1 = la orden espera el "Sí" del paciente (§1.3.1). Se pasa a 1 cuando Meta apruebe la plantilla |
+| `patient_confirmation_minutes` | 120 | plazo de la orden pendiente |
+| `confirmation_resends_per_day` | 3 | reenvíos de la confirmación por orden y día |
+| `staff_pin_max_attempts` | 5 | intentos de PIN antes del bloqueo |
+| `bot_session_minutes` | 30 | inactividad que reinicia la conversación del bot |
 
 Sembrados en 20261002000100 con vigencia desde 2026-09-30 (más una fila de
 `late_fee_usd` = 2 en dólares). Lectores (`stable security definer`, para
@@ -562,8 +651,9 @@ equipo si se llaman directo desde la API. La regla del monto vive en
 
 | key | canal | cuándo |
 |---|---|---|
+| `confirmar_financiamiento` | whatsapp (plantilla de Meta `helios_confirmar_financiamiento`) | al crear la orden pendiente y al reenviarla (2026-10-05) |
 | `comprobante_financiamiento` | email | al confirmar (y al reenviar) |
-| `bienvenida` | whatsapp_manual | al confirmar |
+| `bienvenida` | whatsapp_manual → **whatsapp** (2026-10-05) | al confirmar; con la confirmación del paciente sale sola como texto libre y solo cae a la cola manual si la API falla |
 | `cuota_manana` | whatsapp_manual + email | víspera, 19:00 |
 | `cuota_hoy` | whatsapp_manual | día del vencimiento, 08:00 |
 | `cuota_vencida_d1` | whatsapp_manual | +1 día |
@@ -606,3 +696,115 @@ Implementado en 20261002000700 (cimientos; el despacho es de H6/H7):
   `{cuotas}`, `{monto_cuota}`, `{fecha}`, `{monto}`, `{motivo}`…; la lista
   exacta por plantilla está en `notification_templates.variables`). Si falta
   una, `22023` y no se encola.
+
+### 4.1 Cambios del 2026-10-05 (pendientes de implementar)
+
+- `notification_templates.channels` admite `whatsapp` (automático por la
+  API). Columnas nuevas: `wa_template_name` (nombre aprobado en Meta; null =
+  solo texto libre), `wa_template_lang` (`es`) y `wa_template_params text[]`
+  (las variables de `{{1}}`, `{{2}}`… en orden).
+- `confirmar_financiamiento`: `wa_template_name = 'helios_confirmar_financiamiento'`,
+  `wa_template_params = {nombre, clinica, monto_consulta, cargo_servicio, iva_cargo_servicio, cuotas_linea}`
+  (`{cargo_servicio}` = `consumer_fee_usd`, `{iva_cargo_servicio}` = `consumer_fee_vat_usd`).
+  `{cuotas_linea}` es el plan en una sola línea («$61.60 el 12/10 y $61.60 el
+  19/10»), porque Meta no admite saltos de línea en una variable. El texto
+  completo está en docs/00 §15.5.
+- `bienvenida` pasa a `{whatsapp}` y se encola al **confirmar** (el "Sí"). Va
+  como texto libre: la respuesta del paciente abrió la ventana de 24 h. Texto
+  nuevo por defecto:
+
+  ```text
+  ¡Listo, {nombre}! Tu financiamiento #{orden} en {clinica} está confirmado.
+
+  Tus cuotas:
+  {cuotas}
+
+  Para pagar (en bolívares, a la tasa BCV del día del pago):
+  {cuentas_de_cobro}
+
+  Cuando pagues, envíanos el comprobante por este chat. También te mandamos todos los detalles a tu correo.
+  ```
+- Avisos al médico que registró por WhatsApp (canal `whatsapp`, **solo texto
+  libre**: si su ventana de 24 h está cerrada se omiten y el resultado queda en
+  el panel): `orden_aceptada`, `orden_rechazada`, `orden_vencida`. Variables:
+  `{paciente}` (nombre de pila), `{orden}`, `{hora}`.
+- `outbound_messages` gana `recipient_staff_id` (el destinatario es una persona
+  del personal en lugar de un paciente), `wa_message_id`, `wa_status`
+  (`sent` | `delivered` | `read` | `failed`) y `wa_error`.
+
+---
+
+## 5. WhatsApp: webhook y bot (2026-10-05, pendiente de implementar)
+
+Todas son **solo para `service_role`** (`revoke … from public, anon,
+authenticated`): las llama la Edge Function `whatsapp-webhook` o `pg_cron`,
+nunca el panel. Son `security definer` con `set search_path` como el resto.
+Las del webhook **no lanzan** errores de negocio: devuelven
+`{ok: false, reason}` para que un reintento de 360dialog no se repita en bucle.
+
+### 5.1 Tablas nuevas
+
+| Tabla | Para qué |
+|---|---|
+| `whatsapp_inbound` | Cada evento recibido, crudo (`wa_message_id` único). El texto de un PIN se guarda como `[PIN]` |
+| `whatsapp_contacts` | Por número: `last_inbound_at` (la ventana de 24 h), `profile_id` / `staff_user_id` si se conoce |
+| `whatsapp_sessions` | Estado de la conversación del bot por número (`state`, `data jsonb`, `updated_at`). La Edge Function la lee y la escribe directamente |
+| `staff_whatsapp_numbers` | Número → persona y clínica (§2.7) |
+| `staff_pins` | `user_id`, `pin_hash` (bcrypt), `failed_attempts`, `locked_at`, `set_at` |
+
+`charges` gana `channel` (`panel` | `whatsapp`), `answered_at` y
+`answer_wa_message_id` (la prueba del "Sí").
+
+### 5.2 Del webhook
+
+- `helios_whatsapp_inbound(p_message_id text, p_from text, p_type text, p_payload jsonb) → jsonb`.
+  Guarda el evento (si ya estaba: `{duplicate: true}` y no se hace nada más),
+  actualiza `whatsapp_contacts` y devuelve lo que hace falta para enrutar:
+  `{duplicate, staff: {user_id, staff_name, merchant_id, merchant_name, role, has_pin, pin_locked} | null,
+  pending_charge_id: uuid | null}` (la única orden `pending` vigente cuyo
+  paciente tiene ese teléfono registrado).
+- `helios_patient_decision(p_charge_id uuid, p_decision text, p_from_phone text, p_wa_message_id text) → jsonb`.
+  `p_decision` ∈ `si` | `no`. Comprueba que `p_from_phone` sea el teléfono
+  registrado del paciente y que la orden siga `pending` y sin vencer. **Sí**:
+  revalida y confirma (§5.1 del plan): asiento, cuotas, comisión, comprobante,
+  bienvenida y aviso al médico. **No**: `declined`. Idempotente por
+  `p_wa_message_id`. Devuelve
+  `{ok, status: confirmed|declined, order_number}` o
+  `{ok: false, reason: no_pendiente|vencida|otro_telefono|no_disponible}`. En
+  `no_disponible` (la revalidación falló) la orden queda `declined`, al paciente
+  no se le dice el motivo y la clínica ve el texto neutro de siempre.
+- `helios_whatsapp_status(p_wa_message_id text, p_status text, p_error jsonb, p_at timestamptz) → void`.
+- `helios_whatsapp_text(p_to text, p_text text, p_staff_user_id uuid default null) → uuid`.
+  Encola un texto libre para la conversación del bot y lo despacha al momento.
+  Si la ventana del número está cerrada, `22023`.
+
+### 5.3 Crons
+
+- `helios_whatsapp_dispatch()`: cada 10 s. Ventana abierta → texto; cerrada →
+  plantilla; sin plantilla o tras 3 fallos → `whatsapp_manual`. Sin
+  `d360_api_key` en Vault no llama a nadie y todo cae a la cola manual.
+- `helios_expire_pending_charges()`: cada minuto. `pending` con
+  `expires_at < now()` → `expired`, libera la reserva, cancela la plantilla si
+  aún no salió y encola `orden_vencida` al médico si la registró por WhatsApp.
+
+### 5.4 Del bot
+
+Cada `bot_*` resuelve `p_phone` en `staff_whatsapp_numbers` (activo y con
+la persona aún activa en esa clínica; si no, `42501` "Este número no está
+registrado en Helios"). Después fija `request.jwt.claims` en la transacción
+(`sub` = la persona, `role` = `authenticated`) y llama a la RPC del panel, así
+que **devuelven y fallan exactamente igual que en el panel** (mismos errcode y
+textos). Bitácora con `canal = whatsapp`.
+
+| RPC | Equivale a | Nota |
+|---|---|---|
+| `bot_set_pin(p_phone, p_pin text) → jsonb` | — | Solo si no tiene PIN. 4 dígitos, no triviales (`22023` "Elige un PIN menos obvio") |
+| `bot_patient_eligibility(p_phone, p_document)` | `helios_patient_eligibility` | `p_merchant_id` sale del número |
+| `bot_preview_charge(p_phone, p_document, p_amount_usd)` | `preview_patient_charge` | |
+| `bot_create_charge(p_phone, p_pin, p_patient jsonb, p_amount_usd, p_concept, p_beneficiary_name, p_idempotency_key)` | `create_patient_charge` | Verifica el PIN primero: `42501` "PIN incorrecto. Te quedan N intentos" o "Tu PIN está bloqueado. Escribe a Helios". Sede: la del `cajero` o la principal del `gerente`. `charges.channel = 'whatsapp'` |
+| `bot_recent_charges(p_phone, p_limit int default 10)` | `merchant_transactions` | Las de los últimos 30 días con su `status`; el `cajero` ve las suyas |
+| `bot_resend_confirmation(p_phone, p_charge_id)` | `staff_resend_confirmation` | |
+| `bot_resend_receipt(p_phone, p_charge_id)` | `staff_resend_receipt` | |
+
+`p_idempotency_key` del bot = `wa:<id del mensaje que llevó el PIN>`: si
+360dialog reintenta el webhook, no se crea otra orden.
