@@ -606,10 +606,12 @@ sujeto `personal` siempre traen `merchant_id`. La respuesta trae además
 
 ### 2.7 WhatsApp del personal (bot del médico, 2026-10-05)
 
+Las escrituras usan `helios_assert_super_admin(p_what)` (rol y MFA).
+
 Leer: `is_platform_admin()`. Escribir: `helios_assert_super_admin()`, con
 bitácora.
 
-- `admin_staff_whatsapp(p_merchant_id uuid default null) → table`:
+- `admin_staff_whatsapp(p_merchant_id uuid default null) → jsonb` (un arreglo; implementado en 20261005000500 con el resto de esta sección):
   `id, phone_e164, user_id, staff_name, role, merchant_id, merchant_name,
   has_pin, pin_locked, last_inbound_at, created_at, created_by_name,
   revoked_at, revoked_by_name, revoke_reason`. Null = todas las clínicas.
