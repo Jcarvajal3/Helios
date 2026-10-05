@@ -44,7 +44,7 @@ Además cambian estas cosas:
 | Panel y WhatsApp | El panel web **también exige el "Sí"**: un solo modelo para los dos canales | Javier, 2026-10-05 |
 | Canal del médico | Los médicos registran y consultan **desde WhatsApp** (muchos no tienen secretaria ni computador) | Javier, 2026-10-02 |
 | Identidad del médico | El equipo de Helios **registra su número**; escribir desde ese número lo identifica. **PIN** solo para operaciones de dinero. Nunca usuario y clave por chat | Javier, 2026-10-02 |
-| Alta de paciente nuevo por WhatsApp | El médico manda **todos los datos en un solo mensaje**; el bot los interpreta (Claude), pide lo que falte y muestra un resumen antes de confirmar | Javier, 2026-10-02 |
+| Alta de paciente nuevo por WhatsApp | El médico manda **todos los datos en un solo mensaje**; el bot los interpreta (Gemini desde el 2026-10-06; antes Claude), pide lo que falte y muestra un resumen antes de confirmar | Javier, 2026-10-02 |
 | Proveedor de WhatsApp | **360dialog**, **un solo número con coexistencia**: la app WhatsApp Business para el equipo y la API para el bot y los envíos automáticos | Javier, 2026-10-05 |
 | Pago y reporte del paciente | **Por WhatsApp al equipo Helios**, que registra el pago en el superadmin | Javier, 2026-09-30 |
 | Comisión de la secretaria | **Se suma a la liquidación de la clínica**, y la clínica se la entrega a su personal | Javier, 2026-09-30 |
@@ -146,7 +146,7 @@ El mismo flujo, conversado. El detalle técnico está en §15.
 
 1. El médico escribe al WhatsApp de Helios desde **su número registrado**. La primera vez el bot le pide **crear un PIN** de 4 dígitos (dos veces). Después le ofrece botones: **Nuevo financiamiento**, **Mis financiamientos**, **Ayuda**.
 2. **Cédula** → la misma respuesta que en el panel (nuevo / disponible $X con nombre enmascarado / no disponible, sin motivo).
-3. **Paciente conocido**: pide monto y concepto ("80 consulta"). **Paciente nuevo**: pide **todos los datos en un solo mensaje** (el bot le ofrece una plantilla para copiar, no obligatoria). Claude los interpreta; el bot **pregunta solo lo que falte** y nunca inventa un dato.
+3. **Paciente conocido**: pide monto y concepto ("80 consulta"). **Paciente nuevo**: pide **todos los datos en un solo mensaje** (el bot le ofrece una plantilla para copiar, no obligatoria). Gemini los interpreta; el bot **pregunta solo lo que falte** y nunca inventa un dato.
 4. **Resumen**: datos del paciente (con el **correo bien visible**, porque ahí llega el comprobante), monto de la consulta, línea "Servicio Helios 20 % + IVA" y las 2 cuotas con fechas. Botones **Confirmar** / **Corregir**.
 5. **Confirmar** → el bot pide el **PIN** → orden pendiente → WhatsApp al paciente. El bot avisa "Esperando la respuesta de José (vence a las 16:40)".
 6. El bot le avisa al médico cuando el paciente **acepta**, **rechaza** o la orden **vence** (con botón **Reenviar**).
@@ -163,7 +163,7 @@ El mismo flujo, conversado. El detalle técnico está en §15.
 | Backend | **Supabase Postgres 17**: RLS + RPC `security definer`, `pg_cron`, `http`, Storage y Auth (email + contraseña y MFA TOTP) |
 | API | **Ninguna para el panel.** Igual que el panel de Ronda: cliente de Supabase con clave publicable, RLS y RPC. No hay Hono ni server functions |
 | WhatsApp | **360dialog** (Cloud API de Meta), un solo número con coexistencia. Salida: cola `outbound_messages` + `pg_cron` + `http` (como el correo). Entrada: **una Edge Function, `whatsapp-webhook`** (la única pieza con runtime propio, §15) |
-| IA del bot | **Claude** (`claude-opus-5-5`, ajustable), solo desde la Edge Function: interpreta la intención del médico y extrae los datos del paciente a un esquema fijo. No toca la base: lo que extrae pasa por las mismas RPC |
+| IA del bot | **Gemini** (API de Interactions, `gemini-3.8-flash` por defecto, ajustable con `GEMINI_MODEL`; decidido por Javier el 2026-10-06), solo desde la Edge Function: extrae los datos del paciente escritos libremente a un esquema fijo, con `store: false`. No toca la base: lo que extrae pasa por las mismas RPC |
 | Deploy | Vercel (panel, preset Nitro) y Supabase (dos proyectos: `Helios` y `Helios-dev`) |
 | Observabilidad | Sentry (panel) |
 | Asistente IA (fase 5) | Edge Function `admin-asistente` portada de Ronda |
@@ -645,8 +645,8 @@ Es el único documento que recibe el paciente, así que tiene que estar completo
 | Vercel | Proyecto `helios-panel`; dominio por definir (p. ej. `app.helios.…`); variables `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_ENTORNO`, `VITE_SENTRY_DSN` |
 | Sentry | Proyecto `helios-panel` con subida de sourcemaps (como Ronda) |
 | WhatsApp | **360dialog**, un solo número con **coexistencia** (la app WhatsApp Business para el equipo; la API para el bot y los envíos). Hay que abrir la app al menos cada 13 días. Mientras Meta aprueba: el **sandbox** de 360dialog (`waba-sandbox.360dialog.io`, solo escribe al teléfono de quien pidió la clave). Secretos en Vault: `d360_api_key` y `d360_base_url` (sandbox o producción) |
-| Edge Function | `whatsapp-webhook` (§15). Secretos de la función: `ANTHROPIC_API_KEY` y `WHATSAPP_WEBHOOK_TOKEN` (el secreto que va en la URL del webhook). Se despliega con el CLI, sin Docker |
-| Anthropic | Una API key para el bot (console.anthropic.com), solo en los secretos de la Edge Function |
+| Edge Function | `whatsapp-webhook` (§15). Secretos de la función: `GEMINI_API_KEY` (y opcional `GEMINI_MODEL`) y `WHATSAPP_WEBHOOK_TOKEN` (el secreto que va en la URL del webhook). Se despliega con el CLI, sin Docker |
+| Gemini | Una API key de Google AI Studio (aistudio.google.com) para el bot, solo en los secretos de la Edge Function |
 | Email (**obligatorio**) | **Resend** con dominio propio verificado (SPF, DKIM, DMARC). Dev usa un remitente de pruebas y una lista de destinatarios permitidos, para no escribir nunca a un paciente real desde dev |
 | Bootstrap | `bootstrap_superadmin.sql` (patrón de Ronda) para el primer super_admin; el resto desde Ajustes › Equipo |
 | Entornos locales | `.env.dev` / `.env.prod` en `panel/` (patrón de Ronda); banner "DEV" cuando no es producción |
@@ -665,7 +665,7 @@ Estimación para una persona con asistencia de IA, en semanas de trabajo efectiv
 | **3 — Superadmin operativo** | Registrar pago (+ doble control), avisos de hoy (H7), alertas H10, pagos a clínicas con comisiones, ficha de paciente y de clínica adaptadas, Ajustes › Contacto y cuentas de cobro, poda de métricas y vocabulario | Ciclo completo en dev: alta → comprobante → avisos → pago por WhatsApp → conciliación → lunes → transferencia | 2 |
 | **4 — Endurecimiento y piloto** | Prueba de extremo a extremo con fechas simuladas (mora día 1/4/30/60), revisión de RLS y RPC (la clínica no puede leer a pacientes ajenos ni enumerar cédulas), textos legales, `/soporte` y privacidad, carga inicial en prod, formación del equipo y de 1-2 clínicas piloto | Piloto en producción con límites bajos por clínica | 1 |
 | **5 — Asistente IA** (opcional) | Portar `admin-asistente` + vistas `asistente.*` + `mapa.json` | — | 0,5-1 |
-| **6 — WhatsApp y bot del médico** (adelantada al 2026-10-05) | B: orden pendiente y "Sí" (§5.1) con el interruptor en 0. C: panel "Esperando al paciente". D: despacho a 360dialog. E: `whatsapp-webhook`. F: bot del médico (números, PIN, conversación, Claude). G: punta a punta en el sandbox y paso a producción cuando Meta apruebe. B y C no esperan a Meta (el "Sí" se simula en las suites SQL) | Con el sandbox: un médico registra por WhatsApp, el paciente (el mismo teléfono de prueba) acepta y le llegan la bienvenida y el comprobante | 2-2,5 |
+| **6 — WhatsApp y bot del médico** (adelantada al 2026-10-05) | B: orden pendiente y "Sí" (§5.1) con el interruptor en 0. C: panel "Esperando al paciente". D: despacho a 360dialog. E: `whatsapp-webhook`. F: bot del médico (números, PIN, conversación, Gemini). G: punta a punta en el sandbox y paso a producción cuando Meta apruebe. B y C no esperan a Meta (el "Sí" se simula en las suites SQL) | Con el sandbox: un médico registra por WhatsApp, el paciente (el mismo teléfono de prueba) acepta y le llegan la bienvenida y el comprobante | 2-2,5 |
 | **7 — Recordatorios automáticos** | Plantillas *utility* para `cuota_manana`, `cuota_hoy`, `cuota_vencida_d1`, `cargo_por_atraso_d4`, `pago_recibido`/`pago_rechazado` y `cuenta_congelada`; pasan del canal manual al automático, plantilla a plantilla | La cola de "Avisos de hoy" queda solo para los fallidos | 0,5 |
 
 **Total hasta el piloto: unas 8 semanas.** Las fases 0-1 son el camino crítico; la 2 y la 3 se pueden solapar.
@@ -689,9 +689,9 @@ Estimación para una persona con asistencia de IA, en semanas de trabajo efectiv
 | **Clínica o secretaria que da de alta pacientes falsos** | Sin KYC ni consentimiento digital, Helios paga el 100% a la clínica aunque el paciente no pague, y la secretaria cobra comisión por cada alta. Es el fraude #1 que ya identificó Ronda, aquí agravado | **Desde el 2026-10-05, el "Sí" del paciente** desde su teléfono registrado: sin él no hay deuda, ni pago a la clínica, ni comisión. Además, las alertas automáticas de H10, el comprobante por correo con "si no reconoces este financiamiento, escríbenos", cédula única y lista negra. Queda el caso del paciente **nuevo** con un teléfono que controla la propia clínica: lo cubren las alertas (`telefono_repetido`, ráfagas) y las medidas de §14 |
 | **Datos de contacto malos** | La cobranza depende 100% del teléfono, el WhatsApp y el correo | **El "Sí" verifica el teléfono**: sin un WhatsApp que responda no hay financiamiento. Además, validación de formato, email confirmado (dos veces en el panel; destacado en el resumen del bot), contacto de referencia obligatorio y alerta por correo rebotado |
 | **Teléfono del médico robado o clonado** | El número registrado identifica al médico | **PIN** en toda operación de dinero (5 intentos y bloqueo; reseteo solo por Helios), revocación inmediata desde el superadmin, y el "Sí" del paciente: con el teléfono del médico solo no se crea deuda |
-| **El bot interpreta mal un dato** | Un correo o una cédula mal leídos llegan al comprobante o a la persona equivocada | Claude solo extrae a un esquema fijo y no corrige datos; el bot pregunta lo que falte, muestra un resumen que el médico confirma, y las RPC revalidan todo. El "Sí" del paciente es la última barrera |
+| **El bot interpreta mal un dato** | Un correo o una cédula mal leídos llegan al comprobante o a la persona equivocada | La IA (Gemini) solo extrae a un esquema fijo y no corrige datos; el bot pregunta lo que falte, muestra un resumen que el médico confirma, y las RPC revalidan todo. El "Sí" del paciente es la última barrera |
 | **Dependencia de 360dialog y Meta** | Si el número se bloquea, ni el bot ni las confirmaciones funcionan | Plantillas *utility* y solo a pacientes que piden financiar (calidad alta), soporte de 360dialog, y el interruptor `patient_confirmation_required` para volver al registro sin "Sí" desde el panel en una emergencia |
-| **Datos personales en terceros** | Cédula, dirección y teléfono pasan por 360dialog, Meta y Anthropic | Aviso de privacidad y consentimiento revisados por un abogado antes del piloto; nada clínico en los mensajes; el PIN nunca llega a Claude |
+| **Datos personales en terceros** | Cédula, dirección y teléfono pasan por 360dialog, Meta y Google (Gemini, con `store: false`) | Aviso de privacidad y consentimiento revisados por un abogado antes del piloto; nada clínico en los mensajes; el PIN nunca llega a la IA |
 | **Operación manual (pagos y avisos por WhatsApp)** | No escala y se presta a errores | Doble control, cruce con el extracto, cola diaria con estado, y la fase 6 lista para automatizar sin cambiar el modelo |
 | **Deriva entre Ronda y Helios** | Los arreglos de un lado no llegan al otro | Mismos nombres en la base + `portar-de-ronda.mjs` + suites compartidas |
 | **Datos sensibles de salud** | El nombre del servicio puede revelar un diagnóstico ("consulta oncológica"), y ahora viaja por correo | El concepto es opcional y se recomienda genérico ("Consulta"), no se guarda información clínica y las capturas de pago van en buckets privados con URL firmada. Hay que revisar el hábeas data (art. 28 CRBV) con un abogado |
@@ -769,7 +769,7 @@ flowchart LR
   P[Paciente] <--> W
   E[Equipo Helios<br/>app WhatsApp Business] <--> W
   W -- webhook --> F[Edge Function<br/>whatsapp-webhook]
-  F -- intención y extracción --> A[Claude]
+  F -- extracción de datos --> A[Gemini]
   F -- "RPC bot_* y helios_* (service_role)" --> DB[(Supabase)]
   DB -- outbound_messages --> D[helios_whatsapp_dispatch<br/>pg_cron cada 10 s + http]
   D --> W
@@ -814,7 +814,7 @@ flowchart LR
 - La primera vez que el médico escribe, el bot le pide crearlo (dos veces). El equipo de Helios, que acaba de registrar el número, lo confirma por llamada.
 - Se pide **al confirmar cada orden** (lo único que acaba creando deuda). Consultar y reenviar no lo piden.
 - **5 fallos → bloqueado** hasta que Helios lo resetee (`admin_reset_staff_pin`, con motivo y bitácora).
-- El mensaje con el PIN se guarda **tachado** en `whatsapp_inbound` y **nunca** pasa por Claude.
+- El mensaje con el PIN se guarda **tachado** en `whatsapp_inbound` y **nunca** pasa por la IA.
 
 **Ejecutar como la persona.** Los `bot_*` son RPC solo para `service_role`. Resuelven el número → la persona, fijan `request.jwt.claims` en la transacción (`sub` = esa persona) y llaman a la RPC del panel. Así `auth.uid()` es el médico y se aplican **exactamente** las reglas del panel: rol y sede, límite de 60 cédulas, privacidad entre clínicas, idempotencia. La bitácora anota además `canal = whatsapp`.
 
@@ -827,11 +827,11 @@ flowchart LR
 
 **Los datos del paciente nuevo** (implementado así el 2026-10-05):
 1. **El formulario primero, sin IA.** El bot ofrece un formulario para copiar (una línea «Etiqueta: valor» por dato). Si el mensaje lo usa (tres etiquetas o más, o una corrección suelta como «Correo: …»), se lee con código (`datos.ts`), sin margen de error.
-2. **Claude para el texto libre.** Si el médico escribe como le salga, Claude (`claude-opus-5-5`, esfuerzo bajo, con alternativa por rechazo) extrae al esquema de `p_patient` más monto, concepto y paciente atendido con una herramienta estricta (`claude.ts`).
+2. **Gemini para el texto libre** (desde el 2026-10-06; antes Claude). Si el médico escribe como le salga, Gemini extrae al esquema de `p_patient` más monto, concepto y paciente atendido, con salida JSON con esquema y `store: false` (`gemini.ts`).
    - Reglas: **no inventar ni corregir** (cédulas, nombres, teléfonos y correos tal cual), fechas día/mes/año, el sexo solo si el mensaje lo dice.
    - **Qué falta lo calcula el código**, no el modelo. Las RPC revalidan todo.
-   - A Claude solo llegan el mensaje del médico y el esquema: nunca el PIN ni datos de otros pacientes.
-   - Sin la clave de Anthropic, el bot pide el formulario.
+   - A Gemini solo llegan el mensaje del médico y el esquema: nunca el PIN ni datos de otros pacientes.
+   - Sin `GEMINI_API_KEY`, el bot pide el formulario.
 - **La intención no la decide un modelo:** botones (Nuevo financiamiento, Mis financiamientos, Ayuda; Confirmar, Corregir, Cancelar) y unas pocas palabras clave («menú», «cancelar», «reenviar 1042», una cédula). Es más predecible para médicos mayores.
 
 ### 15.5 La plantilla para Meta

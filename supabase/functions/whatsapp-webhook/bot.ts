@@ -10,7 +10,7 @@
 //   menú       Nuevo financiamiento · Mis financiamientos · Ayuda
 //              (o directamente una cédula, o «reenviar 1042»)
 //   cedula     → nuevo: datos      disponible: monto      no disponible: menú
-//   datos      el formulario o texto libre (Claude); pide solo lo que falte
+//   datos      el formulario o texto libre (Gemini); pide solo lo que falte
 //   monto      «80 consulta»
 //   resumen    Confirmar · Corregir · Cancelar
 //   pin        el PIN → la orden sale al paciente → menú
@@ -19,7 +19,7 @@
 // despacha en cuanto termina.
 // ═══════════════════════════════════════════════════════════════════════════
 
-import { extraerConClaude } from './claude.ts'
+import { extraerConGemini } from './gemini.ts'
 import {
   FORMULARIO,
   diaCorto,
@@ -317,8 +317,8 @@ export async function atenderAlPersonal({
     if (formulario.etiquetado || /^\s*[^:\n]{2,40}:\s*\S/.test(texto)) {
       lectura = formulario
     } else {
-      const clave = Deno.env.get('ANTHROPIC_API_KEY')
-      if (clave) lectura = await extraerConClaude(texto, clave)
+      const clave = Deno.env.get('GEMINI_API_KEY')
+      if (clave) lectura = await extraerConGemini(texto, clave)
       if (!lectura) {
         await enviar('No pude leer los datos. Por favor copia este formulario, llénalo y envíamelo:\n\n' + FORMULARIO)
         return { paso: 'datos', leido: false }

@@ -14,8 +14,10 @@ import {
   leerFormulario,
   leerMonto,
   leerMontoYConcepto,
+  lecturaDeLaIA,
   normalizarFecha,
   normalizarSexo,
+  textoDeLaInteraccion,
 } from './datos.ts'
 
 let fallos = 0
@@ -94,6 +96,37 @@ comprueba(leerCedula('hola') === null && leerCedula('12') === null, 'no es cédu
 comprueba(dinero(61.6) === '$61.60', 'dinero')
 comprueba(diaCorto('2026-10-12') === 'lun 12/10', 'día corto', diaCorto('2026-10-12'))
 comprueba(horaCaracas('2026-10-05T20:40:00Z') === '16:40', 'hora de Caracas', horaCaracas('2026-10-05T20:40:00Z'))
+
+console.log('\nLo que devuelve la IA')
+const json = '{"first_name":"Ana","birth_date":"12/04/1990","sex":"mujer","email":"Ana@X.com","monto":80,"concepto":"Consulta","atendido":null,"phone":null}'
+comprueba(textoDeLaInteraccion({ status: 'completed', output_text: json }) === json, 'output_text')
+comprueba(
+  textoDeLaInteraccion({ status: 'completed', steps: [{ type: 'model_output', content: [{ type: 'text', text: json }] }] }) === json,
+  'el texto dentro de steps',
+)
+comprueba(textoDeLaInteraccion({ status: 'failed', output_text: json }) === null, 'una interacción que no terminó: null')
+comprueba(textoDeLaInteraccion(null) === null && textoDeLaInteraccion({ steps: [] }) === null, 'sin texto: null')
+
+const ia = lecturaDeLaIA(JSON.parse(json))
+comprueba(
+  ia !== null &&
+    ia.paciente.first_name === 'Ana' &&
+    ia.paciente.birth_date === '1990-04-12' &&
+    ia.paciente.sex === 'F' &&
+    ia.paciente.email === 'ana@x.com' &&
+    ia.paciente.phone === undefined &&
+    ia.monto === 80 &&
+    ia.concepto === 'Consulta' &&
+    ia.atendido === null,
+  'convierte y normaliza como el formulario',
+  JSON.stringify(ia),
+)
+comprueba(
+  lecturaDeLaIA({ first_name: 'Ana', clave_rara: 'x', monto: -5 })?.monto === null &&
+    !('clave_rara' in (lecturaDeLaIA({ clave_rara: 'x' })?.paciente ?? {})),
+  'ignora claves desconocidas y montos raros',
+)
+comprueba(lecturaDeLaIA([1, 2]) === null && lecturaDeLaIA('x') === null, 'algo que no es un objeto: null')
 
 console.log(fallos === 0 ? '\nTODO BIEN' : `\n${fallos} FALLOS`)
 process.exit(fallos === 0 ? 0 : 1)

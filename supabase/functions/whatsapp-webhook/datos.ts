@@ -3,7 +3,7 @@
 //
 // El médico manda los datos de un paciente nuevo en un solo mensaje. Si usa
 // el formulario (una línea «Etiqueta: valor» por dato), se lee aquí sin IA y
-// sin margen de error. Si escribe libre, los extrae Claude (claude.ts) a la
+// sin margen de error. Si escribe libre, los extrae Gemini (gemini.ts) a la
 // misma forma. En los dos casos, QUÉ FALTA lo decide este código, no el
 // modelo, y la base revalida todo al registrar.
 //
@@ -141,7 +141,7 @@ export function leerCedula(t: string): string | null {
 /**
  * Lee un mensaje con el formulario: una línea «Etiqueta: valor» por dato.
  * `etiquetado` es true si reconoció al menos tres etiquetas (entonces no hace
- * falta Claude). Las líneas sin valor se ignoran.
+ * falta la IA). Las líneas sin valor se ignoran.
  */
 export function leerFormulario(t: string): Lectura & { etiquetado: boolean } {
   const paciente: DatosDelPaciente = {}
@@ -225,4 +225,66 @@ export function horaCaracas(iso: string | null): string {
     minute: '2-digit',
     hour12: false,
   }).format(new Date(iso))
+}
+
+// ── Lo que devuelve la IA ──────────────────────────────────────────────────
+
+/**
+ * El texto generado de una respuesta de la API de Interactions de Gemini, o
+ * null si la interacción no terminó o no trae texto. Tolerante a la forma:
+ * `output_text` si viene; si no, el último texto dentro de `steps`.
+ */
+export function textoDeLaInteraccion(cuerpo: unknown): string | null {
+  if (typeof cuerpo !== 'object' || cuerpo === null) return null
+  const r = cuerpo as Record<string, unknown>
+  if (typeof r.status === 'string' && r.status !== 'completed') return null
+  if (typeof r.output_text === 'string' && r.output_text.trim() !== '') return r.output_text
+
+  let ultimo: string | null = null
+  const recorrer = (v: unknown): void => {
+    if (Array.isArray(v)) {
+      v.forEach(recorrer)
+    } else if (typeof v === 'object' && v !== null) {
+      for (const [k, x] of Object.entries(v)) {
+        if (k === 'text' && typeof x === 'string' && x.trim() !== '') ultimo = x
+        else recorrer(x)
+      }
+    }
+  }
+  recorrer(r.steps ?? r.outputs ?? null)
+  return ultimo
+}
+
+function textoONulo(v: unknown, max = 200): string | undefined {
+  return typeof v === 'string' && v.trim() !== '' ? v.trim().slice(0, max) : undefined
+}
+
+const CLAVES: Array<keyof DatosDelPaciente> = [
+  'first_name', 'last_name', 'birth_date', 'sex', 'phone', 'email', 'state', 'city', 'address',
+  'occupation', 'reference_name', 'reference_phone', 'reference_relationship',
+]
+
+/**
+ * El JSON de la IA → una `Lectura`. Se queda solo con las claves conocidas y
+ * con texto; normaliza la fecha, el sexo y el correo como el formulario.
+ * Null si no es un objeto.
+ */
+export function lecturaDeLaIA(v: unknown): Lectura | null {
+  if (typeof v !== 'object' || v === null || Array.isArray(v)) return null
+  const d = v as Record<string, unknown>
+  const paciente: DatosDelPaciente = {}
+  for (const k of CLAVES) {
+    const x = textoONulo(d[k])
+    if (x !== undefined) paciente[k] = x
+  }
+  if (paciente.birth_date) paciente.birth_date = normalizarFecha(paciente.birth_date)
+  if (paciente.sex) paciente.sex = normalizarSexo(paciente.sex)
+  if (paciente.email) paciente.email = paciente.email.toLowerCase()
+  const monto = typeof d.monto === 'number' && Number.isFinite(d.monto) && d.monto > 0 ? d.monto : null
+  return {
+    paciente,
+    monto,
+    concepto: textoONulo(d.concepto, 80) ?? null,
+    atendido: textoONulo(d.atendido, 120) ?? null,
+  }
 }
