@@ -27,7 +27,7 @@ import {
 import { canSee } from '@/features/auth/permissions'
 import { useStaff } from '@/features/auth/session'
 import type { StaffContext } from '@/features/auth/session'
-import { LIMITE_DE_FILAS } from '@/features/merchant/financiamientos'
+import { ESTADO_DEL_FINANCIAMIENTO, LIMITE_DE_FILAS } from '@/features/merchant/financiamientos'
 import type {
   CuotaDeLaClinica,
   FilaDeFinanciamiento,
@@ -134,7 +134,7 @@ function Financiamientos({ staff }: { staff: StaffContext }) {
 
   const filas = lista.data?.rows ?? []
   const conComision = filas.some((f) => f.staffCommissionUsd !== null)
-  const conComprobante = filas.some((f) => f.receipt !== null)
+  const conComprobante = filas.some((f) => f.receipt !== null || f.status !== 'confirmed')
   const estadoCifras = estadoDeConsulta(resumen)
 
   return (
@@ -290,7 +290,7 @@ function Financiamientos({ staff }: { staff: StaffContext }) {
                   ? [
                       {
                         label: 'Comprobante',
-                        info: 'Si al paciente le llegó el correo con sus cuotas. «Rebotado» quiere decir que el correo no existe: avisa a Helios.',
+                        info: 'Si al paciente le llegó el correo con sus cuotas. «Rebotado» quiere decir que el correo no existe: avisa a Helios. Mientras la orden espera el Sí del paciente, aquí se ve cómo va.',
                       } as const,
                     ]
                   : []),
@@ -334,7 +334,11 @@ function Financiamientos({ staff }: { staff: StaffContext }) {
                   )}
                   {conComprobante && (
                     <Td>
-                      {f.receipt ? (
+                      {f.status !== 'confirmed' ? (
+                        <Badge tone={ESTADO_DEL_FINANCIAMIENTO[f.status].tone} icono>
+                          {ESTADO_DEL_FINANCIAMIENTO[f.status].texto}
+                        </Badge>
+                      ) : f.receipt ? (
                         <Badge tone={COMPROBANTE[f.receipt].tone} icono>
                           {COMPROBANTE[f.receipt].texto}
                         </Badge>

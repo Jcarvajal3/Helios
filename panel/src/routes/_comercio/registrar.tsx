@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { createFileRoute, useBlocker } from '@tanstack/react-router'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { RotateCcw } from 'lucide-react'
 
 import { PageAction } from '@/components/layouts/PageAction'
@@ -32,7 +32,11 @@ import {
   maximoParaFinanciar,
 } from '@/features/merchant/registro'
 import type { Elegibilidad, Financiamiento, PasoDelAlta } from '@/features/merchant/registro'
-import { consultarCedula, registrarFinanciamiento } from '@/features/merchant/registroApi'
+import {
+  consultarCedula,
+  fetchConfirmacionRequerida,
+  registrarFinanciamiento,
+} from '@/features/merchant/registroApi'
 
 export const Route = createFileRoute('/_comercio/registrar')({
   staticData: { title: 'Nuevo financiamiento' },
@@ -89,6 +93,14 @@ function Registrar({ staff }: { staff: StaffContext }) {
   const [concepto, setConcepto] = useState(CONCEPTO_SUGERIDO)
   const [beneficiario, setBeneficiario] = useState('')
   const [resultado, setResultado] = useState<Resultado | null>(null)
+
+  // ¿La orden espera el Sí del paciente por WhatsApp? Lo decide Helios; solo
+  // cambia lo que dice el paso de confirmar. Si no se sabe, el texto de antes.
+  const confirmacion = useQuery({
+    queryKey: ['confirmacion-requerida'],
+    queryFn: fetchConfirmacionRequerida,
+    staleTime: 5 * 60_000,
+  })
 
   // El día de hoy, para la edad. Se lee al montar y no en cada tecla.
   const [hoy] = useState(hoyCaracas)
@@ -317,6 +329,7 @@ function Registrar({ staff }: { staff: StaffContext }) {
           titular={titular}
           correoDestino={correoDestino}
           esNuevo={esNuevo}
+          conConfirmacion={confirmacion.data === true}
           confirmando={alta.isPending}
           errorAlta={alta.error}
           onConfirmar={confirmar}

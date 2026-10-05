@@ -65,6 +65,14 @@ export type FilaDeFinanciamiento = {
   /** La comisión de quien lo registró. Null si la base no la manda. */
   staffCommissionUsd: number | null
   cuotas: [CuotaDeLaClinica, CuotaDeLaClinica]
+  /**
+   * Con la confirmación del paciente la lista trae también las órdenes que
+   * esperan su Sí, las que rechazó y las que vencieron (contrato §1.5). Solo
+   * las confirmadas cuentan en las cifras.
+   */
+  status: EstadoDelFinanciamiento
+  /** Hasta cuándo espera la orden el Sí. Solo en pending y expired. */
+  expiresAt: string | null
 }
 
 export function leerFilaDeFinanciamiento(v: unknown): FilaDeFinanciamiento {
@@ -82,6 +90,8 @@ export function leerFilaDeFinanciamiento(v: unknown): FilaDeFinanciamiento {
     receipt: leerEstadoDelComprobante(r.receipt_status),
     staffCommissionUsd: numeroONulo(r.staff_commission_usd),
     cuotas: [cuota(r.cuota_1_due, r.cuota_1_run), cuota(r.cuota_2_due, r.cuota_2_run)],
+    status: ESTADOS.find((e) => e === r.status) ?? 'confirmed',
+    expiresAt: textoONulo(r.expires_at),
   }
 }
 
@@ -152,7 +162,13 @@ export function leerPorPersona(v: unknown): PorPersona {
 
 // ── La ficha de uno ───────────────────────────────────────────────────────
 
-export type EstadoDelFinanciamiento = 'pending' | 'confirmed' | 'voided' | 'reverted'
+export type EstadoDelFinanciamiento =
+  | 'pending'
+  | 'confirmed'
+  | 'declined'
+  | 'expired'
+  | 'voided'
+  | 'reverted'
 
 /**
  * Una de las dos mitades en que Helios le paga el financiamiento a la
@@ -204,7 +220,14 @@ export type DetalleDeFinanciamiento = {
   pagos: PagoALaClinica[]
 }
 
-const ESTADOS: readonly EstadoDelFinanciamiento[] = ['pending', 'confirmed', 'voided', 'reverted']
+const ESTADOS: readonly EstadoDelFinanciamiento[] = [
+  'pending',
+  'confirmed',
+  'declined',
+  'expired',
+  'voided',
+  'reverted',
+]
 const ESTADOS_DEL_PAGO = ['pending', 'paid', 'partial', 'cancelled'] as const
 
 function leerPago(f: Record<string, unknown>): PagoALaClinica | null {
@@ -282,7 +305,9 @@ export const ESTADO_DEL_FINANCIAMIENTO: Record<
   { texto: string; tone: 'success' | 'warning' | 'error' | 'neutral' }
 > = {
   confirmed: { texto: 'Confirmado', tone: 'success' },
-  pending: { texto: 'Sin confirmar', tone: 'warning' },
+  pending: { texto: 'Esperando al paciente', tone: 'warning' },
+  declined: { texto: 'Rechazado', tone: 'error' },
+  expired: { texto: 'Vencido', tone: 'neutral' },
   voided: { texto: 'Anulado', tone: 'error' },
   reverted: { texto: 'Revertido', tone: 'neutral' },
 }

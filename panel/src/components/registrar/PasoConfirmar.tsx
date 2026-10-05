@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, CircleCheck } from 'lucide-react'
+import { ArrowLeft, CircleCheck, Send } from 'lucide-react'
 
 import {
   Button,
@@ -40,6 +40,10 @@ const IR_A: Record<PasoDelAlta, string> = {
  *
  * Solo aquí se puede confirmar, y solo con la vista previa a la vista: sin
  * ella el paciente estaría aceptando unas cuotas que nadie le ha dicho.
+ *
+ * Con la confirmación del paciente (`conConfirmacion`, contrato §1.3.1) el
+ * botón ya no confirma: le envía al paciente un WhatsApp con este resumen, y
+ * el financiamiento existe cuando responde Sí.
  */
 export function PasoConfirmar({
   merchantId,
@@ -50,6 +54,7 @@ export function PasoConfirmar({
   titular,
   correoDestino,
   esNuevo,
+  conConfirmacion,
   confirmando,
   errorAlta,
   onConfirmar,
@@ -64,6 +69,8 @@ export function PasoConfirmar({
   /** El correo tecleado (nuevo) o el enmascarado que ya tiene Helios (conocido). */
   correoDestino: string | null
   esNuevo: boolean
+  /** La orden espera el Sí del paciente por WhatsApp. */
+  conConfirmacion: boolean
   confirmando: boolean
   errorAlta: unknown
   onConfirmar: () => void
@@ -189,8 +196,9 @@ export function PasoConfirmar({
           )}
 
           <p className="type-panel-body text-on-surface">
-            Léele al paciente las fechas y los montos de sus cuotas. Si está de acuerdo,
-            confirma.
+            {conConfirmacion
+              ? 'Léele al paciente las fechas y los montos de sus cuotas. Al enviar, le llega un WhatsApp con este resumen y tiene 2 horas para responder Sí. Sin su Sí no hay financiamiento.'
+              : 'Léele al paciente las fechas y los montos de sus cuotas. Si está de acuerdo, confirma.'}
           </p>
 
           <div className="flex flex-wrap items-center gap-3">
@@ -199,8 +207,18 @@ export function PasoConfirmar({
               botonRef={confirmarRef}
               disabled={!lista || confirmando}
             >
-              <CircleCheck size={16} aria-hidden />
-              {confirmando ? 'Registrando…' : 'Confirmar financiamiento'}
+              {conConfirmacion ? (
+                <Send size={16} aria-hidden />
+              ) : (
+                <CircleCheck size={16} aria-hidden />
+              )}
+              {confirmando
+                ? conConfirmacion
+                  ? 'Enviando…'
+                  : 'Registrando…'
+                : conConfirmacion
+                  ? 'Enviar al paciente'
+                  : 'Confirmar financiamiento'}
               <Tecla enBoton>Enter</Tecla>
             </BotonConFoco>
             <BotonConFoco variant="text" onClick={() => onIrA('monto')} disabled={confirmando}>

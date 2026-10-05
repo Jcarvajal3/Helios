@@ -43,7 +43,18 @@ export async function fetchVistaPrevia(params: {
 }
 
 /**
- * Paso 5: el alta. A partir de aquí la deuda existe (contrato §1.3).
+ * ¿Espera la orden el «Sí» del paciente por WhatsApp? (contrato §1.3.1). Lo
+ * decide Helios con un interruptor; cambia lo que dice el paso de confirmar.
+ */
+export async function fetchConfirmacionRequerida(): Promise<boolean> {
+  const { data, error } = await supabase.rpc('helios_patient_confirmation_required')
+  if (error) throw error
+  return data === true
+}
+
+/**
+ * Paso 5: el alta (contrato §1.3). Con la confirmación del paciente crea la
+ * orden PENDIENTE: la deuda existe cuando el paciente responde Sí.
  *
  * `patient` lleva solo `{ document }` si el paciente ya existe: la base no
  * sobrescribe nada de un paciente conocido, y mandarle unos datos que la
@@ -66,6 +77,30 @@ export async function registrarFinanciamiento(params: {
     p_concept: params.concept,
     p_beneficiary_name: params.beneficiaryName,
     p_idempotency_key: params.idempotencyKey,
+  })
+  if (error) throw error
+  return leerFinanciamiento(data)
+}
+
+/**
+ * Cómo está un financiamiento ahora (`helios_charge_for_staff`). La pantalla
+ * de espera lo vuelve a pedir cada pocos segundos mientras la orden espera.
+ */
+export async function fetchFinanciamiento(chargeId: string): Promise<Financiamiento> {
+  const { data, error } = await supabase.rpc('helios_charge_for_staff', {
+    p_charge_id: chargeId,
+  })
+  if (error) throw error
+  return leerFinanciamiento(data)
+}
+
+/**
+ * «Reenviar al paciente» (contrato §1.3.2): otra pregunta por WhatsApp. Una
+ * orden vencida se reabre con plazo nuevo y las fechas de hoy.
+ */
+export async function reenviarConfirmacion(chargeId: string): Promise<Financiamiento> {
+  const { data, error } = await supabase.rpc('staff_resend_confirmation', {
+    p_charge_id: chargeId,
   })
   if (error) throw error
   return leerFinanciamiento(data)

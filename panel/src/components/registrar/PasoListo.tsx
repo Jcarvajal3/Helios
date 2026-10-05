@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { useMutation } from '@tanstack/react-query'
-import { CircleCheck, FilePlus2, Mail } from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { CircleCheck, FilePlus2, Mail, MessageCircle, XCircle } from 'lucide-react'
 
 import { useToast } from '@/components/Toast'
 import {
@@ -15,21 +15,26 @@ import {
   claseDeBoton,
   formatUsd,
 } from '@/components/ui'
-import { COMPROBANTE, fraseDelComprobante } from '@/features/merchant/registro'
+import { COMPROBANTE, esperaAlPaciente, fraseDelComprobante } from '@/features/merchant/registro'
 import type { EstadoDelComprobante, Financiamiento } from '@/features/merchant/registro'
-import { reenviarComprobante } from '@/features/merchant/registroApi'
+import { fetchFinanciamiento, reenviarComprobante } from '@/features/merchant/registroApi'
 import { describeError } from '@/lib/supabase'
 
 import { BotonConFoco } from './Campo'
+import { ConfirmacionDelPaciente } from './ConfirmacionDelPaciente'
 import { DesgloseDelServicio, PlanDePagos } from './PlanDePagos'
 
 /**
  * PASO 5 · REGISTRADO.
  *
  * El número de orden, el paciente, sus cuotas y qué pasó con el comprobante
- * (plan §2.1, paso 6). El comprobante sale solo al confirmar; «Reenviar» es
+ * (plan §2.1, pasos 5-7). El comprobante sale solo al confirmar; «Reenviar» es
  * para cuando el paciente dice que no le llegó, y va al correo REGISTRADO:
  * la clínica no puede cambiarlo (lo corrige Helios).
+ *
+ * Con la confirmación del paciente, la orden llega aquí PENDIENTE: la pantalla
+ * espera su «Sí» (`ConfirmacionDelPaciente`) y vuelve a pedir el
+ * financiamiento cada pocos segundos hasta que acepta, rechaza o vence.
  *
  * El foco cae en «Registrar otro», que es lo siguiente que se hace en una
  * recepción con cola.
@@ -50,11 +55,37 @@ export function PasoListo({
   onRegistrarElQueQueria: () => void
 }) {
   const avisar = useToast()
+  const queryClient = useQueryClient()
   const otroRef = useRef<HTMLButtonElement>(null)
+
+  // Lo último que se sabe de la orden. Mientras espera al paciente se vuelve
+  // a pedir; en cuanto responde (o vence) se deja de preguntar.
+  const actual = useQuery({
+    queryKey: ['financiamiento', financiamiento.id],
+    queryFn: () => fetchFinanciamiento(financiamiento.id),
+    initialData: financiamiento,
+    refetchInterval: (q) => (q.state.data && esperaAlPaciente(q.state.data) ? 4_000 : false),
+    refetchIntervalInBackground: true,
+  })
+  const f = actual.data
+
   const [comprobante, setComprobante] = useState<{
     estado: EstadoDelComprobante | null
     correo: string | null
-  }>({ estado: financiamiento.receipt, correo: financiamiento.emailEnmascarado })
+  }>({ estado: f.receipt, correo: f.emailEnmascarado })
+
+  // Al pasar de esperar a confirmado (o rechazado, o vencido), lo que se sabe
+  // del comprobante es lo nuevo, y las listas del panel ya no están al día.
+  const statusAnterior = useRef(f.status)
+  useEffect(() => {
+    if (f.status === statusAnterior.current) return
+    statusAnterior.current = f.status
+    setComprobante({ estado: f.receipt, correo: f.emailEnmascarado })
+    if (f.status === 'confirmed') avisar('El paciente aceptó: financiamiento confirmado')
+    void queryClient.invalidateQueries({ queryKey: ['merchant-transactions'] })
+    void queryClient.invalidateQueries({ queryKey: ['merchant-transactions-summary'] })
+    void queryClient.invalidateQueries({ queryKey: ['comisiones'] })
+  }, [f.status, f.receipt, f.emailEnmascarado, avisar, queryClient])
 
   useEffect(() => {
     otroRef.current?.focus()
@@ -69,8 +100,21 @@ export function PasoListo({
     },
   })
 
-  const f = financiamiento
   const estado = comprobante.estado
+  const confirmado = f.status === 'confirmed'
+  const titulo = confirmado
+    ? `Financiamiento #${f.orderNumber} registrado`
+    : f.status === 'pending'
+      ? `Orden #${f.orderNumber} enviada al paciente`
+      : f.status === 'expired'
+        ? `Orden #${f.orderNumber} vencida`
+        : `Orden #${f.orderNumber} no confirmada`
+  const Icono = confirmado ? CircleCheck : f.status === 'pending' ? MessageCircle : XCircle
+  const colorDelIcono = confirmado
+    ? 'text-success'
+    : f.status === 'pending'
+      ? 'text-on-surface-variant'
+      : 'text-error'
 
   return (
     <div className="flex flex-col gap-5">
@@ -91,10 +135,10 @@ export function PasoListo({
 
       <Card variant="hero" className="flex flex-col gap-5">
         <div className="flex items-start gap-3">
-          <CircleCheck size={28} aria-hidden className="mt-1 shrink-0 text-success" />
+          <Icono size={28} aria-hidden className={`mt-1 shrink-0 ${colorDelIcono}`} />
           <div className="min-w-0">
             <p role="status" className="type-panel-page text-on-surface">
-              Financiamiento #{f.orderNumber} registrado
+              {titulo}
             </p>
             <p className="mt-1 type-panel-body text-on-surface-variant">
               {f.patientName ?? 'Paciente'}
@@ -126,25 +170,32 @@ export function PasoListo({
           concepto={f.concept}
         />
 
-        <div className="flex flex-wrap items-center gap-3 rounded-panel-card bg-panel-raised p-4">
-          <Mail size={20} aria-hidden className="shrink-0 text-on-surface-variant" />
-          <p className="min-w-0 flex-1 basis-60 type-panel-body text-on-surface">
-            {fraseDelComprobante(estado, comprobante.correo)}
-          </p>
-          {estado && (
-            <Badge tone={COMPROBANTE[estado].tone} icono>
-              {COMPROBANTE[estado].texto}
-            </Badge>
-          )}
-          <Button
-            size="sm"
-            variant="tonal"
-            disabled={reenvio.isPending || estado === 'sin_configurar'}
-            onClick={() => reenvio.mutate()}
-          >
-            {reenvio.isPending ? 'Reenviando…' : 'Reenviar comprobante'}
-          </Button>
-        </div>
+        <ConfirmacionDelPaciente
+          financiamiento={f}
+          onCambio={(nuevo) => queryClient.setQueryData(['financiamiento', f.id], nuevo)}
+        />
+
+        {confirmado && (
+          <div className="flex flex-wrap items-center gap-3 rounded-panel-card bg-panel-raised p-4">
+            <Mail size={20} aria-hidden className="shrink-0 text-on-surface-variant" />
+            <p className="min-w-0 flex-1 basis-60 type-panel-body text-on-surface">
+              {fraseDelComprobante(estado, comprobante.correo)}
+            </p>
+            {estado && (
+              <Badge tone={COMPROBANTE[estado].tone} icono>
+                {COMPROBANTE[estado].texto}
+              </Badge>
+            )}
+            <Button
+              size="sm"
+              variant="tonal"
+              disabled={reenvio.isPending || estado === 'sin_configurar'}
+              onClick={() => reenvio.mutate()}
+            >
+              {reenvio.isPending ? 'Reenviando…' : 'Reenviar comprobante'}
+            </Button>
+          </div>
+        )}
 
         {reenvio.isError && (
           <ErrorBox title="No se pudo reenviar el comprobante" detail={describeError(reenvio.error)} />

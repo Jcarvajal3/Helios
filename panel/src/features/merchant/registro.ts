@@ -235,6 +235,7 @@ export function diaDeLaSemana(fecha: string): string {
  *   entregado       llegó al buzón
  *   rebotado        el correo no existe o no acepta: no llegó
  *   sin_configurar  Helios todavía no tiene el envío de correos listo
+ *   sin_enviar      la orden espera el «Sí» del paciente: sale al aceptar
  */
 export type EstadoDelComprobante =
   | 'pendiente'
@@ -242,6 +243,7 @@ export type EstadoDelComprobante =
   | 'entregado'
   | 'rebotado'
   | 'sin_configurar'
+  | 'sin_enviar'
 
 const ESTADOS_DEL_COMPROBANTE: readonly EstadoDelComprobante[] = [
   'pendiente',
@@ -249,6 +251,7 @@ const ESTADOS_DEL_COMPROBANTE: readonly EstadoDelComprobante[] = [
   'entregado',
   'rebotado',
   'sin_configurar',
+  'sin_enviar',
 ]
 
 /** Un estado conocido, o `null`: un estado nuevo no se pinta como otro. */
@@ -266,6 +269,7 @@ export const COMPROBANTE: Record<
   entregado: { texto: 'Entregado', tone: 'success' },
   rebotado: { texto: 'Rebotado', tone: 'error' },
   sin_configurar: { texto: 'Sin configurar', tone: 'warning' },
+  sin_enviar: { texto: 'Sin enviar', tone: 'neutral' },
 }
 
 /**
@@ -285,16 +289,135 @@ export function fraseDelComprobante(
       return `El correo${correo ? ` ${correo}` : ''} rebotó: el comprobante no llegó. Avisa a Helios para corregirlo.`
     case 'sin_configurar':
       return 'El envío de correos de Helios todavía no está configurado: el comprobante saldrá en cuanto lo esté.'
+    case 'sin_enviar':
+      return `El comprobante sale${a} en cuanto el paciente acepte.`
     case 'pendiente':
     case null:
       return `Comprobante en camino${a}. Llega en uno o dos minutos.`
   }
 }
 
+// ── 4b. La confirmación del paciente (contrato §1.3.1) ─────────────────────
+
+/**
+ * Cómo va la pregunta al paciente por WhatsApp.
+ *
+ *   por_enviar   en la cola de WhatsApp; sale en segundos
+ *   enviada      WhatsApp la aceptó
+ *   entregada    llegó a su teléfono
+ *   leida        la abrió
+ *   fallida      no se le pudo escribir (teléfono sin WhatsApp, por ejemplo)
+ *   aceptada     respondió Sí: el financiamiento está confirmado
+ *   rechazada    respondió No (o ya no se le podía financiar)
+ *   vencida      no respondió a tiempo
+ */
+export type EstadoDeLaConfirmacion =
+  | 'por_enviar'
+  | 'enviada'
+  | 'entregada'
+  | 'leida'
+  | 'fallida'
+  | 'aceptada'
+  | 'rechazada'
+  | 'vencida'
+
+const ESTADOS_DE_LA_CONFIRMACION: readonly EstadoDeLaConfirmacion[] = [
+  'por_enviar',
+  'enviada',
+  'entregada',
+  'leida',
+  'fallida',
+  'aceptada',
+  'rechazada',
+  'vencida',
+]
+
+/** Cómo se ve cada estado en una insignia. */
+export const CONFIRMACION: Record<
+  EstadoDeLaConfirmacion,
+  { texto: string; tone: 'neutral' | 'warning' | 'error' | 'success' }
+> = {
+  por_enviar: { texto: 'Enviando', tone: 'neutral' },
+  enviada: { texto: 'Enviada', tone: 'neutral' },
+  entregada: { texto: 'Entregada', tone: 'neutral' },
+  leida: { texto: 'Leída', tone: 'neutral' },
+  fallida: { texto: 'No se pudo enviar', tone: 'error' },
+  aceptada: { texto: 'Aceptó', tone: 'success' },
+  rechazada: { texto: 'Rechazada', tone: 'error' },
+  vencida: { texto: 'Vencida', tone: 'warning' },
+}
+
+export type Confirmacion = {
+  status: EstadoDeLaConfirmacion | null
+  /** El teléfono REGISTRADO al que se le preguntó, enmascarado. */
+  telefonoEnmascarado: string | null
+  sentAt: string | null
+  answeredAt: string | null
+  resendsToday: number
+}
+
+export function leerConfirmacion(v: unknown): Confirmacion | null {
+  const r = filaONula(v)
+  if (!r) return null
+  return {
+    status: ESTADOS_DE_LA_CONFIRMACION.find((e) => e === r.status) ?? null,
+    telefonoEnmascarado: textoONulo(r.telefono_enmascarado),
+    sentAt: textoONulo(r.sent_at),
+    answeredAt: textoONulo(r.answered_at),
+    resendsToday: numeroONulo(r.resends_today) ?? 0,
+  }
+}
+
+/** La orden todavía espera la respuesta del paciente. */
+export function esperaAlPaciente(f: Pick<Financiamiento, 'status'>): boolean {
+  return f.status === 'pending'
+}
+
+/** Minutos enteros que le quedan a la orden (0 si ya venció o no tiene plazo). */
+export function minutosRestantes(expiresAt: string | null, ahora: number): number {
+  if (!expiresAt) return 0
+  const fin = Date.parse(expiresAt)
+  if (Number.isNaN(fin)) return 0
+  return Math.max(0, Math.ceil((fin - ahora) / 60_000))
+}
+
+/** «1 h 25 min», «40 min», «menos de 1 min». */
+export function textoDelPlazo(minutos: number): string {
+  if (minutos <= 0) return 'menos de 1 min'
+  const h = Math.floor(minutos / 60)
+  const m = minutos % 60
+  if (h === 0) return `${m} min`
+  return m === 0 ? `${h} h` : `${h} h ${m} min`
+}
+
+/** La frase de la pantalla de espera, según cómo va la pregunta. */
+export function fraseDeLaEspera(c: Confirmacion | null): string {
+  const a = c?.telefonoEnmascarado ? ` al ${c.telefonoEnmascarado}` : ' al paciente'
+  switch (c?.status ?? null) {
+    case 'fallida':
+      return `No pudimos escribirle por WhatsApp${a}. Revisa con Helios que el teléfono tenga WhatsApp y reenvía.`
+    case 'leida':
+      return 'El paciente ya leyó el mensaje. Falta que responda Sí.'
+    case 'entregada':
+    case 'enviada':
+      return `Le enviamos un WhatsApp${a} con el resumen. Tiene que responder Sí para aceptar.`
+    default:
+      return `Enviando un WhatsApp${a} con el resumen. Tiene que responder Sí para aceptar.`
+  }
+}
+
 export type Financiamiento = {
   id: string
   orderNumber: number
+  /** pending (espera al paciente) · confirmed · declined · expired · voided · reverted */
   status: string
+  /** Hasta cuándo espera la orden el «Sí». Solo en pending y expired. */
+  expiresAt: string | null
+  channel: 'panel' | 'whatsapp'
+  confirmation: Confirmacion | null
+  declineReason: 'paciente' | 'no_disponible' | null
+  /** El texto que se enseña si se rechazó (el neutro, si no se le podía financiar). */
+  declineMessage: string | null
   createdAt: string | null
   businessDate: string | null
   /** La consulta: lo que se le paga a la clínica. Sin el fee. */
@@ -330,6 +453,14 @@ export function leerFinanciamiento(v: unknown): Financiamiento {
     id,
     orderNumber: numero(r.order_number),
     status: texto(r.status, 'confirmed'),
+    expiresAt: textoONulo(r.expires_at),
+    channel: r.channel === 'whatsapp' ? 'whatsapp' : 'panel',
+    confirmation: leerConfirmacion(r.confirmation),
+    declineReason:
+      r.decline_reason === 'paciente' || r.decline_reason === 'no_disponible'
+        ? r.decline_reason
+        : null,
+    declineMessage: textoONulo(r.decline_message),
     createdAt: textoONulo(r.created_at),
     businessDate: textoONulo(r.business_date),
     merchantSaleUsd: base,

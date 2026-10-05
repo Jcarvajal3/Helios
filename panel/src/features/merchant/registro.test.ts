@@ -9,7 +9,10 @@ import {
   coincideConLoPedido,
   diaDeLaSemana,
   esRechazoDeLaBase,
+  esperaAlPaciente,
+  fraseDeLaEspera,
   fraseDelComprobante,
+  leerConfirmacion,
   leerElegibilidad,
   leerEstadoDelComprobante,
   leerFinanciamiento,
@@ -17,10 +20,12 @@ import {
   leerReenvio,
   leerVistaPrevia,
   maximoParaFinanciar,
+  minutosRestantes,
   pasoDelError,
   porcentajeDelServicio,
   reglaDelAtraso,
   rotuloDelServicio,
+  textoDelPlazo,
 } from './registro'
 
 let fallos = 0
@@ -255,6 +260,112 @@ const reventon: Almacen = {
   removeItem: () => {},
 }
 comprueba(claveDelAlta(reventon, t0, generar).length > 0, 'un almacén que lanza tampoco revienta')
+
+// ── La confirmación del paciente (contrato §1.3.1) ─────────────────────────
+console.log('\nLa confirmación del paciente')
+
+const pendiente = leerFinanciamiento({
+  id: 'c-1',
+  order_number: 1042,
+  status: 'pending',
+  channel: 'whatsapp',
+  expires_at: '2026-10-05T16:40:00-04:00',
+  merchant_sale_usd: 100,
+  breakdown: { base_usd: 100, consumer_fee_pct: 20, consumer_fee_usd: 20, consumer_fee_vat_usd: 3.2 },
+  receipt: { status: 'sin_enviar', email_enmascarado: 'j***@gmail.com' },
+  confirmation: {
+    status: 'entregada',
+    telefono_enmascarado: '0414-***-**67',
+    sent_at: '2026-10-05T14:40:05-04:00',
+    answered_at: null,
+    resends_today: 1,
+  },
+  installments: [
+    { sequence: 1, due_date: '2026-10-12', amount_usd: 61.6 },
+    { sequence: 2, due_date: '2026-10-19', amount_usd: 61.6 },
+  ],
+})
+comprueba(
+  pendiente.status === 'pending' && esperaAlPaciente(pendiente) && pendiente.channel === 'whatsapp',
+  'una orden pendiente espera al paciente',
+)
+comprueba(pendiente.receipt === 'sin_enviar', 'su comprobante está sin enviar')
+comprueba(
+  pendiente.confirmation?.status === 'entregada' &&
+    pendiente.confirmation.telefonoEnmascarado === '0414-***-**67' &&
+    pendiente.confirmation.resendsToday === 1,
+  'lee la confirmación',
+)
+comprueba(pendiente.cuotas.length === 2, 'trae el plan de cuotas aunque no haya deuda')
+comprueba(
+  fraseDelComprobante('sin_enviar', 'j***@gmail.com') ===
+    'El comprobante sale a j***@gmail.com en cuanto el paciente acepte.',
+  'la frase del comprobante sin enviar',
+)
+
+const sinConfirmacion = leerFinanciamiento({
+  id: 'c-2',
+  order_number: 7,
+  status: 'confirmed',
+  merchant_sale_usd: 10,
+})
+comprueba(
+  sinConfirmacion.confirmation === null &&
+    sinConfirmacion.expiresAt === null &&
+    sinConfirmacion.channel === 'panel' &&
+    sinConfirmacion.declineReason === null,
+  'una base sin la confirmación no rompe nada',
+)
+comprueba(!esperaAlPaciente(sinConfirmacion), 'confirmado no espera')
+
+const rechazado = leerFinanciamiento({
+  id: 'c-3',
+  order_number: 8,
+  status: 'declined',
+  merchant_sale_usd: 10,
+  decline_reason: 'no_disponible',
+  decline_message: 'No podemos financiar a esta persona.',
+})
+comprueba(
+  rechazado.declineReason === 'no_disponible' &&
+    rechazado.declineMessage === 'No podemos financiar a esta persona.',
+  'lee el motivo y el texto del rechazo',
+)
+comprueba(
+  leerFinanciamiento({ id: 'c-4', order_number: 9, merchant_sale_usd: 1, decline_reason: 'otro' })
+    .declineReason === null,
+  'un motivo desconocido no se inventa',
+)
+
+comprueba(leerConfirmacion(null) === null, 'sin confirmación, null')
+comprueba(
+  leerConfirmacion({ status: 'estado_nuevo' })?.status === null,
+  'un estado nuevo no se pinta como otro',
+)
+
+const ahora = Date.parse('2026-10-05T15:00:00-04:00')
+comprueba(minutosRestantes('2026-10-05T16:40:00-04:00', ahora) === 100, '100 minutos restantes')
+comprueba(minutosRestantes('2026-10-05T15:00:30-04:00', ahora) === 1, 'medio minuto redondea a 1')
+comprueba(minutosRestantes('2026-10-05T14:00:00-04:00', ahora) === 0, 'vencida: 0')
+comprueba(
+  minutosRestantes(null, ahora) === 0 && minutosRestantes('no-es-fecha', ahora) === 0,
+  'sin plazo: 0',
+)
+comprueba(textoDelPlazo(100) === '1 h 40 min', 'plazo: 1 h 40 min', textoDelPlazo(100))
+comprueba(textoDelPlazo(120) === '2 h', 'plazo: 2 h', textoDelPlazo(120))
+comprueba(textoDelPlazo(5) === '5 min' && textoDelPlazo(0) === 'menos de 1 min', 'plazo corto')
+
+comprueba(
+  fraseDeLaEspera(pendiente.confirmation).startsWith('Le enviamos un WhatsApp al 0414-***-**67'),
+  'la frase de la espera nombra el teléfono',
+  fraseDeLaEspera(pendiente.confirmation),
+)
+comprueba(
+  pendiente.confirmation !== null &&
+    fraseDeLaEspera({ ...pendiente.confirmation, status: 'fallida' }).startsWith('No pudimos escribirle'),
+  'si falló, lo dice',
+)
+comprueba(fraseDeLaEspera(null).startsWith('Enviando un WhatsApp al paciente'), 'sin datos, enviando')
 
 console.log(fallos === 0 ? '\nTODO BIEN' : `\n${fallos} FALLOS`)
 process.exit(fallos === 0 ? 0 : 1)

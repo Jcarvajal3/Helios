@@ -1,8 +1,10 @@
+import { useEffect } from 'react'
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Mail } from 'lucide-react'
 
 import { usePageTitle } from '@/components/layouts/PageAction'
+import { ConfirmacionDelPaciente } from '@/components/registrar/ConfirmacionDelPaciente'
 import { DesgloseDelServicio } from '@/components/registrar/PlanDePagos'
 import { useToast } from '@/components/Toast'
 import {
@@ -26,9 +28,9 @@ import { useStaff } from '@/features/auth/session'
 import { ESTADO_DEL_FINANCIAMIENTO, ESTADO_DEL_PAGO } from '@/features/merchant/financiamientos'
 import type { DetalleDeFinanciamiento } from '@/features/merchant/financiamientos'
 import { fetchDetalle } from '@/features/merchant/financiamientosApi'
-import { COMPROBANTE, diaDeLaSemana } from '@/features/merchant/registro'
+import { COMPROBANTE, diaDeLaSemana, esperaAlPaciente } from '@/features/merchant/registro'
 import type { EstadoDelComprobante } from '@/features/merchant/registro'
-import { reenviarComprobante } from '@/features/merchant/registroApi'
+import { fetchFinanciamiento, reenviarComprobante } from '@/features/merchant/registroApi'
 import { describeError } from '@/lib/supabase'
 
 /**
@@ -85,11 +87,54 @@ function Ficha({ chargeId }: { chargeId: string }) {
       {query.data && (
         <div className="flex flex-col gap-6">
           <Resumen f={query.data} />
-          <Comprobante f={query.data} />
+          {query.data.status === 'confirmed' || query.data.status === 'reverted' ? (
+            <Comprobante f={query.data} />
+          ) : (
+            <RespuestaDelPaciente chargeId={query.data.id} />
+          )}
           {query.data.pagos.length > 0 && <CuandoTePagamos f={query.data} />}
         </div>
       )}
     </>
+  )
+}
+
+// ── 0. La respuesta del paciente (mientras no es un financiamiento) ───────
+
+/**
+ * Una orden que espera el Sí del paciente, que rechazó o que venció (contrato
+ * §1.3.1): cómo va la pregunta por WhatsApp y «Reenviar al paciente». Se
+ * vuelve a pedir cada pocos segundos mientras espera; cuando cambia, la ficha
+ * entera se recarga (si aceptó, ya es un financiamiento con su comprobante).
+ */
+function RespuestaDelPaciente({ chargeId }: { chargeId: string }) {
+  const queryClient = useQueryClient()
+  const orden = useQuery({
+    queryKey: ['financiamiento', chargeId],
+    queryFn: () => fetchFinanciamiento(chargeId),
+    refetchInterval: (q) => (q.state.data && esperaAlPaciente(q.state.data) ? 4_000 : false),
+  })
+
+  const status = orden.data?.status
+  useEffect(() => {
+    if (status && status !== 'pending') {
+      void queryClient.invalidateQueries({ queryKey: ['merchant-order', chargeId] })
+    }
+  }, [status, chargeId, queryClient])
+
+  if (orden.isError) {
+    return <ErrorBox title="No pudimos ver la respuesta del paciente" detail={describeError(orden.error)} />
+  }
+  if (!orden.data) return <SkeletonList rows={1} />
+
+  return (
+    <section className="flex flex-col gap-3">
+      <SectionTitle>La respuesta del paciente</SectionTitle>
+      <ConfirmacionDelPaciente
+        financiamiento={orden.data}
+        onCambio={(nuevo) => queryClient.setQueryData(['financiamiento', chargeId], nuevo)}
+      />
+    </section>
   )
 }
 
@@ -178,6 +223,7 @@ const FRASE_DE_LA_FICHA: Record<EstadoDelComprobante | 'desconocido', string> = 
   rebotado: 'El comprobante no llegó: el correo rebotó.',
   sin_configurar:
     'El envío de correos de Helios todavía no está configurado: el comprobante saldrá en cuanto lo esté.',
+  sin_enviar: 'El comprobante sale en cuanto el paciente acepte.',
   desconocido: 'Sin datos del comprobante.',
 }
 
