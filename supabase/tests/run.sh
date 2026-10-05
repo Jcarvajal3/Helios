@@ -60,6 +60,7 @@ SUITES=(
   email_dispatch_smoke
   whatsapp_dispatch_smoke
   whatsapp_webhook_smoke
+  bot_smoke
   reminders_smoke
   register_payment_smoke
   risk_alerts_smoke

@@ -825,12 +825,14 @@ flowchart LR
 - **v1:** nuevo financiamiento, mis financiamientos (los últimos 10 con su estado), reenviar al paciente, reenviar comprobante, ayuda.
 - **Después:** "¿cuánto me pagan el lunes?" (`merchant_settlement_outlook`), comisiones y notas de voz.
 
-**Claude.** Dos usos, nada más:
-1. **Intención** de un texto libre fuera de un paso guiado (nuevo financiamiento, mis financiamientos, ayuda, otra cosa).
-2. **Extracción** de los datos del paciente nuevo, con salida estructurada al esquema de `p_patient` más monto, concepto y paciente atendido.
-   - Reglas: **no inventar ni corregir** (cédulas, nombres, teléfonos y correos tal cual), fechas en `dd/mm/aaaa`, estado de una lista cerrada.
+**Los datos del paciente nuevo** (implementado así el 2026-10-05):
+1. **El formulario primero, sin IA.** El bot ofrece un formulario para copiar (una línea «Etiqueta: valor» por dato). Si el mensaje lo usa (tres etiquetas o más, o una corrección suelta como «Correo: …»), se lee con código (`datos.ts`), sin margen de error.
+2. **Claude para el texto libre.** Si el médico escribe como le salga, Claude (`claude-opus-5-5`, esfuerzo bajo, con alternativa por rechazo) extrae al esquema de `p_patient` más monto, concepto y paciente atendido con una herramienta estricta (`claude.ts`).
+   - Reglas: **no inventar ni corregir** (cédulas, nombres, teléfonos y correos tal cual), fechas día/mes/año, el sexo solo si el mensaje lo dice.
    - **Qué falta lo calcula el código**, no el modelo. Las RPC revalidan todo.
    - A Claude solo llegan el mensaje del médico y el esquema: nunca el PIN ni datos de otros pacientes.
+   - Sin la clave de Anthropic, el bot pide el formulario.
+- **La intención no la decide un modelo:** botones (Nuevo financiamiento, Mis financiamientos, Ayuda; Confirmar, Corregir, Cancelar) y unas pocas palabras clave («menú», «cancelar», «reenviar 1042», una cédula). Es más predecible para médicos mayores.
 
 ### 15.5 La plantilla para Meta
 

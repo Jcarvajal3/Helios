@@ -718,8 +718,8 @@ Implementado en 20261002000700 (cimientos; el despacho es de H6/H7):
 ### 4.1 Cambios del 2026-10-05
 
 Implementado en 20261005000300 (canal, plantillas, bienvenida) y
-20261005000400 (despacho). Los avisos al médico y `recipient_staff_id` van con
-el bot (pendientes).
+20261005000400 (despacho) y 20261005000600 (bot: avisos al médico y
+`recipient_staff_id`).
 
 - `notification_templates.channels` admite `whatsapp` (automático por la
   API). Columnas nuevas: `wa_template_name` (nombre aprobado en Meta; null =
@@ -752,20 +752,21 @@ el bot (pendientes).
 
   Cuando pagues, envíanos el comprobante por este chat. También te mandamos todos los detalles a tu correo.
   ```
-- Avisos al médico que registró por WhatsApp (canal `whatsapp`, **solo texto
-  libre**: si su ventana de 24 h está cerrada se omiten y el resultado queda en
-  el panel): `orden_aceptada`, `orden_rechazada`, `orden_vencida`. Variables:
-  `{paciente}` (nombre de pila), `{orden}`, `{hora}`.
+- Avisos al médico que registró por WhatsApp (canal `whatsapp`, plantilla
+  interna `bot_respuesta` = `{texto}`, **solo texto libre**: si su ventana de 24 h
+  está cerrada se omiten y el resultado queda en el panel): aceptada, rechazada
+  y vencida (§5.4).
 - En WhatsApp, `outbound_messages` usa las columnas del correo: `provider_id`
   = el id del mensaje (wamid), `last_event` = `sent` | `delivered` | `read` |
   `failed` y `last_error`. Un mensaje que la API no puede mandar pero una
   persona sí pasa a `channel = 'whatsapp_manual'` («Avisos de hoy») con el
-  motivo en `last_error`. Con el bot ganará `recipient_staff_id` (el
-  destinatario es una persona del personal en lugar de un paciente).
+  motivo en `last_error`. `recipient_staff_id` (y `profile_id` null) cuando el
+  destinatario es una persona del personal en lugar de un paciente; las
+  lecturas de «Avisos de hoy» no los muestran.
 
 ---
 
-## 5. WhatsApp: webhook y bot (2026-10-05, pendiente de implementar)
+## 5. WhatsApp: webhook y bot (2026-10-05)
 
 Todas son **solo para `service_role`** (`revoke … from public, anon,
 authenticated`): las llama la Edge Function `whatsapp-webhook` o `pg_cron`,
@@ -828,10 +829,14 @@ Implementados en 20261005000300 (vencer) y 20261005000400 (despacho, con
 
 ### 5.4 Del bot
 
+Implementado en 20261005000600; la conversación vive en
+`supabase/functions/whatsapp-webhook/bot.ts`.
+
 Cada `bot_*` resuelve `p_phone` en `staff_whatsapp_numbers` (activo y con
 la persona aún activa en esa clínica; si no, `42501` "Este número no está
-registrado en Helios"). Después fija `request.jwt.claims` en la transacción
-(`sub` = la persona, `role` = `authenticated`) y llama a la RPC del panel, así
+registrado en Helios"). Después fija `request.jwt.claims` y
+`request.jwt.claim.sub` en la transacción (`sub` = la persona, `role` =
+`authenticated`) y `helios.canal` = `whatsapp`, y llama a la RPC del panel, así
 que **devuelven y fallan exactamente igual que en el panel** (mismos errcode y
 textos). Bitácora con `canal = whatsapp`.
 
@@ -840,10 +845,20 @@ textos). Bitácora con `canal = whatsapp`.
 | `bot_set_pin(p_phone, p_pin text) → jsonb` | — | Solo si no tiene PIN. 4 dígitos, no triviales (`22023` "Elige un PIN menos obvio") |
 | `bot_patient_eligibility(p_phone, p_document)` | `helios_patient_eligibility` | `p_merchant_id` sale del número |
 | `bot_preview_charge(p_phone, p_document, p_amount_usd)` | `preview_patient_charge` | |
-| `bot_create_charge(p_phone, p_pin, p_patient jsonb, p_amount_usd, p_concept, p_beneficiary_name, p_idempotency_key)` | `create_patient_charge` | Verifica el PIN primero: `42501` "PIN incorrecto. Te quedan N intentos" o "Tu PIN está bloqueado. Escribe a Helios". Sede: la del `cajero` o la principal del `gerente`. `charges.channel = 'whatsapp'` |
+| `bot_create_charge(p_phone, p_pin, p_patient jsonb, p_amount_usd, p_concept, p_beneficiary_name, p_idempotency_key)` | `create_patient_charge` | Verifica el PIN primero y **no lanza** si está mal (un error desharía el intento contado): devuelve `{ok: false, error: "pin", message, attempts_left, locked}`. Al 5.º fallo se bloquea. Con el PIN bien devuelve `{ok: true, charge}`; los errores de negocio lanzan como en el panel. Sede: la del `cajero` o la principal del `gerente`. `charges.channel = 'whatsapp'` |
 | `bot_recent_charges(p_phone, p_limit int default 10)` | `merchant_transactions` | Las de los últimos 30 días con su `status`; el `cajero` ve las suyas |
 | `bot_resend_confirmation(p_phone, p_charge_id)` | `staff_resend_confirmation` | |
 | `bot_resend_receipt(p_phone, p_charge_id)` | `staff_resend_receipt` | |
+| `bot_charge_by_order(p_phone, p_order_number bigint)` | `helios_charge_for_staff` | La orden de esa clínica por su número (para «reenviar 1042»); si no, `P0002` |
+| `bot_session(p_phone) → jsonb` / `bot_session_save(p_phone, p_state, p_data)` | — | El paso de la conversación; `{state, data, nueva}`. Pasados `bot_session_minutes` (30) sin actividad, `nueva` |
+
+Las respuestas del bot y los avisos al médico salen con
+`helios_whatsapp_text(p_to, p_text, p_staff_user_id, p_buttons jsonb default '[]') → uuid`
+(hasta 3 botones `{id, title}`; solo con la ventana de 24 h abierta). El
+médico que registró por WhatsApp recibe `✅ … aceptó`, `❌ … no aceptó` o
+`⌛ … venció` (`helios_notify_staff_of_charge`); con la ventana cerrada, el
+resultado queda en el panel. El webhook llama a
+`helios_dispatch_whatsapp_batch` al terminar cada evento para que salga ya.
 
 `p_idempotency_key` del bot = `wa:<id del mensaje que llevó el PIN>`: si
 360dialog reintenta el webhook, no se crea otra orden.

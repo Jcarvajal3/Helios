@@ -141,5 +141,13 @@ Deno.serve(async (req) => {
     return new Response('Error', { status: 500 })
   }
 
+  // Lo que se encoló (las respuestas del bot, la bienvenida tras un «Sí»)
+  // sale ya, sin esperar al cron de 10 s. Si falla, el cron lo manda.
+  try {
+    await rpc('helios_dispatch_whatsapp_batch', { p_limit: 10 })
+  } catch (err) {
+    console.error('whatsapp-webhook despacho', err)
+  }
+
   return new Response('ok')
 })
