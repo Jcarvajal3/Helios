@@ -482,7 +482,7 @@ begin
     raise exception 'La misma dedupe_key no debía encolar dos veces';
   end if;
   select * into v_row from public.outbound_messages where id = v_msg;
-  if v_row.recipient <> '+584141234567' or v_row.rendered_text not like 'Hola, José. Te escribimos de Helios.%' then
+  if v_row.recipient <> '+584141234567' or v_row.rendered_text not like '¡Listo, José! Tu financiamiento #1 en Sol está confirmado.%' then
     raise exception 'WhatsApp mal renderizado: % / %', v_row.recipient, v_row.rendered_text;
   end if;
 

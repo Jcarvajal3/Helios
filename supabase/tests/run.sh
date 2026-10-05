@@ -48,6 +48,7 @@ SUITES=(
   fx_rate_smoke
   helios_cimientos_smoke
   patient_charge_smoke
+  patient_confirmation_smoke
   eligibility_smoke
   staff_commission_smoke
   metricas_cimientos

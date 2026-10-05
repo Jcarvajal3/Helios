@@ -201,7 +201,23 @@ Errores típicos (`22023` salvo que se indique):
 
 Idempotente: la misma `p_idempotency_key` devuelve el mismo financiamiento.
 
-#### 1.3.1 Con la confirmación del paciente (2026-10-05, pendiente de implementar)
+#### 1.3.1 Con la confirmación del paciente (2026-10-05)
+
+Implementado en 20261005000200 (los estados `declined` y `expired`) y
+20261005000300. Precisiones de la implementación:
+
+- La reserva de cupo vive en `helios_credit_used_usd`, que ahora suma
+  `helios_credit_reserved_usd` (la consulta de las órdenes `pending` con
+  `expires_at > now()`). Así la elegibilidad, la vista previa, el alta,
+  `available_usd` y `helios_assign_debt` la respetan sin cambios.
+- La respuesta añade también `channel` (`panel` | `whatsapp`),
+  `decline_reason` (`paciente` | `no_disponible` | null) y `decline_message`
+  (el texto para mostrar: «El paciente rechazó el financiamiento» o el texto
+  neutro de «no disponible»).
+- `charges.channel` sale de la variable de sesión `helios.canal` (la pone el
+  bot); por defecto `panel`.
+- Lo que creaba la deuda vive ahora en `helios_finalize_charge` (interna) y lo
+  usan los dos caminos: el interruptor en 0 y el «Sí».
 
 Con `patient_confirmation_required = 1` (el parámetro arranca en 0 y entonces
 todo sigue como arriba). La firma **no cambia**. Lo que cambia:
