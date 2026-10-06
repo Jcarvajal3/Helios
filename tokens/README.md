@@ -32,8 +32,8 @@ Sale del logo (`brand/helios-logo.svg`):
 
 | Rol | Claro | Oscuro | De dónde |
 |---|---|---|---|
-| `primary` | `#0040B8` | `#8FC8FF` | la palabra «Helios» / el cielo del sol |
-| `primaryBright` | `#015CF1` | `#C0E3FF` | el azul del sol |
+| `primary` | `#0040B8` | `#8FC8FF` | la acción: entre la palabra (`#002770`) y el rayo más oscuro |
+| `primaryBright` | `#015CF1` | `#C0E3FF` | el rayo más oscuro (`#045EF3`) |
 | `secondary` | `#0057D9` | `#A5D8FE` | entre los dos azules |
 | lienzo (`surfaceContainerLowest`) | `#F3F6FB` | `#0A101C` | |
 | tarjeta (`surfaceContainerLow`) | `#FFFFFF` | `#111A2B` | |

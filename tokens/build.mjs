@@ -239,9 +239,6 @@ export const colorRoles = ${ts(LIGHT)} as const;
 /** Los mismos roles en el tema oscuro. */
 export const colorRolesDark = ${ts(DARK)} as const;
 
-/** Degradados del sol del logo, listos para CSS o SVG. */
-export const gradients = ${ts(T.color.gradient)} as const;
-
 // ─── Tipografía ─────────────────────────────────────────────────────────────
 
 export const fontFamilies = ${ts({

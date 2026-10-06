@@ -5,6 +5,7 @@ dist/
 .vercel/
 .nitro/
 .tanstack/
+.vite/
 *.tsbuildinfo
 
 # Entornos (nunca se versionan; hay .env.example)

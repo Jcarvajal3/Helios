@@ -53,13 +53,15 @@
   --color-on-success-container: #0C4420;
   --color-scrim: #0A1020;
   --color-shadow: #0A1020;
-  --color-logo-wordmark: #0040B8;
+  --color-logo-wordmark: #002770;
 
-  --color-brand-wordmark: #0040B8;
-  --color-brand-blue: #015CF1;
-  --color-brand-blue-bright: #0B6FFB;
-  --color-brand-sky: #A5D8FE;
-  --color-brand-sky-light: #C0E3FF;
+  --color-brand-wordmark: #002770;
+  --color-brand-blue: #045EF3;
+  --color-brand-blue-isologo: #157EFD;
+  --color-brand-blue-light: #1F99FE;
+  --color-brand-sky: #45A8FD;
+  --color-brand-sky-bright: #4EADFD;
+  --color-brand-sky-light: #73C3FE;
 
   /* ── Shape ─────────────────────────────────────────────────────── */
   --radius-none: 0px;

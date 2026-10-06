@@ -13,11 +13,13 @@
 
 /** Hex crudos del logo. Prefiere `colorRoles` en componentes. */
 export const brand = {
-  "wordmark": "#0040B8",
-  "blue": "#015CF1",
-  "blueBright": "#0B6FFB",
-  "sky": "#A5D8FE",
-  "skyLight": "#C0E3FF"
+  "wordmark": "#002770",
+  "blue": "#045EF3",
+  "blueIsologo": "#157EFD",
+  "blueLight": "#1F99FE",
+  "sky": "#45A8FD",
+  "skyBright": "#4EADFD",
+  "skyLight": "#73C3FE"
 } as const;
 
 /**
@@ -69,7 +71,7 @@ export const colorRoles = {
   "onSuccessContainer": "#0C4420",
   "scrim": "#0A1020",
   "shadow": "#0A1020",
-  "logoWordmark": "#0040B8"
+  "logoWordmark": "#002770"
 } as const;
 
 /** Los mismos roles en el tema oscuro. */
@@ -118,18 +120,6 @@ export const colorRolesDark = {
   "scrim": "#000000",
   "shadow": "#000000",
   "logoWordmark": "#EAF3FF"
-} as const;
-
-/** Degradados del sol del logo, listos para CSS o SVG. */
-export const gradients = {
-  "sun": [
-    "#015CF1",
-    "#A5D8FE"
-  ],
-  "sunDiagonal": [
-    "#0B6FFB",
-    "#C0E3FF"
-  ]
 } as const;
 
 // ─── Tipografía ─────────────────────────────────────────────────────────────

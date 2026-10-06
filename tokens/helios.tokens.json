@@ -13,13 +13,15 @@
     ]
   },
   "color": {
-    "comment": "Dos temas. `role` es el CLARO, el de por defecto (recepción de una clínica, pantalla con luz de día); `roleDark` es el oscuro, con las mismas claves. Los hex de marca salen del logo: el azul de la palabra (#0040B8) y el degradado del sol (#015CF1 → #0B6FFB → #A5D8FE / #C0E3FF). Las superficies no siguen el orden tonal de M3 al pie de la letra: se nombran por su papel en el armazón (`shell.surface`): `surfaceContainerLowest` es el lienzo, el plano más hondo, y `surfaceContainerLow` la tarjeta que flota encima; en claro el lienzo es gris azulado y la tarjeta blanca, en oscuro al revés de luz pero con el mismo orden. `logoWordmark` es el color de la palabra «Helios» en el logotipo: azul en claro, casi blanco en oscuro. `placeholder` es un tono propio, sin equivalente en M3, para texto de placeholder e iconos inactivos — nunca para texto real.",
+    "comment": "Dos temas. `role` es el CLARO, el de por defecto (recepción de una clínica, pantalla con luz de día); `roleDark` es el oscuro, con las mismas claves. Los hex de marca salen del logo: el azul marino de la palabra (#002770), los seis azules planos de los rayos (#045EF3 → #73C3FE) y el fondo del isologo (#157EFD). Los roles no copian el logo: `primary` (#0040B8) es el azul de acción del panel, entre la palabra y el rayo más oscuro. Las superficies no siguen el orden tonal de M3 al pie de la letra: se nombran por su papel en el armazón (`shell.surface`): `surfaceContainerLowest` es el lienzo, el plano más hondo, y `surfaceContainerLow` la tarjeta que flota encima; en claro el lienzo es gris azulado y la tarjeta blanca, en oscuro al revés de luz pero con el mismo orden. `logoWordmark` es el color de la palabra «Helios» en el logotipo: azul en claro, casi blanco en oscuro. `placeholder` es un tono propio, sin equivalente en M3, para texto de placeholder e iconos inactivos — nunca para texto real.",
     "brand": {
-      "wordmark": "#0040B8",
-      "blue": "#015CF1",
-      "blueBright": "#0B6FFB",
-      "sky": "#A5D8FE",
-      "skyLight": "#C0E3FF"
+      "wordmark": "#002770",
+      "blue": "#045EF3",
+      "blueIsologo": "#157EFD",
+      "blueLight": "#1F99FE",
+      "sky": "#45A8FD",
+      "skyBright": "#4EADFD",
+      "skyLight": "#73C3FE"
     },
     "role": {
       "primary": "#0040B8",
@@ -65,7 +67,7 @@
       "onSuccessContainer": "#0C4420",
       "scrim": "#0A1020",
       "shadow": "#0A1020",
-      "logoWordmark": "#0040B8"
+      "logoWordmark": "#002770"
     },
     "roleDark": {
       "primary": "#8FC8FF",
@@ -112,16 +114,6 @@
       "scrim": "#000000",
       "shadow": "#000000",
       "logoWordmark": "#EAF3FF"
-    },
-    "gradient": {
-      "sun": [
-        "#015CF1",
-        "#A5D8FE"
-      ],
-      "sunDiagonal": [
-        "#0B6FFB",
-        "#C0E3FF"
-      ]
     }
   },
   "font": {
