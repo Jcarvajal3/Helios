@@ -14,6 +14,7 @@ import {
   leerFormulario,
   leerMonto,
   leerMontoYConcepto,
+  montoEs,
   lecturaDeLaIA,
   normalizarFecha,
   normalizarSexo,
@@ -93,7 +94,8 @@ comprueba(leerCedula('e 1234567') === 'E1234567', 'cédula E')
 comprueba(leerCedula('12345678') === 'V12345678', 'sin letra es V')
 comprueba(leerCedula('hola') === null && leerCedula('12') === null, 'no es cédula')
 
-comprueba(dinero(61.6) === '$61.60', 'dinero')
+comprueba(dinero(61.6) === '$61,60' && dinero(100) === '$100' && dinero(1.92) === '$1,92', 'dinero al estilo venezolano')
+comprueba(montoEs(1250.5) === '1.250,50' && montoEs(1234567) === '1.234.567' && montoEs(99.999) === '100', 'miles y redondeo')
 comprueba(diaCorto('2026-10-12') === 'lun 12/10', 'día corto', diaCorto('2026-10-12'))
 comprueba(horaCaracas('2026-10-05T20:40:00Z') === '16:40', 'hora de Caracas', horaCaracas('2026-10-05T20:40:00Z'))
 

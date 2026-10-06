@@ -10,7 +10,8 @@
 //   3. Un número del personal        → el bot del médico (bot.ts)
 //   4. «Sí» / «No» escrito por un paciente con UNA orden esperando
 //                                    → helios_patient_decision
-//   5. Todo lo demás                 → nada: lo atiende una persona desde la
+//   5. Todo lo demás                 → el bot del paciente (paciente.ts); si
+//                                      se calla, lo atiende una persona desde la
 //                                      app WhatsApp Business (coexistencia)
 //
 // La URL lleva un secreto propio (?token=…, WHATSAPP_WEBHOOK_TOKEN). Sin él,
@@ -26,6 +27,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
 import { atenderAlPersonal } from './bot.ts'
+import { atenderAlPaciente } from './paciente.ts'
 import type { Personal } from './bot.ts'
 import {
   decisionDelBoton,
@@ -103,8 +105,9 @@ async function mensaje(m: EventoDeMensaje): Promise<void> {
     return
   }
 
-  // 5. Lo atiende una persona.
-  await listo('nadie')
+  // 5. El bot del paciente; si se calla, lo atiende una persona desde la app.
+  const res = await atenderAlPaciente({ rpc, mensaje: m })
+  await listo(res ? 'paciente' : 'nadie', res)
 }
 
 Deno.serve(async (req) => {

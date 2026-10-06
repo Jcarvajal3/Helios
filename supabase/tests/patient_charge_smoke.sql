@@ -240,7 +240,7 @@ begin
   if not exists (select 1 from public.outbound_messages
                  where charge_id = v_charge and template_key = 'bienvenida' and channel = 'whatsapp_manual'
                    and recipient = '+584141234567' and dedupe_key = 'bienvenida:' || v_charge
-                   and rendered_text like '%Clínica Prueba PC%' and rendered_text like '%Cuota 2: $61.60%') then
+                   and rendered_text like '🩺 ¡Listo, José! Tu financiamiento #%' and rendered_text like '%* $61,60 — %') then
     raise exception 'La bienvenida debía encolarse por WhatsApp';
   end if;
   if not exists (select 1 from audit.admin_actions where action = 'charge.created' and target_id = v_charge
@@ -344,7 +344,7 @@ begin
   exception when sqlstate '22023' then
     get stacked diagnostics v_err = message_text;
   end;
-  if v_err is distinct from 'El monto supera lo disponible para financiar ($40.00)' then
+  if v_err is distinct from 'El monto supera lo disponible para financiar ($40)' then
     raise exception 'El segundo cargo debía rechazarse por cupo, dijo: %', v_err;
   end if;
   perform public.create_patient_charge(v_m, null, v_pac, 35, null, null, 'pc-key-5');

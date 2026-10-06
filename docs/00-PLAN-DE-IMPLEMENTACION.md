@@ -46,6 +46,9 @@ Además cambian estas cosas:
 | Identidad del médico | El equipo de Helios **registra su número**; escribir desde ese número lo identifica. **PIN** solo para operaciones de dinero. Nunca usuario y clave por chat | Javier, 2026-10-02 |
 | Alta de paciente nuevo por WhatsApp | El médico manda **todos los datos en un solo mensaje**; el bot los interpreta (Gemini desde el 2026-10-06; antes Claude), pide lo que falte y muestra un resumen antes de confirmar | Javier, 2026-10-02 |
 | Proveedor de WhatsApp | **360dialog**, **un solo número con coexistencia**: la app WhatsApp Business para el equipo y la API para el bot y los envíos automáticos | Javier, 2026-10-05 |
+| Total al paciente | **Al paciente sí se le enseña el total con el cargo por servicio**; a la clínica, nunca. Montos de los mensajes al estilo venezolano ($1,92) | Javier, 2026-10-06 |
+| Bot del paciente | Menú con Pagar cuota, Ver financiamientos y Ayuda antes de que atienda una persona (§15.6) | Javier, 2026-10-06 |
+| IA del bot | **Gemini** en lugar de Claude | Javier, 2026-10-06 |
 | Pago y reporte del paciente | **Por WhatsApp al equipo Helios**, que registra el pago en el superadmin | Javier, 2026-09-30 |
 | Comisión de la secretaria | **Se suma a la liquidación de la clínica**, y la clínica se la entrega a su personal | Javier, 2026-09-30 |
 | Antifraude | **Solo alertas automáticas.** Los topes por clínica, la retención de liquidaciones y el expediente con fotos se evaluarán después (§14) | Javier, 2026-09-30 |
@@ -855,5 +858,56 @@ La única que hace falta para arrancar. La bienvenida va como texto libre (§5.1
 - Pie: `Helios · Financiamiento de consultas médicas`.
 - Botones de respuesta rápida: **Sí, acepto** · **No**. El payload de cada botón se fija al enviar: `confirmar:<charge_id>` / `rechazar:<charge_id>`.
 - Ejemplo para Meta: {{1}} `José`, {{2}} `Consultorio Demo`, {{3}} `100.00`, {{4}} `20.00`, {{5}} `3.20`, {{6}} `$61.60 el 12/10 y $61.60 el 19/10`.
-- **El cargo por servicio va desglosado y dicho con todas las letras** (decidido por Javier, 2026-10-05): consulta, cargo y su IVA en líneas separadas, y las cuotas aparte. Ningún total suma el fee (regla de Ronda).
+- **El cargo por servicio va desglosado y dicho con todas las letras** (decidido por Javier, 2026-10-05): consulta, cargo y su IVA en líneas separadas, y las cuotas aparte. (En la v2, §15.5.1, también el total: al paciente sí se le enseña.)
 - Los porcentajes (20 % y 16 %) están escritos en la plantilla: si cambian `consumer_fee_pct` o `vat_pct`, hay que editar la plantilla y volver a mandarla a aprobación.
+
+#### 15.5.1 La v2 (2026-10-06): el texto nuevo, con el total y los porcentajes como variables
+
+La v1 (arriba) está **aprobada** desde el 2026-10-06 y es la que se usa fuera de la ventana de 24 h hasta que se apruebe la v2. Lleva «20 %» escrito: **no cambiar `consumer_fee_pct` hasta pasar a la v2.** Dentro de la ventana ya sale el texto nuevo.
+
+- Nombre: `helios_confirmar_financiamiento_v2` · Categoría: **Utility** · Idioma: **Spanish** (`es`) · Variables **numéricas**.
+- Cuerpo:
+
+  > 👋 Hola, {{1}}. Bienvenido a Helios 💙
+  >
+  > {{2}} registró tu consulta de ${{3}} para pagarla en 2 cuotas, sin inicial.
+  >
+  > \* Consulta: ${{4}}
+  > \* Servicio Helios ({{5}}%): ${{6}}
+  > \* IVA ({{7}}% sobre el servicio): ${{8}}
+  > \* Total: ${{9}}
+  >
+  > Tus cuotas serán de {{10}}:
+  > 📅 {{11}}
+  >
+  > ¿Confirmas tu financiamiento? Responde Sí o No.
+  > Tienes 2 horas para confirmar.
+
+- Botones de respuesta rápida, en este orden: **Sí** · **No**.
+- Ejemplo: {{1}} `Javier`, {{2}} `Clínica Test`, {{3}} `100`, {{4}} `100`, {{5}} `12`, {{6}} `12`, {{7}} `16`, {{8}} `1,92`, {{9}} `113,92`, {{10}} `$56,96`, {{11}} `12/10 y 19/10`.
+- Al paciente **sí** se le enseña el total con el cargo por servicio (decisión de Javier, 2026-10-06). A la clínica, nunca.
+- Cuando Meta la apruebe, se cambia en la base (lo hace el equipo técnico):
+
+  ```sql
+  update public.notification_templates
+     set wa_template_name = 'helios_confirmar_financiamiento_v2',
+         wa_template_params = array['nombre','clinica','monto_consulta','monto_consulta','servicio_pct',
+                                    'cargo_servicio','iva_pct','iva_cargo_servicio','total','cuotas_monto','cuotas_fechas']
+   where key = 'confirmar_financiamiento';
+  ```
+
+### 15.6 El bot del paciente (2026-10-06)
+
+Decidido por Javier el 2026-10-06. Si un paciente le escribe a Helios (y no es su respuesta a una confirmación), antes de que lo atienda una persona:
+
+- **Cualquier mensaje** → «💙 Gracias por escribirnos, {nombre}…» con tres botones: **Pagar cuota**, **Ver financiamientos**, **Ayuda**. Como mucho una vez cada **2 h**; si ya lo vio, el bot se calla y lo ve el equipo en la app.
+- **Pagar cuota** → las cuotas vencidas (o, si no hay, la próxima), con su cargo por atraso, el total en dólares y en bolívares a la tasa BCV de hoy, las cuentas de cobro y «envíanos el comprobante por este chat».
+- **Ver financiamientos** → los activos, con sus cuotas pendientes y el saldo (con el cargo por servicio: es lo que debe).
+- **Ayuda** → «una persona te atenderá» y el bot se calla **24 h** con ese número.
+- **Una foto o un documento** (casi siempre un comprobante) → acuse sin menú y el bot se calla 24 h: lo revisa una persona.
+- **Alguien sin financiamientos** → acuse y 24 h de silencio.
+- **Un teléfono de varios pacientes** (una familia) → pide la cédula antes de enseñar nada.
+
+Piezas: `paciente.ts` y `textos_paciente.ts` en la Edge Function; en la base, `bot_paciente_contexto`, `bot_paciente_guardar`, `bot_paciente_resumen` y `helios_whatsapp_patient_text` (20261006000100). Lo que recuerda de cada número vive en `whatsapp_contacts` (`bot_menu_at`, `human_until`, `patient_profile_id`, `patient_state`). **Hacen falta las cuentas de cobro** (Ajustes › Cuentas de cobro) para que «Pagar cuota» diga cómo pagar.
+
+Los mensajes al paciente cambiaron el mismo día (textos de Javier): la pregunta (§15.5.1) y la bienvenida («🩺 ¡Listo, {nombre}! Tu financiamiento #{orden} ya está activo…»). Los montos de todos los mensajes van al estilo venezolano («$100», «$1,92»).

@@ -398,9 +398,9 @@ begin
      or v_msg.recipient is distinct from 'paula.recorrido@prueba.helios.test' then
     raise exception 'PASO 4: el comprobante debía quedar pendiente por correo: %', to_jsonb(v_msg);
   end if;
-  if v_msg.rendered_text not like '%Cuota 1: $61.60%' or v_msg.rendered_text not like '%Cuota 2: $61.60%'
+  if v_msg.rendered_text not like '%Cuota 1: $61,60%' or v_msg.rendered_text not like '%Cuota 2: $61,60%'
      or v_msg.html is null
-     or (length(v_msg.html) - length(replace(v_msg.html, '61.60', ''))) / length('61.60') < 2
+     or (length(v_msg.html) - length(replace(v_msg.html, '61,60', ''))) / length('61,60') < 2
      or v_msg.html not like '%no es una factura%' or v_msg.rendered_text not like '%no es una factura%' then
     raise exception 'PASO 4: al comprobante le faltan las dos cuotas o «no es una factura»';
   end if;
@@ -464,7 +464,7 @@ begin
   if v_n < 1 or not exists (
        select 1 from public.outbound_messages
         where profile_id = v_profile and template_key = 'cuota_manana' and channel = 'whatsapp_manual'
-          and installment_due_date = v_i1.due_date and rendered_text like '%61.60%'
+          and installment_due_date = v_i1.due_date and rendered_text like '%61,60%'
           and dedupe_key = format('cuota_manana:whatsapp_manual:%s:%s', v_profile, v_i1.due_date)) then
     raise exception 'PASO 5: cuota_manana debía encolarse con su dedupe (hay %)', v_n;
   end if;
@@ -554,7 +554,7 @@ begin
   end if;
   if not exists (select 1 from public.outbound_messages
                  where dedupe_key = 'pago_recibido:' || (v_rep1->>'report_id') and status = 'pendiente'
-                   and profile_id = v_profile and rendered_text like '%61.60%') then
+                   and profile_id = v_profile and rendered_text like '%61,60%') then
     raise exception 'PASO 6: conciliar debía encolar pago_recibido';
   end if;
   if (select count(*) from public.outbound_messages
@@ -631,7 +631,7 @@ begin
   if not exists (select 1 from public.outbound_messages
                  where profile_id = v_profile and template_key = 'cargo_por_atraso_d4'
                    and installment_due_date = v_i2.due_date and status = 'pendiente'
-                   and rendered_text like '%63.60%') then
+                   and rendered_text like '%63,60%') then
     raise exception 'PASO 7: debía encolarse cargo_por_atraso_d4 con $63.60';
   end if;
 

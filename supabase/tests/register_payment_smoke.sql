@@ -242,7 +242,7 @@ begin
   -- --- 7a. pago_recibido -------------------------------------------------------
   if not exists (select 1 from public.outbound_messages
                  where dedupe_key = 'pago_recibido:' || v_rep.id and status = 'pendiente'
-                   and rendered_text like '%$61.60%') then
+                   and rendered_text like '%$61,60%') then
     raise exception 'Conciliar debía encolar pago_recibido';
   end if;
 

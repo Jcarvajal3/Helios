@@ -149,13 +149,13 @@ begin
      or jsonb_array_length(v_row.wa_template->'params') <> 6
      or v_row.wa_template->'params'->>0 <> 'José'
      or v_row.wa_template->'params'->>1 <> 'Clínica Despacho'
-     or v_row.wa_template->'params'->>2 <> '100.00'
-     or v_row.wa_template->'params'->>3 <> '20.00'
-     or v_row.wa_template->'params'->>4 <> '3.20'
-     or v_row.wa_template->'params'->>5 not like '$61.60 el % y $61.60 el %'
+     or v_row.wa_template->'params'->>2 <> '100'
+     or v_row.wa_template->'params'->>3 <> '20'
+     or v_row.wa_template->'params'->>4 <> '3,20'
+     or v_row.wa_template->'params'->>5 not like '$61,60 el % y $61,60 el %'
      or v_row.wa_template->'buttons'->0->>'id' <> 'confirmar:' || v_charge
      or v_row.wa_template->'buttons'->1->>'id' <> 'rechazar:' || v_charge
-     or v_row.wa_template->'buttons'->0->>'title' <> 'Sí, acepto' then
+     or v_row.wa_template->'buttons'->0->>'title' <> 'Sí' then
     raise exception 'La plantilla de Meta no quedó resuelta: %', v_row.wa_template;
   end if;
 
@@ -217,7 +217,7 @@ begin
   select * into v_call from pg_temp._llamadas order by n desc limit 1;
   if v_call.body->>'type' <> 'interactive'
      or v_call.body->'interactive'->>'type' <> 'button'
-     or v_call.body->'interactive'->'body'->>'text' not like 'Hola, José. Clínica Despacho registró%'
+     or v_call.body->'interactive'->'body'->>'text' not like '👋 Hola, José. Bienvenido a Helios 💙%'
      or jsonb_array_length(v_call.body->'interactive'->'action'->'buttons') <> 2
      or v_call.body->'interactive'->'action'->'buttons'->0->'reply'->>'id' <> 'confirmar:' || v_charge
      or v_call.body->'interactive'->'action'->'buttons'->1->'reply'->>'title' <> 'No' then
@@ -229,7 +229,7 @@ begin
   insert into pg_temp._respuestas (status, body) values (200, '{"messages":[{"id":"wamid.C"}]}');
   perform public.helios_dispatch_whatsapp_batch();
   select * into v_call from pg_temp._llamadas order by n desc limit 1;
-  if v_call.body->>'type' <> 'text' or v_call.body->'text'->>'body' not like '¡Listo, José!%'
+  if v_call.body->>'type' <> 'text' or v_call.body->'text'->>'body' not like '🩺 ¡Listo, José!%'
      or v_call.body->'text'->>'body' not like E'%• Cuota 1\n• Cuota 2%' then
     raise exception 'Con la ventana abierta la bienvenida va como texto, con sus saltos de línea: %', v_call.body;
   end if;

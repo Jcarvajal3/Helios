@@ -164,12 +164,16 @@ begin
     raise exception 'La pregunta al paciente no quedó en la cola: %', to_jsonb(v_row);
   end if;
   v_text := v_row.rendered_text;
-  if v_text not like '%Clínica Confirma registró a tu nombre%'
-     or v_text not like '%Consulta: $100.00%'
-     or v_text not like '%Cargo por servicio de Helios (20 %): $20.00%'
-     or v_text not like '%IVA del cargo por servicio (16 %): $3.20%'
-     or v_text not like '%$61.60 el ' || to_char(v_bdate + 7, 'DD/MM') || ' y $61.60 el ' || to_char(v_bdate + 14, 'DD/MM') || '%'
-     or v_text like '%123.20%' or v_text like '%{%' then
+  -- Al paciente sí se le enseña el total con el cargo (2026-10-06).
+  if v_text not like '👋 Hola, José. Bienvenido a Helios 💙%'
+     or v_text not like '%Clínica Confirma registró tu consulta de $100 para pagarla en 2 cuotas, sin inicial.%'
+     or v_text not like '%* Consulta: $100%'
+     or v_text not like '%* Servicio Helios (20\%): $20%'
+     or v_text not like '%* IVA (16\% sobre el servicio): $3,20%'
+     or v_text not like '%* Total: $123,20%'
+     or v_text not like '%Tus cuotas serán de $61,60:%'
+     or v_text not like '%📅 ' || to_char(v_bdate + 7, 'DD/MM') || ' y ' || to_char(v_bdate + 14, 'DD/MM') || '%'
+     or v_text like '%{%' then
     raise exception 'El texto de la pregunta no es el esperado: %', v_text;
   end if;
 
@@ -246,7 +250,7 @@ begin
                      where charge_id = v_charge and template_key = 'comprobante_financiamiento' and channel = 'email')
      or not exists (select 1 from public.outbound_messages
                      where charge_id = v_charge and template_key = 'bienvenida' and channel = 'whatsapp'
-                       and rendered_text like '¡Listo, José!%') then
+                       and rendered_text like '🩺 ¡Listo, José!%') then
     raise exception 'El «Sí» debía devengar la comisión y encolar comprobante y bienvenida automática';
   end if;
 

@@ -202,9 +202,21 @@ export function juntar(antes: DatosDelPaciente, nuevo: DatosDelPaciente): DatosD
   return out
 }
 
-/** «$61.60». */
+/**
+ * Un monto al estilo venezolano (como `helios_money_text` en la base):
+ * «100», «1,92», «1.250,50». Sin «,00» si es entero.
+ */
+export function montoEs(n: number): string {
+  const centimos = Math.round(n * 100)
+  const entero = Math.trunc(centimos / 100)
+  const dec = Math.abs(centimos % 100)
+  const miles = String(entero).replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  return dec === 0 ? miles : `${miles},${String(dec).padStart(2, '0')}`
+}
+
+/** «$61,60», «$100». */
 export function dinero(n: number): string {
-  return `$${n.toFixed(2)}`
+  return `$${montoEs(n)}`
 }
 
 const DIAS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb']

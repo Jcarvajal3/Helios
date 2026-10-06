@@ -449,12 +449,12 @@ begin
      or v_row.next_attempt_at is null or v_row.charge_id <> v_charge then
     raise exception 'El comprobante debía encolarse por correo al correo registrado: %', to_jsonb(v_row) - 'html';
   end if;
-  if v_row.subject not like 'Tu financiamiento en Consultorio <Sol> & Luna — 2 cuotas de $61.60' then
+  if v_row.subject not like 'Tu financiamiento en Consultorio <Sol> & Luna — 2 cuotas de $61,60' then
     raise exception 'Asunto inesperado: %', v_row.subject;
   end if;
-  if position('Monto de la consulta: $100.00' in v_row.rendered_text) = 0
-     or position('Servicio Helios (20 % + IVA) de $23.20' in v_row.rendered_text) = 0
-     or position('Cuota 2: $61.60' in v_row.rendered_text) = 0
+  if position('Monto de la consulta: $100' in v_row.rendered_text) = 0
+     or position('Servicio Helios (20 % + IVA) de $23,20' in v_row.rendered_text) = 0
+     or position('Cuota 2: $61,60' in v_row.rendered_text) = 0
      or position('Registró: Ana' in v_row.rendered_text) = 0
      or position('V-****5678' in v_row.rendered_text) = 0
      or position('0414-0001122' in v_row.rendered_text) = 0
@@ -462,7 +462,7 @@ begin
     raise exception 'Al comprobante le falta algo:%', v_row.rendered_text;
   end if;
   -- Ningún total que sume el fee.
-  if position('123.20' in v_row.rendered_text) > 0 or position('123.20' in v_row.html) > 0 then
+  if position('123,20' in v_row.rendered_text) > 0 or position('123,20' in v_row.html) > 0 then
     raise exception 'El comprobante no puede mostrar el total con el fee (123.20)';
   end if;
   -- El HTML escapa lo que viene de los datos y no deja marcadores sin rellenar.
@@ -482,7 +482,7 @@ begin
     raise exception 'La misma dedupe_key no debía encolar dos veces';
   end if;
   select * into v_row from public.outbound_messages where id = v_msg;
-  if v_row.recipient <> '+584141234567' or v_row.rendered_text not like '¡Listo, José! Tu financiamiento #1 en Sol está confirmado.%' then
+  if v_row.recipient <> '+584141234567' or v_row.rendered_text not like '🩺 ¡Listo, José! Tu financiamiento #1 ya está activo.%' then
     raise exception 'WhatsApp mal renderizado: % / %', v_row.recipient, v_row.rendered_text;
   end if;
 

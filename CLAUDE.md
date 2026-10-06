@@ -27,9 +27,13 @@ docs/       plan, contrato, reglas
   **medianoche** (`helios_business_date`), no a las 10 AM como en Ronda.
 - **Libro contable**: partida doble, append-only, `idempotency_key` en toda
   mutación de dinero. La única función que crea deuda es `helios_assign_debt`.
-- **Ningún total mostrado incluye el fee de Helios.** El fee (20% + IVA)
-  aparece solo dentro de las cuotas o como línea aparte en un desglose. La
-  clínica ve solo montos sin fee.
+- **A la clínica, ningún total incluye el fee de Helios.** El fee (% +
+  IVA, parámetro `consumer_fee_pct`) aparece solo dentro de las cuotas o como
+  línea aparte en un desglose. La clínica ve solo montos sin fee. **Al
+  paciente sí** se le enseña el total con el fee (decisión de Javier,
+  2026-10-06: es lo que paga).
+- Los montos en los mensajes (WhatsApp, correo) van al estilo venezolano:
+  `helios_money_text` → «$100», «$1,92», «$1.250,50».
 - **Seguridad en la base, no en el router**: RLS + RPC `security definer` con
   `set search_path`. El personal de la clínica **no lee** `profiles`,
   `installments` ni `payment_reports` directamente.

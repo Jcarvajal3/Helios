@@ -862,3 +862,35 @@ resultado queda en el panel. El webhook llama a
 
 `p_idempotency_key` del bot = `wa:<id del mensaje que llevó el PIN>`: si
 360dialog reintenta el webhook, no se crea otra orden.
+
+### 5.5 El bot del paciente (2026-10-06)
+
+Implementado en 20261006000100; la conversación vive en
+`supabase/functions/whatsapp-webhook/paciente.ts` (docs/00 §15.6). Solo para
+`service_role`.
+
+| RPC | Para qué |
+|---|---|
+| `bot_paciente_contexto(p_phone) → jsonb` | `{perfiles: [{id, nombre, documento, documento_enmascarado}], elegido, estado, humano, menu_reciente}`: los pacientes con ese teléfono, a quién identificó por su cédula, si espera la cédula, si lo atiende una persona y si vio el menú en las últimas 2 h |
+| `bot_paciente_guardar(p_phone, p_menu, p_humano_horas, p_estado, p_profile_id) → void` | Solo cambia lo que viene. `p_humano_horas` 0 despierta al bot; `p_estado` '' lo limpia |
+| `bot_paciente_resumen(p_profile_id) → jsonb` | `{nombre, financiamientos: [{orden, clinica, consulta, cuotas: [{sequence, due_date, monto, cargo_atraso, vencida}]}], tasa_bcv, cuentas_de_cobro, pago_en_revision}`. Montos con el cargo por servicio: es para el paciente |
+| `helios_whatsapp_patient_text(p_to, p_text, p_profile_id default null, p_buttons default '[]') → uuid` | Encola la respuesta (plantilla interna `bot_paciente`); `p_profile_id` null para quien escribe sin ser paciente. Solo con la ventana de 24 h abierta |
+
+`whatsapp_contacts` gana `bot_menu_at`, `human_until`, `patient_profile_id`
+y `patient_state`.
+
+### 5.6 Los mensajes y los montos (2026-10-06, completa §4)
+
+- `helios_money_text` escribe al estilo venezolano: «100», «1,92»,
+  «1.250,50» (sin «,00» si es entero). Lo usan WhatsApp, el correo y los
+  textos de error. `helios_pct_text(numeric)`: «20», «12,5».
+- `confirmar_financiamiento`: texto nuevo con el **total con el cargo por
+  servicio** (al paciente sí, decisión del 2026-10-06; a la clínica nunca).
+  Variables nuevas: `servicio_pct`, `iva_pct`, `total`, `cuotas_monto`
+  («$56,96», o «$56,97 y $56,96» si difieren en un céntimo) y
+  `cuotas_fechas` («12/10 y 19/10»). Botones «Sí» / «No». La plantilla de
+  Meta sigue siendo la v1 (6 variables) hasta que se apruebe la v2 (docs/00
+  §15.5.1).
+- `bienvenida`: texto nuevo («🩺 ¡Listo, {nombre}! Tu financiamiento #{orden}
+  ya está activo…»); `{cuotas}` llega como «* $56,96 — 12/10/2026», una línea
+  por cuota.

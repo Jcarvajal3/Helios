@@ -26,6 +26,13 @@
 -- exista `admin_register_payment` (fase 3).
 -- ============================================================================
 
+-- Las suites no dependen de la configuración real: dentro de su transacción
+-- la confirmación del paciente por WhatsApp arranca APAGADA (el registro
+-- confirma al instante). Las suites que la prueban la encienden después.
+insert into public.business_parameters (key, value, effective_from, note)
+values ('patient_confirmation_required', 0, public.helios_business_date(now()), 'pruebas (rollback)')
+on conflict (key, effective_from) do update set value = 0;
+
 /**
  * Un consumo confirmado de `p_base` (sin fee) para `p_user` en `p_merchant`,
  * registrado por `p_staff`. Devuelve lo mismo que devolvía `confirm_charge`.

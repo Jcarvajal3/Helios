@@ -127,12 +127,12 @@ begin
   if v_row.status <> 'pendiente' or v_row.recipient <> 'jose.correo@prueba.helios.test' then
     raise exception 'El comprobante debía quedar pendiente al correo registrado: %', to_jsonb(v_row);
   end if;
-  if v_row.subject not like 'Tu financiamiento en Clínica Correo — 2 cuotas de $61.60' then
+  if v_row.subject not like 'Tu financiamiento en Clínica Correo — 2 cuotas de $61,60' then
     raise exception 'Asunto inesperado: %', v_row.subject;
   end if;
-  if v_row.rendered_text not like '%Monto de la consulta: $100.00%'
-     or v_row.rendered_text not like '%Servicio Helios (20 % + IVA) de $23.20%'
-     or v_row.rendered_text not like '%Cuota 1: $61.60%'
+  if v_row.rendered_text not like '%Monto de la consulta: $100%'
+     or v_row.rendered_text not like '%Servicio Helios (20 % + IVA) de $23,20%'
+     or v_row.rendered_text not like '%Cuota 1: $61,60%'
      or v_row.rendered_text not like '%Si no reconoces este financiamiento%'
      or v_row.rendered_text not like '%Este comprobante no es una factura fiscal.%'
      or v_row.rendered_text not like '%C.I. V-****5678%'
@@ -141,14 +141,14 @@ begin
   end if;
   if v_row.html is null
      or v_row.html not like '%https://wa.me/584140000000?text=%'
-     or v_row.html not like '%Servicio Helios (20&nbsp;% + IVA)</strong> de $23.20%'
+     or v_row.html not like '%Servicio Helios (20&nbsp;% + IVA)</strong> de $23,20%'
      or v_row.html not like '%Este comprobante no es una factura fiscal.%'
      or v_row.html not like '%Si no reconoces este financiamiento%'
      or v_row.html not like '%role="presentation"%' then
     raise exception 'Al HTML del comprobante le falta algo';
   end if;
   -- Ningún total con el fee: ni 123.20 ni la palabra «Total».
-  if v_row.rendered_text like '%123.20%' or v_row.html like '%123.20%'
+  if v_row.rendered_text like '%123,20%' or v_row.html like '%123,20%'
      or v_row.rendered_text ilike '%total%' or v_row.html ilike '%total%' then
     raise exception 'El comprobante no puede mostrar un total que sume el fee';
   end if;
