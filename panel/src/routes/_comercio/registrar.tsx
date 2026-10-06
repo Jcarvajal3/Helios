@@ -39,7 +39,7 @@ import {
 } from '@/features/merchant/registroApi'
 
 export const Route = createFileRoute('/_comercio/registrar')({
-  staticData: { title: 'Nuevo financiamiento' },
+  staticData: { title: 'Nuevo pago en cuotas' },
   component: RegistrarRoute,
 })
 
@@ -57,7 +57,7 @@ type Consulta = { documento: string; elegibilidad: Elegibilidad }
 type Resultado = { financiamiento: Financiamiento; coincide: boolean }
 
 /**
- * NUEVO FINANCIAMIENTO (plan §2.1): la secretaria registra al paciente y la
+ * NUEVO PAGO EN CUOTAS (plan §2.1): la secretaria registra al paciente y la
  * consulta en un solo paso, con el paciente delante.
  *
  *   1. Cédula     → `helios_patient_eligibility`: nuevo, disponible o no.
@@ -73,11 +73,11 @@ type Resultado = { financiamiento: Financiamiento; coincide: boolean }
  *
  *   · La clave de idempotencia se crea al abrir el formulario y vive en
  *     `sessionStorage` (`claveDelAlta`): un doble clic o una recarga con la
- *     respuesta perdida devuelven el mismo financiamiento, no otro.
+ *     respuesta perdida devuelven el mismo pago en cuotas, no otro.
  *   · Salir con datos a medias —otro ítem del menú, cerrar la pestaña,
  *     recargar— pregunta antes (`useBlocker`).
  *   · Tras el alta, todo se vacía y la clave se estrena: el paciente
- *     siguiente es otro financiamiento.
+ *     siguiente es otro pago en cuotas.
  */
 function Registrar({ staff }: { staff: StaffContext }) {
   const queryClient = useQueryClient()
@@ -357,8 +357,8 @@ function Registrar({ staff }: { staff: StaffContext }) {
           title="¿Salir sin registrar?"
           summary={
             alta.isPending
-              ? 'El financiamiento se está registrando ahora mismo. Espera a que termine para no perder la respuesta.'
-              : 'Se pierden los datos que escribiste de este paciente. El financiamiento no se ha registrado.'
+              ? 'El pago en cuotas se está registrando ahora mismo. Espera a que termine para no perder la respuesta.'
+              : 'Se pierden los datos que escribiste de este paciente. El pago en cuotas no se ha registrado.'
           }
           confirmLabel="Salir sin registrar"
           danger

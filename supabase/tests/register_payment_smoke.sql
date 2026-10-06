@@ -63,7 +63,7 @@ begin
   insert into public.profiles (id, phone_e164, first_name, full_name)
   values (v_pac, '+584140009301', 'Luis', 'Luis Pagos');
 
-  update public.levels set monthly_limit_usd = 350 where level = 1;
+  update public.levels set monthly_limit_usd = 150 where level = 1;
   update public.notification_templates set enabled = true
    where key in ('cuota_vencida_d1', 'pago_recibido', 'pago_rechazado');
 
@@ -138,26 +138,26 @@ begin
   raise notice 'TEST REGISTRO 2 OK — lo vencido va primero';
 
   -- --- 4 (preparación). Una línea del extracto que casa con el pago de A1 ----
-  -- A la tasa de hace 3 días: 61.60 × 123.456789 = 7604.94 Bs.
+  -- A la tasa de hace 3 días: 56.96 × 123.456789 = 7032.10 Bs.
   insert into public.bank_statement_lines (bank, moved_on, reference, amount_ves, fingerprint, imported_by)
-  values ('Banesco', v_today - 3, '0000123456', round(61.60 * 123.456789, 2),
+  values ('Banesco', v_today - 3, '0000123456', round(56.96 * 123.456789, 2),
           'prueba-registro-' || gen_random_uuid(), v_super);
 
   -- --- 3. El registro --------------------------------------------------------
   v_res := public.admin_register_payment(
     v_pac, array[v_a1], 'pago_movil', ' Banesco ', ' 123456 ', v_today - 3,
-    7604.94, v_pac || '/captura.jpg', 'Lo mandó por WhatsApp');
+    7032.10, v_pac || '/captura.jpg', 'Lo mandó por WhatsApp');
 
   select * into v_rep from public.payment_reports where id = (v_res->>'report_id')::uuid;
   if v_rep.status <> 'reported' or v_rep.registered_by <> v_op1 or v_rep.paid_on <> v_today - 3
-     or v_rep.declared_amount_ves <> 7604.94 or v_rep.note <> 'Lo mandó por WhatsApp'
+     or v_rep.declared_amount_ves <> 7032.10 or v_rep.note <> 'Lo mandó por WhatsApp'
      or v_rep.receipt_path <> v_pac || '/captura.jpg' or v_rep.reference <> '123456' or v_rep.bank <> 'Banesco'
      or v_rep.method <> 'pago_movil' then
     raise exception 'El reporte no quedó como debía: %', to_jsonb(v_rep);
   end if;
-  if (v_res->>'amount_usd')::numeric <> 61.60 or (v_res->>'late_fee_usd')::numeric <> 0
+  if (v_res->>'amount_usd')::numeric <> 56.96 or (v_res->>'late_fee_usd')::numeric <> 0
      or (v_res->>'fx_rate')::numeric <> 123.456789
-     or (v_res->>'amount_ves')::numeric <> round(61.60 * 123.456789, 2)
+     or (v_res->>'amount_ves')::numeric <> round(56.96 * 123.456789, 2)
      or v_res->>'status' <> 'reported' or (v_res->>'diferencia_ves')::numeric <> 0 then
     raise exception 'La respuesta no es la del contrato (tasa del día del pago): %', v_res;
   end if;
@@ -242,7 +242,7 @@ begin
   -- --- 7a. pago_recibido -------------------------------------------------------
   if not exists (select 1 from public.outbound_messages
                  where dedupe_key = 'pago_recibido:' || v_rep.id and status = 'pendiente'
-                   and rendered_text like '%$61,60%') then
+                   and rendered_text like '%$56,96%') then
     raise exception 'Conciliar debía encolar pago_recibido';
   end if;
 

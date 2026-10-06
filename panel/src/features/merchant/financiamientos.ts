@@ -26,11 +26,11 @@ import type { EstadoDelComprobante } from './registro'
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
- * Cuándo cobra la clínica una de las dos mitades de un financiamiento.
+ * Cuándo cobra la clínica una de las dos mitades de un pago en cuotas.
  *
- * `paidToMerchantOn` es el lunes del cierre que paga esa cuota y lo calcula
- * la base (`helios_settlement_run_for`): el calendario del cierre vive en un
- * solo sitio.
+ * `paidToMerchantOn` es el día en que Helios paga esa mitad —el siguiente al
+ * vencimiento de la cuota— y lo calcula la base (`helios_settlement_run_for`):
+ * el calendario de pagos vive en un solo sitio.
  */
 export type CuotaDeLaClinica = { dueDate: string; paidToMerchantOn: string } | null
 
@@ -171,7 +171,7 @@ export type EstadoDelFinanciamiento =
   | 'reverted'
 
 /**
- * Una de las dos mitades en que Helios le paga el financiamiento a la
+ * Una de las dos mitades en que Helios le paga el pago en cuotas a la
  * clínica, con la fecha de vencimiento de la cuota del paciente que la
  * origina. Sin el estado de esa cuota: eso es del paciente con Helios.
  *
@@ -299,7 +299,7 @@ export function leerDetalle(v: unknown): DetalleDeFinanciamiento {
   }
 }
 
-/** Cómo se ve el estado del financiamiento en su ficha. */
+/** Cómo se ve el estado del pago en cuotas en su ficha. */
 export const ESTADO_DEL_FINANCIAMIENTO: Record<
   EstadoDelFinanciamiento,
   { texto: string; tone: 'success' | 'warning' | 'error' | 'neutral' }

@@ -42,12 +42,12 @@ export const inicio = [
   {
     tipo: 'cifra',
     id: 'semaforo-del-cierre',
-    titulo: 'Semáforo del cierre',
-    descripcion: 'Si la caja cubre lo que hay que transferir a las clínicas en el próximo cierre.',
+    titulo: 'Semáforo del pago a clínicas',
+    descripcion: 'Si la caja cubre lo que hay que transferirles hoy a las clínicas.',
     espacio: 'inicio',
-    sinonimos: ['cubre el lunes', 'alcanza la caja', 'faltan fondos'],
+    sinonimos: ['cubre el pago de hoy', 'semáforo del cierre', 'alcanza la caja', 'faltan fondos'],
     destino: { to: '/admin' },
-    que: 'Lo que sale hacia las clínicas en el próximo cierre (atrasados incluidos) frente al dinero en caja y a las cuotas que vencen antes de esa fecha: «Cubre», «En camino» (cubrirá con lo que vence, sin nada vencido) o «No cubre».',
+    que: 'Lo que sale hoy hacia las clínicas (atrasados incluidos) frente al dinero en caja: «Cubre» o «No cubre». Se les paga a diario: cada liquidación, el día siguiente a su vencimiento.',
     rpc: 'admin_merchant_payables',
   },
 ] as const satisfies ReadonlyArray<Entrada>

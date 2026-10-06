@@ -118,11 +118,11 @@ export async function removeStaff(params: {
 export const ROL: Record<MerchantRole, { label: string; hace: string }> = {
   gerente: {
     label: 'Administrador',
-    hace: 'lo ve todo de la clínica, registra financiamientos y gestiona el personal',
+    hace: 'lo ve todo de la clínica, registra pagos en cuotas y gestiona el personal',
   },
   cajero: {
     label: 'Secretaria',
-    hace: 'registra financiamientos y consulta los suyos',
+    hace: 'registra pagos en cuotas y consulta los suyos',
   },
 }
 

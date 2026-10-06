@@ -108,7 +108,7 @@ begin
   if v_j->>'nombre' <> 'Javier' or jsonb_array_length(v_j->'financiamientos') <> 1
      or (v_j->'financiamientos'->0->>'consulta')::numeric <> 100
      or jsonb_array_length(v_j->'financiamientos'->0->'cuotas') <> 2
-     or (v_j->'financiamientos'->0->'cuotas'->0->>'monto')::numeric <> 61.60
+     or (v_j->'financiamientos'->0->'cuotas'->0->>'monto')::numeric <> 56.96
      or (v_j->'financiamientos'->0->'cuotas'->0->>'vencida')::boolean
      or v_j->>'cuentas_de_cobro' is null or (v_j->>'pago_en_revision')::boolean then
     raise exception 'El resumen del paciente: %', v_j;

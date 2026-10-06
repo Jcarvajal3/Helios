@@ -149,8 +149,8 @@ export function useEstadoDelLocal({
         title={merchant.isTest ? 'Quitar la marca de prueba' : 'Marcar como clínica de prueba'}
         summary={
           merchant.isTest
-            ? `${merchant.name} vuelve a contar en el volumen, en el cierre del lunes y en los rankings. Lo que se vendió mientras estaba marcado vuelve a sumar.`
-            : `${merchant.name} deja de contar en el volumen, en el cierre del lunes, en la mora y en los rankings. Lo que ya se vendió deja de sumar también.`
+            ? `${merchant.name} vuelve a contar en el volumen, en las cifras de pagos a clínicas y en los rankings. Lo que se vendió mientras estaba marcado vuelve a sumar.`
+            : `${merchant.name} deja de contar en el volumen, en las cifras de pagos a clínicas, en la mora y en los rankings. Lo que ya se vendió deja de sumar también.`
         }
         detail={
           <p className="type-panel-body text-on-surface-variant">

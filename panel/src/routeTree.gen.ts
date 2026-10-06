@@ -34,6 +34,7 @@ import { Route as AdminMetricasRouteImport } from './routes/admin/metricas'
 import { Route as AdminPacientesRouteImport } from './routes/admin/pacientes'
 import { Route as AdminPagosClinicasRouteImport } from './routes/admin/pagos-clinicas'
 import { Route as LegalPrivacidadRouteImport } from './routes/legal.privacidad'
+import { Route as LegalTerminosRouteImport } from './routes/legal.terminos'
 import { Route as ComercioFinanciamientosIdRouteImport } from './routes/_comercio/financiamientos_.$id'
 import { Route as AdminClinicasIdRouteImport } from './routes/admin/clinicas_.$id'
 import { Route as AdminCobrosIdRouteImport } from './routes/admin/cobros_.$id'
@@ -166,6 +167,11 @@ const LegalPrivacidadRoute = LegalPrivacidadRouteImport.update({
   path: '/legal/privacidad',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LegalTerminosRoute = LegalTerminosRouteImport.update({
+  id: '/legal/terminos',
+  path: '/legal/terminos',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ComercioFinanciamientosIdRoute =
   ComercioFinanciamientosIdRouteImport.update({
     id: '/financiamientos_/$id',
@@ -228,6 +234,7 @@ export interface FileRoutesByFullPath {
   '/admin/pacientes': typeof AdminPacientesRoute
   '/admin/pagos-clinicas': typeof AdminPagosClinicasRoute
   '/legal/privacidad': typeof LegalPrivacidadRoute
+  '/legal/terminos': typeof LegalTerminosRoute
   '/admin/': typeof AdminIndexRoute
   '/financiamientos/$id': typeof ComercioFinanciamientosIdRoute
   '/admin/clinicas/$id': typeof AdminClinicasIdRoute
@@ -260,6 +267,7 @@ export interface FileRoutesByTo {
   '/admin/pacientes': typeof AdminPacientesRoute
   '/admin/pagos-clinicas': typeof AdminPagosClinicasRoute
   '/legal/privacidad': typeof LegalPrivacidadRoute
+  '/legal/terminos': typeof LegalTerminosRoute
   '/admin': typeof AdminIndexRoute
   '/financiamientos/$id': typeof ComercioFinanciamientosIdRoute
   '/admin/clinicas/$id': typeof AdminClinicasIdRoute
@@ -295,6 +303,7 @@ export interface FileRoutesById {
   '/admin/pacientes': typeof AdminPacientesRoute
   '/admin/pagos-clinicas': typeof AdminPagosClinicasRoute
   '/legal/privacidad': typeof LegalPrivacidadRoute
+  '/legal/terminos': typeof LegalTerminosRoute
   '/admin/': typeof AdminIndexRoute
   '/_comercio/financiamientos_/$id': typeof ComercioFinanciamientosIdRoute
   '/admin/clinicas_/$id': typeof AdminClinicasIdRoute
@@ -330,6 +339,7 @@ export interface FileRouteTypes {
     | '/admin/pacientes'
     | '/admin/pagos-clinicas'
     | '/legal/privacidad'
+    | '/legal/terminos'
     | '/admin/'
     | '/financiamientos/$id'
     | '/admin/clinicas/$id'
@@ -362,6 +372,7 @@ export interface FileRouteTypes {
     | '/admin/pacientes'
     | '/admin/pagos-clinicas'
     | '/legal/privacidad'
+    | '/legal/terminos'
     | '/admin'
     | '/financiamientos/$id'
     | '/admin/clinicas/$id'
@@ -396,6 +407,7 @@ export interface FileRouteTypes {
     | '/admin/pacientes'
     | '/admin/pagos-clinicas'
     | '/legal/privacidad'
+    | '/legal/terminos'
     | '/admin/'
     | '/_comercio/financiamientos_/$id'
     | '/admin/clinicas_/$id'
@@ -413,6 +425,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   SoporteRoute: typeof SoporteRoute
   LegalPrivacidadRoute: typeof LegalPrivacidadRoute
+  LegalTerminosRoute: typeof LegalTerminosRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -592,6 +605,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LegalPrivacidadRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/legal/terminos': {
+      id: '/legal/terminos'
+      path: '/legal/terminos'
+      fullPath: '/legal/terminos'
+      preLoaderRoute: typeof LegalTerminosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_comercio/financiamientos_/$id': {
       id: '/_comercio/financiamientos_/$id'
       path: '/financiamientos/$id'
@@ -721,6 +741,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   SoporteRoute: SoporteRoute,
   LegalPrivacidadRoute: LegalPrivacidadRoute,
+  LegalTerminosRoute: LegalTerminosRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

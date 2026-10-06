@@ -11,26 +11,26 @@
 --      la prueba: se entra con aal2), el contacto de Helios con WhatsApp, una
 --      cuenta de cobro activa y la tasa BCV del día.
 --   2. La clínica (Ana): cédula nueva → `nuevo`; vista previa de $100 (base
---      100, fee 20, IVA 3.20, dos cuotas de 61.60 a +7/+14 desde la medianoche
+--      100, fee 12, IVA 1.92, dos cuotas de 56.96 a +7/+14 desde la medianoche
 --      de Caracas, sin total con el fee); alta → confirmado, nº de orden,
 --      comprobante, comisión 0.50; la misma clave → el mismo financiamiento;
 --      Ana no lee profiles / installments / payment_reports.
---   3. Libro: Dr user_receivable 123.20 = Cr merchant_payable 100 + platform_
---      revenue 20 + vat_payable 3.20; comisión Dr commission_expense 0.50 /
+--   3. Libro: Dr user_receivable 113.92 = Cr merchant_payable 100 + platform_
+--      revenue 12 + vat_payable 1.92; comisión Dr commission_expense 0.50 /
 --      Cr merchant_payable 0.50; el libro entero cuadra.
---   4. Mensajes: comprobante (correo, sin total, «no es una factura») y
+--   4. Mensajes: comprobante (correo, con el total al paciente, «no es una factura») y
 --      bienvenida (WhatsApp manual). Con Resend SUSTITUIDO dentro de la
 --      transacción, el despacho lo envía. Otra clínica consulta la cédula: solo
---      lo enmascarado y disponible 250, nunca la deuda.
+--      lo enmascarado y disponible 50, nunca la deuda.
 --   5. Víspera de la cuota 1: cuota_manana con dedupe; dos veces no duplica.
 --   6. Pago de la cuota 1 por el equipo (operador registra, super_admin
 --      concilia contra el extracto importado): cuota pagada, caja / cuentas por
 --      cobrar, pago_recibido, avisos de esa fecha cancelados; el cupo sigue en
---      250 hasta pagar las dos.
+--      50 hasta pagar las dos.
 --   7. Mora en la cuota 2: congelado desde el día 1, un cargo de $2 pasada la
 --      gracia (uno solo aunque se repita), cuenta_congelada y cargo_por_
 --      atraso_d4; la elegibilidad dice «no disponible» con el texto neutro.
---      Pago de la cuota 2 + cargo → activo, cupo 350, bloque cerrado.
+--      Pago de la cuota 2 + cargo → activo, cupo 150, bloque cerrado.
 --   8. Liquidación a la clínica: 50 + 50 + 0.50 de comisión; payables partido;
 --      transferencia → comisión pagada; lo que ven gerente y secretaria.
 --   9. Bitácora: registro, conciliación y transferencia.
@@ -135,7 +135,7 @@ begin
   update public.platform_maintenance set is_active = false;
   -- La MFA del equipo encendida dentro de la prueba: el equipo entra con aal2.
   update public.platform_security set require_mfa = true where id;
-  update public.levels set monthly_limit_usd = 350 where level = 1;
+  update public.levels set monthly_limit_usd = 150 where level = 1;
   -- El doble control como se siembra (apagado): aquí además registra uno y
   -- aprueba otro.
   insert into public.business_parameters (key, value, effective_from, note)
@@ -250,23 +250,23 @@ begin
   perform pg_temp.como(v_ana, 'aal1');
 
   v_j := public.helios_patient_eligibility(v_m, v_doc);
-  if v_j->>'estado' is distinct from 'nuevo' or (v_j->>'limite_usd')::numeric is distinct from 350 then
-    raise exception 'PASO 2: una cédula nueva debía responder nuevo con límite 350: %', v_j;
+  if v_j->>'estado' is distinct from 'nuevo' or (v_j->>'limite_usd')::numeric is distinct from 150 then
+    raise exception 'PASO 2: una cédula nueva debía responder nuevo con límite 150: %', v_j;
   end if;
 
   v_j := public.preview_patient_charge(v_m, v_doc, 100);
-  if (v_j->>'base_usd')::numeric is distinct from 100 or (v_j->>'consumer_fee_usd')::numeric is distinct from 20
-     or (v_j->>'consumer_fee_vat_usd')::numeric is distinct from 3.20
+  if (v_j->>'base_usd')::numeric is distinct from 100 or (v_j->>'consumer_fee_usd')::numeric is distinct from 12
+     or (v_j->>'consumer_fee_vat_usd')::numeric is distinct from 1.92
      or jsonb_array_length(v_j->'installments') is distinct from 2
-     or (v_j->'installments'->0->>'amount_usd')::numeric is distinct from 61.60
-     or (v_j->'installments'->1->>'amount_usd')::numeric is distinct from 61.60
+     or (v_j->'installments'->0->>'amount_usd')::numeric is distinct from 56.96
+     or (v_j->'installments'->1->>'amount_usd')::numeric is distinct from 56.96
      or (v_j->'installments'->0->>'due_date')::date is distinct from v_bdate + 7
      or (v_j->'installments'->1->>'due_date')::date is distinct from v_bdate + 14
      or (v_j->>'business_date')::date is distinct from v_bdate
      or not (v_j->>'cabe')::boolean then
     raise exception 'PASO 2: vista previa inesperada: %', v_j;
   end if;
-  if v_j ? 'amount_usd' or v_j ? 'consumer_total_usd' or v_j::text like '%123.2%' then
+  if v_j ? 'amount_usd' or v_j ? 'consumer_total_usd' or v_j::text like '%113.92%' then
     raise exception 'PASO 2: la vista previa no puede traer un total que sume el fee: %', v_j;
   end if;
 
@@ -280,14 +280,14 @@ begin
      or (v_j->>'staff_commission_usd')::numeric is distinct from 0.50
      or v_j->>'registered_by' is distinct from 'Ana Rivas (Secretaria)'
      or jsonb_array_length(v_j->'installments') is distinct from 2
-     or (v_j->'installments'->0->>'amount_usd')::numeric is distinct from 61.60
-     or (v_j->'installments'->1->>'amount_usd')::numeric is distinct from 61.60
+     or (v_j->'installments'->0->>'amount_usd')::numeric is distinct from 56.96
+     or (v_j->'installments'->1->>'amount_usd')::numeric is distinct from 56.96
      or (v_j->'breakdown'->>'base_usd')::numeric is distinct from 100
-     or (v_j->'breakdown'->>'consumer_fee_usd')::numeric is distinct from 20
-     or (v_j->'breakdown'->>'consumer_fee_vat_usd')::numeric is distinct from 3.20 then
+     or (v_j->'breakdown'->>'consumer_fee_usd')::numeric is distinct from 12
+     or (v_j->'breakdown'->>'consumer_fee_vat_usd')::numeric is distinct from 1.92 then
     raise exception 'PASO 2: respuesta de create_patient_charge inesperada: %', v_j;
   end if;
-  if v_j::text like '%123.2%' then
+  if v_j::text like '%113.92%' then
     raise exception 'PASO 2: la respuesta a la clínica no puede traer un total con el fee: %', v_j;
   end if;
 
@@ -329,14 +329,14 @@ begin
   select * into v_i2 from public.installments where charge_id = v_charge and sequence = 2;
   if v_profile is null or v_i1.user_id is distinct from v_profile
      or v_i1.due_date is distinct from v_bdate + 7 or v_i2.due_date is distinct from v_bdate + 14
-     or v_i1.amount_usd is distinct from 61.60 or v_i2.amount_usd is distinct from 61.60
+     or v_i1.amount_usd is distinct from 56.96 or v_i2.amount_usd is distinct from 56.96
      or v_i1.status is distinct from 'pending' or v_i2.status is distinct from 'pending' then
     raise exception 'PASO 2: cuotas inesperadas: % / %', to_jsonb(v_i1), to_jsonb(v_i2);
   end if;
   if public.helios_credit_used_usd(v_profile) is distinct from 100 then
     raise exception 'PASO 2: el financiamiento debía ocupar 100 de cupo (sin el fee)';
   end if;
-  raise notice 'PASO 2 OK — nuevo, vista previa 100/20/3.20 y 2×61.60 a +7/+14, alta confirmada con orden y comisión 0.50, idempotente, sin lectura directa';
+  raise notice 'PASO 2 OK — nuevo, vista previa 100/12/1.92 y 2×56.96 a +7/+14, alta confirmada con orden y comisión 0.50, idempotente, sin lectura directa';
 
   -- =========================================================================
   -- PASO 3 — El libro
@@ -365,8 +365,8 @@ begin
   join ledger.entries e on e.transaction_id = t.id
   join ledger.accounts a on a.id = e.account_id
   where t.reference_id = v_charge and t.type = 'charge';
-  if v_row.n is distinct from 4 or v_row.recv_dr is distinct from 123.20 or v_row.pay_cr is distinct from 100 or v_row.rev_cr is distinct from 20 or v_row.vat_cr is distinct from 3.20 then
-    raise exception 'PASO 3: la venta debía ser Dr user_receivable 123.20 / Cr merchant_payable 100 + platform_revenue 20 + vat_payable 3.20: %',
+  if v_row.n is distinct from 4 or v_row.recv_dr is distinct from 113.92 or v_row.pay_cr is distinct from 100 or v_row.rev_cr is distinct from 12 or v_row.vat_cr is distinct from 1.92 then
+    raise exception 'PASO 3: la venta debía ser Dr user_receivable 113.92 / Cr merchant_payable 100 + platform_revenue 12 + vat_payable 1.92: %',
       to_jsonb(v_row);
   end if;
 
@@ -387,7 +387,7 @@ begin
   if (select sum(debit) - sum(credit) from ledger.entries) is distinct from 0 then
     raise exception 'PASO 3: el libro entero no cuadra (sum(debit) is distinct from sum(credit))';
   end if;
-  raise notice 'PASO 3 OK — venta de 4 patas 123.20 = 100 + 20 + 3.20, comisión 0.50, libro cuadrado';
+  raise notice 'PASO 3 OK — venta de 4 patas 113.92 = 100 + 12 + 1.92, comisión 0.50, libro cuadrado';
 
   -- =========================================================================
   -- PASO 4 — Comprobante, bienvenida, despacho y privacidad entre clínicas
@@ -398,16 +398,20 @@ begin
      or v_msg.recipient is distinct from 'paula.recorrido@prueba.helios.test' then
     raise exception 'PASO 4: el comprobante debía quedar pendiente por correo: %', to_jsonb(v_msg);
   end if;
-  if v_msg.rendered_text not like '%Cuota 1: $61,60%' or v_msg.rendered_text not like '%Cuota 2: $61,60%'
+  if v_msg.rendered_text not like '%Cuota 1: $56,96%' or v_msg.rendered_text not like '%Cuota 2: $56,96%'
      or v_msg.html is null
-     or (length(v_msg.html) - length(replace(v_msg.html, '61,60', ''))) / length('61,60') < 2
+     or (length(v_msg.html) - length(replace(v_msg.html, '56,96', ''))) / length('56,96') < 2
      or v_msg.html not like '%no es una factura%' or v_msg.rendered_text not like '%no es una factura%' then
     raise exception 'PASO 4: al comprobante le faltan las dos cuotas o «no es una factura»';
   end if;
-  if v_msg.html like '%123.20%' or v_msg.html like '%123,20%'
-     or v_msg.rendered_text like '%123.20%' or v_msg.rendered_text like '%123,20%'
-     or coalesce(v_msg.subject, '') like '%123%' then
-    raise exception 'PASO 4: el comprobante no puede mostrar 123.20 como total (fee sumado)';
+  -- Al paciente sí se le enseña el total con la comisión (Javier, 2026-10-06):
+  -- desglosado en el cuerpo, al estilo venezolano; el asunto solo las cuotas.
+  if v_msg.html not like '%$113,92%' or v_msg.html like '%113.92%'
+     or v_msg.rendered_text not like '%Total a pagar: $113,92%' or v_msg.rendered_text like '%113.92%'
+     or v_msg.rendered_text not like '%Comisión de servicio (12\%): $12%'
+     or v_msg.rendered_text not like '%IVA de la comisión (16\%): $1,92%'
+     or coalesce(v_msg.subject, '') like '%113%' then
+    raise exception 'PASO 4: el comprobante debía mostrar al paciente el total 113,92 con la comisión desglosada (y el asunto sin total)';
   end if;
   if not exists (select 1 from public.outbound_messages
                  where charge_id = v_charge and template_key = 'bienvenida' and channel = 'whatsapp_manual'
@@ -437,19 +441,19 @@ begin
   -- Otra clínica consulta la misma cédula: enmascarado y disponible, nada más.
   perform pg_temp.como(v_otro, 'aal1');
   v_j := public.helios_patient_eligibility(v_otra, v_doc);
-  if v_j->>'estado' is distinct from 'disponible' or (v_j->>'disponible_usd')::numeric is distinct from 250
+  if v_j->>'estado' is distinct from 'disponible' or (v_j->>'disponible_usd')::numeric is distinct from 50
      or v_j->>'nombre_enmascarado' is distinct from 'P*** R***'
      or v_j->>'telefono_enmascarado' is distinct from '0414-***-**99'
      or v_j->>'email_enmascarado' is null or v_j->>'email_enmascarado' like '%paula.recorrido%' then
-    raise exception 'PASO 4: otra clínica debía ver solo lo enmascarado y disponible 250: %', v_j;
+    raise exception 'PASO 4: otra clínica debía ver solo lo enmascarado y disponible 50: %', v_j;
   end if;
   if (select array_agg(k order by k) from jsonb_object_keys(v_j) k)
        is distinct from array['disponible_usd', 'email_enmascarado', 'estado', 'min_charge_usd', 'nombre_enmascarado', 'telefono_enmascarado']
-     or v_j::text like '%61.6%' or v_j::text like '%123.2%' or v_j::text like '%Clínica Recorrido%' then
+     or v_j::text like '%56.96%' or v_j::text like '%113.92%' or v_j::text like '%Clínica Recorrido%' then
     raise exception 'PASO 4: la elegibilidad de otra clínica no puede revelar la deuda: %', v_j;
   end if;
   reset role;
-  raise notice 'PASO 4 OK — comprobante sin total y «no es una factura», bienvenida, despacho a Resend (doble) enviado, otra clínica ve 250 enmascarado';
+  raise notice 'PASO 4 OK — comprobante con el total al paciente y «no es una factura», bienvenida, despacho a Resend (doble) enviado, otra clínica ve 50 enmascarado';
 
   -- =========================================================================
   -- PASO 5 — La víspera de la cuota 1
@@ -464,7 +468,7 @@ begin
   if v_n < 1 or not exists (
        select 1 from public.outbound_messages
         where profile_id = v_profile and template_key = 'cuota_manana' and channel = 'whatsapp_manual'
-          and installment_due_date = v_i1.due_date and rendered_text like '%61,60%'
+          and installment_due_date = v_i1.due_date and rendered_text like '%56,96%'
           and dedupe_key = format('cuota_manana:whatsapp_manual:%s:%s', v_profile, v_i1.due_date)) then
     raise exception 'PASO 5: cuota_manana debía encolarse con su dedupe (hay %)', v_n;
   end if;
@@ -486,7 +490,7 @@ begin
   perform pg_temp.como(v_super);
   v_j := public.admin_import_statement('Banesco', jsonb_build_array(jsonb_build_object(
     'moved_on', to_char(v_bdate, 'YYYY-MM-DD'), 'reference', '0000771001',
-    'amount_ves', round(61.60 * v_rate, 2), 'description', 'PAGO MOVIL RECIBIDO')));
+    'amount_ves', round(56.96 * v_rate, 2), 'description', 'PAGO MOVIL RECIBIDO')));
   if (v_j->>'inserted')::int is distinct from 1 then
     raise exception 'PASO 6: debía importarse 1 línea del extracto: %', v_j;
   end if;
@@ -496,7 +500,7 @@ begin
   v_failed := false;
   begin
     perform public.admin_register_payment(v_profile, array[v_i1.id], 'pago_movil', 'Banesco', '771001',
-                                          v_bdate, round(61.60 * v_rate, 2), null, null);
+                                          v_bdate, round(56.96 * v_rate, 2), null, null);
   exception when sqlstate '42501' then
     v_failed := true;
   end;
@@ -506,10 +510,10 @@ begin
 
   perform pg_temp.como(v_oper);
   v_rep1 := public.admin_register_payment(v_profile, array[v_i1.id], 'pago_movil', 'Banesco', '771001',
-                                          v_bdate, round(61.60 * v_rate, 2), null, 'Mandó la captura por WhatsApp');
-  if v_rep1->>'status' is distinct from 'reported' or (v_rep1->>'amount_usd')::numeric is distinct from 61.60
+                                          v_bdate, round(56.96 * v_rate, 2), null, 'Mandó la captura por WhatsApp');
+  if v_rep1->>'status' is distinct from 'reported' or (v_rep1->>'amount_usd')::numeric is distinct from 56.96
      or (v_rep1->>'late_fee_usd')::numeric is distinct from 0 or (v_rep1->>'fx_rate')::numeric is distinct from v_rate
-     or (v_rep1->>'amount_ves')::numeric is distinct from round(61.60 * v_rate, 2)
+     or (v_rep1->>'amount_ves')::numeric is distinct from round(56.96 * v_rate, 2)
      or (v_rep1->>'diferencia_ves')::numeric is distinct from 0 or (v_rep1->>'candidatos_extracto')::int is distinct from 1 then
     raise exception 'PASO 6: registro del pago de la cuota 1 inesperado: %', v_rep1;
   end if;
@@ -526,7 +530,7 @@ begin
   set local role authenticated;
   perform pg_temp.como(v_super);
   v_j := public.admin_reconcile_payment((v_rep1->>'report_id')::uuid, true, null);
-  if v_j->>'status' is distinct from 'reconciled' or (v_j->>'amount_usd')::numeric is distinct from 61.60 or v_j->>'statement_line_id' is null then
+  if v_j->>'status' is distinct from 'reconciled' or (v_j->>'amount_usd')::numeric is distinct from 56.96 or v_j->>'statement_line_id' is null then
     raise exception 'PASO 6: la conciliación de la cuota 1 debía aprobarse ligada al extracto: %', v_j;
   end if;
   reset role;
@@ -549,12 +553,12 @@ begin
   join ledger.entries e on e.transaction_id = t.id
   join ledger.accounts a on a.id = e.account_id
   where t.idempotency_key = 'reconcile:' || (v_rep1->>'report_id');
-  if v_row.cash_dr is distinct from 61.60 or v_row.recv_cr is distinct from 61.60 or v_row.diff is distinct from 0 then
-    raise exception 'PASO 6: el pago debía asentarse Dr cash 61.60 / Cr user_receivable 61.60: %', to_jsonb(v_row);
+  if v_row.cash_dr is distinct from 56.96 or v_row.recv_cr is distinct from 56.96 or v_row.diff is distinct from 0 then
+    raise exception 'PASO 6: el pago debía asentarse Dr cash 56.96 / Cr user_receivable 56.96: %', to_jsonb(v_row);
   end if;
   if not exists (select 1 from public.outbound_messages
                  where dedupe_key = 'pago_recibido:' || (v_rep1->>'report_id') and status = 'pendiente'
-                   and profile_id = v_profile and rendered_text like '%61,60%') then
+                   and profile_id = v_profile and rendered_text like '%56,96%') then
     raise exception 'PASO 6: conciliar debía encolar pago_recibido';
   end if;
   if (select count(*) from public.outbound_messages
@@ -570,11 +574,11 @@ begin
   set local role authenticated;
   perform pg_temp.como(v_otro, 'aal1');
   v_j := public.helios_patient_eligibility(v_otra, v_doc);
-  if v_j->>'estado' is distinct from 'disponible' or (v_j->>'disponible_usd')::numeric is distinct from 250 then
-    raise exception 'PASO 6: el disponible debía seguir en 250 hasta pagar ambas cuotas: %', v_j;
+  if v_j->>'estado' is distinct from 'disponible' or (v_j->>'disponible_usd')::numeric is distinct from 50 then
+    raise exception 'PASO 6: el disponible debía seguir en 50 hasta pagar ambas cuotas: %', v_j;
   end if;
   reset role;
-  raise notice 'PASO 6 OK — operador registra (Bs a la tasa del día), super_admin concilia con el extracto: cuota 1 pagada, caja, pago_recibido, avisos cancelados, cupo aún 250';
+  raise notice 'PASO 6 OK — operador registra (Bs a la tasa del día), super_admin concilia con el extracto: cuota 1 pagada, caja, pago_recibido, avisos cancelados, cupo aún 50';
 
   -- =========================================================================
   -- PASO 7 — Mora en la cuota 2 y su pago
@@ -631,8 +635,8 @@ begin
   if not exists (select 1 from public.outbound_messages
                  where profile_id = v_profile and template_key = 'cargo_por_atraso_d4'
                    and installment_due_date = v_i2.due_date and status = 'pendiente'
-                   and rendered_text like '%63,60%') then
-    raise exception 'PASO 7: debía encolarse cargo_por_atraso_d4 con $63.60';
+                   and rendered_text like '%58,96%') then
+    raise exception 'PASO 7: debía encolarse cargo_por_atraso_d4 con $58.96';
   end if;
 
   -- Cualquier clínica: «no disponible», con el texto neutro y sin el motivo.
@@ -646,7 +650,8 @@ begin
   if v_j->>'estado' is distinct from 'no_disponible' or v_j is distinct from v_j2
      or (select array_agg(k order by k) from jsonb_object_keys(v_j) k) is distinct from array['estado', 'mensaje', 'whatsapp_helios']
      or v_j->>'mensaje' is distinct from v_neutral or v_j->>'whatsapp_helios' is distinct from '+584140001122'
-     or v_j->>'mensaje' ~* '(mora|atras|venc|deud|cuota|congel|\$)' then
+     -- «pagar en cuotas» es el nombre del producto (2026-10-06), no un motivo.
+     or replace(v_j->>'mensaje', 'pagar en cuotas', '') ~* '(mora|atras|venc|deud|cuota|congel|\$)' then
     raise exception 'PASO 7: la elegibilidad debía ser no_disponible con el texto neutro y nada más: % / %', v_j, v_j2;
   end if;
 
@@ -655,18 +660,18 @@ begin
   perform pg_temp.como(v_super);
   perform public.admin_import_statement('Banesco', jsonb_build_array(jsonb_build_object(
     'moved_on', to_char(v_bdate, 'YYYY-MM-DD'), 'reference', '0000771002',
-    'amount_ves', round(63.60 * v_rate, 2), 'description', 'PAGO MOVIL RECIBIDO')));
+    'amount_ves', round(58.96 * v_rate, 2), 'description', 'PAGO MOVIL RECIBIDO')));
   perform pg_temp.como(v_oper);
   v_rep2 := public.admin_register_payment(v_profile, array[v_i2.id], 'pago_movil', 'Banesco', '771002',
-                                          v_bdate, round(63.60 * v_rate, 2), null, 'Pagó la cuota 2 con el cargo');
-  if v_rep2->>'status' is distinct from 'reported' or (v_rep2->>'amount_usd')::numeric is distinct from 63.60
-     or (v_rep2->>'late_fee_usd')::numeric is distinct from 2 or (v_rep2->>'installments_usd')::numeric is distinct from 61.60
+                                          v_bdate, round(58.96 * v_rate, 2), null, 'Pagó la cuota 2 con el cargo');
+  if v_rep2->>'status' is distinct from 'reported' or (v_rep2->>'amount_usd')::numeric is distinct from 58.96
+     or (v_rep2->>'late_fee_usd')::numeric is distinct from 2 or (v_rep2->>'installments_usd')::numeric is distinct from 56.96
      or (v_rep2->>'candidatos_extracto')::int is distinct from 1 or (v_rep2->>'diferencia_ves')::numeric is distinct from 0 then
-    raise exception 'PASO 7: el registro de la cuota 2 debía llevar el cargo (63.60): %', v_rep2;
+    raise exception 'PASO 7: el registro de la cuota 2 debía llevar el cargo (58.96): %', v_rep2;
   end if;
   perform pg_temp.como(v_super);
   v_j := public.admin_reconcile_payment((v_rep2->>'report_id')::uuid, true, null);
-  if v_j->>'status' is distinct from 'reconciled' or (v_j->>'amount_usd')::numeric is distinct from 63.60
+  if v_j->>'status' is distinct from 'reconciled' or (v_j->>'amount_usd')::numeric is distinct from 58.96
      or (v_j->>'late_fee_count')::int is distinct from 1 or v_j->>'statement_line_id' is null then
     raise exception 'PASO 7: la conciliación de la cuota 2 + cargo inesperada: %', v_j;
   end if;
@@ -691,8 +696,8 @@ begin
   perform pg_temp.como(v_otro, 'aal1');
   v_j := public.helios_patient_eligibility(v_otra, v_doc);
   reset role;
-  if v_j->>'estado' is distinct from 'disponible' or (v_j->>'disponible_usd')::numeric is distinct from 350 then
-    raise exception 'PASO 7: pagado todo, el disponible debía volver a 350: %', v_j;
+  if v_j->>'estado' is distinct from 'disponible' or (v_j->>'disponible_usd')::numeric is distinct from 150 then
+    raise exception 'PASO 7: pagado todo, el disponible debía volver a 150: %', v_j;
   end if;
   if exists (select 1 from public.outbound_messages
              where profile_id = v_profile and template_key in ('cuenta_congelada', 'cargo_por_atraso_d4')
@@ -703,7 +708,7 @@ begin
                  where dedupe_key = 'pago_recibido:' || (v_rep2->>'report_id') and status = 'pendiente') then
     raise exception 'PASO 7: conciliar la cuota 2 debía encolar pago_recibido';
   end if;
-  raise notice 'PASO 7 OK — mora: congelada el día 1, un cargo de $2 al día 4 (idempotente), avisos, no_disponible neutro; pagada la cuota 2 + cargo: activa, cupo 350, bloque cerrado';
+  raise notice 'PASO 7 OK — mora: congelada el día 1, un cargo de $2 al día 4 (idempotente), avisos, no_disponible neutro; pagada la cuota 2 + cargo: activa, cupo 150, bloque cerrado';
 
   -- =========================================================================
   -- PASO 8 — La liquidación a la clínica
@@ -729,6 +734,20 @@ begin
   if jsonb_array_length(v_j) is distinct from 1 or (v_j->0->>'consultas_usd')::numeric is distinct from 100
      or (v_j->0->>'comisiones_usd')::numeric is distinct from 0.50 then
     raise exception 'PASO 8: admin_merchant_payables debía decir consultas 100 y comisiones 0.50: %', v_j;
+  end if;
+  -- Cada parte se paga el día siguiente a su vencimiento (2026-10-06): la
+  -- comisión el día siguiente al alta y cada mitad el siguiente a su cuota
+  -- (días 8 y 15; aquí las cuotas se movieron en el tiempo para la mora).
+  v_j := public.admin_merchant_settlements(v_m);
+  if jsonb_array_length(v_j) is distinct from 3
+     or exists (select 1 from jsonb_array_elements(v_j) x
+                where (x->>'run_date')::date is distinct from (x->>'due_date')::date + 1)
+     or (select (x->>'run_date')::date from jsonb_array_elements(v_j) x where x->>'reason' = 'staff_commission')
+          is distinct from v_bdate + 1
+     or (select array_agg((x->>'run_date')::date order by (x->>'run_date')::date) from jsonb_array_elements(v_j) x
+          where x->>'reason' = 'scheduled_installment')
+          is distinct from (select array_agg(d + 1 order by d) from unnest(array[v_i1.due_date, v_i2.due_date]) d) then
+    raise exception 'PASO 8: a la clínica se le debía pagar cada parte el día siguiente a su vencimiento: %', v_j;
   end if;
 
   select array_agg(id) into v_ids from public.settlements where merchant_id = v_m and status = 'pending';
@@ -814,10 +833,10 @@ begin
   end if;
   select coalesce(sum(ledger.account_balance(id)), 0) into v_cash1
     from ledger.accounts where account_type = 'cash' and owner_id is null;
-  -- Entró 61.60 + 63.60 = 125.20 y salió 100.50: la caja sube 24.70
-  -- (= fee 20 + IVA 3.20 + cargo 2 − comisión 0.50).
-  if v_cash1 - v_cash0 is distinct from 24.70 then
-    raise exception 'PASO 10: la caja debía subir 24.70 en el recorrido, subió %', v_cash1 - v_cash0;
+  -- Entró 56.96 + 58.96 = 115.92 y salió 100.50: la caja sube 15.42
+  -- (= fee 12 + IVA 1.92 + cargo 2 − comisión 0.50).
+  if v_cash1 - v_cash0 is distinct from 15.42 then
+    raise exception 'PASO 10: la caja debía subir 15.42 en el recorrido, subió %', v_cash1 - v_cash0;
   end if;
   if exists (select 1 from public.installments where charge_id = v_charge and status is distinct from 'paid')
      or exists (select 1 from public.late_fees where user_id = v_profile and status is distinct from 'paid')
@@ -837,7 +856,7 @@ begin
        where charge_id = v_charge and template_key = 'comprobante_financiamiento') is distinct from 'enviado' then
     raise exception 'PASO 10: el comprobante debía seguir enviado';
   end if;
-  raise notice 'PASO 10 OK — libro cuadrado, caja +24.70, nada pendiente salvo los WhatsApp manuales que tocan';
+  raise notice 'PASO 10 OK — libro cuadrado, caja +15.42, nada pendiente salvo los WhatsApp manuales que tocan';
 
   raise notice '=== RECORRIDO COMPLETO DE UN FINANCIAMIENTO: TODO VERDE ===';
 end $$;

@@ -20,7 +20,7 @@ export async function fetchComisiones(rango: {
 }
 
 /**
- * Las comisiones de una persona, financiamiento a financiamiento. Sin
+ * Las comisiones de una persona, orden a orden. Sin
  * `staffUserId`, las de quien mira (la base lo resuelve con la sesión).
  */
 export async function fetchItemsDeComision(params: {

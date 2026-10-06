@@ -76,11 +76,11 @@ export function MaintenanceTab() {
       const estabaEncendido = query.data?.isActive ?? false
       avisar(
         !isActive
-          ? 'El mantenimiento está apagado. Las clínicas vuelven a registrar financiamientos con normalidad.'
+          ? 'El mantenimiento está apagado. Las clínicas vuelven a registrar pagos en cuotas con normalidad.'
           : estabaEncendido
             ? 'El aviso del mantenimiento está actualizado.'
             : m.blocksBalance
-              ? 'El mantenimiento está encendido: nadie puede financiarse y todos ven el aviso en la siguiente carga.'
+              ? 'El mantenimiento está encendido: nadie puede pagar en cuotas y todos ven el aviso en la siguiente carga.'
               : 'El mantenimiento está encendido: todos ven el aviso en la siguiente carga y el saldo sigue funcionando.',
       )
       setEncendiendo(false)
@@ -122,7 +122,7 @@ export function MaintenanceTab() {
   return (
     <Seccion
       titulo="Mantenimiento"
-      info="El freno de emergencia. Con el saldo apagado ninguna clínica puede registrar financiamientos, y el aviso sale en el panel en la siguiente carga. Registrar y aprobar pagos sigue funcionando, para no crear atrasos a quien tiene una cuota que vence ese día."
+      info="El freno de emergencia. Con el saldo apagado ninguna clínica puede registrar pagos en cuotas, y el aviso sale en el panel en la siguiente carga. Registrar y aprobar pagos sigue funcionando, para no crear atrasos a quien tiene una cuota que vence ese día."
       controles={
         on ? (
           <>
@@ -172,8 +172,8 @@ export function MaintenanceTab() {
           {/* Escrito: es lo que decide si la gente puede consumir esta noche. */}
           <p className="type-panel-caption text-on-surface-variant">
             {bloquea
-              ? 'Nadie puede financiarse hasta que se apague.'
-              : 'El aviso sale, pero todos pueden seguir financiándose: para un mantenimiento programado o una caída parcial.'}
+              ? 'Nadie puede pagar en cuotas hasta que se apague.'
+              : 'El aviso sale, pero todos pueden seguir pagando en cuotas: para un mantenimiento programado o una caída parcial.'}
           </p>
         </div>
       </Card>
@@ -231,8 +231,8 @@ export function MaintenanceTab() {
           title="Encender el mantenimiento"
           summary={
             bloquea
-              ? 'Las clínicas verán este aviso y no podrán registrar financiamientos hasta que se apague.'
-              : 'Las clínicas verán este aviso. Se sigue pudiendo financiar.'
+              ? 'Las clínicas verán este aviso y no podrán registrar pagos en cuotas hasta que se apague.'
+              : 'Las clínicas verán este aviso. Se siguen pudiendo registrar pagos en cuotas.'
           }
           detail={
             <div className="flex flex-col gap-3">

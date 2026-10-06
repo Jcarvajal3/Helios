@@ -134,6 +134,15 @@ begin
   -- =========================================================================
   update public.business_parameters set value = 1
    where key = 'patient_confirmation_required' and effective_from = v_bdate;
+  -- Desde 20261006002000 la pregunta no tiene plantilla de Meta (la v1 decía
+  -- «20 %» y «financiamiento»): fuera de la ventana va a la cola manual. Para
+  -- probar el camino de la plantilla se simula una aprobada, con las 6
+  -- variables de la v1.
+  if (select wa_template_name from public.notification_templates where key = 'confirmar_financiamiento') is not null then
+    raise exception 'La pregunta al paciente no debía tener plantilla de Meta hasta que se apruebe la v3';
+  end if;
+  update public.notification_templates set wa_template_name = 'helios_confirmar_financiamiento'
+   where key = 'confirmar_financiamiento';
   set local role authenticated;
   perform set_config('request.jwt.claims', json_build_object('sub', v_cajero::text, 'role', 'authenticated')::text, true);
   perform public.helios_patient_eligibility(v_m, 'V30000001');
@@ -150,9 +159,9 @@ begin
      or v_row.wa_template->'params'->>0 <> 'José'
      or v_row.wa_template->'params'->>1 <> 'Clínica Despacho'
      or v_row.wa_template->'params'->>2 <> '100'
-     or v_row.wa_template->'params'->>3 <> '20'
-     or v_row.wa_template->'params'->>4 <> '3,20'
-     or v_row.wa_template->'params'->>5 not like '$61,60 el % y $61,60 el %'
+     or v_row.wa_template->'params'->>3 <> '12'
+     or v_row.wa_template->'params'->>4 <> '1,92'
+     or v_row.wa_template->'params'->>5 not like '$56,96 el % y $56,96 el %'
      or v_row.wa_template->'buttons'->0->>'id' <> 'confirmar:' || v_charge
      or v_row.wa_template->'buttons'->1->>'id' <> 'rechazar:' || v_charge
      or v_row.wa_template->'buttons'->0->>'title' <> 'Sí' then
@@ -243,6 +252,21 @@ begin
      or v_row.last_error not like '%fuera de la ventana de 24 h y sin plantilla aprobada%' then
     raise exception 'Sin ventana ni plantilla, a la cola manual: %', to_jsonb(v_row);
   end if;
+
+  -- La pregunta sin plantilla de Meta (como quedó en 20261006002000): fuera
+  -- de la ventana no sale por la API, va a la cola manual.
+  update public.notification_templates set wa_template_name = null where key = 'confirmar_financiamiento';
+  v_msg := public.helios_enqueue_confirmation(v_charge);
+  perform public.helios_dispatch_whatsapp_batch();
+  select * into v_row from public.outbound_messages where id = v_msg;
+  if v_row.channel <> 'whatsapp_manual' or v_row.status <> 'pendiente'
+     or v_row.last_error not like '%fuera de la ventana de 24 h y sin plantilla aprobada%'
+     or v_row.rendered_text not like '%¿Confirmas tu pago en cuotas? Responde Sí o No.%' then
+    raise exception 'La pregunta sin plantilla, fuera de la ventana, va a la cola manual: %', to_jsonb(v_row);
+  end if;
+  update public.outbound_messages set status = 'cancelado' where id = v_msg;
+  update public.notification_templates set wa_template_name = 'helios_confirmar_financiamiento'
+   where key = 'confirmar_financiamiento';
 
   -- =========================================================================
   -- 6. Los errores

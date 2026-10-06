@@ -107,15 +107,15 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub', v_cajero::text, 'role', 'authenticated')::text, true);
 
   v_j := public.helios_patient_eligibility(v_m, 'v-12.345.678');
-  if v_j->>'estado' <> 'nuevo' or (v_j->>'limite_usd')::numeric <> 350 or (v_j->>'min_charge_usd')::numeric <> 10 then
-    raise exception 'Una cédula nueva debía responder nuevo con límite 350: %', v_j;
+  if v_j->>'estado' <> 'nuevo' or (v_j->>'limite_usd')::numeric <> 150 or (v_j->>'min_charge_usd')::numeric <> 10 then
+    raise exception 'Una cédula nueva debía responder nuevo con límite 150: %', v_j;
   end if;
 
   v_j := public.preview_patient_charge(v_m, 'V12345678', 100);
-  if (v_j->>'base_usd')::numeric <> 100 or (v_j->>'consumer_fee_usd')::numeric <> 20
-     or (v_j->>'consumer_fee_vat_usd')::numeric <> 3.20
-     or (v_j->'installments'->0->>'amount_usd')::numeric <> 61.60
-     or (v_j->'installments'->1->>'amount_usd')::numeric <> 61.60
+  if (v_j->>'base_usd')::numeric <> 100 or (v_j->>'consumer_fee_usd')::numeric <> 12
+     or (v_j->>'consumer_fee_vat_usd')::numeric <> 1.92
+     or (v_j->'installments'->0->>'amount_usd')::numeric <> 56.96
+     or (v_j->'installments'->1->>'amount_usd')::numeric <> 56.96
      or (v_j->'installments'->0->>'financed_usd')::numeric <> 50
      or (v_j->'installments'->0->>'due_date')::date <> v_bdate + 7
      or (v_j->'installments'->1->>'due_date')::date <> v_bdate + 14
@@ -136,9 +136,9 @@ begin
      or v_j->'patient'->>'documento_enmascarado' <> 'V-****5678'
      or v_j->'patient'->>'email_enmascarado' <> 'j***@gmail.com'
      or jsonb_array_length(v_j->'installments') <> 2
-     or (v_j->'installments'->0->>'amount_usd')::numeric <> 61.60
+     or (v_j->'installments'->0->>'amount_usd')::numeric <> 56.96
      or (v_j->'breakdown'->>'base_usd')::numeric <> 100
-     or (v_j->'breakdown'->>'consumer_fee_pct')::numeric <> 20
+     or (v_j->'breakdown'->>'consumer_fee_pct')::numeric <> 12
      or v_j->'receipt'->>'status' not in ('pendiente', 'sin_configurar')
      or v_j->>'registered_by' <> 'Ana Secretaria (Secretaria)'
      or (v_j->>'staff_commission_usd')::numeric <> 0.50
@@ -161,7 +161,7 @@ begin
   select * into v_row from public.charges where id = v_charge;
   if v_row.user_id <> v_profile or v_row.requested_by <> v_cajero or v_row.branch_id <> v_br_a
      or v_row.confirmed_at is null or v_row.business_date <> v_bdate
-     or v_row.amount_usd <> 123.20 or v_row.base_usd <> 100
+     or v_row.amount_usd <> 113.92 or v_row.base_usd <> 100
      or v_row.terms_version_id is distinct from (select id from public.terms_versions where is_current)
      or v_row.terms_version_id is null
      or v_row.commission_staff_id <> v_cajero or v_row.staff_commission_usd <> 0.50 then
@@ -177,7 +177,7 @@ begin
   -- Las cuotas: +7 y +14 desde el día operativo, que empieza a medianoche.
   if (select array_agg(due_date order by sequence) from public.installments where charge_id = v_charge)
        <> array[v_bdate + 7, v_bdate + 14]
-     or (select sum(amount_usd) from public.installments where charge_id = v_charge) <> 123.20
+     or (select sum(amount_usd) from public.installments where charge_id = v_charge) <> 113.92
      or (select sum(financed_usd) from public.installments where charge_id = v_charge) <> 100 then
     raise exception 'Cuotas inesperadas';
   end if;
@@ -197,8 +197,8 @@ begin
     if v_tx.d <> v_tx.c then
       raise exception 'Asiento descuadrado: %', to_jsonb(v_tx);
     end if;
-    if v_tx.type = 'charge' and (v_tx.n <> 4 or v_tx.d <> 123.20 or v_tx.idempotency_key <> 'charge:pc-key-1') then
-      raise exception 'La venta debía tener 4 patas por 123.20: %', to_jsonb(v_tx);
+    if v_tx.type = 'charge' and (v_tx.n <> 4 or v_tx.d <> 113.92 or v_tx.idempotency_key <> 'charge:pc-key-1') then
+      raise exception 'La venta debía tener 4 patas por 113.92: %', to_jsonb(v_tx);
     end if;
     if v_tx.type = 'staff_commission' and (v_tx.n <> 2 or v_tx.d <> 0.50
                                            or v_tx.idempotency_key <> 'staff_commission:' || v_charge) then
@@ -213,11 +213,11 @@ begin
       where t.reference_id = v_charge and t.type = 'charge' and a.account_type = 'merchant_payable') <> 100
      or (select e.credit from ledger.entries e join ledger.transactions t on t.id = e.transaction_id
       join ledger.accounts a on a.id = e.account_id
-      where t.reference_id = v_charge and t.type = 'charge' and a.account_type = 'platform_revenue') <> 20
+      where t.reference_id = v_charge and t.type = 'charge' and a.account_type = 'platform_revenue') <> 12
      or (select e.credit from ledger.entries e join ledger.transactions t on t.id = e.transaction_id
       join ledger.accounts a on a.id = e.account_id
-      where t.reference_id = v_charge and t.type = 'charge' and a.account_type = 'vat_payable') <> 3.20 then
-    raise exception 'Las patas de la venta no son 100 / 20 / 3.20';
+      where t.reference_id = v_charge and t.type = 'charge' and a.account_type = 'vat_payable') <> 1.92 then
+    raise exception 'Las patas de la venta no son 100 / 12 / 1.92';
   end if;
 
   -- Comisión devengada, liquidación del día y cupo ocupado.
@@ -240,7 +240,7 @@ begin
   if not exists (select 1 from public.outbound_messages
                  where charge_id = v_charge and template_key = 'bienvenida' and channel = 'whatsapp_manual'
                    and recipient = '+584141234567' and dedupe_key = 'bienvenida:' || v_charge
-                   and rendered_text like '🩺 ¡Listo, José! Tu financiamiento #%' and rendered_text like '%* $61,60 — %') then
+                   and rendered_text like '🩺 ¡Listo, José! Tu pago en cuotas #%' and rendered_text like '%* $56,96 — %') then
     raise exception 'La bienvenida debía encolarse por WhatsApp';
   end if;
   if not exists (select 1 from audit.admin_actions where action = 'charge.created' and target_id = v_charge
@@ -288,19 +288,19 @@ begin
   -- =========================================================================
   perform set_config('request.jwt.claims', json_build_object('sub', v_gerente::text, 'role', 'authenticated')::text, true);
   v_j := public.helios_patient_eligibility(v_m, 'V12345678');
-  if v_j->>'estado' <> 'disponible' or (v_j->>'disponible_usd')::numeric <> 250
+  if v_j->>'estado' <> 'disponible' or (v_j->>'disponible_usd')::numeric <> 50
      or v_j->>'nombre_enmascarado' <> 'J*** P***' or v_j->>'telefono_enmascarado' <> '0414-***-**67'
      or v_j->>'email_enmascarado' <> 'j***@gmail.com' then
     raise exception 'Elegibilidad del conocido inesperada: %', v_j;
   end if;
-  v_j := public.preview_patient_charge(v_m, 'V12345678', 300);
-  if (v_j->>'cabe')::boolean or (v_j->>'disponible_usd')::numeric <> 250 then
-    raise exception 'La vista previa debía decir que 300 no cabe en 250: %', v_j;
+  v_j := public.preview_patient_charge(v_m, 'V12345678', 60);
+  if (v_j->>'cabe')::boolean or (v_j->>'disponible_usd')::numeric <> 50 then
+    raise exception 'La vista previa debía decir que 60 no cabe en 50: %', v_j;
   end if;
 
   v_j := public.create_patient_charge(v_m, null,
     v_pac || jsonb_build_object('phone', '04241112233', 'email', 'otro@correo.com', 'first_name', 'Jose'),
-    150, 'Consulta + eco', null, 'pc-key-2');
+    10, 'Consulta + eco', null, 'pc-key-2');
   v_charge2 := (v_j->>'id')::uuid;
   if v_j->>'concept' <> 'Consulta + eco' or v_j->>'branch_id' <> v_br_a::text
      or v_j->>'registered_by' <> 'Laura Gerente (Administrador)' then
@@ -328,31 +328,31 @@ begin
   raise notice 'TEST 3 OK — conocido: propuesta de cambio sin sobrescribir, comprobante al correo registrado';
 
   -- =========================================================================
-  -- 4. Cupo: doble gasto y cupo agotado (usado 250 de 350)
+  -- 4. Cupo: doble gasto y cupo agotado (usado 110 de 150)
   -- =========================================================================
   set local role authenticated;
   perform set_config('request.jwt.claims', json_build_object('sub', v_cajero_b::text, 'role', 'authenticated')::text, true);
   v_j := public.helios_patient_eligibility(v_m, 'V12345678');
-  if (v_j->>'disponible_usd')::numeric <> 100 then
-    raise exception 'Debían quedar 100 disponibles: %', v_j;
+  if (v_j->>'disponible_usd')::numeric <> 40 then
+    raise exception 'Debían quedar 40 disponibles: %', v_j;
   end if;
-  -- Dos sedes a la vez, una detrás de otra: 60 cabe, el segundo 60 ya no.
-  perform public.create_patient_charge(v_m, null, v_pac, 60, null, null, 'pc-key-3');
+  -- Dos sedes a la vez, una detrás de otra: 25 cabe, el segundo 25 ya no.
+  perform public.create_patient_charge(v_m, null, v_pac, 25, null, null, 'pc-key-3');
   v_err := null;
   begin
-    perform public.create_patient_charge(v_m, null, v_pac, 60, null, null, 'pc-key-4');
+    perform public.create_patient_charge(v_m, null, v_pac, 25, null, null, 'pc-key-4');
   exception when sqlstate '22023' then
     get stacked diagnostics v_err = message_text;
   end;
-  if v_err is distinct from 'El monto supera lo disponible para financiar ($40)' then
+  if v_err is distinct from 'El monto supera lo disponible ($15).' then
     raise exception 'El segundo cargo debía rechazarse por cupo, dijo: %', v_err;
   end if;
-  perform public.create_patient_charge(v_m, null, v_pac, 35, null, null, 'pc-key-5');
+  perform public.create_patient_charge(v_m, null, v_pac, 10, null, null, 'pc-key-5');
   -- Quedan 5 < mínimo: «no disponible», sin decir por qué.
   v_j := public.helios_patient_eligibility(v_m, 'V12345678');
   v_neutral := v_j->>'mensaje';
   if v_j->>'estado' <> 'no_disponible'
-     or v_neutral <> 'No podemos financiar a esta persona. Si tiene dudas, puede escribir a Helios al 0414-0001122.'
+     or v_neutral <> 'Esta persona no puede pagar en cuotas con Helios. Si tiene dudas, puede escribir a Helios al 0414-0001122.'
      or v_j->>'whatsapp_helios' <> '+584140001122'
      or (select count(*) from jsonb_object_keys(v_j)) <> 3 then
     raise exception 'Cupo agotado debía ser no_disponible neutro: %', v_j;

@@ -39,14 +39,15 @@ function Linea({ children }: { children: ReactNode }) {
 }
 
 /**
- * La cabecera del cierre: «Liquidación prevista, cierre del lunes 28 (neto)»
- * o, si ya pasó, «Liquidación del cierre del lunes 21 (neto)». Es lo que ese
- * cierre le paga al local por las cuotas que vencían en la semana.
+ * La cabecera de lo que se le paga por la semana: «Liquidación prevista de la
+ * semana (neto)» o, si ya pasó, «Liquidación de la semana (neto)». Es lo que
+ * se le paga a la clínica (a diario, el día siguiente a cada vencimiento) por
+ * las cuotas que vencían en la semana; el último pago cae el lunes siguiente.
  */
 export function rotuloDelCierre(cierre: LocalesDeLaSemana['cierre']): string {
   return cierre.pasado
-    ? `Liquidación del cierre del ${diaConNumero(cierre.lunes)} (neto)`
-    : `Liquidación prevista, cierre del ${diaConNumero(cierre.lunes)} (neto)`
+    ? `Liquidación de la semana, pagada hasta el ${diaConNumero(cierre.lunes)} (neto)`
+    : `Liquidación prevista de la semana, hasta el ${diaConNumero(cierre.lunes)} (neto)`
 }
 
 /**
@@ -266,8 +267,8 @@ export function columnasDeLocales({
       key: 'cierre',
       header: rotuloDelCierre(d.cierre),
       info: d.cierre.pasado
-        ? `Lo que el cierre de caja del ${diaConNumero(d.cierre.lunes)} le generó por las cuotas que vencieron esta semana, y lo que falte por transferirle. Es lo mismo que dice Pagos a clínicas.`
-        : `Lo que el cierre de caja del ${diaConNumero(d.cierre.lunes)} le transferirá por las cuotas que vencen esta semana, se paguen o no: lo ya generado más lo que se generará hasta el domingo con sus condiciones. Es su neto: no lleva el service fee. Si tiene algo atrasado de cierres anteriores, va debajo: ese lunes también se le paga, y con ello es lo que Pagos a clínicas llama «Sale este lunes (con lo atrasado)».`,
+        ? `Lo que se le generó por las cuotas que vencieron esta semana (cada mitad se paga el día siguiente a su vencimiento, el último el ${diaConNumero(d.cierre.lunes)}), y lo que falte por transferirle. Es lo mismo que dice Pagos a clínicas.`
+        : `Lo que se le transferirá por las cuotas que vencen esta semana, se paguen o no, cada mitad el día siguiente a su vencimiento (el último pago, el ${diaConNumero(d.cierre.lunes)}): lo ya generado más lo que se generará hasta el domingo con sus condiciones. Es su neto: no lleva la comisión de servicio. Si tiene algo atrasado de semanas anteriores, va debajo.`,
       type: 'number',
       sortDir: 'desc',
       sort: orden((l) => l.transferencia.generadoUsd + l.transferencia.previstoUsd),
@@ -296,9 +297,9 @@ export function columnasDeLocales({
 
     {
       key: 'cierre-atrasado',
-      header: 'Atrasado de cierres anteriores',
+      header: 'Atrasado de semanas anteriores',
       hidden: true,
-      info: 'Lo de cierres anteriores que sigue sin transferirse y ese lunes también se paga. Solo para un cierre que no ha llegado.',
+      info: 'Lo de semanas anteriores que sigue sin transferirse. Solo para una semana cuyos pagos no han terminado.',
       type: 'number',
       sortDir: 'desc',
       sort: orden((l) => l.transferencia.atrasadoUsd),

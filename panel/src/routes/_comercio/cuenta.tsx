@@ -60,6 +60,6 @@ function CuentaPage() {
 }
 
 const ROLE_DESCRIPTION = {
-  gerente: 'ves toda la clínica: financiamientos, comisiones, métricas, pagos y personal.',
-  cajero: 'registras financiamientos y consultas los tuyos y tus comisiones.',
+  gerente: 'ves toda la clínica: pagos en cuotas, comisiones, métricas, pagos y personal.',
+  cajero: 'registras pagos en cuotas y consultas los tuyos y tus comisiones.',
 } as const

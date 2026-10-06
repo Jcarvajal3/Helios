@@ -14,7 +14,7 @@ import type { Elegibilidad, Financiamiento, Reenvio, VistaPrevia } from './regis
 // (`describeError`), y el `code` decide qué se hace con él.
 // ═══════════════════════════════════════════════════════════════════════════
 
-/** Paso 1: ¿se puede financiar a esta cédula? (contrato §1.1) */
+/** Paso 1: ¿puede pagar en cuotas esta cédula? (contrato §1.1) */
 export async function consultarCedula(params: {
   merchantId: string
   document: string
@@ -83,7 +83,7 @@ export async function registrarFinanciamiento(params: {
 }
 
 /**
- * Cómo está un financiamiento ahora (`helios_charge_for_staff`). La pantalla
+ * Cómo está un pago en cuotas ahora (`helios_charge_for_staff`). La pantalla
  * de espera lo vuelve a pedir cada pocos segundos mientras la orden espera.
  */
 export async function fetchFinanciamiento(chargeId: string): Promise<Financiamiento> {

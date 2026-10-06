@@ -68,7 +68,7 @@ export function Feriados({ anio, onAnio }: { anio: number; onAnio: (anio: number
   return (
     <Seccion
       titulo="Feriados"
-      info="Los días en que ni el BCV publica ni los bancos operan. No cuentan como hábiles para la tasa ni para los cierres: sin ellos, un martes de Carnaval hacía saltar el aviso de tasa vieja."
+      info="Los días en que ni el BCV publica ni los bancos operan. No cuentan como hábiles para la tasa: sin ellos, un martes de Carnaval hacía saltar el aviso de tasa vieja. A las clínicas se les paga igual: los días de pago son corridos."
       controles={
         <>
           <SelectorDePaso
@@ -132,7 +132,7 @@ export function Feriados({ anio, onAnio }: { anio: number; onAnio: (anio: number
       {quitando && (
         <ConfirmDialog
           title="Quitar el feriado"
-          summary={`El ${formatDay(quitando)} vuelve a contar como día hábil para la tasa y para los cierres.`}
+          summary={`El ${formatDay(quitando)} vuelve a contar como día hábil para la tasa.`}
           confirmLabel="Quitarlo"
           danger
           busy={quitar.isPending}
@@ -164,7 +164,7 @@ function NuevoFeriado({ anio, onClose }: { anio: number; onClose: () => void }) 
   return (
     <ConfirmDialog
       title="Añadir un feriado"
-      summary="Ese día deja de contar como hábil para la tasa y para los cierres."
+      summary="Ese día deja de contar como hábil para la tasa."
       detail={
         <div className="flex flex-col gap-3">
           <Input id="fer-dia" label="Día" type="date" value={day} onChange={setDay} />

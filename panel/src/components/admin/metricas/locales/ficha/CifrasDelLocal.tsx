@@ -27,7 +27,7 @@ const pctEntero = (n: number) => formatPorcentaje(n, 0)
 
 /**
  * Las cifras de un local en la semana: lo que vendió, a cuánta gente, cómo le
- * paga su gente y qué se le transfiere el lunes. Cada una con su cambio
+ * paga su gente y qué se le transfiere por la semana. Cada una con su cambio
  * frente a la anterior (a la misma altura si la semana va a medias) y la
  * chispa de sus ocho últimas semanas.
  */
@@ -106,7 +106,7 @@ export function CifrasDelLocal({
       <CifraConTendencia
         titulo={rotuloDelCierre(d.cierre)}
         valor={formatUsd(totalDelCierre(l.transferencia))}
-        info="Calculado de las liquidaciones: lo que el cierre de caja del lunes siguiente le paga por las cuotas que vencen esta semana, se paguen o no. Es su neto, que no lleva el service fee. Es lo mismo que dice Pagos a clínicas; lo atrasado de cierres anteriores va en el pie, aparte."
+        info="Calculado de las liquidaciones: lo que se le paga por las cuotas que vencen esta semana, se paguen o no, cada mitad el día siguiente a su vencimiento. Es su neto, que no lleva la comisión de servicio. Es lo mismo que dice Pagos a clínicas; lo atrasado de semanas anteriores va en el pie, aparte."
         pie={pieDelCierre(l.transferencia, d.cierre)}
         link={{ to: '/admin/pagos-clinicas' }}
       />

@@ -25,10 +25,10 @@ import { describeError } from '@/lib/supabase'
  *                (otro mensaje, sin alargar el plazo).
  *   · expired  → venció sin respuesta. «Reenviar al paciente» la reabre con
  *                otras 2 horas y las fechas de hoy.
- *   · declined → dijo No, o ya no se le podía financiar (con el texto neutro
+ *   · declined → dijo No, o ya no podía pagar en cuotas (con el texto neutro
  *                de siempre: la clínica nunca sabe por qué).
  *
- * Quien la pinta se encarga de volver a pedir el financiamiento mientras
+ * Quien la pinta se encarga de volver a pedir la orden mientras
  * espera; aquí solo se enseña y se reenvía (`onCambio` con lo nuevo).
  */
 export function ConfirmacionDelPaciente({
@@ -67,12 +67,12 @@ export function ConfirmacionDelPaciente({
         tone="error"
         titulo={
           f.declineReason === 'paciente'
-            ? 'El paciente no aceptó el financiamiento'
-            : 'No se pudo confirmar el financiamiento'
+            ? 'El paciente no aceptó el pago en cuotas'
+            : 'No se pudo confirmar el pago en cuotas'
         }
       >
         {f.declineMessage ??
-          'No se creó ninguna deuda. Si fue un error, registra el financiamiento otra vez.'}
+          'No se creó ninguna deuda. Si fue un error, registra el pago en cuotas otra vez.'}
       </Callout>
     )
   }

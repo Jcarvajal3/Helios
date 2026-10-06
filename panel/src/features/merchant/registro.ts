@@ -10,7 +10,7 @@ import {
 import { leerMonto } from '@/lib/montos'
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Nuevo financiamiento: lo que va y viene de las tres RPC del alta.
+// Nuevo pago en cuotas: lo que va y viene de las tres RPC del alta.
 //
 //   helios_patient_eligibility  → leerElegibilidad
 //   preview_patient_charge      → leerVistaPrevia
@@ -49,7 +49,14 @@ export const MINIMO_POR_DEFECTO = 10
 
 /** El texto neutro de «no disponible» cuando la base no manda el suyo. */
 export const NO_DISPONIBLE_POR_DEFECTO =
-  'No podemos financiar a esta persona. Si tiene dudas, puede escribir a Helios.'
+  'Esta persona no puede pagar en cuotas con Helios. Si tiene dudas, puede escribir a Helios.'
+
+/**
+ * El porcentaje de la comisión de servicio cuando la base no lo manda
+ * (parámetro `consumer_fee_pct`, 12 % + IVA desde el 2026-10-06). Lo paga el
+ * paciente; a la clínica no le cuesta nada.
+ */
+export const COMISION_DE_SERVICIO_POR_DEFECTO = 12
 
 /**
  * Lee la respuesta de `helios_patient_eligibility`.
@@ -85,7 +92,7 @@ export function leerElegibilidad(v: unknown): Elegibilidad {
   }
 }
 
-/** El máximo que se puede financiar hoy: lo disponible o, si es nuevo, el límite. */
+/** El máximo que puede pagar en cuotas hoy: lo disponible o, si es nuevo, el límite. */
 export function maximoParaFinanciar(e: Elegibilidad): number | null {
   if (e.estado === 'nuevo') return e.limiteUsd
   if (e.estado === 'disponible') return e.disponibleUsd
@@ -99,8 +106,8 @@ export function maximoParaFinanciar(e: Elegibilidad): number | null {
  *
  * Mismas reglas que la base: libre, con dos decimales como mucho, desde el
  * mínimo y dentro de lo disponible. El texto del tope repite el de la base
- * («El monto supera lo disponible para financiar ($X)») para que la
- * secretaria no lea dos frases distintas para lo mismo.
+ * («El monto supera lo disponible ($X)») para que la secretaria no lea dos
+ * frases distintas para lo mismo.
  */
 export function leerMontoDeConsulta(
   escrito: string,
@@ -121,7 +128,7 @@ export function leerMontoDeConsulta(
   if (limites.maximo !== null && usd > limites.maximo) {
     return {
       ok: false,
-      problema: `El monto supera lo disponible para financiar (${formato(limites.maximo)}).`,
+      problema: `El monto supera lo disponible (${formato(limites.maximo)}).`,
     }
   }
   return { ok: true, usd: Math.round(usd * 100) / 100 }
@@ -137,7 +144,7 @@ export type CuotaDelPlan = {
   sequence: number
   dueDate: string
   /** Lo que paga el paciente en esa cuota: su mitad de la consulta más su
-   *  mitad del servicio Helios. */
+   *  mitad de la comisión de servicio. */
   amountUsd: number
 }
 
@@ -145,7 +152,7 @@ export type VistaPrevia = {
   /** Lo que vale la consulta y lo que se le paga a la clínica. */
   baseUsd: number
   feePct: number
-  /** El servicio Helios y su IVA, por separado. NUNCA se suman a `baseUsd`. */
+  /** La comisión de servicio y su IVA, por separado. NUNCA se suman a `baseUsd`. */
   feeUsd: number
   feeVatUsd: number
   businessDate: string | null
@@ -171,7 +178,7 @@ export function leerVistaPrevia(v: unknown): VistaPrevia {
   const r = comoFila(v)
   return {
     baseUsd: numero(r.base_usd),
-    feePct: numeroONulo(r.consumer_fee_pct) ?? 20,
+    feePct: numeroONulo(r.consumer_fee_pct) ?? COMISION_DE_SERVICIO_POR_DEFECTO,
     feeUsd: numero(r.consumer_fee_usd),
     feeVatUsd: numero(r.consumer_fee_vat_usd),
     businessDate: textoONulo(r.business_date),
@@ -187,12 +194,13 @@ export function leerVistaPrevia(v: unknown): VistaPrevia {
 }
 
 /**
- * «Servicio Helios 20% + IVA»: el rótulo de la ÚNICA línea donde aparece el
- * fee en la pantalla de la clínica. Con el porcentaje que manda la base.
+ * «Comisión de servicio 12% + IVA»: el rótulo de la ÚNICA línea donde aparece
+ * la comisión de servicio en la pantalla de la clínica. Con el porcentaje que
+ * manda la base.
  */
 export function rotuloDelServicio(feePct: number): string {
   const pct = Number.isInteger(feePct) ? String(feePct) : String(feePct).replace('.', ',')
-  return `Servicio Helios ${pct}% + IVA`
+  return `Comisión de servicio ${pct}% + IVA`
 }
 
 /**
@@ -225,7 +233,7 @@ export function diaDeLaSemana(fecha: string): string {
   return DIAS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()] ?? ''
 }
 
-// ── 4. El financiamiento creado ───────────────────────────────────────────
+// ── 4. El pago en cuotas creado ───────────────────────────────────────────
 
 /**
  * Estado del comprobante por correo (plan §7.3).
@@ -307,8 +315,8 @@ export function fraseDelComprobante(
  *   entregada    llegó a su teléfono
  *   leida        la abrió
  *   fallida      no se le pudo escribir (teléfono sin WhatsApp, por ejemplo)
- *   aceptada     respondió Sí: el financiamiento está confirmado
- *   rechazada    respondió No (o ya no se le podía financiar)
+ *   aceptada     respondió Sí: el pago en cuotas está confirmado
+ *   rechazada    respondió No (o ya no podía pagar en cuotas)
  *   vencida      no respondió a tiempo
  */
 export type EstadoDeLaConfirmacion =
@@ -416,11 +424,11 @@ export type Financiamiento = {
   channel: 'panel' | 'whatsapp'
   confirmation: Confirmacion | null
   declineReason: 'paciente' | 'no_disponible' | null
-  /** El texto que se enseña si se rechazó (el neutro, si no se le podía financiar). */
+  /** El texto que se enseña si se rechazó (el neutro, si ya no podía pagar en cuotas). */
   declineMessage: string | null
   createdAt: string | null
   businessDate: string | null
-  /** La consulta: lo que se le paga a la clínica. Sin el fee. */
+  /** La consulta: lo que se le paga a la clínica. Sin la comisión de servicio. */
   merchantSaleUsd: number
   concept: string | null
   beneficiaryName: string | null
@@ -428,7 +436,7 @@ export type Financiamiento = {
   documentoEnmascarado: string | null
   emailEnmascarado: string | null
   cuotas: CuotaDelPlan[]
-  /** Del desglose; el fee solo se enseña como línea aparte. */
+  /** Del desglose; la comisión de servicio solo se enseña como línea aparte. */
   feePct: number
   feeUsd: number | null
   feeVatUsd: number | null
@@ -444,7 +452,7 @@ export function leerFinanciamiento(v: unknown): Financiamiento {
   const recibo = filaONula(r.receipt) ?? {}
 
   const id = textoONulo(r.id) ?? textoONulo(r.charge_id)
-  if (id === null) throw new Error('El financiamiento se registró pero la respuesta no trae su número.')
+  if (id === null) throw new Error('El pago en cuotas se registró pero la respuesta no trae su número.')
 
   const base = numeroONulo(r.merchant_sale_usd) ?? numero(desglose.base_usd)
   const fee = numeroONulo(desglose.consumer_fee_usd)
@@ -480,12 +488,12 @@ export function leerFinanciamiento(v: unknown): Financiamiento {
 }
 
 /**
- * El porcentaje del servicio a partir de sus cifras, para el rótulo del
- * desglose cuando la respuesta no lo trae (`helios_charge_for_staff` manda
- * el importe, no el porcentaje). Con una décima: $20 sobre $100 es 20.
+ * El porcentaje de la comisión de servicio a partir de sus cifras, para el
+ * rótulo del desglose cuando la respuesta no lo trae (`helios_charge_for_staff`
+ * manda el importe, no el porcentaje). Con una décima: $12 sobre $100 es 12.
  */
 export function porcentajeDelServicio(baseUsd: number, feeUsd: number | null): number {
-  if (feeUsd === null || baseUsd <= 0) return 20
+  if (feeUsd === null || baseUsd <= 0) return COMISION_DE_SERVICIO_POR_DEFECTO
   return Math.round((feeUsd / baseUsd) * 1000) / 10
 }
 
@@ -493,7 +501,7 @@ export function porcentajeDelServicio(baseUsd: number, feeUsd: number | null): n
  * Si lo que devolvió la base es lo que se pidió.
  *
  * `create_patient_charge` es idempotente: la misma clave devuelve el MISMO
- * financiamiento aunque los datos hayan cambiado. Eso protege del doble clic
+ * pago en cuotas aunque los datos hayan cambiado. Eso protege del doble clic
  * y de la recarga, pero tiene un caso raro: la respuesta de un alta se
  * pierde (la red cae justo entonces), la secretaria corrige el monto o la
  * cédula y vuelve a confirmar. La base contesta con el de antes, y la
@@ -543,8 +551,10 @@ export function pasoDelError(mensaje: string | undefined, esNuevo: boolean): Pas
   if (!mensaje) return null
   const m = mensaje.toLowerCase()
 
-  if (m.includes('no podemos financiar')) return 'cedula'
-  if (/monto|disponible para financiar/.test(m)) return 'monto'
+  // Con las dos redacciones: la de antes («No podemos financiar a esta
+  // persona») y la de ahora («Esta persona no puede pagar en cuotas»).
+  if (m.includes('no podemos financiar') || m.includes('no puede pagar en cuotas')) return 'cedula'
+  if (/monto|disponible/.test(m)) return 'monto'
   if (
     esNuevo &&
     /mayor de edad|tel[eé]fono|correo|referencia|nombre|apellido|nacimiento|direcci[oó]n|ciudad|estado|sexo/.test(
@@ -566,7 +576,7 @@ export function codigoDeError(error: unknown): string | null {
 /**
  * Si el error viene de la propia base —una RPC que se negó con su texto— y
  * no de la red. Solo entonces es seguro decir que no se registró nada: un
- * fallo de red en pleno alta puede haber llegado a crear el financiamiento.
+ * fallo de red en pleno alta puede haber llegado a crear el pago en cuotas.
  */
 export function esRechazoDeLaBase(error: unknown): boolean {
   const code = codigoDeError(error)

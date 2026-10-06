@@ -21,10 +21,10 @@ const NACIONALIDADES: Array<{ value: Nacionalidad; label: string }> = [
  * Una pregunta y tres respuestas posibles (contrato §1.1):
  *
  *   nuevo          Helios no lo conoce: se piden todos sus datos.
- *   disponible     lo conoce y puede financiarle hasta $X. Se le leen al
+ *   disponible     lo conoce y puede pagar en cuotas hasta $X. Se le leen al
  *                  paciente su nombre, su teléfono y su correo enmascarados
  *                  para confirmar que es él.
- *   no_disponible  no se le puede financiar. NUNCA se dice por qué: mora,
+ *   no_disponible  no puede pagar en cuotas. NUNCA se dice por qué: mora,
  *                  lista negra o cupo agotado se ven igual desde la clínica.
  *
  * Cada consulta cuenta contra el límite diario de la secretaria, así que no
@@ -122,11 +122,11 @@ export function PasoCedula({
                   ? `${nacionalidad}-${legible} · léesela en voz alta al paciente para confirmarla`
                   : 'Quien paga las cuotas. Si el paciente es menor, la de su representante.'
               }
-              className="min-w-0 flex-1 basis-64"
+              className="min-w-0 flex-1 basis-40"
             />
           </div>
 
-          <div>
+          <div className="flex flex-col sm:block">
             <BotonConFoco type="submit" disabled={consultando}>
               <Search size={16} aria-hidden />
               {consultando ? 'Consultando…' : 'Consultar'}
@@ -147,13 +147,13 @@ export function PasoCedula({
                 Paciente nuevo en Helios
               </p>
               <p className="mt-1 type-panel-body text-on-surface-variant">
-                Vas a registrar sus datos. Puede financiar desde{' '}
+                Vas a registrar sus datos. Puede pagar en cuotas desde{' '}
                 <strong className="text-on-surface">{formatUsd(elegibilidad.minChargeUsd)}</strong>{' '}
                 hasta <strong className="text-on-surface">{formatUsd(elegibilidad.limiteUsd)}</strong>.
               </p>
             </div>
           </div>
-          <div>
+          <div className="flex flex-col sm:block">
             <BotonConFoco botonRef={seguirRef} onClick={onSeguir}>
               Continuar con sus datos
               <Tecla enBoton>Enter</Tecla>
@@ -183,19 +183,19 @@ export function PasoCedula({
           </dl>
 
           <div className="rounded-panel-card bg-panel-raised p-4">
-            <DataLabel>Disponible para financiar</DataLabel>
+            <DataLabel>Límite disponible</DataLabel>
             <p className="mt-1 type-panel-hero text-on-surface">
               {formatUsd(elegibilidad.disponibleUsd)}
             </p>
           </div>
 
           {noCoincide ? (
-            <Callout tone="warning" titulo="No sigas con este financiamiento">
+            <Callout tone="warning" titulo="No sigas con este pago en cuotas">
               Revisa que la cédula esté bien escrita. Si lo está y los datos no son los del
-              paciente, pídele que escriba a Helios para aclararlo antes de financiar.
+              paciente, pídele que escriba a Helios para aclararlo antes de seguir.
             </Callout>
           ) : (
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3">
               <BotonConFoco botonRef={seguirRef} onClick={onSeguir}>
                 Sí, son sus datos
                 <Tecla enBoton>Enter</Tecla>
@@ -229,7 +229,7 @@ function DatoEnmascarado({ rotulo, valor }: { rotulo: string; valor: string | nu
 }
 
 /**
- * «No se puede financiar», en neutro.
+ * «No puede pagar en cuotas», en neutro.
  *
  * Gris y no rojo: no es un error de la secretaria ni del sistema, es una
  * respuesta. Y sin motivo, porque la base no lo manda (privacidad entre
@@ -242,7 +242,7 @@ function NoDisponible({ mensaje, whatsapp }: { mensaje: string; whatsapp: string
   return (
     <Callout
       tone="info"
-      titulo="No se puede financiar con Helios"
+      titulo="No puede pagar en cuotas con Helios"
       accion={
         numero ? (
           <a
@@ -274,7 +274,7 @@ function ErrorDeConsulta({ error }: { error: unknown }) {
 
   const titulo =
     code === '55000'
-      ? 'Helios no está registrando financiamientos en este momento'
+      ? 'Helios no está registrando pagos en cuotas en este momento'
       : code === '22023'
         ? 'No se pudo consultar la cédula'
         : code === '42501'

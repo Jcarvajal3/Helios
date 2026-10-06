@@ -51,7 +51,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       <div
         role="status"
         aria-live="polite"
-        className="pointer-events-none fixed bottom-4 right-4 z-50 flex flex-col items-end gap-2"
+        // Por encima de la barra de abajo del teléfono (`--hueco-inferior`), y
+        // allí de lado a lado: una tarjeta de 384 px pegada a la derecha de
+        // una pantalla de 375 se sale por la izquierda.
+        className="pointer-events-none fixed right-4 bottom-[calc(1rem+var(--hueco-inferior,0px))] z-50 flex flex-col items-end gap-2 max-sm:left-4 max-sm:items-stretch"
       >
         {avisos.map((aviso) => (
           <Tarjeta key={aviso.id} aviso={aviso} onCerrar={() => cerrar(aviso.id)} />

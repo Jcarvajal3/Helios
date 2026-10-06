@@ -51,7 +51,8 @@ Los tokens salen de [`../tokens/helios.tokens.json`](../tokens/helios.tokens.jso
 `npm run tokens` regenera `src/styles/tokens.gen.css` y
 `src/theme/tokens.gen.ts` y comprueba el contraste AA. Tema claro por defecto;
 el oscuro se elige en el pie del menú. Logo e isotipo en
-`src/components/HeliosLogo.tsx`, sacados de `../brand/helios-logo.svg`.
+`src/components/HeliosLogo.tsx`, sacados de `../brand/helios-logo.svg`; el
+favicon (`public/icon.svg`) es el isologo, `../brand/helios-isologo.svg`.
 
 ## Qué falta (por fase)
 

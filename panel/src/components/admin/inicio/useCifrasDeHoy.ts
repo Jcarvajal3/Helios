@@ -81,7 +81,7 @@ export function useDeudaVencida(): LecturaDeCifra<DeudaDeHoy | null> {
 
 export type CierreDeHoy = {
   fechaCierre: string | null
-  /** Lo que sale en el cierre, atrasados incluidos. */
+  /** Lo que sale hacia las clínicas en el próximo pago (hoy), atrasados incluidos. */
   salen: number
   /** La caja según el libro. */
   caja: number
@@ -89,13 +89,13 @@ export type CierreDeHoy = {
 }
 
 /**
- * El próximo cierre: lo que sale, la caja y si alcanza.
+ * El próximo pago a las clínicas: lo que sale, la caja y si alcanza.
  *
- * Las cuotas que cuentan son las que vencen hasta la víspera del cierre. Sin
- * eso se comparaba la caja de hoy con lo que sale el lunes y el cierre salía
- * en rojo toda la semana, aunque las cuotas que lo cubren aún no hubieran
- * vencido. Si el cierre es hoy o no tiene fecha, cuenta la cartera de la
- * semana.
+ * Desde el 2026-10-06 se les paga a diario (cada liquidación, el día
+ * siguiente a su vencimiento) y el próximo pago es hoy: se compara la caja de
+ * hoy con lo que sale hoy y cuenta la cartera de la semana. Si el servidor
+ * mandara un pago futuro, las cuotas que cuentan serían las que vencen hasta
+ * su víspera.
  */
 export function useCierreDeHoy(hoy: string): LecturaDeCifra<CierreDeHoy> {
   const locales = useQuery(consultaDeudaConLocales())

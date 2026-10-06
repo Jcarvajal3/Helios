@@ -377,6 +377,21 @@
     letter-spacing: 0.005em;
     font-weight: 400;
   }
+
+  /* Un campo, con el dedo, a 16. Safari del iPhone acerca la página entera
+     al tocar un campo con letra de menos de 16 px, y no la vuelve a alejar:
+     la secretaria escribe la cédula y se queda mirando media pantalla.
+     Solo los campos de letra de lectura: los grandes (cédula, monto) ya van
+     a 28. Dentro de la capa y con más especificidad que `.type-panel-body`,
+     para que un className suelto pueda seguir cambiándolo. */
+  @media (pointer: coarse) {
+    input.type-panel-body,
+    select.type-panel-body,
+    textarea.type-panel-body {
+      font-size: 1rem;
+      line-height: 1.5rem;
+    }
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -588,4 +603,122 @@ input[type='search']::-webkit-search-cancel-button,
 input[type='search']::-webkit-search-decoration {
   -webkit-appearance: none;
   appearance: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   El teléfono.
+
+   El panel se dibujó para la tablet y el monitor de la recepción, pero la
+   secretaria también lo abre en su teléfono, de pie y con una mano. Lo que
+   sigue es lo que cambia por debajo de 640 px (el `sm` de Tailwind).
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── La tabla, en tarjetas ───────────────────────────────────────────────
+   Una tabla de cinco columnas no cabe en 343 px, y arrastrarla de lado para
+   leer el importe de una fila es perder el nombre de quién era. Por debajo de
+   640 cada fila es una tarjeta: la primera celda hace de título y las demás
+   van una por renglón, con el rótulo de su columna a la izquierda y el dato a
+   la derecha.
+
+   Los rótulos los pone `Table` en variables (`--col-2`, `--col-3`…) sobre la
+   <table>: así salen del render del servidor, sin un efecto que tenga que ir
+   detrás de cada fila que se monta. Una celda que ocupa varias columnas (el
+   desglose de una transferencia) no lleva rótulo y va de lado a lado.
+
+   Sin capa, como el foco: tiene que ganar a los `px-4`, `whitespace-nowrap` y
+   `max-w-*` que cada celda trae para la vista de escritorio. */
+@media (width < 40rem) {
+  .tabla-apilada {
+    min-width: 0;
+  }
+
+  .tabla-apilada thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .tabla-apilada tbody,
+  .tabla-apilada tr,
+  .tabla-apilada td {
+    display: block;
+  }
+
+  .tabla-apilada tr {
+    padding: 12px 16px;
+  }
+
+  .tabla-apilada td {
+    /* `flow-root` contiene el rótulo flotante sin una clase de apaño. */
+    display: flow-root;
+    max-width: none;
+    padding: 3px 0;
+    text-align: right;
+    border: 0;
+  }
+
+  .tabla-apilada td::before {
+    float: left;
+    margin-right: 1rem;
+    text-align: left;
+    font-family: var(--font-body);
+    font-size: 0.8125rem;
+    line-height: 1.25rem;
+    font-weight: 400;
+    color: var(--color-panel-muted);
+  }
+
+  .tabla-apilada td:first-child {
+    padding-bottom: 6px;
+    text-align: left;
+    font-weight: 600;
+  }
+
+  .tabla-apilada td:nth-child(2)::before { content: var(--col-2, none); }
+  .tabla-apilada td:nth-child(3)::before { content: var(--col-3, none); }
+  .tabla-apilada td:nth-child(4)::before { content: var(--col-4, none); }
+  .tabla-apilada td:nth-child(5)::before { content: var(--col-5, none); }
+  .tabla-apilada td:nth-child(6)::before { content: var(--col-6, none); }
+  .tabla-apilada td:nth-child(7)::before { content: var(--col-7, none); }
+  .tabla-apilada td:nth-child(8)::before { content: var(--col-8, none); }
+  .tabla-apilada td:nth-child(9)::before { content: var(--col-9, none); }
+  .tabla-apilada td:nth-child(10)::before { content: var(--col-10, none); }
+
+  .tabla-apilada td[colspan] {
+    padding: 8px 0 4px;
+    text-align: left;
+    font-weight: 400;
+  }
+
+  .tabla-apilada td[colspan]::before {
+    content: none;
+  }
+}
+
+/* ── La ventana, en hoja ─────────────────────────────────────────────────
+   En el teléfono una ventana centrada con 24 px de aire alrededor deja un
+   recuadro estrecho en mitad de la pantalla, con los botones lejos del
+   pulgar. Por debajo de 640 sube desde abajo, de lado a lado. */
+@keyframes panel-hoja {
+  from { transform: translateY(24px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@media (width < 40rem) {
+  .anim-ventana { animation: panel-hoja 200ms cubic-bezier(0.2, 0, 0, 1); }
+}
+
+@media (width < 40rem) and (prefers-reduced-motion: reduce) {
+  .anim-ventana { animation: none; }
+}
+
+/* ── La barra de abajo, mientras se escribe ──────────────────────────────
+   En Android el teclado encoge la ventana y la barra de abajo sube pegada a
+   él, tapando el campo en el que se está escribiendo. Con el foco en un
+   campo de texto no hay nada que navegar: se aparta. */
+body:has(:is(input:not([type='checkbox'], [type='radio']), select, textarea):focus) .barra-inferior {
+  display: none;
 }

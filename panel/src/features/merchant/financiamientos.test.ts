@@ -66,9 +66,9 @@ const detalle = leerDetalle({
   status: 'confirmed',
   created_at: '2026-10-01T14:00:00Z',
   merchant_sale_usd: 100,
-  amount_usd: 123.2,
-  consumer_fee_usd: 20,
-  consumer_fee_vat_usd: 3.2,
+  amount_usd: 113.92,
+  consumer_fee_usd: 12,
+  consumer_fee_vat_usd: 1.92,
   is_gerente: true,
   customer_name: 'José Pérez',
   items: [{ name: 'Consulta y eco', quantity: 1, unit_price_usd: 100, line_total_usd: 100 }],
@@ -76,18 +76,18 @@ const detalle = leerDetalle({
   staff_commission_usd: 0.5,
   commission_staff_name: 'Ana',
   payouts: [
-    { kind: 'installment', sequence: 2, due_date: '2026-10-15', run_date: '2026-10-19', amount_usd: 50, status: 'pending' },
-    { kind: 'advance', sequence: null, due_date: '2026-10-01', run_date: '2026-10-05', amount_usd: 0 },
-    { kind: 'installment', sequence: 1, due_date: '2026-10-08', run_date: '2026-10-12', amount_usd: 50, status: 'paid', paid_usd: 50 },
+    { kind: 'installment', sequence: 2, due_date: '2026-10-15', run_date: '2026-10-16', amount_usd: 50, status: 'pending' },
+    { kind: 'advance', sequence: null, due_date: '2026-10-01', run_date: '2026-10-02', amount_usd: 0 },
+    { kind: 'installment', sequence: 1, due_date: '2026-10-08', run_date: '2026-10-09', amount_usd: 50, status: 'paid', paid_usd: 50 },
   ],
   // Aunque la base mandara el estado de pago del paciente, no pasa.
   installment_status: 'overdue',
 })
 igual(detalle.pagos.map((p) => p.sequence), [1, 2], 'las dos mitades en orden, sin el adelanto')
-igual(detalle.pagos[0].paidToMerchantOn, '2026-10-12', 'run_date se lee como paid_to_merchant_on')
+igual(detalle.pagos[0].paidToMerchantOn, '2026-10-09', 'run_date se lee como paid_to_merchant_on (el día siguiente al vencimiento)')
 igual(detalle.concept, 'Consulta y eco', 'sin concept suelto, el nombre de la única línea')
 igual(detalle.receipt, { status: 'entregado', sentAt: '2026-10-01T14:01:00Z', lastEvent: 'delivered' }, 'el comprobante')
-igual(detalle.feePct, 20, 'el porcentaje del servicio sale de sus cifras')
+igual(detalle.feePct, 12, 'el porcentaje de la comisión de servicio sale de sus cifras')
 comprueba(!JSON.stringify(detalle).includes('overdue'), 'el estado de pago del paciente no llega a la ficha')
 
 const nueva = leerDetalle({
@@ -97,8 +97,8 @@ const nueva = leerDetalle({
   merchant_sale_usd: 40,
   concept: 'Control',
   installments: [
-    { sequence: 1, due_date: '2026-10-08', paid_to_merchant_on: '2026-10-12' },
-    { sequence: 2, due_date: '2026-10-15', paid_to_merchant_on: '2026-10-19' },
+    { sequence: 1, due_date: '2026-10-08', paid_to_merchant_on: '2026-10-09' },
+    { sequence: 2, due_date: '2026-10-15', paid_to_merchant_on: '2026-10-16' },
   ],
   receipt_status: 'pendiente',
 })
@@ -121,8 +121,8 @@ const venta = leerFilaDeVentas({
   base_eur: 100,
   vat_eur: 0,
   sale_eur: 100,
-  consumer_fee_eur: 20,
-  charged_to_customer_eur: 123.2,
+  consumer_fee_eur: 12,
+  charged_to_customer_eur: 113.92,
   net_to_merchant_eur: 100,
   settled_eur: 50,
   paid_eur: 0,
@@ -131,9 +131,13 @@ const venta = leerFilaDeVentas({
 igual(venta.saleUsd, 100, 'la consulta desde sale_eur')
 igual(venta.netToMerchantUsd, 100, 'el neto desde net_to_merchant_eur')
 igual(venta.registeredBy, 'Ana', 'quien registró desde cashier')
-comprueba(!JSON.stringify(venta).includes('123.2'), 'el total con el fee del paciente no se lee')
+comprueba(!JSON.stringify(venta).includes('113.92'), 'el total con la comisión de servicio del paciente no se lee')
 const cabeceras = COLUMNAS_VENTAS.map((c) => c.header.toLowerCase()).join('|')
-comprueba(!/cliente|consumer|servicio helios/.test(cabeceras), 'ninguna columna habla del fee del paciente')
+comprueba(
+  !/cliente|consumer|servicio helios|comisi[oó]n de servicio/.test(cabeceras),
+  'ninguna columna habla de la comisión de servicio del paciente',
+)
+comprueba(!/financ|lunes/.test(cabeceras), 'ninguna columna habla de financiamientos ni de lunes')
 
 console.log(fallos === 0 ? '\nTODO BIEN' : `\n${fallos} FALLOS`)
 process.exit(fallos === 0 ? 0 : 1)

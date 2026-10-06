@@ -8,10 +8,10 @@ import type { CuotaDelPlan } from '@/features/merchant/registro'
  * Es lo que la secretaria le lee al paciente antes de confirmar, así que va
  * con el día de la semana («jueves 08/10/26»): así se apunta una cita.
  *
- * Cada cuota lleva dentro su parte del servicio Helios; eso es lo que dice
- * la regla (el fee va «dentro de las cuotas o como línea aparte»). Lo que no
- * hay aquí es una fila de total: sumar las cuotas daría la consulta MÁS el
- * servicio, y esa cifra no se enseña en el panel de la clínica.
+ * Cada cuota lleva dentro su parte de la comisión de servicio; eso es lo que
+ * dice la regla (va «dentro de las cuotas o como línea aparte»). Lo que no
+ * hay aquí es una fila de total: sumar las cuotas daría la consulta MÁS la
+ * comisión de servicio, y esa cifra no se enseña en el panel de la clínica.
  */
 export function PlanDePagos({ cuotas }: { cuotas: CuotaDelPlan[] }) {
   return (
@@ -38,12 +38,13 @@ export function PlanDePagos({ cuotas }: { cuotas: CuotaDelPlan[] }) {
 }
 
 /**
- * EL DESGLOSE: la consulta y, en su propia línea, el servicio Helios.
+ * EL DESGLOSE: la consulta y, en su propia línea, la comisión de servicio.
  *
  * ⚠️ Regla de Ronda que Helios hereda sin excepción: **ningún total mostrado
- * incluye el fee**. Aquí hay dos líneas y ninguna tercera que las sume. La
- * consulta es lo que cobra la clínica; el servicio (20 % + IVA) es de Helios
- * y lo paga el paciente repartido en sus cuotas.
+ * a la clínica incluye la comisión de servicio**. Aquí hay dos líneas y
+ * ninguna tercera que las sume. La consulta es lo que cobra la clínica; la
+ * comisión de servicio (el % que manda la base, hoy 12 %, + IVA 16 % sobre
+ * ella) es de Helios y la paga el paciente repartida en sus cuotas.
  */
 export function DesgloseDelServicio({
   baseUsd,

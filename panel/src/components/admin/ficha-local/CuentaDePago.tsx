@@ -30,11 +30,11 @@ import { SOLO_SUPER_ADMIN, useIsSuperAdmin } from '@/features/admin/role'
 import { describeError } from '@/lib/supabase'
 
 /**
- * La cuenta a la que Helios le transfiere a la clínica los lunes
- * (`merchant_payout_accounts`, plan H8). Ronda no la guardaba: se pedía por
- * WhatsApp cada vez. Cambiarla lo exige el servidor a un super admin y queda
- * en la bitácora; cambiar una que ya existe pide escribir CAMBIAR: un dígito
- * mal puesto manda el pago de una semana a otra cuenta.
+ * La cuenta a la que Helios le transfiere a la clínica cada día que le toca
+ * cobrar (`merchant_payout_accounts`, plan H8). Ronda no la guardaba: se pedía
+ * por WhatsApp cada vez. Cambiarla lo exige el servidor a un super admin y
+ * queda en la bitácora; cambiar una que ya existe pide escribir CAMBIAR: un
+ * dígito mal puesto manda un pago a otra cuenta.
  */
 export function CuentaDePago({ merchantId }: { merchantId: string }) {
   const cuenta = useQuery(consultaCuentaDePago(merchantId))
@@ -80,7 +80,7 @@ export function CuentaDePago({ merchantId }: { merchantId: string }) {
           </Card>
         ) : (
           <Callout tone="warning" titulo="Esta clínica no tiene cuenta de pago">
-            Sin ella, cada lunes hay que pedirle a dónde transferir. Ponla antes de su primer cierre.
+            Sin ella, cada pago hay que pedirle a dónde transferir. Ponla antes de su primer pago.
           </Callout>
         ))}
     </Seccion>
@@ -200,7 +200,7 @@ function EditarCuenta({
           confirmWord={actual ? 'CAMBIAR' : undefined}
           danger={actual !== null}
           title={actual ? 'Cambiar la cuenta de pago' : 'Poner la cuenta de pago'}
-          summary="Desde que confirmes, las transferencias de los lunes a esta clínica van a esta cuenta."
+          summary="Desde que confirmes, las transferencias a esta clínica van a esta cuenta."
           detail={
             <DatosParaCopiar
               cuenta={{

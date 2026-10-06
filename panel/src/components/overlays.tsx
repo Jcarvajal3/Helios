@@ -239,7 +239,11 @@ export function Modal({
   const widths = { sm: 'max-w-md', md: 'max-w-xl', lg: 'max-w-3xl' }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-6">
+    // En el teléfono la ventana es una hoja que sube desde abajo, de lado a
+    // lado y con los botones al alcance del pulgar. `mt-auto` y no
+    // `items-end`: con una hoja más alta que la pantalla, `items-end` la
+    // cortaría por arriba, y el margen automático la deja desplazarse entera.
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto sm:p-6">
       {/* El velo se pulsa para cerrar, pero no entra en el recorrido de Tab:
           ya está la equis, y un botón que ocupa toda la pantalla no es un
           sitio al que llegar con el teclado. */}
@@ -256,7 +260,7 @@ export function Modal({
         aria-modal="true"
         aria-label={title}
         tabIndex={-1}
-        className={`anim-ventana relative my-8 w-full ${widths[width]} rounded-panel-card border border-panel-hairline-strong bg-panel-card p-6 shadow-2xl outline-none`}
+        className={`anim-ventana relative mt-auto w-full ${widths[width]} rounded-t-panel-card border border-panel-hairline-strong bg-panel-card p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl outline-none max-sm:border-x-0 max-sm:border-b-0 sm:my-8 sm:rounded-panel-card sm:p-6`}
       >
         {!sinEncabezado && (
           <div className="mb-shell-gap-group flex items-start justify-between gap-4">
@@ -417,9 +421,12 @@ export function ConfirmDialog({
 
         {error && <ErrorBox title="No se pudo completar" detail={String(error)} />}
 
-        <div className="flex gap-3">
+        {/* En el teléfono, uno encima de otro y de lado a lado: el pulgar
+            acierta sin apuntar, y la acción queda arriba, donde se lee. */}
+        <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
           <Button
             size="md"
+            className="max-sm:w-full"
             variant={rojo ? 'danger' : 'filled'}
             disabled={!ready}
             // Mientras trabaja no hay motivo que escribir: el texto del botón
@@ -429,7 +436,7 @@ export function ConfirmDialog({
           >
             {busy ? 'Un momento…' : confirmLabel}
           </Button>
-          <Button variant="text" size="md" onClick={onClose}>
+          <Button variant="text" size="md" className="max-sm:w-full" onClick={onClose}>
             Cancelar
           </Button>
         </div>

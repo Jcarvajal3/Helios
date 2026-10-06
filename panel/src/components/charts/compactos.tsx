@@ -33,7 +33,7 @@ export type MiniBarrasProps = {
   /** 36 px para la ranura de una cifra; 96 px para una tarjeta con «pocos datos». */
   alto?: 'sm' | 'md'
   formato?: (n: number) => string
-  /** Qué son las barras, para el lector de pantalla: «Financiado esta semana». */
+  /** Qué son las barras, para el lector de pantalla: «Registrado esta semana». */
   rotulo: string
   /** El nombre corto de la serie en el globo, junto a la cifra: «Consumos». */
   serie?: string
@@ -192,7 +192,8 @@ export type StackedBarProps = {
  * Cada segmento se lee en su globo —su cifra y qué parte es del total— al
  * pasar el ratón; con el teclado, la barra es una parada de Tab y las
  * flechas van de un segmento al siguiente. El globo no escribe ningún total:
- * si los segmentos son cuotas, su suma sería un total con el fee dentro.
+ * si los segmentos son cuotas, su suma sería un total con la comisión de
+ * servicio dentro.
  */
 export function StackedBar({ segmentos, leyenda = true, formato = String, rotulo }: StackedBarProps) {
   const valores = segmentos.map((s) => Math.max(0, limpio(s.valor) ?? 0))

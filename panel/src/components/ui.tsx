@@ -927,7 +927,12 @@ export function EmptyState({
  * sepa. Cada paso llega cuando caben esas tarjetas a 13rem. Tres por fila no
  * pasan por dos: tres cifras en dos columnas son 2 + 1.
  */
-const REJILLA_CIFRAS = 'grid gap-4 grid-cols-[repeat(auto-fit,minmax(min(13rem,100%),1fr))]'
+const REJILLA_CIFRAS =
+  // En el teléfono, dos por fila y no una: cuatro cifras de una en una son
+  // una pantalla entera de tarjetas antes de llegar a la lista. A media
+  // anchura la cifra baja a 22 (`Stat`) y la pista parte en dos líneas. Si
+  // son impares, la última ocupa la fila entera en vez de quedarse sola.
+  'grid grid-cols-2 gap-3 max-sm:[&>*:last-child:nth-child(odd)]:col-span-2 sm:gap-4 sm:grid-cols-[repeat(auto-fit,minmax(min(13rem,100%),1fr))]'
 
 export type ColumnasDeCifras = 2 | 3 | 4
 
@@ -1128,7 +1133,13 @@ export function Stat({
       {estado === 'cargando' && <SkeletonBlock className={hero ? 'h-10 w-40' : 'h-8 w-28'} />}
       {estado === 'error' && <NoSePudoLeer onReintentar={onReintentar} className="relative z-10" />}
       {listo && (
-        <p className={`${hero ? 'type-panel-hero' : 'type-panel-figure'} text-on-surface`}>
+        <p
+          className={`${
+            hero
+              ? 'type-panel-hero max-sm:text-[1.75rem] max-sm:leading-9'
+              : 'type-panel-figure max-sm:text-[1.375rem] max-sm:leading-7'
+          } text-on-surface`}
+        >
           {value}
         </p>
       )}
@@ -1139,7 +1150,7 @@ export function Stat({
   return (
     <div
       aria-busy={estado === 'cargando' || undefined}
-      className={`group/stat relative flex h-full flex-col gap-2 border border-panel-hairline bg-panel-card p-panel-pad-card ${
+      className={`group/stat relative flex h-full flex-col gap-2 border border-panel-hairline bg-panel-card p-panel-pad-card max-sm:p-3.5 ${
         hero ? 'rounded-panel-hero' : 'rounded-panel-card'
       } ${
         link
@@ -1184,7 +1195,7 @@ export function Stat({
       {hint && listo && (
         <p
           title={typeof hint === 'string' ? hint : undefined}
-          className={`truncate type-panel-caption text-panel-muted ${visual ? '' : 'mt-auto'}`}
+          className={`max-sm:line-clamp-2 type-panel-caption text-panel-muted sm:truncate ${visual ? '' : 'mt-auto'}`}
         >
           {hint}
         </p>
@@ -1284,12 +1295,30 @@ export type TableHeader = string | { label: string; info: string }
 export function Table({
   headers,
   children,
+  apilada = false,
   className = '',
 }: {
   headers: Array<TableHeader>
   children: ReactNode
+  /**
+   * En el teléfono (por debajo de 640 px), cada fila en tarjeta: la primera
+   * celda de título y las demás con el rótulo de su columna delante. Ver
+   * `.tabla-apilada` en styles.css. Sin esto la tabla se arrastra de lado.
+   */
+  apilada?: boolean
   className?: string
 }) {
+  // Los rótulos que la tarjeta pone delante de cada celda, como cadenas de
+  // CSS: `--col-2: "Consulta"`. La primera columna no lleva: es el título.
+  const rotulos = apilada
+    ? Object.fromEntries(
+        headers.slice(1).map((h, i) => [
+          `--col-${i + 2}`,
+          JSON.stringify(typeof h === 'string' ? h : h.label),
+        ]),
+      )
+    : undefined
+
   return (
     // `overscroll-x-contain`: una tabla de siete columnas no cabe en una
     // tablet y se lee arrastrándola de lado. Sin esto, el arrastre que llega
@@ -1299,7 +1328,10 @@ export function Table({
     <div
       className={`overflow-x-auto overscroll-x-contain rounded-panel-card border border-panel-hairline bg-panel-card ${className}`}
     >
-      <table className="w-full min-w-max border-collapse">
+      <table
+        style={rotulos}
+        className={`w-full min-w-max border-collapse ${apilada ? 'tabla-apilada' : ''}`}
+      >
         <thead>
           <tr className="border-b border-panel-hairline">
             {headers.map((h) => {

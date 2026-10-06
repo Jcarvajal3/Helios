@@ -34,23 +34,24 @@ import { fetchFinanciamiento, reenviarComprobante } from '@/features/merchant/re
 import { describeError } from '@/lib/supabase'
 
 /**
- * LA FICHA DE UN FINANCIAMIENTO, para la clínica.
+ * LA FICHA DE UN PAGO EN CUOTAS, para la clínica.
  * ══════════════════════════════════════════════════════════════════════════
  *
  * Lo que se viene a mirar cuando alguien pregunta por la orden 1043:
  *
- *   1. Qué se financió: la consulta, a quién, quién lo registró y su
- *      comisión, con el servicio Helios en su propia línea (nunca sumado).
+ *   1. Qué se registró: la consulta, a quién, quién lo registró y su
+ *      comisión, con la comisión de servicio en su propia línea (nunca sumada).
  *   2. El comprobante: si le llegó al paciente, y «Reenviar» si dice que no.
- *   3. Cuándo te pagamos: el lunes de cierre de cada mitad.
+ *   3. Cuándo te pagamos: el día de pago de cada mitad (el siguiente al
+ *      vencimiento de su cuota).
  *
  * Lo que NO está, y no es un olvido: **el estado de pago de las cuotas del
- * paciente**. A la clínica se le paga por fecha de cierre, haya pagado el
+ * paciente**. A la clínica se le paga por fecha, haya pagado el
  * paciente o no; un «en mora» aquí se leería como «esto no me lo van a
  * pagar», que es justo lo contrario de lo que pasa (plan §8.2).
  */
 export const Route = createFileRoute('/_comercio/financiamientos_/$id')({
-  staticData: { title: 'Financiamiento' },
+  staticData: { title: 'Pago en cuotas' },
   component: FinanciamientoRoute,
 })
 
@@ -67,21 +68,21 @@ function Ficha({ chargeId }: { chargeId: string }) {
     queryFn: () => fetchDetalle(chargeId),
   })
 
-  usePageTitle(query.data ? `Financiamiento #${query.data.orderNumber}` : null)
+  usePageTitle(query.data ? `Orden #${query.data.orderNumber}` : null)
 
   return (
     <>
       <Link
         to="/financiamientos"
-        className="mb-4 inline-flex items-center gap-1 type-panel-control text-on-surface-variant hover:text-on-surface"
+        className="mb-4 inline-flex items-center gap-1 type-panel-control text-on-surface-variant hover:text-on-surface max-sm:mb-2 max-sm:min-h-11"
       >
-        <ArrowLeft size={14} aria-hidden /> Financiamientos
+        <ArrowLeft size={14} aria-hidden /> Pagos en cuotas
       </Link>
 
       {query.isLoading && <SkeletonList rows={3} />}
 
       {query.isError && (
-        <ErrorBox title="No pudimos abrir este financiamiento" detail={describeError(query.error)} />
+        <ErrorBox title="No pudimos abrir este pago en cuotas" detail={describeError(query.error)} />
       )}
 
       {query.data && (
@@ -99,13 +100,13 @@ function Ficha({ chargeId }: { chargeId: string }) {
   )
 }
 
-// ── 0. La respuesta del paciente (mientras no es un financiamiento) ───────
+// ── 0. La respuesta del paciente (mientras no está confirmado) ────────────
 
 /**
  * Una orden que espera el Sí del paciente, que rechazó o que venció (contrato
  * §1.3.1): cómo va la pregunta por WhatsApp y «Reenviar al paciente». Se
  * vuelve a pedir cada pocos segundos mientras espera; cuando cambia, la ficha
- * entera se recarga (si aceptó, ya es un financiamiento con su comprobante).
+ * entera se recarga (si aceptó, ya es un pago en cuotas con su comprobante).
  */
 function RespuestaDelPaciente({ chargeId }: { chargeId: string }) {
   const queryClient = useQueryClient()
@@ -138,7 +139,7 @@ function RespuestaDelPaciente({ chargeId }: { chargeId: string }) {
   )
 }
 
-// ── 1. Qué se financió ────────────────────────────────────────────────────
+// ── 1. Qué se registró ────────────────────────────────────────────────────
 
 function Resumen({ f }: { f: DetalleDeFinanciamiento }) {
   const estado = ESTADO_DEL_FINANCIAMIENTO[f.status]
@@ -170,7 +171,7 @@ function Resumen({ f }: { f: DetalleDeFinanciamiento }) {
           )}
         </div>
 
-        <div className="text-right">
+        <div className="sm:text-right">
           <p className="type-panel-body text-on-surface">
             {f.businessDate ? formatDay(f.businessDate) : '—'} · {formatTime(cuando)}
           </p>
@@ -194,7 +195,8 @@ function Resumen({ f }: { f: DetalleDeFinanciamiento }) {
           <span className="text-on-surface-variant">
             Comisión de {f.commissionStaffName ?? f.registeredBy ?? 'quien lo registró'}
             <span className="block type-panel-caption text-panel-muted">
-              Va en la transferencia del lunes a la clínica, aparte de la consulta.
+              Se paga el día siguiente a que el paciente confirma, en la transferencia de ese
+              día a la clínica, aparte de la consulta.
             </span>
           </span>
           <span className="tabular-nums text-on-surface">{formatUsd(f.staffCommissionUsd)}</span>
@@ -300,7 +302,8 @@ function Comprobante({ f }: { f: DetalleDeFinanciamiento }) {
 
 /**
  * Las dos mitades: el vencimiento de cada cuota del paciente (solo la fecha)
- * y el lunes del cierre que se la paga a la clínica. El importe y el estado
+ * y el día en que se le paga a la clínica (el siguiente al vencimiento; lo
+ * calcula la base con `helios_settlement_run_for`). El importe y el estado
  * de la transferencia son del administrador; la base los manda vacíos a una
  * secretaria.
  */
@@ -311,6 +314,7 @@ function CuandoTePagamos({ f }: { f: DetalleDeFinanciamiento }) {
     <section>
       <SectionTitle className="mb-3">Cuándo te pagamos</SectionTitle>
       <Table
+        apilada
         headers={
           conImportes
             ? ['Mitad', 'Vence la cuota', 'Te pagamos el', 'Importe', 'Transferencia']
@@ -356,8 +360,9 @@ function CuandoTePagamos({ f }: { f: DetalleDeFinanciamiento }) {
         })}
       </Table>
       <p className="mt-4 type-panel-caption leading-5 text-panel-muted">
-        Helios cierra caja los lunes a las 10:00 y ese mismo día transfiere lo que venció en la
-        semana, <strong>haya pagado o no tu paciente</strong>: cobrarle es cosa de Helios.
+        Helios te paga cada mitad el día siguiente al vencimiento de su cuota (a los 8 y a los
+        15 días de la consulta), <strong>haya pagado o no tu paciente</strong>: cobrarle es cosa
+        de Helios.
       </p>
     </section>
   )

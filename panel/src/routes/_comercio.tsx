@@ -1,9 +1,9 @@
-import { useState } from 'react'
 import { createFileRoute, Outlet } from '@tanstack/react-router'
 
+import { HeliosIsotipo, HeliosLogo } from '@/components/HeliosLogo'
 import { StaffGate } from '@/components/StaffGate'
 import { PanelShell } from '@/components/layouts/PanelShell'
-import { merchantNavGroupsFor } from '@/config/navigation'
+import { merchantBarraInferiorFor, merchantNavGroupsFor } from '@/config/navigation'
 import { ROLE_LABEL } from '@/features/auth/permissions'
 import { useSession } from '@/features/auth/session'
 import type { StaffContext } from '@/features/auth/session'
@@ -46,12 +46,9 @@ function ComercioShell({
   return (
     <PanelShell
       groups={merchantNavGroupsFor(staff.role)}
+      barraInferior={merchantBarraInferiorFor(staff.role)}
       logo={(plegado) => (
-        <MerchantLogo
-          name={staff.merchantName}
-          logoUrl={staff.merchantLogoUrl}
-          plegado={plegado}
-        />
+        <LogoDeHelios clinica={staff.merchantName} plegado={plegado} />
       )}
       account={{
         // El correo es lo que distingue a una secretaria de otra: la base no
@@ -66,45 +63,24 @@ function ComercioShell({
 }
 
 /**
- * El logo del local en la cabecera de la barra, con el nombre como respaldo.
+ * El logo de Helios en la cabecera del menú, suelto y sin tarjeta, como en el
+ * panel de admin: el panel es de Helios, la clínica lo usa.
  *
- * El respaldo no es un detalle: el logo es opcional en la ficha del comercio
- * y la imagen puede fallar al cargar. Un hueco vacío donde debería estar la
- * identidad del local hace dudar de en qué cuenta se ha entrado.
- *
- * Plegada la barra no caben ni el logo ni el nombre, así que queda la
- * inicial: sigue diciendo de qué local es el panel, que es lo único que esta
- * caja tiene que contestar.
+ * El nombre de la clínica queda en el `title`, para quien dude de en qué
+ * cuenta ha entrado. Plegada la barra, a 64 px no cabe el logotipo entero y
+ * queda el isotipo.
  */
-function MerchantLogo({
-  name,
-  logoUrl,
-  plegado,
-}: {
-  name: string
-  logoUrl: string | null
-  plegado: boolean
-}) {
-  const [broken, setBroken] = useState(false)
-
+function LogoDeHelios({ clinica, plegado }: { clinica: string; plegado: boolean }) {
   return (
-    <div
-      title={plegado ? name : undefined}
-      className={`flex h-11 items-center justify-center overflow-hidden rounded-[var(--radius-panel-card)] bg-shell-card px-3 ${
-        plegado ? 'lg:px-0' : ''
-      }`}
-    >
-      {logoUrl && !broken ? (
-        <img
-          src={logoUrl}
-          alt={name}
-          onError={() => setBroken(true)}
-          className="max-h-full max-w-full object-contain"
-        />
-      ) : (
-        <span className="type-panel-section truncate tracking-wide text-on-surface">
-          <span className={plegado ? 'lg:hidden' : undefined}>{name.toUpperCase()}</span>
-          {plegado && <span className="hidden lg:inline">{name.slice(0, 1).toUpperCase()}</span>}
+    <div title={`Helios · ${clinica}`} className="flex items-center">
+      {/* Envueltos: el SVG del logo trae `display` en línea y una clase no
+          podría esconderlo. */}
+      <span className={`flex ${plegado ? 'lg:hidden' : ''}`}>
+        <HeliosLogo height={22} />
+      </span>
+      {plegado && (
+        <span className="hidden lg:flex">
+          <HeliosIsotipo size={26} />
         </span>
       )}
     </div>

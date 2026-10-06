@@ -135,7 +135,7 @@ begin
   if v_j->>'status' <> 'pending' or v_j->>'channel' <> 'panel'
      or v_exp is null or v_exp < now() + interval '119 minutes' or v_exp > now() + interval '121 minutes'
      or jsonb_array_length(v_j->'installments') <> 2
-     or (v_j->'installments'->0->>'amount_usd')::numeric <> 61.60
+     or (v_j->'installments'->0->>'amount_usd')::numeric <> 56.96
      or (v_j->'installments'->0->>'due_date')::date <> v_bdate + 7
      or (v_j->'installments'->1->>'due_date')::date <> v_bdate + 14
      or v_j->'receipt'->>'status' <> 'sin_enviar'
@@ -168,10 +168,11 @@ begin
   if v_text not like '👋 Hola, José. Bienvenido a Helios 💙%'
      or v_text not like '%Clínica Confirma registró tu consulta de $100 para pagarla en 2 cuotas, sin inicial.%'
      or v_text not like '%* Consulta: $100%'
-     or v_text not like '%* Servicio Helios (20\%): $20%'
-     or v_text not like '%* IVA (16\% sobre el servicio): $3,20%'
-     or v_text not like '%* Total: $123,20%'
-     or v_text not like '%Tus cuotas serán de $61,60:%'
+     or v_text not like '%* Comisión de servicio (12\%): $12%'
+     or v_text not like '%* IVA de la comisión (16\%): $1,92%'
+     or v_text not like '%¿Confirmas tu pago en cuotas? Responde Sí o No.%'
+     or v_text not like '%* Total: $113,92%'
+     or v_text not like '%Tus cuotas serán de $56,96:%'
      or v_text not like '%📅 ' || to_char(v_bdate + 7, 'DD/MM') || ' y ' || to_char(v_bdate + 14, 'DD/MM') || '%'
      or v_text like '%{%' then
     raise exception 'El texto de la pregunta no es el esperado: %', v_text;
@@ -181,7 +182,7 @@ begin
   -- 3. La reserva de cupo
   -- =========================================================================
   if public.helios_credit_reserved_usd(v_profile) <> 100 or public.helios_credit_used_usd(v_profile) <> 100
-     or public.available_usd(v_profile) <> 250 then
+     or public.available_usd(v_profile) <> 50 then
     raise exception 'La orden pendiente debía reservar $100: reservado %, usado %, disponible %',
       public.helios_credit_reserved_usd(v_profile), public.helios_credit_used_usd(v_profile),
       public.available_usd(v_profile);
@@ -190,12 +191,12 @@ begin
   set local role authenticated;
   perform set_config('request.jwt.claims', json_build_object('sub', v_otro::text, 'role', 'authenticated')::text, true);
   v_j := public.helios_patient_eligibility(v_otra, 'V20000001');
-  if v_j->>'estado' <> 'disponible' or (v_j->>'disponible_usd')::numeric <> 250 then
-    raise exception 'Otra clínica debía ver el disponible descontado (250): %', v_j;
+  if v_j->>'estado' <> 'disponible' or (v_j->>'disponible_usd')::numeric <> 50 then
+    raise exception 'Otra clínica debía ver el disponible descontado (50): %', v_j;
   end if;
   v_failed := false;
   begin
-    perform public.create_patient_charge(v_otra, null, jsonb_build_object('document', 'V20000001'), 50, null, null, 'pcf-otra');
+    perform public.create_patient_charge(v_otra, null, jsonb_build_object('document', 'V20000001'), 30, null, null, 'pcf-otra');
   exception when others then
     v_failed := true; v_err := sqlerrm;
   end;
@@ -234,7 +235,7 @@ begin
 
   if (select array_agg(due_date order by sequence) from public.installments where charge_id = v_charge)
        <> array[v_bdate + 7, v_bdate + 14]
-     or (select sum(amount_usd) from public.installments where charge_id = v_charge) <> 123.20 then
+     or (select sum(amount_usd) from public.installments where charge_id = v_charge) <> 113.92 then
     raise exception 'Las cuotas debían salir del business_date de la orden';
   end if;
 
@@ -369,7 +370,7 @@ begin
     v_failed := true; v_err := sqlerrm;
   end;
   reset role;
-  if not v_failed or v_err <> 'Este financiamiento ya no se puede reenviar' then
+  if not v_failed or v_err <> 'Esta orden ya no se puede reenviar' then
     raise exception 'Una confirmada no se reenvía: %', coalesce(v_err, 'sin error');
   end if;
 
@@ -405,7 +406,7 @@ begin
   set local role authenticated;
   perform set_config('request.jwt.claims', json_build_object('sub', v_cajero::text, 'role', 'authenticated')::text, true);
   v_j := public.helios_charge_for_staff(v_charge4);
-  if v_j->>'decline_message' not like 'No podemos financiar a esta persona.%'
+  if v_j->>'decline_message' not like 'Esta persona no puede pagar en cuotas con Helios.%'
      or v_j->'confirmation'->>'status' <> 'rechazada' then
     raise exception 'La clínica debía ver el texto neutro: %', v_j;
   end if;

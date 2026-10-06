@@ -29,7 +29,7 @@ export type VencidoDeSuGente = Desglose & {
   personas: number
 }
 
-/** El cierre de caja del lunes siguiente, para ese local. */
+/** Lo que se le paga por las cuotas de la semana (de martes a lunes), para ese local. */
 export type Transferencia = {
   /** Liquidaciones ya generadas para ese cierre. */
   generadoUsd: number
@@ -40,9 +40,9 @@ export type Transferencia = {
   /** Lo que se generará antes del cierre (solo si el cierre no ha llegado). */
   previstoUsd: number
   /**
-   * Lo de cierres anteriores que sigue sin transferirse: no es de esta semana,
-   * pero ese lunes también se paga (solo si el cierre no ha llegado). Lo
-   * pendiente + lo previsto + esto es el «Sale este lunes (con lo atrasado)» de Pagos a locales.
+   * Lo de semanas anteriores que sigue sin transferirse: no es de esta semana,
+   * pero sigue saliendo como atrasado en los pagos diarios (solo si los
+   * pagos de la semana no han terminado).
    */
   atrasadoUsd: number
 }
@@ -133,7 +133,7 @@ export type LocalesDeLaSemana = {
   dias: number
   /** Contra qué se compara: la semana anterior, o sus mismos días si la elegida va a medias. */
   anterior: { desde: string; hasta: string; mismaAltura: boolean }
-  /** El cierre de caja que paga lo que vence en la semana: el lunes siguiente. */
+  /** El último día de pago de lo que vence en la semana: el lunes siguiente. */
   cierre: { lunes: string; pasado: boolean }
   graciaDias: number
   local: string | null

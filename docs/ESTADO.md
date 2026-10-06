@@ -1,6 +1,17 @@
 # Estado del trabajo
 
-Actualizado el 2026-10-01.
+Actualizado el 2026-10-06.
+
+## 2026-10-06 · Las reglas del negocio publicadas
+
+Plan §0.1. Comisión de servicio **12% + IVA**, límite inicial **$150**, a la clínica **a los 8 y 15 días** (a diario, ya no los lunes), cosmetología, operador **Quarto Latam, C.A.**, y vocabulario externo sin «financiamiento» ni «préstamo». Portada nueva con «Quiero afiliarme» y `/legal/terminos`.
+
+- **Base:** migraciones `20261006001000`–`001300` y `002000`–`002100` aplicadas. 32/32 suites en verde; `verificar-contrato.mjs`: 170 llamadas a 155 RPC, todo cuadra.
+- **Panel:** `tsc`, lint, build y 116/116 tests en verde.
+- **Pendiente:**
+  - Desplegar `whatsapp-webhook` (los textos nuevos del bot están en el repo, sin desplegar).
+  - Crear y aprobar en Meta la plantilla v3 `helios_confirmar_pago_en_cuotas` (§15.5.2). Hasta entonces, fuera de la ventana de 24 h la pregunta al paciente va a la cola manual.
+  - Publicar el WhatsApp de afiliación en `panel/src/config/legal.ts` y el RIF de Quarto Latam.
 
 ## Hecho y verificado
 

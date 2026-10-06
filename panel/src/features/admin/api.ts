@@ -346,16 +346,25 @@ export async function flagForReview(reportId: string, note: string): Promise<voi
 
 /**
  * Las categorías de una clínica (`merchant_category`). Los valores médicos
- * los añade la migración H8 (plan §4.4); los de Ronda (`discoteca`,
+ * los añade la migración H8 (plan §4.4), y `cosmetologia` la de 2026-10-06
+ * (Helios cubre medicina, odontología y cosmetología); los de Ronda (`discoteca`,
  * `conciertos`) siguen en el enum de la base pero el panel no los ofrece, y
  * si llegara uno se lee como «sin categoría».
  */
-export type MerchantCategory = 'clinica' | 'consultorio' | 'odontologia' | 'laboratorio' | 'imagenes' | 'otros'
+export type MerchantCategory =
+  | 'clinica'
+  | 'consultorio'
+  | 'odontologia'
+  | 'cosmetologia'
+  | 'laboratorio'
+  | 'imagenes'
+  | 'otros'
 
 export const MERCHANT_CATEGORY_LABEL: Record<MerchantCategory, string> = {
   clinica: 'Clínica',
   consultorio: 'Consultorio',
   odontologia: 'Odontología',
+  cosmetologia: 'Cosmetología',
   laboratorio: 'Laboratorio',
   imagenes: 'Imágenes',
   otros: 'Otros',
@@ -366,6 +375,7 @@ export const CATEGORIAS_CLINICA: ReadonlyArray<MerchantCategory> = [
   'clinica',
   'consultorio',
   'odontologia',
+  'cosmetologia',
   'laboratorio',
   'imagenes',
   'otros',
@@ -470,7 +480,12 @@ export async function createMerchant(params: {
 // ── Pagos al comercio ──────────────────────────────────────────────────────
 
 /**
- * Lo que se le debe a cada comercio, con el cierre del lunes delante.
+ * Lo que se le debe a cada comercio, con el pago de hoy delante.
+ *
+ * Desde el 2026-10-06 a la clínica se le paga a diario: cada liquidación, el
+ * día siguiente a su vencimiento (la consulta a los días 8 y 15, la comisión
+ * de la secretaria el día siguiente a la confirmación). El «cierre» de las RPC
+ * (`next_run_date`, `run_date`) es el pago de un día.
  *
  * `accruedUsd` son filas reales de `settlements`; `upcomingUsd` es la cuota que
  * todavía no ha vencido y por tanto no existe en ninguna tabla. Se piden a una
@@ -484,15 +499,15 @@ export type MerchantPayable = {
   taxId: string | null
   /** Local de prueba: su fila se ve, con etiqueta, pero no suma en las cifras. */
   isTest: boolean
-  /** Día operativo de hoy, de 10 AM a 10 AM. */
+  /** Día operativo de hoy, de medianoche a medianoche en Caracas. */
   todayDate: string
-  /** El lunes del próximo cierre. Hoy mismo, si hoy es lunes. */
+  /** El día del próximo pago: hoy (se paga a diario). */
   nextRunDate: string
-  /** Lo que hay que transferirle en ese cierre. */
+  /** Lo que hay que transferirle hoy, con lo atrasado. */
   nextRunUsd: number
   accruedUsd: number
   accruedCount: number
-  /** Cierres que ya pasaron y siguen sin transferirse. Eso sí es un atraso. */
+  /** Pagos de días anteriores que siguen sin transferirse. Eso sí es un atraso. */
   overdueUsd: number
   oldestDueDate: string | null
   /** Cuotas por vencer: se le deberán, pero todavía no toca. */
@@ -503,7 +518,7 @@ export type MerchantPayable = {
   lastPayoutOn: string | null
   lastPayoutUsd: number | null
   /**
-   * Lo del próximo cierre partido en consultas y comisiones del personal
+   * Lo que sale hoy partido en consultas y comisiones del personal
    * (contrato §2.5). `null` si la base no lo manda.
    */
   desglose?: ConsultasYComisiones | null
@@ -555,24 +570,24 @@ export type Settlement = {
    *  no el usuario (docs/05 §3). */
   isDue: boolean
   /**
-   * Entra en el cierre del lunes que viene.
+   * Entra en el pago de hoy (con lo atrasado).
    *
-   * No es lo mismo que `isDue` y por eso existe: el lunes del cierre, lo
-   * vencido incluye el tramo que vence ESE lunes, que pertenece a la semana
-   * siguiente. Marcarlo sería adelantarle al comercio una semana entera.
+   * No es lo mismo que `isDue` y por eso existe: lo que vence hoy ya está
+   * vencido, pero se paga mañana, el día siguiente a su vencimiento. Marcarlo
+   * sería adelantarle un día a la clínica.
    */
   inNextRun: boolean
-  /** El lunes concreto en que se paga esta liquidación. */
+  /** El día concreto en que se paga esta liquidación: el siguiente a su vencimiento. */
   runDate: string
 }
 
 /**
  * Las liquidaciones de un comercio.
  *
- * Sin `runDate`, lo que se le debe hoy venga del cierre que venga —lo que
- * necesita la tarea del lunes—. Con `runDate`, las de ese cierre y solo ésas,
- * incluidas las ya transferidas: un cierre saldado tiene que poder contar qué
- * pasó, no quedarse en blanco.
+ * Sin `runDate`, lo que se le debe hoy venga del día de pago que venga —lo
+ * que necesita la tarea diaria—. Con `runDate`, las de ese día de pago y solo
+ * ésas, incluidas las ya transferidas: un pago saldado tiene que poder contar
+ * qué pasó, no quedarse en blanco.
  */
 export async function fetchMerchantSettlements(
   merchantId: string,
@@ -600,11 +615,13 @@ export async function fetchMerchantSettlements(
 }
 
 /**
- * Un cierre de caja con filas: el lunes, lo que se generó esa semana, lo que
- * salió del banco y lo que quedó a deber.
+ * Un día de pago con filas: el día, lo que vencía la víspera, lo que salió del
+ * banco y lo que quedó a deber.
  *
  * El eje es `helios_settlement_run_for(due_date)`: cada liquidación pertenece a
- * un cierre y solo a uno, el primer lunes posterior a su vencimiento.
+ * un día de pago y solo a uno, el siguiente a su vencimiento (hasta el
+ * 2026-10-06 era el primer lunes posterior). La base lo calcula al leer, así
+ * que también lo pasado sale por días: hay una fila por cada día con pagos.
  */
 export type SettlementRun = {
   runDate: string
@@ -615,9 +632,9 @@ export type SettlementRun = {
   comercios: number
   primerVencimiento: string
   ultimoVencimiento: string
-  /** El cierre que viene. Lo dice el servidor, que es quien sabe qué día operativo es. */
+  /** El pago de hoy. Lo dice el servidor, que es quien sabe qué día operativo es. */
   isNext: boolean
-  /** Un lunes que ya pasó: lo que quede sin pagar aquí es atraso de verdad. */
+  /** Un día de pago que ya pasó: lo que quede sin pagar aquí es atraso de verdad. */
   isPast: boolean
   /** Lo de los locales de prueba, contado aparte y nunca dentro de lo de arriba. */
   pendientePruebaUsd: number
@@ -644,7 +661,7 @@ export async function fetchSettlementRuns(): Promise<SettlementRun[]> {
   }))
 }
 
-/** Un comercio dentro de un cierre concreto. Sin proyección: lo que fue. */
+/** Un comercio dentro de un día de pago concreto. Sin proyección: lo que fue. */
 export type RunPayable = {
   merchantId: string
   merchantName: string

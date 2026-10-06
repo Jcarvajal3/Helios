@@ -22,8 +22,6 @@ export type StaffContext = {
    *  Obligatorio desde 2026-08-25, pero los comercios de antes pueden no
    *  tenerlo. */
   merchantTaxId: string | null
-  /** Logo del local para el sidebar. Null cae al nombre en texto. */
-  merchantLogoUrl: string | null
   /** Null para un gerente general: cubre todas las sucursales. */
   branchId: string | null
   branchName: string
@@ -93,7 +91,7 @@ export async function fetchStaffContext(userId: string): Promise<StaffContext | 
     // sin ellos el comprobante del cobro no dice quién emite.
     .select(
       'merchant_id, branch_id, role, ' +
-        'merchants(name, legal_name, tax_id, logo_url), ' +
+        'merchants(name, legal_name, tax_id), ' +
         'merchant_branches(name, address)',
     )
     // El filtro por user_id es imprescindible, no redundante. Antes se
@@ -121,7 +119,6 @@ export async function fetchStaffContext(userId: string): Promise<StaffContext | 
       name: string
       legal_name: string | null
       tax_id: string | null
-      logo_url: string | null
     } | null
     merchant_branches: { name: string; address: string | null } | null
   }
@@ -138,7 +135,6 @@ export async function fetchStaffContext(userId: string): Promise<StaffContext | 
     merchantName: row.merchants?.name ?? 'Clínica',
     merchantLegalName: row.merchants?.legal_name ?? null,
     merchantTaxId: row.merchants?.tax_id ?? null,
-    merchantLogoUrl: row.merchants?.logo_url ?? null,
     branchId: row.branch_id,
     branchName: row.merchant_branches?.name ?? 'Todas las sedes',
     branchAddress: row.merchant_branches?.address ?? null,

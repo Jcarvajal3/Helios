@@ -80,7 +80,7 @@ begin
   values (v_pac,  '+584140009201', 'María', 'María Avisos', 'maria.avisos@prueba.helios.test'),
          (v_pac2, '+584140009202', 'Pedro', 'Pedro Avisos', null);
 
-  update public.levels set monthly_limit_usd = 350 where level = 1;
+  update public.levels set monthly_limit_usd = 150 where level = 1;
   update public.notification_templates set enabled = true
    where key in ('cuota_manana', 'cuota_hoy', 'cuota_vencida_d1', 'cargo_por_atraso_d4',
                  'pago_recibido', 'pago_rechazado', 'cuenta_congelada');
@@ -117,7 +117,7 @@ begin
   select * into v_row from public.outbound_messages
    where profile_id = v_pac and template_key = 'cuota_manana' and channel = 'whatsapp_manual';
   if v_row.recipient <> '+584140009201' or v_row.charge_id <> v_c1
-     or v_row.rendered_text not like '%mañana%61,60%'
+     or v_row.rendered_text not like '%mañana%56,96%'
      or v_row.rendered_text like '%{%' or v_row.dedupe_key <> format('cuota_manana:whatsapp_manual:%s:%s', v_pac, v_d) then
     raise exception 'El WhatsApp de la víspera no está listo para pegar: %', to_jsonb(v_row);
   end if;
@@ -154,8 +154,8 @@ begin
   perform public.helios_enqueue_reminders('cargo_por_atraso_d4', v_d + 4);
   select * into v_row from public.outbound_messages
    where profile_id = v_pac and template_key = 'cargo_por_atraso_d4' and installment_due_date = v_d;
-  if not found or v_row.rendered_text not like '%$63,60%' or v_row.rendered_text not like '%$2%' then
-    raise exception 'El aviso del cargo debía llevar la cuota con el cargo ($63,60): %', v_row.rendered_text;
+  if not found or v_row.rendered_text not like '%$58,96%' or v_row.rendered_text not like '%$2%' then
+    raise exception 'El aviso del cargo debía llevar la cuota con el cargo ($58,96): %', v_row.rendered_text;
   end if;
 
   -- D+7: ningún mensaje nuevo para D.
@@ -177,8 +177,8 @@ begin
   select * into v_row from public.outbound_messages
    where profile_id = v_pac2 and template_key = 'cuota_hoy' and installment_due_date = v_d;
   if (select count(*) from public.outbound_messages where profile_id = v_pac2 and template_key = 'cuota_hoy') <> 1
-     or v_row.charge_id is not null or v_row.rendered_text not like '%$61,60%' then
-    raise exception 'Dos financiamientos del mismo día: un aviso con la suma ($61.60): %', to_jsonb(v_row);
+     or v_row.charge_id is not null or v_row.rendered_text not like '%$56,96%' then
+    raise exception 'Dos financiamientos del mismo día: un aviso con la suma ($56.96): %', to_jsonb(v_row);
   end if;
   -- Sin correo, la víspera sale solo por WhatsApp.
   perform public.helios_enqueue_reminders('cuota_manana', v_d - 1);
@@ -222,7 +222,7 @@ begin
   perform public.admin_reconcile_payment((v_rep->>'report_id')::uuid, true, 'Cotejado a mano en la prueba');
   select * into v_row from public.outbound_messages where dedupe_key = 'pago_recibido:' || (v_rep->>'report_id');
   if not found or v_row.channel <> 'whatsapp_manual' or v_row.profile_id <> v_pac
-     or v_row.rendered_text not like '%$63,60%' then
+     or v_row.rendered_text not like '%$58,96%' then
     raise exception 'Conciliar debía encolar pago_recibido con el monto: %', to_jsonb(v_row);
   end if;
   raise notice 'TEST AVISOS 6 OK — conciliar encola pago_recibido';

@@ -64,6 +64,17 @@ poda:
    | `000400_las_alertas_de_las_clinicas` | H10: las alertas nuevas de `admin_risk_alerts` |
    | `000500_el_historial_de_correos_dice_los_rebotados` | `admin_outbound_history(p_status => 'rebotado')` y `'entregado'` |
 
+7. Las reglas del negocio publicadas (`20261006001…` y `20261006002…`, docs/00 §0.1):
+
+   | Migración | Qué hace |
+   |---|---|
+   | `001000_la_comision_baja_al_doce_y_el_limite_a_150` | `consumer_fee_pct` = 12 desde el 2026-10-06 (con vigencia; lo confirmado conserva su desglose) y nivel 1 = $150 |
+   | `001100_las_clinicas_pueden_ser_de_cosmetologia` | `merchant_category` + `cosmetologia` |
+   | `001200_a_la_clinica_se_le_paga_a_los_8_y_15_dias` | `helios_settlement_run_for(d) = d + 1` y `helios_next_settlement_run = hoy`: cada mitad se paga el día siguiente a su vencimiento (días 8 y 15), a diario y no los lunes. Las previsiones de caja agrupan lo que sale por la semana del día de pago |
+   | `001300_las_metricas_de_locales_miran_la_semana_de_pagos` | `metricas.locales_cierre`: lo generado, previsto y atrasado de una semana se mide por los pagos de martes a lunes (las cuotas que vencen de lunes a domingo), no por el lunes |
+   | `002000_los_mensajes_hablan_de_pagos_en_cuotas` | Textos al paciente y a la clínica sin "financiamiento" (errores de las RPC, plantillas, comprobante con desglose y total, bienvenida, avisos), condiciones v2 en `terms_versions`, y `confirmar_financiamiento` sin plantilla de Meta hasta la v3 (fuera de la ventana de 24 h cae a la cola manual). Termina con una guarda que falla si un texto activo vuelve a decir financiamiento, préstamo o crédito |
+   | `002100_el_panel_lee_los_textos_y_la_confirmacion` | Error de cupo exacto ("El monto supera lo disponible ($X).") y `merchant_commission_items` con `confirmed_at` |
+
 Todo el detalle de la poda —qué se borró, qué se tocó y por qué— está en
 `poda/NOTAS.md`; el de cada migración de Helios, en su cabecera.
 

@@ -19,22 +19,27 @@ import type { RunPayable, SettlementRun } from '@/features/admin/api'
 import { csvDinero } from '@/lib/csv'
 import { describeError } from '@/lib/supabase'
 
-/** Por debajo de medio céntimo, un cierre está saldado. */
+/** Por debajo de medio céntimo, un pago está saldado. */
 const SALDADO = 0.005
 
-/** Cómo se llama un cierre en el desplegable, sin tener que abrirlo. */
+/**
+ * Cómo se llama un día de pago en el desplegable, sin tener que abrirlo.
+ *
+ * El «cierre» de la base (`run_date`) es, desde el 2026-10-06, el pago de un
+ * día: cada liquidación se paga el día siguiente a su vencimiento.
+ */
 export function estadoDelCierre(run: SettlementRun): string {
-  if (run.isNext) return 'en curso'
+  if (run.isNext) return 'hoy'
   if (!run.isPast) return 'por llegar'
   return run.pendienteUsd > SALDADO ? `quedan ${formatUsd(run.pendienteUsd)}` : 'saldado'
 }
 
 /**
- * Un cierre de caja, local a local.
+ * Un día de pago a las clínicas, local a local.
  *
- * Aquí no hay proyección: un cierre es lo que fue. Las tres cifras son las de
- * esa semana (se generó, se transfirió, quedó a deber) y cada fila abre el
- * local con ESE cierre, incluidas sus líneas ya pagadas.
+ * Aquí no hay proyección: un pago es lo que fue. Las tres cifras son las de
+ * ese día (se generó, se transfirió, quedó a deber) y cada fila abre el local
+ * con ESE día de pago, incluidas sus líneas ya pagadas.
  */
 export function UnCierreDeCaja({ run }: { run: SettlementRun }) {
   const navigate = useNavigate()
@@ -45,17 +50,19 @@ export function UnCierreDeCaja({ run }: { run: SettlementRun }) {
   })
 
   const saldado = run.pendienteUsd <= SALDADO
+  // Con el pago diario, todo lo de un día vence la víspera: un solo día.
+  const unSoloDia = run.primerVencimiento === run.ultimoVencimiento
 
   return (
     <>
       <div className="mb-1 flex flex-wrap items-center gap-2">
-        <SectionTitle>Cierre del {formatDay(run.runDate)}</SectionTitle>
+        <SectionTitle>Pago del {formatDay(run.runDate)}</SectionTitle>
         <InfoDot
-          title={`Cierre del ${formatDay(run.runDate)}`}
-          what="Lo que quede sin transferir sigue contando como atrasado en «Lo que se debe hoy»."
+          title={`Pago del ${formatDay(run.runDate)}`}
+          what="Lo que tocaba transferirles a las clínicas ese día: cada liquidación se paga el día siguiente a su vencimiento (la consulta, a los 8 y a los 15 días; la comisión de la secretaria, el día siguiente a la confirmación). Lo que quede sin transferir sigue contando como atrasado en «Lo que se debe hoy»."
         />
         {run.isNext ? (
-          <Badge tone="neutral">En curso</Badge>
+          <Badge tone="neutral">Hoy</Badge>
         ) : !run.isPast ? (
           <Badge tone="neutral">Por llegar</Badge>
         ) : saldado ? (
@@ -70,21 +77,27 @@ export function UnCierreDeCaja({ run }: { run: SettlementRun }) {
       </div>
 
       <p className="mb-4 type-panel-caption text-on-surface-variant">
-        Liquidaciones con vencimiento del {formatDay(run.primerVencimiento)} al{' '}
-        {formatDay(run.ultimoVencimiento)}.
+        {unSoloDia ? (
+          <>Liquidaciones que vencieron el {formatDay(run.primerVencimiento)}.</>
+        ) : (
+          <>
+            Liquidaciones con vencimiento del {formatDay(run.primerVencimiento)} al{' '}
+            {formatDay(run.ultimoVencimiento)}.
+          </>
+        )}
       </p>
 
       {rows.isPending && <SkeletonTable rows={4} columns={4} />}
 
       {rows.isError && (
-        <ErrorBox title="No se pudo cargar el cierre" detail={describeError(rows.error)} />
+        <ErrorBox title="No se pudo cargar el pago" detail={describeError(rows.error)} />
       )}
 
       {rows.data?.length === 0 && (
         <EmptyState
           icon={<Landmark size={40} />}
-          title="Este cierre no tiene nada"
-          description="No hay ninguna liquidación con vencimiento en esa semana."
+          title="Ese día no hay nada que pagar"
+          description="No hay ninguna liquidación que toque pagar ese día."
         />
       )}
 
@@ -103,10 +116,10 @@ export function UnCierreDeCaja({ run }: { run: SettlementRun }) {
                 ` · ${formatUsd(run.pendientePruebaUsd)} en clínicas de prueba, aparte`}
             </>
           }
-          exportar={{ archivo: `cierre-${run.runDate}` }}
+          exportar={{ archivo: `pago-a-clinicas-${run.runDate}` }}
           rowTone={(m) => (m.pendienteUsd > SALDADO && run.isPast && !m.isTest ? 'error' : undefined)}
-          // El cierre viaja con el enlace: quien entra desde la semana del 14
-          // quiere ver esa semana, no todo lo que se le debe al local.
+          // El día de pago viaja con el enlace: quien entra desde el pago del
+          // 14 quiere ver ese día, no todo lo que se le debe al local.
           onRowClick={(m) =>
             void navigate({
               to: '/admin/pagos-clinicas/$id',
@@ -149,7 +162,7 @@ const COLUMNAS: Array<Column<RunPayable>> = [
     key: 'generado',
     header: 'Se generó',
     type: 'number',
-    info: 'Liquidaciones con vencimiento en esa semana: la parte de la clínica (financiado sin fee) menos su comisión.',
+    info: 'Lo que tocaba pagarle ese día (sus liquidaciones vencieron el día anterior): la parte de la clínica (financiado sin fee) menos su comisión, más las comisiones de su personal.',
     sort: (m) => m.generadoUsd,
     sortDir: 'desc',
     csv: (m) => csvDinero(m.generadoUsd),

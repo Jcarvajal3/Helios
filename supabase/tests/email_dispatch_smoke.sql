@@ -107,7 +107,7 @@ begin
   insert into public.profiles (id, phone_e164, first_name, last_name, full_name, document_number, email)
   values (v_pac, '+584140009101', 'José', 'Pérez', 'José Pérez', 'V12345678', 'jose.correo@prueba.helios.test');
 
-  update public.levels set monthly_limit_usd = 350 where level = 1;
+  update public.levels set monthly_limit_usd = 150 where level = 1;
 
   -- Contacto de Helios sin remitente y con WhatsApp.
   update public.platform_contact
@@ -127,13 +127,17 @@ begin
   if v_row.status <> 'pendiente' or v_row.recipient <> 'jose.correo@prueba.helios.test' then
     raise exception 'El comprobante debía quedar pendiente al correo registrado: %', to_jsonb(v_row);
   end if;
-  if v_row.subject not like 'Tu financiamiento en Clínica Correo — 2 cuotas de $61,60' then
+  if v_row.subject not like 'Tu pago en cuotas en Clínica Correo — 2 cuotas de $56,96' then
     raise exception 'Asunto inesperado: %', v_row.subject;
   end if;
   if v_row.rendered_text not like '%Monto de la consulta: $100%'
-     or v_row.rendered_text not like '%Servicio Helios (20 % + IVA) de $23,20%'
-     or v_row.rendered_text not like '%Cuota 1: $61,60%'
-     or v_row.rendered_text not like '%Si no reconoces este financiamiento%'
+     or v_row.rendered_text not like '%Comisión de servicio (12\%): $12%'
+     or v_row.rendered_text not like '%IVA de la comisión (16\%): $1,92%'
+     or v_row.rendered_text not like '%Total a pagar: $113,92%'
+     or v_row.rendered_text not like '%ORDEN #%'
+     or v_row.rendered_text not like '%Cuota 1: $56,96%'
+     or v_row.rendered_text not like '%Si no reconoces este pago en cuotas%'
+     or v_row.rendered_text not like '%Quarto Latam, C.A.%'
      or v_row.rendered_text not like '%Este comprobante no es una factura fiscal.%'
      or v_row.rendered_text not like '%C.I. V-****5678%'
      or v_row.rendered_text not like '%Registró: Ana%' then
@@ -141,18 +145,20 @@ begin
   end if;
   if v_row.html is null
      or v_row.html not like '%https://wa.me/584140000000?text=%'
-     or v_row.html not like '%Servicio Helios (20&nbsp;% + IVA)</strong> de $23,20%'
+     or v_row.html not like '%Comisi&oacute;n de servicio (12\%)%$12<%'
+     or v_row.html not like '%IVA de la comisi&oacute;n (16\%)%$1,92<%'
+     or v_row.html not like '%Total a pagar%$113,92<%'
      or v_row.html not like '%Este comprobante no es una factura fiscal.%'
-     or v_row.html not like '%Si no reconoces este financiamiento%'
+     or v_row.html not like '%Si no reconoces este pago en cuotas%'
      or v_row.html not like '%role="presentation"%' then
     raise exception 'Al HTML del comprobante le falta algo';
   end if;
-  -- Ningún total con el fee: ni 123.20 ni la palabra «Total».
-  if v_row.rendered_text like '%123,20%' or v_row.html like '%123,20%'
-     or v_row.rendered_text ilike '%total%' or v_row.html ilike '%total%' then
-    raise exception 'El comprobante no puede mostrar un total que sume el fee';
+  -- Al paciente sí se le enseña el total con la comisión (Javier, 2026-10-06),
+  -- y nada de lo que lee dice financiamiento.
+  if v_row.subject || v_row.rendered_text || v_row.html ~* 'financ|pr[eé]stamo|cr[eé]dito|servicio helios' then
+    raise exception 'El comprobante todavía habla de financiamiento';
   end if;
-  raise notice 'TEST CORREO 10 OK — comprobante completo, fee en línea aparte y sin total';
+  raise notice 'TEST CORREO 10 OK — comprobante completo, con la comisión, su IVA y el total';
 
   -- --- 1. Sin clave → no-op --------------------------------------------------
   v_res := public.helios_dispatch_email_batch();

@@ -23,6 +23,7 @@ export function Topbar({
   search,
   asistente,
   inmersiva,
+  conBarraInferior = false,
   onAbrirCajon,
   slotRef,
 }: {
@@ -35,6 +36,8 @@ export function Topbar({
   /** El botón del asistente, junto a la paleta. Solo lo pasa el super admin. */
   asistente?: ReactNode
   inmersiva: boolean
+  /** Hay barra de abajo en el teléfono: su «Menú» hace lo que la hamburguesa. */
+  conBarraInferior?: boolean
   onAbrirCajon: () => void
   /** Dónde cuelgan su acción las pantallas, vía `PageAction`. */
   slotRef: (nodo: HTMLDivElement | null) => void
@@ -49,9 +52,13 @@ export function Topbar({
 
   return (
     <header className="sticky top-0 z-20 flex h-(--topbar-height) shrink-0 items-center gap-3 border-b border-panel-hairline bg-shell-canvas/90 px-4 backdrop-blur lg:px-8">
-      <AbrirMenu onClick={onAbrirCajon} />
+      <AbrirMenu onClick={onAbrirCajon} soloTableta={conBarraInferior} />
 
-      <h1 className="type-panel-page min-w-0 shrink truncate text-on-surface">{title}</h1>
+      {/* A 18 en el teléfono: a 22, «Nuevo pago en cuotas» y su acción no
+          caben juntos en 343 px y el título se cortaba en «Nuevo pago en…». */}
+      <h1 className="type-panel-page min-w-0 shrink truncate text-on-surface max-sm:text-lg max-sm:leading-6">
+        {title}
+      </h1>
 
       <div className="flex min-w-0 flex-1 items-center justify-end gap-3">
         {/* Compacto a propósito, 340 como mucho: busca en TODO el panel, y si
@@ -67,13 +74,15 @@ export function Topbar({
 }
 
 /** Por debajo de lg la barra lateral es un cajón y esto la abre. */
-function AbrirMenu({ onClick }: { onClick: () => void }) {
+function AbrirMenu({ onClick, soloTableta = false }: { onClick: () => void; soloTableta?: boolean }) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-label="Abrir el menú"
-      className="inline-flex size-10 shrink-0 items-center justify-center rounded-panel-control text-on-surface-variant transition-colors duration-(--transition-fast) hover:bg-panel-raised hover:text-on-surface lg:hidden"
+      className={`inline-flex size-10 shrink-0 items-center justify-center rounded-panel-control text-on-surface-variant transition-colors duration-(--transition-fast) hover:bg-panel-raised hover:text-on-surface lg:hidden ${
+        soloTableta ? 'max-md:hidden' : ''
+      }`}
     >
       <Menu size={18} aria-hidden />
     </button>

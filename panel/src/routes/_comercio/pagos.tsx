@@ -26,6 +26,7 @@ import {
 import { canSee } from '@/features/auth/permissions'
 import { useStaff } from '@/features/auth/session'
 import type { StaffContext } from '@/features/auth/session'
+import { sumarDias } from '@/components/kit/rango'
 import { CONCEPTO, MEDIO_DE_PAGO, agruparLineas, repartir } from '@/features/merchant/pagos'
 import type { Reparto, Transferencia } from '@/features/merchant/pagos'
 import { diaDeLaSemana } from '@/features/merchant/registro'
@@ -40,7 +41,7 @@ import { describeError } from '@/lib/supabase'
 export const Route = createFileRoute('/_comercio/pagos')({
   // `wide`: la tabla de transferencias lleva la referencia bancaria, que no
   // se puede recortar sin dejar de servir para cotejarla contra el banco.
-  staticData: { title: 'Pagos', width: 'wide' },
+  staticData: { title: 'Lo que recibo', width: 'wide' },
   component: PagosRoute,
 })
 
@@ -71,13 +72,17 @@ function PagosRoute() {
 /**
  * PAGOS: lo que Helios le paga a la clínica (el `/liquidaciones` de Ronda).
  *
- * Helios cierra caja los lunes a las 10:00 y ese día transfiere, en UNA
- * transferencia, dos cosas distintas que aquí se enseñan siempre partidas:
+ * Helios paga todos los días (no hay cierre semanal) y cada día transfiere,
+ * en UNA transferencia, dos cosas distintas que aquí se enseñan siempre
+ * partidas:
  *
- *   · Consultas: la mitad de cada financiamiento al vencer cada cuota del
- *     paciente, haya pagado o no.
- *   · Comisiones del personal: la de quien registró cada financiamiento, en
- *     el lunes siguiente a la semana del alta. La clínica se las entrega.
+ *   · Consultas: la mitad de cada pago en cuotas el día siguiente al
+ *     vencimiento de cada cuota del paciente (a los 8 y a los 15 días de la
+ *     consulta), haya pagado o no.
+ *   · Comisiones del personal: la de quien registró cada pago en cuotas, el
+ *     día siguiente a que el paciente confirma. La clínica se las entrega.
+ *
+ * La fecha del próximo pago la calcula la base (`helios_settlement_run_for`).
  */
 function Pagos({ staff }: { staff: StaffContext }) {
   const prevision = useQuery({
@@ -97,6 +102,7 @@ function Pagos({ staff }: { staff: StaffContext }) {
 
   const p = prevision.data
   const esHoy = p !== undefined && p.nextRunDate === p.todayDate
+  const esManana = p !== undefined && p.nextRunDate === sumarDias(p.todayDate, 1)
   const recibido = (transferencias.data ?? []).reduce((s, t) => s + t.amountUsd, 0)
   const devengado: Reparto | null = porTransferir.data ? repartir(porTransferir.data) : null
 
@@ -104,13 +110,13 @@ function Pagos({ staff }: { staff: StaffContext }) {
     <>
       <StatGrid>
         <Stat
-          label={esHoy ? 'Te llega hoy' : 'Te llega el lunes'}
+          label={esHoy ? 'Te llega hoy' : esManana ? 'Te llega mañana' : 'Próximo pago'}
           value={formatUsd(p?.nextRunUsd ?? 0)}
           hint={
             p
               ? p.nextRun
                 ? `${CONCEPTO.consultas} ${formatUsd(p.nextRun.consultasUsd)} · comisiones ${formatUsd(p.nextRun.comisionesUsd)}`
-                : `Cierre del ${diaDeLaSemana(p.nextRunDate)} ${formatDay(p.nextRunDate)} a las 10:00`
+                : `El ${diaDeLaSemana(p.nextRunDate)} ${formatDay(p.nextRunDate)}`
               : undefined
           }
           estado={estadoDeConsulta(prevision)}
@@ -122,7 +128,7 @@ function Pagos({ staff }: { staff: StaffContext }) {
           hint={
             p && p.upcomingUsd > 0
               ? `${formatUsd(p.upcomingUsd)} en cuotas que aún no vencen`
-              : 'Todo vencido y a la espera del cierre'
+              : 'Todo vencido y a la espera del próximo pago'
           }
           estado={estadoDeConsulta(prevision)}
           onReintentar={() => void prevision.refetch()}
@@ -172,12 +178,12 @@ function Pagos({ staff }: { staff: StaffContext }) {
       </Card>
 
       <p className="mt-6 max-w-3xl type-panel-body leading-6 text-on-surface-variant">
-        Helios cierra caja <strong>todos los lunes a las 10:00</strong> y ese mismo día te
-        transfiere las cuotas que vencieron durante la semana,{' '}
-        <strong>haya pagado o no tu paciente</strong>: cobrarle es cosa de Helios. Cada
-        financiamiento se te paga en dos mitades, una por cuota. En la misma transferencia van
-        las <strong>comisiones de tu personal</strong> de la semana anterior, para que se las
-        entregues.
+        Helios te paga <strong>todos los días</strong>. Cada pago en cuotas te llega en dos
+        mitades: la primera <strong>a los 8 días</strong> de la consulta y la segunda{' '}
+        <strong>a los 15 días</strong> (el día siguiente al vencimiento de cada cuota del
+        paciente), <strong>haya pagado o no tu paciente</strong>: cobrarle es cosa de Helios.
+        En la misma transferencia van las <strong>comisiones de tu personal</strong>, cada una
+        el día siguiente a que el paciente confirma, para que se las entregues.
       </p>
 
       {/* ── Historial ─────────────────────────────────────────────────── */}
@@ -212,6 +218,7 @@ function Pagos({ staff }: { staff: StaffContext }) {
         {transferencias.data && transferencias.data.length > 0 && (
           <>
             <Table
+              apilada
               headers={[
                 'Fecha',
                 'Método',
@@ -289,13 +296,13 @@ function FilaDeTransferencia({ t }: { t: Transferencia }) {
                   <span className="text-on-surface-variant">
                     {g.concepto === 'consultas' ? (
                       <>
-                        {CONCEPTO.consultas} · financiamientos del {formatDay(g.businessDate)} ·{' '}
+                        {CONCEPTO.consultas} · pagos en cuotas del {formatDay(g.businessDate)} ·{' '}
                         {g.count} {g.count === 1 ? 'mitad' : 'mitades'}
                       </>
                     ) : (
                       <>
                         {CONCEPTO.comisiones} · {g.count}{' '}
-                        {g.count === 1 ? 'financiamiento' : 'financiamientos'} ·{' '}
+                        {g.count === 1 ? 'orden' : 'órdenes'} ·{' '}
                         <Link to="/comisiones" className="underline underline-offset-2 hover:text-on-surface">
                           ver por persona
                         </Link>

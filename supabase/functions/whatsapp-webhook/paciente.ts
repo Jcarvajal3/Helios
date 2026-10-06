@@ -5,14 +5,14 @@
 // confirmación), antes de que lo atienda una persona:
 //
 //   · un mensaje cualquiera → el mensaje genérico con tres botones
-//     (Pagar cuota · Ver financiamientos · Ayuda), como mucho una vez cada
+//     (Pagar cuota · Mis pagos en cuotas · Ayuda), como mucho una vez cada
 //     2 horas; si ya lo vio, se calla y lo ve el equipo en la app;
 //   · Pagar cuota → la cuota que toca (las vencidas primero), en dólares y en
 //     bolívares de hoy, las cuentas de cobro y «envíanos el comprobante»;
-//   · Ver financiamientos → los activos con lo pendiente y el saldo;
+//   · Mis pagos en cuotas → los activos con lo pendiente y el saldo;
 //   · Ayuda → «una persona te atenderá» y se calla 24 h;
 //   · una foto o un documento (un comprobante) → acuse y se calla 24 h;
-//   · alguien sin financiamientos → un acuse y se calla 24 h;
+//   · alguien sin pagos en cuotas → un acuse y se calla 24 h;
 //   · un teléfono de varios pacientes → pide la cédula antes de enseñar nada.
 //
 // Lo que recuerda de cada número vive en `whatsapp_contacts`.
@@ -103,7 +103,7 @@ export async function atenderAlPaciente({
     return { paso: 'comprobante' }
   }
 
-  // Alguien sin financiamientos con Helios: lo atiende el equipo.
+  // Alguien sin pagos en cuotas con Helios: lo atiende el equipo.
   if (ctx.perfiles.length === 0) {
     await guardar({ humano: HORAS_DE_PERSONA })
     await enviar(mensajeSinFinanciamientos(), null)
@@ -126,7 +126,7 @@ export async function atenderAlPaciente({
 
   const quierePagar = boton === 'paciente:pagar' || ['pagar', 'pagar cuota'].includes(n)
   const quiereVer =
-    boton === 'paciente:financiamientos' || ['ver financiamientos', 'financiamientos', 'saldo'].includes(n)
+    boton === 'paciente:financiamientos' || ['mis pagos en cuotas', 'pagos en cuotas', 'mis pagos', 'ver financiamientos', 'financiamientos', 'saldo'].includes(n)
   if (quierePagar || quiereVer) {
     const r = await rpc<ResumenDelPaciente>('bot_paciente_resumen', { p_profile_id: perfil.id })
     await guardar({ humano: 0 })

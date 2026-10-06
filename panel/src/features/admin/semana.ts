@@ -276,7 +276,8 @@ export type Capital = {
  * consumo que le toca al local es fija: esté ya transferida o por transferir,
  * lo que la persona devuelve la va reduciendo. Sumarle «lo que se debe a los
  * locales» contaba dos veces el mismo dinero (Javier, 2026-09-25). Si hay caja
- * para lo que sale el lunes lo dice otro semáforo, el del cierre.
+ * para lo que sale hoy hacia las clínicas lo dice otro semáforo, el del pago
+ * de hoy.
  *
  * Las semanas suponen que no vuelve nada: lo que queda dividido entre lo que
  * se financia de media en una semana. Es el peor caso a propósito.

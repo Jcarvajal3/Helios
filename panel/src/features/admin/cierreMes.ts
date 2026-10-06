@@ -147,8 +147,9 @@ export function puntoLibro(descuadre: number, asientos: number, tolerancia: numb
 }
 
 /**
- * Los locales tienen transferido lo que tocaba pagar en el mes: los cierres
- * cuyo lunes cae dentro del mes están saldados.
+ * Los locales tienen transferido lo que tocaba pagar en el mes: los días de
+ * pago (los «cierres» de la base; desde el 2026-10-06, uno por día) que caen
+ * dentro del mes están saldados.
  */
 export function puntoLocales(
   cierres: ReadonlyArray<{ runDate: string; pendienteUsd: number; isPast: boolean }>,
@@ -165,20 +166,22 @@ export function puntoLocales(
     return {
       estado: 'falta',
       detalle: `Quedan ${euros(total)} sin transferir de ${pendientes.length} ${
-        pendientes.length === 1 ? 'cierre' : 'cierres'
+        pendientes.length === 1 ? 'día de pago' : 'días de pago'
       } del mes.`,
       primerPendiente: pendientes[0]?.runDate ?? null,
     }
   }
   if (porLlegar.length > 0) {
-    return { estado: 'todavia_no', detalle: 'Algún cierre del mes todavía no ha llegado.', primerPendiente: null }
+    return { estado: 'todavia_no', detalle: 'Algún día de pago del mes todavía no ha llegado.', primerPendiente: null }
   }
   return {
     estado: 'hecho',
     detalle:
       delMes.length === 0
-        ? 'No hubo cierres con pagos a clínicas en el mes.'
-        : `Los ${delMes.length} cierres del mes están saldados.`,
+        ? 'No hubo pagos a clínicas en el mes.'
+        : delMes.length === 1
+          ? 'El único día de pago del mes está saldado.'
+          : `Los ${delMes.length} días de pago del mes están saldados.`,
     primerPendiente: null,
   }
 }

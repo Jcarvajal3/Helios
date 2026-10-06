@@ -2,7 +2,7 @@
 // Helios — Lo que el bot le dice al paciente (decisiones del 2026-10-06,
 // docs/00 §15.6). Módulo puro: lo prueba `textos_paciente.test.ts`.
 //
-// Al paciente SÍ se le enseña lo que paga con el cargo por servicio dentro
+// Al paciente SÍ se le enseña lo que paga con la comisión de servicio dentro
 // (es su deuda); a la clínica, nunca.
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -12,7 +12,7 @@ export type Boton = { id: string; title: string }
 
 export const MENU_PACIENTE: Boton[] = [
   { id: 'paciente:pagar', title: 'Pagar cuota' },
-  { id: 'paciente:financiamientos', title: 'Ver financiamientos' },
+  { id: 'paciente:financiamientos', title: 'Mis pagos en cuotas' },
   { id: 'paciente:ayuda', title: 'Ayuda' },
 ]
 
@@ -54,7 +54,7 @@ export function fechaLarga(fecha: string): string {
 export function mensajeGenerico(nombre: string | null): string {
   return (
     `💙 Gracias por escribirnos${hola(nombre)}.\n\n` +
-    'Hemos recibido tu mensaje. Si necesitas asistencia con tu financiamiento Helios, nuestro equipo está para ayudarte.\n\n' +
+    'Hemos recibido tu mensaje. Si necesitas asistencia con tu pago en cuotas con Helios, nuestro equipo está para ayudarte.\n\n' +
     'Mientras tanto, puedes consultar o pagar tu cuota desde aquí:'
   )
 }
@@ -83,7 +83,7 @@ export function mensajePedirCedula(): string {
 
 /**
  * Las cuotas a pagar ahora: todas las vencidas, o si no hay, la próxima.
- * Con el financiamiento al que pertenece cada una.
+ * Con el pago en cuotas al que pertenece cada una.
  */
 export function cuotasAPagar(r: ResumenDelPaciente): Array<{ f: FinanciamientoActivo; c: CuotaPendiente }> {
   const todas = r.financiamientos
@@ -122,10 +122,10 @@ export function mensajePagar(r: ResumenDelPaciente): string {
   )
 }
 
-/** «Ver financiamientos»: los activos, lo pendiente de cada uno y el saldo. */
+/** «Mis pagos en cuotas»: los activos, lo pendiente de cada uno y el saldo. */
 export function mensajeFinanciamientos(r: ResumenDelPaciente): string {
   if (r.financiamientos.length === 0) {
-    return `No tienes financiamientos activos${hola(r.nombre)}. 💙`
+    return `No tienes pagos en cuotas activos${hola(r.nombre)}. 💙`
   }
   let saldoTotal = 0
   const bloques = r.financiamientos.map((f) => {
@@ -138,7 +138,7 @@ export function mensajeFinanciamientos(r: ResumenDelPaciente): string {
     return `🩺 #${f.orden} · ${f.clinica} (consulta ${dinero(f.consulta)})\n${cuotas.join('\n')}\nSaldo: ${dinero(saldo)}`
   })
   return (
-    `📋 Tus financiamientos activos:\n\n${bloques.join('\n\n')}` +
+    `📋 Tus pagos en cuotas activos:\n\n${bloques.join('\n\n')}` +
     (r.financiamientos.length > 1 ? `\n\nSaldo total: ${dinero(saldoTotal)}` : '') +
     (r.pago_en_revision ? '\n\nTienes un pago en revisión: aún no aparece descontado.' : '')
   )

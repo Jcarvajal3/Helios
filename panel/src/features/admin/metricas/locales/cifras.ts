@@ -36,12 +36,12 @@ export function totalDelCierre(t: Transferencia): number {
 
 /**
  * El pie del cierre: qué parte falta por generar (o por transferir, si ya
- * pasó) y lo atrasado de cierres anteriores que ese lunes también se paga.
+ * pasó) y lo atrasado de semanas anteriores.
  */
 export function pieDelCierre(t: Transferencia, cierre: LocalesDeLaSemana['cierre']): string {
   const atrasado = !cierre.pasado && t.atrasadoUsd > 0.005 ? `más ${formatUsd(t.atrasadoUsd)} atrasado` : null
   if (totalDelCierre(t) <= 0) {
-    return atrasado ? `Nada de esta semana; ${atrasado} de cierres anteriores` : 'No le vence nada esta semana'
+    return atrasado ? `Nada de esta semana; ${atrasado} de semanas anteriores` : 'No le vence nada esta semana'
   }
   if (cierre.pasado) {
     return t.pendienteUsd > 0.005 ? `Faltan ${formatUsd(t.pendienteUsd)} por transferir` : 'Transferido entero'
@@ -51,7 +51,7 @@ export function pieDelCierre(t: Transferencia, cierre: LocalesDeLaSemana['cierre
       ? `${formatUsd(t.previstoUsd)} por generar · ${atrasado}`
       : `${formatUsd(t.generadoUsd)} generado + ${formatUsd(t.previstoUsd)} hasta el domingo`
   }
-  return atrasado ? `Todo generado · ${atrasado} de cierres anteriores` : `Todo generado · se paga el ${diaConNumero(cierre.lunes)}`
+  return atrasado ? `Todo generado · ${atrasado} de semanas anteriores` : `Todo generado · se termina de pagar el ${diaConNumero(cierre.lunes)}`
 }
 
 /** «55 % del facturado de todos los locales». */

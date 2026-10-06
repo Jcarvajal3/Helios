@@ -176,7 +176,7 @@ console.log('── Caja ──────────────────�
   ])
   comprueba(r.cantidad === 1, 'solo cuentan las clínicas con atraso, sin los de prueba', String(r.cantidad))
   comprueba(r.detalle === `${formatUsd(50)} sin transferir`, 'el atraso sin la clínica de prueba', String(r.detalle))
-  comprueba(r.plazo === 'pasado', 'un cierre sin transferir ya es un atraso')
+  comprueba(r.plazo === 'pasado', 'un pago de un día anterior sin transferir ya es un atraso')
 }
 
 console.log('\n── Cobranza ─────────────────────────────────────────────────')

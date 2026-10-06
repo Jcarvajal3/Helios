@@ -31,7 +31,7 @@ console.log('── El cierre ────────────────�
 const t = { generadoUsd: 300, transferidoUsd: 0, pendienteUsd: 300, previstoUsd: 142, atrasadoUsd: 0 }
 igual(totalDelCierre(t), 442, 'lo generado más lo previsto')
 igual(pieDelCierre(t, { lunes: '2026-09-28', pasado: false }), '$300,00 generado + $142,00 hasta el domingo', 'en curso: las dos partes')
-igual(pieDelCierre({ ...t, previstoUsd: 0 }, { lunes: '2026-09-28', pasado: false }), 'Todo generado · se paga el lunes 28', 'en curso, todo generado')
+igual(pieDelCierre({ ...t, previstoUsd: 0 }, { lunes: '2026-09-28', pasado: false }), 'Todo generado · se termina de pagar el lunes 28', 'en curso, todo generado')
 igual(pieDelCierre({ ...t, previstoUsd: 0 }, { lunes: '2026-09-21', pasado: true }), 'Faltan $300,00 por transferir', 'ya pasó y falta')
 igual(
   pieDelCierre({ ...t, previstoUsd: 0, pendienteUsd: 0, transferidoUsd: 300 }, { lunes: '2026-09-21', pasado: true }),
@@ -46,11 +46,11 @@ igual(
 igual(
   pieDelCierre({ ...t, atrasadoUsd: 279.25 }, { lunes: '2026-09-28', pasado: false }),
   '$142,00 por generar · más $279,25 atrasado',
-  'lo atrasado de cierres anteriores también se dice',
+  'lo atrasado de semanas anteriores también se dice',
 )
 igual(
   pieDelCierre({ ...t, previstoUsd: 0, atrasadoUsd: 279.25 }, { lunes: '2026-09-28', pasado: false }),
-  'Todo generado · más $279,25 atrasado de cierres anteriores',
+  'Todo generado · más $279,25 atrasado de semanas anteriores',
   'todo generado, con atraso',
 )
 igual(

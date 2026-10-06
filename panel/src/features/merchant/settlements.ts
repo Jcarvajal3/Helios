@@ -21,7 +21,7 @@ import type { Liquidacion, Prevision, Transferencia } from './pagos'
  */
 
 /**
- * La previsión: lo del próximo lunes y lo que falta en total. Por RPC y no
+ * La previsión: lo del próximo pago y lo que falta en total. Por RPC y no
  * contra la vista `merchant_payables`, porque la cuota que aún no ha vencido
  * no existe en ninguna tabla que la clínica pueda leer.
  */

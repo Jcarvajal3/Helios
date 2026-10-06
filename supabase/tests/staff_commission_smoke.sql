@@ -9,7 +9,7 @@
 --      fila en `staff_commissions`.
 --   2. El monto: el parámetro global vs. el pactado con la clínica, con su
 --      vigencia; 0 = sin comisión; la instantánea no se recalcula.
---   3. El cierre del lunes la incluye y el cron de las cuotas no le resta la
+--   3. Se paga el día siguiente al alta y el cron de las cuotas no le resta la
 --      comisión a la mitad de la clínica.
 --   4. La transferencia: parcial (la comisión sigue devengada) y entera
 --      (pasa a pagada); el reparto consultas / comisiones; lo que ve la
@@ -131,7 +131,7 @@ begin
   set local role authenticated;
   perform set_config('request.jwt.claims', json_build_object('sub', v_bea::text, 'role', 'authenticated')::text, true);
   perform public.helios_patient_eligibility(v_m, 'V60000001');
-  v_ch_b := (public.create_patient_charge(v_m, null, '{"document":"V60000001"}', 50, null, null, 'sc-b')->>'id')::uuid;
+  v_ch_b := (public.create_patient_charge(v_m, null, '{"document":"V60000001"}', 20, null, null, 'sc-b')->>'id')::uuid;
   reset role;
   if (select staff_commission_usd from public.charges where id = v_ch_b) <> 0.75
      or (select amount_usd from public.staff_commissions where charge_id = v_ch_b) <> 0.75
@@ -187,7 +187,7 @@ begin
   end if;
 
   perform set_config('request.jwt.claims', json_build_object('sub', v_ana::text, 'role', 'authenticated')::text, true);
-  v_ch_c := (public.create_patient_charge(v_m, null, '{"document":"V60000001"}', 50, null, null, 'sc-c')->>'id')::uuid;
+  v_ch_c := (public.create_patient_charge(v_m, null, '{"document":"V60000001"}', 20, null, null, 'sc-c')->>'id')::uuid;
   reset role;
   if (select amount_usd from public.staff_commissions where charge_id = v_ch_c) <> 0.30 then
     raise exception 'C debía llevar la comisión pactada (0.30)';
@@ -203,7 +203,7 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub', v_admin::text, 'role', 'authenticated')::text, true);
   perform public.admin_set_settlement_terms(v_m, 0, 50, 0, 'scheduled', null, 'sin comisión', 0);
   perform set_config('request.jwt.claims', json_build_object('sub', v_ana::text, 'role', 'authenticated')::text, true);
-  v_j := public.create_patient_charge(v_m, null, '{"document":"V60000001"}', 20, null, null, 'sc-d');
+  v_j := public.create_patient_charge(v_m, null, '{"document":"V60000001"}', 10, null, null, 'sc-d');
   v_ch_d := (v_j->>'id')::uuid;
   reset role;
   if v_j->'staff_commission_usd' <> 'null'::jsonb
@@ -215,31 +215,32 @@ begin
   raise notice 'TEST 2 OK — global vs. pactada con vigencia, 0 = sin comisión, instantánea';
 
   -- =========================================================================
-  -- 3. El cierre del lunes
+  -- 3. El pago del día siguiente (desde 2026-10-06 ya no hay cierre del lunes)
   -- =========================================================================
-  -- 0.50 + 0.75 + 0.30, todas del día: entran en el primer lunes después.
+  -- 0.50 + 0.75 + 0.30, todas del día: se pagan mañana. El pago que viene es
+  -- el de hoy, que solo recoge lo que venció antes de hoy: ninguna de ellas.
   select * into v_row from public.helios_settlement_outlook(v_m);
-  -- Si hoy fuese lunes, el cierre de hoy ya no las recoge: van al siguiente.
-  v_num := 0;
-  if v_row.next_run_date > v_bdate then
-    v_num := 1.55;
-  end if;
-  if v_row.accrued_comisiones_usd <> 1.55 or v_row.accrued_consultas_usd <> 0
-     or v_row.next_run_comisiones_usd <> v_num
-     or v_row.upcoming_usd <> 220 then
+  if v_row.next_run_date <> v_bdate
+     or v_row.accrued_comisiones_usd <> 1.55 or v_row.accrued_consultas_usd <> 0
+     or v_row.next_run_comisiones_usd <> 0 or v_row.overdue_usd <> 0
+     or v_row.upcoming_usd <> 150 then
     raise exception 'Previsión inesperada: %', to_jsonb(v_row);
   end if;
-  if public.helios_settlement_run_for(v_bdate) <= v_bdate
-     or extract(isodow from public.helios_settlement_run_for(v_bdate)) <> 1 then
-    raise exception 'La comisión debía caer en el lunes siguiente al alta';
+  if public.helios_settlement_run_for(v_bdate) <> v_bdate + 1 then
+    raise exception 'La comisión debía pagarse el día siguiente al alta, no el %',
+      public.helios_settlement_run_for(v_bdate);
   end if;
 
   set local role authenticated;
   perform set_config('request.jwt.claims', json_build_object('sub', v_admin::text, 'role', 'authenticated')::text, true);
-  v_j := public.admin_merchant_settlements(v_m, public.helios_settlement_run_for(v_bdate));
-  select count(*) into v_n from jsonb_array_elements(v_j) x where x->>'reason' = 'staff_commission';
+  v_j := public.admin_merchant_settlements(v_m, v_bdate + 1);
+  select count(*) into v_n from jsonb_array_elements(v_j) x
+  where x->>'reason' = 'staff_commission' and (x->>'run_date')::date = v_bdate + 1;
   if v_n <> 3 then
-    raise exception 'El cierre del lunes debía traer las 3 comisiones: %', v_j;
+    raise exception 'El pago de mañana debía traer las 3 comisiones: %', v_j;
+  end if;
+  if jsonb_array_length(public.admin_merchant_settlements(v_m, v_bdate)) <> 0 then
+    raise exception 'El pago de hoy no debía traer las comisiones de hoy';
   end if;
   v_j := public.admin_merchant_payables(v_m);
   if (v_j->0->>'comisiones_usd')::numeric <> 1.55 or (v_j->0->>'consultas_usd')::numeric <> 0 then
@@ -253,7 +254,7 @@ begin
   end if;
   reset role;
 
-  -- El cron de las cuotas: la mitad de A es 50, no 49.50.
+  -- El cron de las cuotas: la mitad de A es 50, no 49.50, y se paga el día 8.
   perform public.run_scheduled_settlements(v_bdate + 7);
   select id, amount_usd into v_inst_a, v_num from public.settlements
   where charge_id = v_ch_a and reason = 'scheduled_installment' and business_date = v_bdate + 7;
@@ -264,7 +265,16 @@ begin
   if (select sum(amount_usd) from public.settlements where charge_id = v_ch_a and reason = 'scheduled_installment') <> 100 then
     raise exception 'Las dos mitades de A debían sumar su neto (100)';
   end if;
-  raise notice 'TEST 3 OK — el lunes incluye la comisión y las mitades no la descuentan';
+  set local role authenticated;
+  perform set_config('request.jwt.claims', json_build_object('sub', v_admin::text, 'role', 'authenticated')::text, true);
+  if (select count(*) from jsonb_array_elements(public.admin_merchant_settlements(v_m, v_bdate + 8)) x
+      where x->>'id' = v_inst_a::text) <> 1
+     or (select count(*) from jsonb_array_elements(public.admin_merchant_settlements(v_m, v_bdate + 15)) x
+         where x->>'reason' = 'scheduled_installment' and (x->>'amount_usd')::numeric = 50) <> 1 then
+    raise exception 'Las mitades de A debían pagarse los días 8 y 15';
+  end if;
+  reset role;
+  raise notice 'TEST 3 OK — la comisión se paga al día siguiente y las mitades no la descuentan';
 
   -- =========================================================================
   -- 4. Transferencias

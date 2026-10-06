@@ -47,7 +47,7 @@ type FinanciamientosSearch = { desde?: string; hasta?: string }
 
 export const Route = createFileRoute('/_comercio/financiamientos')({
   // `wide`: nueve columnas de nombres, dinero y fechas.
-  staticData: { title: 'Financiamientos', width: 'wide' },
+  staticData: { title: 'Pagos en cuotas', width: 'wide' },
   validateSearch: (s: Record<string, unknown>): FinanciamientosSearch => ({
     desde: comoDia(s.desde),
     hasta: comoDia(s.hasta),
@@ -72,12 +72,12 @@ const ATAJOS: Array<{ label: string; dias: number }> = [
 ]
 
 /**
- * FINANCIAMIENTOS: lo que se registró en la clínica, por día operativo.
+ * PAGOS EN CUOTAS: lo que se registró en la clínica, por día operativo.
  *
  * El administrador ve la clínica entera, quién registró cada uno y puede
  * descargar el libro para contabilidad. La secretaria ve solo los suyos
  * —la lista, las cifras y la ficha—; ese corte lo hace la base
- * (`scope = 'self'`), y la pantalla lo dice para que «3 financiamientos»
+ * (`scope = 'self'`), y la pantalla lo dice para que «3 órdenes»
  * no se lea como los de toda la clínica.
  *
  * De cada uno: el paciente (solo el nombre), a quién se atendió, el
@@ -190,14 +190,14 @@ function Financiamientos({ staff }: { staff: StaffContext }) {
               cero que no se leyó: con error, «No se pudo leer». */}
           <StatGrid className="mb-3">
             <Stat
-              label={propios ? 'Lo que registraste' : 'Financiado en el rango'}
+              label={propios ? 'Lo que registraste' : 'Registrado en el rango'}
               value={formatUsd(resumen.data?.saleUsd ?? 0)}
-              info="La suma de las consultas, lo que cobra la clínica. Sin el servicio Helios, que paga el paciente."
+              info="La suma de las consultas, lo que cobra la clínica. Sin la comisión de servicio, que paga el paciente."
               estado={estadoCifras}
               onReintentar={() => void resumen.refetch()}
             />
             <Stat
-              label="Financiamientos"
+              label="Órdenes"
               value={String(resumen.data?.count ?? 0)}
               estado={estadoCifras}
               onReintentar={() => void resumen.refetch()}
@@ -206,13 +206,13 @@ function Financiamientos({ staff }: { staff: StaffContext }) {
               <Stat
                 label="Consulta promedio"
                 value={formatUsd(resumen.data?.avgTicketUsd ?? 0)}
-                hint="Financiado ÷ financiamientos"
+                hint="Registrado ÷ órdenes"
                 estado={estadoCifras}
                 onReintentar={() => void resumen.refetch()}
               />
             )}
             <Stat
-              label="Días con financiamientos"
+              label="Días con órdenes"
               value={String(resumen.data?.activeDays ?? 0)}
               estado={estadoCifras}
               onReintentar={() => void resumen.refetch()}
@@ -221,7 +221,7 @@ function Financiamientos({ staff }: { staff: StaffContext }) {
 
           <p className="mb-6 type-panel-caption text-panel-muted">
             {propios
-              ? 'Ves solo los financiamientos que registraste tú. '
+              ? 'Ves solo los pagos en cuotas que registraste tú. '
               : ''}
             El día de Helios va de medianoche a medianoche, hora de Caracas.
           </p>
@@ -238,14 +238,14 @@ function Financiamientos({ staff }: { staff: StaffContext }) {
 
           {lista.isError && (
             <ErrorBox
-              title="No pudimos cargar los financiamientos"
+              title="No pudimos cargar los pagos en cuotas"
               detail={describeError(lista.error)}
             />
           )}
 
           {lista.data?.truncated && (
             <ErrorBox
-              title={`Se muestran los ${LIMITE_DE_FILAS} financiamientos más recientes`}
+              title={`Se muestran los ${LIMITE_DE_FILAS} pagos en cuotas más recientes`}
               detail="El rango tiene más. Las cifras de arriba sí los cuentan todos; para ver los que faltan, acorta las fechas."
             />
           )}
@@ -253,7 +253,7 @@ function Financiamientos({ staff }: { staff: StaffContext }) {
           {lista.data && filas.length === 0 && (
             <EmptyState
               icon={<FileText size={40} />}
-              title="Sin financiamientos en estas fechas"
+              title="Sin pagos en cuotas en estas fechas"
               description={
                 propios
                   ? 'Aquí aparecen los que registres tú. Prueba a ampliar el rango de fechas.'
@@ -263,7 +263,16 @@ function Financiamientos({ staff }: { staff: StaffContext }) {
           )}
 
           {filas.length > 0 && (
+            <TarjetasDeFinanciamientos
+              filas={filas}
+              deTodos={deTodos}
+              onAbrir={(id) => void navigate({ to: '/financiamientos/$id', params: { id } })}
+            />
+          )}
+
+          {filas.length > 0 && (
             <Table
+              className="max-sm:hidden"
               headers={[
                 'Fecha',
                 '# Orden',
@@ -273,7 +282,7 @@ function Financiamientos({ staff }: { staff: StaffContext }) {
                   ? [
                       {
                         label: 'Registró',
-                        info: 'La cuenta de la clínica que registró el financiamiento. Es quien gana su comisión.',
+                        info: 'La cuenta de la clínica que registró el pago en cuotas. Es quien gana su comisión.',
                       } as const,
                     ]
                   : []),
@@ -282,7 +291,7 @@ function Financiamientos({ staff }: { staff: StaffContext }) {
                   ? [
                       {
                         label: 'Comisión',
-                        info: 'Lo que gana quien lo registró. Helios la paga dentro de la transferencia del lunes a la clínica.',
+                        info: 'Lo que gana quien lo registró. Helios se la paga a la clínica el día siguiente a que el paciente confirma, en la transferencia de ese día.',
                       } as const,
                     ]
                   : []),
@@ -296,7 +305,7 @@ function Financiamientos({ staff }: { staff: StaffContext }) {
                   : []),
                 {
                   label: 'Te pagamos',
-                  info: 'El lunes en que Helios le transfiere a la clínica cada mitad (cuota 1 y cuota 2), haya pagado o no el paciente.',
+                  info: 'El día en que Helios le transfiere a la clínica cada mitad: el siguiente al vencimiento de la cuota 1 y de la cuota 2 del paciente (a los 8 y a los 15 días de la consulta), haya pagado o no el paciente.',
                 },
               ]}
             >
@@ -357,8 +366,8 @@ function Financiamientos({ staff }: { staff: StaffContext }) {
 
           {filas.length > 0 && (
             <p className="mt-4 type-panel-caption leading-5 text-panel-muted">
-              Pulsa una fila para ver el detalle y reenviar el comprobante. Helios cierra caja
-              los lunes a las 10:00 y ese día transfiere lo que venció en la semana,{' '}
+              Pulsa un pago en cuotas para ver el detalle y reenviar el comprobante. Helios te paga
+              cada mitad el día siguiente al vencimiento de su cuota,{' '}
               <strong>haya pagado o no el paciente</strong>.
             </p>
           )}
@@ -369,8 +378,80 @@ function Financiamientos({ staff }: { staff: StaffContext }) {
 }
 
 /**
+ * La lista en el teléfono: una tarjeta por pago en cuotas.
+ *
+ * No es la tabla apilada de las demás pantallas: con nueve columnas, cada
+ * fila serían diez renglones de «rótulo · dato» y en la pantalla cabrían
+ * dos. Aquí manda lo que se viene a buscar —quién y cuánto— en la primera
+ * línea; debajo, la orden, el día y quién lo registró; y el comprobante y
+ * los días de pago, en pequeño. El concepto y la comisión están en la ficha,
+ * a un toque.
+ */
+function TarjetasDeFinanciamientos({
+  filas,
+  deTodos,
+  onAbrir,
+}: {
+  filas: FilaDeFinanciamiento[]
+  deTodos: boolean
+  onAbrir: (id: string) => void
+}) {
+  return (
+    <ul className="flex flex-col overflow-hidden rounded-panel-card border border-panel-hairline bg-panel-card sm:hidden">
+      {filas.map((f) => (
+        <li key={f.id} className="border-b border-panel-hairline last:border-0">
+          <button
+            type="button"
+            onClick={() => onAbrir(f.id)}
+            className="flex w-full flex-col gap-1.5 px-4 py-3 text-left transition-colors duration-[var(--transition-fast)] active:bg-panel-raised"
+          >
+            <span className="flex w-full items-baseline justify-between gap-3">
+              <span className="min-w-0 truncate type-panel-body font-semibold text-on-surface">
+                {f.patientName ?? 'Sin nombre'}
+              </span>
+              <span className="shrink-0 type-panel-section tabular-nums text-on-surface">
+                {formatUsd(f.merchantSaleUsd)}
+              </span>
+            </span>
+
+            <span className="type-panel-caption text-panel-muted">
+              #{f.orderNumber} · {formatDay(f.businessDate)} {formatTime(f.confirmedAt)}
+              {deTodos && f.registeredBy && ` · ${f.registeredBy}`}
+              {f.beneficiaryName && (
+                <span className="block">Atendido: {f.beneficiaryName}</span>
+              )}
+            </span>
+
+            <span className="flex w-full flex-wrap items-center justify-between gap-x-3 gap-y-1">
+              {f.status !== 'confirmed' ? (
+                <Badge tone={ESTADO_DEL_FINANCIAMIENTO[f.status].tone} icono>
+                  {ESTADO_DEL_FINANCIAMIENTO[f.status].texto}
+                </Badge>
+              ) : f.receipt ? (
+                <Badge tone={COMPROBANTE[f.receipt].tone} icono>
+                  {COMPROBANTE[f.receipt].texto}
+                </Badge>
+              ) : (
+                <span />
+              )}
+              <span className="type-panel-caption tabular-nums text-on-surface-variant">
+                Te pagamos{' '}
+                {f.cuotas
+                  .map((c, i) => (c ? `${i + 1}ª ${formatDay(c.paidToMerchantOn)}` : null))
+                  .filter(Boolean)
+                  .join(' · ') || '—'}
+              </span>
+            </span>
+          </button>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+/**
  * Las dos fechas en que se le paga a la clínica, una debajo de otra. La
- * fecha es la del cierre (lunes); el vencimiento de la cuota va en el
+ * fecha es la del pago (el día siguiente al vencimiento); el de la cuota va en el
  * `title`, que es el otro día que hay en juego y no se debe confundir.
  */
 function Mitades({ cuotas }: { cuotas: FilaDeFinanciamiento['cuotas'] }) {
@@ -393,7 +474,7 @@ function Mitades({ cuotas }: { cuotas: FilaDeFinanciamiento['cuotas'] }) {
 }
 
 /**
- * QUIÉN REGISTRÓ: lo financiado por cada persona del personal en el rango,
+ * QUIÉN REGISTRÓ: lo registrado por cada persona del personal en el rango,
  * con su comisión. Solo para el administrador: a una secretaria la base le
  * devuelve únicamente su fila, que ya son las cifras de arriba.
  */
@@ -417,13 +498,13 @@ function QuienRegistro({
   if (error) {
     return (
       <div className="mb-6">
-        <ErrorBox title="No pudimos repartir los financiamientos por persona" detail={describeError(error)} />
+        <ErrorBox title="No pudimos repartir los pagos en cuotas por persona" detail={describeError(error)} />
       </div>
     )
   }
 
-  // Sin financiamientos no se pinta un reparto vacío: debajo ya está el
-  // «Sin financiamientos en estas fechas».
+  // Sin órdenes no se pinta un reparto vacío: debajo ya está el
+  // «Sin pagos en cuotas en estas fechas».
   if (!data || data.rows.length === 0) return null
 
   const conComision = data.rows.some((r) => r.commissionUsd !== null)
@@ -432,10 +513,11 @@ function QuienRegistro({
     <section className="mb-6">
       <SectionTitle className="mb-3">Quién registró</SectionTitle>
       <Table
+        apilada
         headers={[
           'Persona',
-          'Financiamientos',
-          'Financiado',
+          'Órdenes',
+          'Registrado',
           ...(conComision ? ['Comisión'] : []),
           'Último',
         ]}
@@ -462,8 +544,8 @@ function QuienRegistro({
         ))}
       </Table>
       <p className="mt-3 type-panel-caption leading-5 text-panel-muted">
-        Lo financiado en el rango, repartido por quien registró cada financiamiento. El detalle
-        por semana, pagado y por pagar, está en Comisiones.
+        Lo registrado en el rango, repartido por quien registró cada pago en cuotas. El detalle
+        de las comisiones, pagado y por pagar, está en Comisiones.
       </p>
     </section>
   )

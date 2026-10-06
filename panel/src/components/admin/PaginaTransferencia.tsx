@@ -278,7 +278,8 @@ const COLUMNAS_CUBRIO: Array<Column<PayoutItem>> = [
   },
   {
     key: 'cierre',
-    header: 'Cierre',
+    header: 'Día de pago',
+    info: 'El día en que tocaba transferirla: el siguiente a su vencimiento.',
     sort: (i) => i.runDate,
     csv: (i) => i.runDate,
     cell: (i) => <span className="whitespace-nowrap text-on-surface-variant">{formatDay(i.runDate)}</span>,

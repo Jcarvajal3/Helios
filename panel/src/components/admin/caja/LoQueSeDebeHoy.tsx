@@ -22,13 +22,13 @@ import { comprometidoFuturoDe, payablesTotals } from '@/features/admin/definitio
 import { csvDinero } from '@/lib/csv'
 import { describeError } from '@/lib/supabase'
 
-/** Qué locales se ven: todos, los que tienen algo atrasado o los que cobran este lunes. */
+/** Qué locales se ven: todos, los que tienen algo atrasado o los que cobran hoy. */
 export type SoloLocales = 'atrasados' | 'este-cierre'
 
 export const OPCIONES_SOLO: ReadonlyArray<{ value: SoloLocales | ''; label: string }> = [
   { value: '', label: 'Todos' },
   { value: 'atrasados', label: 'Con atraso' },
-  { value: 'este-cierre', label: 'Cobran este lunes' },
+  { value: 'este-cierre', label: 'Cobran hoy' },
 ]
 
 function futuroDe(m: MerchantPayable): number {
@@ -37,8 +37,10 @@ function futuroDe(m: MerchantPayable): number {
 
 /**
  * Lo que se le debe hoy a cada local, con las tres cifras que hay que
- * distinguir: lo de este lunes, lo atrasado de cierres anteriores y lo
+ * distinguir: lo que toca pagar hoy, lo atrasado de días anteriores y lo
  * comprometido a futuro. Mezclarlas era lo que hacía pagar de más.
+ *
+ * Se paga a diario: cada liquidación, el día siguiente a su vencimiento.
  *
  * Las cifras de arriba son puertas: pulsar «atrasado» deja solo los locales
  * con atraso. Los locales de prueba salen, con su etiqueta, y no suman.
@@ -73,7 +75,7 @@ export function LoQueSeDebeHoy({
       <EmptyState
         icon={<Landmark size={40} />}
         title="No se le debe nada a ninguna clínica"
-        description="Cuando haya financiamientos, aquí aparece lo que hay que transferirle a cada uno y en qué cierre le toca."
+        description="Cuando haya financiamientos, aquí aparece lo que hay que transferirle a cada clínica y qué día le toca."
       />
     )
   }
@@ -89,19 +91,18 @@ export function LoQueSeDebeHoy({
   const resumen = (
     <>
       <Puerta activa={solo === 'este-cierre'} onClick={() => onSolo('este-cierre')}>
-        {formatUsd(totals.saleEsteCierre - totals.atrasado)} de la semana que cierra el{' '}
-        {totals.fechaCierre ? formatDay(totals.fechaCierre) : 'próximo lunes'}
+        {formatUsd(totals.saleEsteCierre - totals.atrasado)} que toca pagar hoy
       </Puerta>
       {' · '}
       <Puerta activa={solo === 'atrasados'} onClick={() => onSolo('atrasados')} alerta={totals.atrasado > 0}>
-        {formatUsd(totals.atrasado)} atrasados de cierres anteriores
+        {formatUsd(totals.atrasado)} atrasados de días anteriores
       </Puerta>
       {' · '}
-      {formatUsd(totals.comprometidoFuturo)} por vencer en cierres posteriores
+      {formatUsd(totals.comprometidoFuturo)} por pagar en los próximos días
       {prueba > 0 && ` · ${formatUsd(prueba)} en clínicas de prueba, aparte`}{' '}
       <InfoDot
         title="Lo que se debe hoy"
-        what="Lo que se le transfiere a cada clínica: el financiado (sin fee) de sus pacientes menos la comisión de la clínica. El cierre es cada lunes a las 10:00; el panel no mueve dinero: la transferencia se hace en el banco y aquí se registra."
+        what="Lo que se le transfiere a cada clínica: el financiado (sin fee) de sus pacientes menos la comisión de la clínica, más las comisiones de su personal. Se paga a diario: cada liquidación, el día siguiente a su vencimiento (la consulta, a los 8 y a los 15 días; la comisión de la secretaria, el día siguiente a la confirmación). El panel no mueve dinero: la transferencia se hace en el banco y aquí se registra."
       />
     </>
   )
@@ -111,7 +112,7 @@ export function LoQueSeDebeHoy({
       {rows.length === 0 ? (
         <EmptyState
           icon={<Landmark size={40} />}
-          title={solo === 'atrasados' ? 'Ninguna clínica tiene pagos atrasados' : 'Ninguna clínica cobra este lunes'}
+          title={solo === 'atrasados' ? 'Ninguna clínica tiene pagos atrasados' : 'Ninguna clínica cobra hoy'}
           action={
             <Button size="md" variant="tonal" onClick={() => onSolo(undefined)}>
               Ver todas las clínicas
@@ -196,9 +197,9 @@ const COLUMNAS: Array<Column<MerchantPayable>> = [
   },
   {
     key: 'este-lunes',
-    header: 'Sale este lunes (con lo atrasado)',
+    header: 'Sale hoy (con lo atrasado)',
     type: 'number',
-    info: 'Lo que hay que transferirle en el próximo cierre: lo de la semana más lo atrasado de cierres anteriores. Arriba, «de la semana que cierra» no lleva lo atrasado. Son sus consultas (financiado sin fee, menos su comisión) más las comisiones de su personal; debajo, partido.',
+    info: 'Lo que hay que transferirle hoy: lo que venció ayer más lo atrasado de días anteriores. Arriba, «que toca pagar hoy» no lleva lo atrasado. Son sus consultas (financiado sin fee, menos su comisión) más las comisiones de su personal; debajo, partido.',
     sort: (m) => m.nextRunUsd,
     sortDir: 'desc',
     csv: (m) => csvDinero(m.nextRunUsd),
@@ -215,7 +216,7 @@ const COLUMNAS: Array<Column<MerchantPayable>> = [
   },
   {
     key: 'consultas',
-    header: 'Este lunes: consultas',
+    header: 'Hoy: consultas',
     type: 'number',
     hidden: true,
     sort: (m) => m.desglose?.consultasUsd ?? null,
@@ -224,7 +225,7 @@ const COLUMNAS: Array<Column<MerchantPayable>> = [
   },
   {
     key: 'comisiones',
-    header: 'Este lunes: comisiones del personal',
+    header: 'Hoy: comisiones del personal',
     type: 'number',
     hidden: true,
     sort: (m) => m.desglose?.comisionesUsd ?? null,
@@ -235,7 +236,7 @@ const COLUMNAS: Array<Column<MerchantPayable>> = [
     key: 'atrasado',
     header: 'De eso, atrasado',
     type: 'number',
-    info: 'Lo de cierres que ya pasaron y sigue sin transferirse. Ya va dentro de «Sale este lunes».',
+    info: 'Lo que tocaba pagar ayer o antes y sigue sin transferirse. Ya va dentro de «Sale hoy».',
     sort: (m) => m.overdueUsd,
     sortDir: 'desc',
     csv: (m) => csvDinero(m.overdueUsd),
@@ -255,9 +256,9 @@ const COLUMNAS: Array<Column<MerchantPayable>> = [
   },
   {
     key: 'futuro',
-    header: 'Por vencer en cierres posteriores',
+    header: 'Por pagar en los próximos días',
     type: 'number',
-    info: 'Lo que se le deberá después del próximo cierre, sobre todo por cuotas de sus pacientes que todavía no vencen y aún no son liquidaciones. No toca pagarlo.',
+    info: 'Lo que se le deberá después del pago de hoy: lo que vence hoy (sale mañana) y, sobre todo, cuotas de sus pacientes que todavía no vencen y aún no son liquidaciones. Hoy no toca pagarlo.',
     sort: futuroDe,
     sortDir: 'desc',
     csv: (m) => csvDinero(futuroDe(m)),
@@ -267,7 +268,7 @@ const COLUMNAS: Array<Column<MerchantPayable>> = [
     key: 'total',
     header: 'Total por pagar',
     type: 'number',
-    info: '«Sale este lunes» más «Por vencer en cierres posteriores».',
+    info: '«Sale hoy» más «Por pagar en los próximos días».',
     hidden: true,
     sort: (m) => m.totalPendingUsd,
     csv: (m) => csvDinero(m.totalPendingUsd),

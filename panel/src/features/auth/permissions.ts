@@ -8,7 +8,7 @@ import type { MerchantRole } from '@/features/auth/session'
  * `inventario` de Ronda no existe en Helios (no hay catálogo): quien lo
  * tuviera se trata como si no fuera personal de la clínica (`session.ts`).
  *
- * La **secretaria** registra financiamientos y consulta los que registró
+ * La **secretaria** registra pagos en cuotas y consulta los que registró
  * ella, y sus comisiones; el **administrador** ve los de toda la clínica y
  * además el dinero —métricas, lo que Helios le transfiere y su personal—.
  *
@@ -21,7 +21,7 @@ import type { MerchantRole } from '@/features/auth/session'
  *   `gerente`: Métricas y Pagos están cerradas de verdad.
  * - `merchant_transactions`, `merchant_transactions_summary` y
  *   `merchant_charge_detail` dejan entrar a cualquier personal de la clínica,
- *   pero quien no es gerente solo recibe los financiamientos que registró él.
+ *   pero quien no es gerente solo recibe los pagos en cuotas que registró él.
  * - `merchant_sales_export` —la descarga para contabilidad— pide gerente.
  *
  * Sin este mapa, una secretaria que entrara a Pagos no vería un error: vería
@@ -35,7 +35,7 @@ export type MerchantSection =
   // Dentro de Comisiones: las de todo el personal y no solo las propias.
   | 'comisiones-de-todos'
   | 'metricas'
-  // Descargar los financiamientos para contabilidad.
+  // Descargar los pagos en cuotas para contabilidad.
   | 'contabilidad'
   | 'pagos'
   | 'personal'

@@ -7,7 +7,7 @@
 // `bot_*`, que actúan COMO esa persona con las reglas del panel.
 //
 //   (sin PIN)  pin_nuevo → pin_repetir → menú
-//   menú       Nuevo financiamiento · Mis financiamientos · Ayuda
+//   menú       Nuevo pago en cuotas · Mis pagos en cuotas · Ayuda
 //              (o directamente una cédula, o «reenviar 1042»)
 //   cedula     → nuevo: datos      disponible: monto      no disponible: menú
 //   datos      el formulario o texto libre (Gemini); pide solo lo que falte
@@ -69,8 +69,8 @@ type Datos = {
 type Boton = { id: string; title: string }
 
 const MENU: Boton[] = [
-  { id: 'menu:nuevo', title: 'Nuevo financiamiento' },
-  { id: 'menu:mis', title: 'Mis financiamientos' },
+  { id: 'menu:nuevo', title: 'Nuevo pago en cuotas' },
+  { id: 'menu:mis', title: 'Mis pagos en cuotas' },
   { id: 'menu:ayuda', title: 'Ayuda' },
 ]
 
@@ -183,13 +183,13 @@ export async function atenderAlPersonal({
         await enviar(`${r.mensaje}. Escribe otro PIN de 4 números:`)
         return { paso: 'pin_nuevo' }
       }
-      return menu('Listo, tu PIN quedó guardado. Te lo pediré cada vez que registres un financiamiento. Te recomendamos borrar los mensajes donde lo escribiste.\n\n¿Qué quieres hacer?')
+      return menu('Listo, tu PIN quedó guardado. Te lo pediré cada vez que registres un pago en cuotas. Te recomendamos borrar los mensajes donde lo escribiste.\n\n¿Qué quieres hacer?')
     }
     await guardar('pin_nuevo')
     const hola = nombreDePila(personal)
     await enviar(
       `Hola${hola ? `, ${hola}` : ''}. Soy el asistente de Helios para ${personal.merchant_name ?? 'tu clínica'}.\n\n` +
-        'Para empezar, crea un PIN de 4 números. Te lo pediré cada vez que registres un financiamiento. Escríbelo ahora:',
+        'Para empezar, crea un PIN de 4 números. Te lo pediré cada vez que registres un pago en cuotas. Escríbelo ahora:',
     )
     return { paso: 'pin_nuevo' }
   }
@@ -225,8 +225,8 @@ export async function atenderAlPersonal({
     return { paso: 'reenviar', ok: r.ok }
   }
 
-  // ── Mis financiamientos y ayuda (desde cualquier paso) ────────────────
-  if (boton === 'menu:mis' || n === 'mis financiamientos' || (estado === 'menu' && n === '2')) {
+  // ── Mis pagos en cuotas y ayuda (desde cualquier paso) ────────────────
+  if (boton === 'menu:mis' || ['mis pagos en cuotas', 'mis pagos', 'mis financiamientos'].includes(n) || (estado === 'menu' && n === '2')) {
     const r = await probar<Array<Record<string, unknown>>>('bot_recent_charges', { p_phone: tel, p_limit: 10 })
     if (!r.ok) {
       await enviar(r.mensaje)
@@ -240,8 +240,8 @@ export async function atenderAlPersonal({
     await guardar('menu')
     await enviar(
       lineas.length === 0
-        ? 'No tienes financiamientos en los últimos 30 días.'
-        : `Tus últimos financiamientos:\n${lineas.join('\n')}\n\nPara reenviarle algo a un paciente escribe, por ejemplo, «reenviar ${r.data[0].order_number}».`,
+        ? 'No tienes pagos en cuotas en los últimos 30 días.'
+        : `Tus últimos pagos en cuotas:\n${lineas.join('\n')}\n\nPara reenviarle algo a un paciente escribe, por ejemplo, «reenviar ${r.data[0].order_number}».`,
       MENU,
     )
     return { paso: 'mis', cuantos: lineas.length }
@@ -251,10 +251,10 @@ export async function atenderAlPersonal({
     await guardar('menu')
     await enviar(
       'Así funciona:\n' +
-        '1. Pulsa «Nuevo financiamiento» y escribe la cédula del paciente.\n' +
+        '1. Pulsa «Nuevo pago en cuotas» y escribe la cédula del paciente.\n' +
         '2. Si es nuevo, envíame sus datos en un solo mensaje.\n' +
         '3. Revisa el resumen y confírmalo con tu PIN.\n' +
-        '4. Al paciente le llega un WhatsApp: cuando responda Sí, el financiamiento queda confirmado y te aviso aquí.\n\n' +
+        '4. Al paciente le llega un WhatsApp: cuando responda Sí, la orden queda confirmada y te aviso aquí.\n\n' +
         'Escribe «menú» para volver al inicio en cualquier momento. El equipo de Helios ve este chat: si algo no funciona, escríbenos aquí.',
       MENU,
     )
@@ -263,7 +263,7 @@ export async function atenderAlPersonal({
 
   // ── La cédula (o un atajo desde el menú) ──────────────────────────────
   const cedulaDirecta = estado === 'menu' ? leerCedula(texto) : null
-  if (boton === 'menu:nuevo' || n === 'nuevo financiamiento' || n === 'nuevo' || (estado === 'menu' && n === '1')) {
+  if (boton === 'menu:nuevo' || ['nuevo pago en cuotas', 'nuevo pago', 'nuevo financiamiento', 'nuevo'].includes(n) || (estado === 'menu' && n === '1')) {
     await guardar('cedula')
     await enviar('Escribe la cédula del paciente (por ejemplo V12345678):')
     return { paso: 'cedula' }
@@ -283,12 +283,12 @@ export async function atenderAlPersonal({
     }
     const e = r.data
     if (e.estado === 'no_disponible') {
-      return menu(String(e.mensaje ?? 'No podemos financiar a esta persona.'))
+      return menu(String(e.mensaje ?? 'Esta persona no puede pagar en cuotas con Helios.'))
     }
     if (e.estado === 'nuevo') {
       await guardar('datos', { cedula, nuevo: true, disponible: Number(e.limite_usd ?? 0) || null, paciente: {} })
       await enviar(
-        `${cedula} es un paciente nuevo. Puede financiar hasta ${dinero(Number(e.limite_usd ?? 0))}.\n\n` +
+        `${cedula} es un paciente nuevo. Tiene disponible para pagar en cuotas hasta ${dinero(Number(e.limite_usd ?? 0))}.\n\n` +
           'Envíame sus datos en un solo mensaje. Puedes copiar este formulario, llenarlo y enviarlo:\n\n' +
           FORMULARIO,
       )
@@ -304,7 +304,7 @@ export async function atenderAlPersonal({
     })
     await enviar(
       `Paciente: ${e.nombre_enmascarado ?? cedula} · ${e.telefono_enmascarado ?? ''}\n` +
-        `Puede financiar hasta ${dinero(Number(e.disponible_usd ?? 0))}.\n\n` +
+        `Tiene disponible para pagar en cuotas hasta ${dinero(Number(e.disponible_usd ?? 0))}.\n\n` +
         'Escribe el monto de la consulta y el concepto (por ejemplo: 80 consulta):',
     )
     return { paso: 'monto' }
@@ -421,7 +421,7 @@ export async function atenderAlPersonal({
         MENU,
       )
     } else {
-      await enviar(`Listo. Financiamiento #${f.order_number} registrado.`, MENU)
+      await enviar(`Listo. Orden #${f.order_number} registrada.`, MENU)
     }
     return { paso: 'enviada', charge_id: f.id, status: f.status }
   }
@@ -441,7 +441,7 @@ export async function atenderAlPersonal({
     const v = p.data
     if (v.cabe === false) {
       await guardar('monto', d)
-      await enviar(`Ese monto supera lo que puede financiar (${dinero(Number(v.disponible_usd ?? v.limite_usd ?? 0))}). Escribe otro monto:`)
+      await enviar(`Ese monto supera lo disponible (${dinero(Number(v.disponible_usd ?? v.limite_usd ?? 0))}). Escribe otro monto:`)
       return { paso: 'monto', cabe: false }
     }
 
@@ -464,8 +464,8 @@ export async function atenderAlPersonal({
     await enviar(
       `Revisa antes de enviar:\n\n${quien}\n\n` +
         `Consulta: ${dinero(Number(v.base_usd))}${d.concepto ? ` (${d.concepto})` : ''}\n` +
-        `Cargo por servicio de Helios (${v.consumer_fee_pct} %): ${dinero(Number(v.consumer_fee_usd))}\n` +
-        `IVA del cargo por servicio: ${dinero(Number(v.consumer_fee_vat_usd))}\n` +
+        `Comisión de servicio (${v.consumer_fee_pct}%): ${dinero(Number(v.consumer_fee_usd))}\n` +
+        `IVA de la comisión: ${dinero(Number(v.consumer_fee_vat_usd))}\n` +
         `Cuotas: ${cuotas}\n\n` +
         'Al confirmar, le llega un WhatsApp al paciente y tiene 2 horas para responder Sí.',
       RESUMEN,

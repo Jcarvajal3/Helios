@@ -70,10 +70,10 @@ begin
   end if;
   raise notice 'TEST H1.1 OK — BCV es el dólar, el euro archivado, espejos del dólar';
 
-  if (select monthly_limit_usd from public.levels where level = 1) <> 350
+  if (select monthly_limit_usd from public.levels where level = 1) <> 150
      or not (select is_active from public.levels where level = 1)
      or (select required_spend_usd from public.levels where level = 1) <> 0 then
-    raise exception 'El nivel 1 debía ser $350, activo y sin requisitos';
+    raise exception 'El nivel 1 debía ser $150, activo y sin requisitos';
   end if;
   if exists (select 1 from public.levels where level <> 1 and is_active) then
     raise exception 'Solo el nivel 1 debía estar activo';
@@ -449,21 +449,23 @@ begin
      or v_row.next_attempt_at is null or v_row.charge_id <> v_charge then
     raise exception 'El comprobante debía encolarse por correo al correo registrado: %', to_jsonb(v_row) - 'html';
   end if;
-  if v_row.subject not like 'Tu financiamiento en Consultorio <Sol> & Luna — 2 cuotas de $61,60' then
+  if v_row.subject not like 'Tu pago en cuotas en Consultorio <Sol> & Luna — 2 cuotas de $56,96' then
     raise exception 'Asunto inesperado: %', v_row.subject;
   end if;
   if position('Monto de la consulta: $100' in v_row.rendered_text) = 0
-     or position('Servicio Helios (20 % + IVA) de $23,20' in v_row.rendered_text) = 0
-     or position('Cuota 2: $61,60' in v_row.rendered_text) = 0
+     or position('Comisión de servicio (12%): $12' in v_row.rendered_text) = 0
+     or position('IVA de la comisión (16%): $1,92' in v_row.rendered_text) = 0
+     or position('Total a pagar: $113,92' in v_row.rendered_text) = 0
+     or position('Cuota 2: $56,96' in v_row.rendered_text) = 0
      or position('Registró: Ana' in v_row.rendered_text) = 0
      or position('V-****5678' in v_row.rendered_text) = 0
      or position('0414-0001122' in v_row.rendered_text) = 0
      or position('Zelle: pagos@helios.test' in v_row.rendered_text) = 0 then
     raise exception 'Al comprobante le falta algo:%', v_row.rendered_text;
   end if;
-  -- Ningún total que sume el fee.
-  if position('123,20' in v_row.rendered_text) > 0 or position('123,20' in v_row.html) > 0 then
-    raise exception 'El comprobante no puede mostrar el total con el fee (123.20)';
+  -- Al paciente sí se le enseña el total (Javier, 2026-10-06): en el HTML también.
+  if position('$113,92' in v_row.html) = 0 then
+    raise exception 'El HTML del comprobante debía mostrar el total con la comisión ($113,92)';
   end if;
   -- El HTML escapa lo que viene de los datos y no deja marcadores sin rellenar.
   if position('Consultorio &lt;Sol&gt; &amp; Luna' in v_row.html) = 0
@@ -482,7 +484,7 @@ begin
     raise exception 'La misma dedupe_key no debía encolar dos veces';
   end if;
   select * into v_row from public.outbound_messages where id = v_msg;
-  if v_row.recipient <> '+584141234567' or v_row.rendered_text not like '🩺 ¡Listo, José! Tu financiamiento #1 ya está activo.%' then
+  if v_row.recipient <> '+584141234567' or v_row.rendered_text not like '🩺 ¡Listo, José! Tu pago en cuotas #1 ya está activo.%' then
     raise exception 'WhatsApp mal renderizado: % / %', v_row.recipient, v_row.rendered_text;
   end if;
 

@@ -18,8 +18,8 @@ import { describeError } from '@/lib/supabase'
  * Tres bloques, en el orden de la conversación cuando llama el gerente:
  *
  *   1. Cuánto se le debe        las tres cifras que pregunta, en el carril.
- *   2. Por qué                  las liquidaciones por cierre, y desde aquí se
- *                               le paga (`LiquidacionesDelLocal`).
+ *   2. Por qué                  las liquidaciones por día de pago, y desde
+ *                               aquí se le paga (`LiquidacionesDelLocal`).
  *   3. Qué se le ha pagado      el histórico de transferencias.
  */
 export function PaginaPagosComercio({
@@ -27,7 +27,7 @@ export function PaginaPagosComercio({
   cierre,
 }: {
   merchantId: string
-  /** Cierre del que se viene, si se entró desde una semana concreta. */
+  /** Día de pago del que se viene, si se entró desde uno concreto. */
   cierre: string | null
 }) {
   const navigate = useNavigate()
@@ -97,9 +97,9 @@ export function PaginaPagosComercio({
               titulo="Lo que se le debe"
               cifras={[
                 {
-                  label: payable
-                    ? `Sale el ${formatDay(payable.nextRunDate)} (con lo atrasado)`
-                    : 'Sale este lunes (con lo atrasado)',
+                  // Se paga a diario: el próximo pago es siempre hoy.
+                  label: 'Sale hoy (con lo atrasado)',
+                  info: 'Lo que hay que transferirle hoy: cada liquidación se paga el día siguiente a su vencimiento (la consulta, a los 8 y a los 15 días; la comisión de la secretaria, el día siguiente a la confirmación).',
                   value: formatUsd(payable?.nextRunUsd ?? 0),
                   hint: payable?.desglose
                     ? `Consultas ${formatUsd(payable.desglose.consultasUsd)} + Comisiones del personal ${formatUsd(payable.desglose.comisionesUsd)}`
@@ -108,8 +108,8 @@ export function PaginaPagosComercio({
                   onReintentar: reintentar,
                 },
                 {
-                  label: 'De eso, de cierres anteriores',
-                  info: 'Liquidaciones de cierres que ya pasaron y siguen sin transferirse: es un atraso con la clínica. Ya va dentro de la cifra de al lado.',
+                  label: 'De eso, de días anteriores',
+                  info: 'Liquidaciones que tocaba pagar ayer o antes y siguen sin transferirse: es un atraso con la clínica. Ya va dentro de la cifra de al lado.',
                   value: formatUsd(atrasado),
                   senal: atrasado > 0 ? { tone: 'error', texto: 'Atrasado' } : undefined,
                   hint: payable?.oldestDueDate ? `Desde el ${formatDay(payable.oldestDueDate)}` : undefined,
@@ -117,8 +117,8 @@ export function PaginaPagosComercio({
                   onReintentar: reintentar,
                 },
                 {
-                  label: 'Por vencer en cierres posteriores',
-                  info: 'Lo que se le deberá después del próximo cierre, sobre todo por cuotas de sus pacientes que todavía no vencen y aún no son liquidaciones. No toca pagarlo.',
+                  label: 'Por pagar en los próximos días',
+                  info: 'Lo que se le deberá después del pago de hoy: lo que vence hoy (sale mañana) y, sobre todo, cuotas de sus pacientes que todavía no vencen y aún no son liquidaciones. Hoy no toca pagarlo.',
                   value: formatUsd(futuro),
                   estado,
                   onReintentar: reintentar,

@@ -6,7 +6,7 @@ import { COMPROBANTE, leerEstadoDelComprobante } from './registro'
 import type { EstadoDelComprobante } from './registro'
 
 // ═══════════════════════════════════════════════════════════════════════════
-// El libro de financiamientos de la clínica, para contabilidad
+// El libro de pagos en cuotas de la clínica, para contabilidad
 // (`merchant_sales_export`, solo el administrador).
 //
 // Dos partes que en los libros no son la misma cosa:
@@ -15,7 +15,7 @@ import type { EstadoDelComprobante } from './registro'
 //   2. LO QUE HELIOS LE FACTURA A LA CLÍNICA — hoy 0 %, pero el campo existe
 //      por si una clínica pacta otra cosa; es un gasto.
 //
-// ⚠️ SIN EL FEE DEL PACIENTE, ni suelto ni sumado. La RPC heredada de Ronda
+// ⚠️ SIN LA COMISIÓN DE SERVICIO DEL PACIENTE, ni suelta ni sumada. La RPC heredada de Ronda
 // todavía lo manda (`consumer_fee_*`, `charged_to_customer_*`) y aquí no se
 // lee a propósito: lo que Helios le cobra al paciente no es de la clínica.
 //
@@ -132,7 +132,7 @@ export const COLUMNAS_VENTAS: Array<CsvColumn<FilaDeVentas>> = [
   { header: 'Fecha y hora (Caracas)', value: (r) => csvInstante(r.confirmedAt) },
   { header: 'Nro. de orden', value: (r) => csvEntero(r.orderNumber) },
   // El uuid identifica la fila contra cualquier otro extracto de la base.
-  { header: 'ID del financiamiento', value: (r) => r.chargeId },
+  { header: 'ID de la orden', value: (r) => r.chargeId },
   { header: 'Sede', value: (r) => r.branchName },
   { header: 'Registrado por', value: (r) => r.registeredBy },
   { header: 'Estado', value: (r) => ESTADO[r.status] ?? r.status },
@@ -152,7 +152,7 @@ export const COLUMNAS_VENTAS: Array<CsvColumn<FilaDeVentas>> = [
   { header: 'IVA de la comision USD', value: (r) => csvDinero(r.merchantFeeVatUsd) },
   { header: 'NETO PARA LA CLINICA USD', value: (r) => csvDinero(r.netToMerchantUsd) },
 
-  // ── En bolívares, a la tasa del día del financiamiento ──────────────────
+  // ── En bolívares, a la tasa del día de la orden ─────────────────────────
   // Seis decimales: es como la guarda la base, y con dos no cuadra.
   { header: 'Tasa BCV del dia', value: (r) => csvDinero(r.fxRate, 6) },
   { header: 'Consulta Bs', value: (r) => csvDinero(r.saleVes) },
@@ -178,4 +178,4 @@ export const COLUMNAS_VENTAS: Array<CsvColumn<FilaDeVentas>> = [
 
 /** Lo que lleva el archivo, en una línea para quien lo descarga. */
 export const QUE_LLEVA =
-  'El libro de financiamientos: la consulta, lo que Helios te factura (hoy nada), el neto, cuándo te lo pagamos y la comisión de quien lo registró. En dólares y en bolívares. Sin el servicio Helios que paga el paciente.'
+  'El libro de pagos en cuotas: la consulta, lo que Helios te factura (hoy nada), el neto, cuándo te lo pagamos y la comisión de quien lo registró. En dólares y en bolívares. Sin la comisión de servicio que paga el paciente.'

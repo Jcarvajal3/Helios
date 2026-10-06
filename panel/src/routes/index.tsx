@@ -1,27 +1,27 @@
 import { createFileRoute } from '@tanstack/react-router'
 
 import {
-  Clinicas,
   ComoFunciona,
   Heroe,
+  Medicos,
   Menu,
+  Pacientes,
   Pie,
   Preguntas,
-  Reglas,
 } from '@/components/portada'
 
 /**
  * LA PORTADA — `/`.
  *
- * Una versión corta de la de Ronda: le habla al paciente, que no tiene app ni
- * cuenta y solo necesita saber qué es, cómo se usa y cuáles son las reglas.
- * El personal de la clínica entra por "Entrar", que lleva a `/login`. Todo el
- * texto vive en `components/portada.tsx`.
+ * Le habla a los dos públicos de Helios: el médico o centro que se afilia y
+ * el paciente que paga en cuotas. Los médicos y su personal entran por
+ * "Entrar", que lleva a `/login`. Todo el texto vive en
+ * `components/portada.tsx`.
  */
-const TITULO = 'Helios — Tu consulta hoy, págala en dos semanas'
+const TITULO = 'Helios — Tu consulta hoy, págala en dos cuotas'
 
 const DESCRIPCION =
-  'En las clínicas afiliadas, pides pagar con Helios en recepción y la consulta se divide en dos cuotas: una a los 7 días y otra a los 14. Hoy no pagas nada.'
+  'Helios es una forma de pagar consultas y tratamientos de salud privada en cuotas: medicina, odontología y cosmetología. Dos cuotas, a los 7 y a los 14 días, con una comisión de servicio del 12% + IVA.'
 
 export const Route = createFileRoute('/')({
   component: Portada,
@@ -37,11 +37,11 @@ export const Route = createFileRoute('/')({
 })
 
 /**
- *   Heroe        qué es         → "tu consulta hoy, en dos cuotas"
- *   ComoFunciona ¿cómo se usa?  → tres pasos, el primero en recepción
- *   Reglas       ¿y la trampa?  → las seis reglas, escritas
+ *   Heroe        qué es         → salud privada en cuotas, y un ejemplo
+ *   ComoFunciona ¿cómo se usa?  → registra el médico, confirma el paciente, dos cuotas
+ *   Medicos      para médicos   → pago garantizado a los 8 y 15 días, «Quiero afiliarme»
+ *   Pacientes    para pacientes → 7 y 14 días, comisión del 12%, límite de $150
  *   Preguntas    lo que queda
- *   Clinicas     la tarjeta para la clínica
  */
 function Portada() {
   return (
@@ -50,9 +50,9 @@ function Portada() {
       <main>
         <Heroe />
         <ComoFunciona />
-        <Reglas />
+        <Medicos />
+        <Pacientes />
         <Preguntas />
-        <Clinicas />
       </main>
       <Pie />
     </div>

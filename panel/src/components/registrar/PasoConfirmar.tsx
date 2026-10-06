@@ -43,7 +43,7 @@ const IR_A: Record<PasoDelAlta, string> = {
  *
  * Con la confirmación del paciente (`conConfirmacion`, contrato §1.3.1) el
  * botón ya no confirma: le envía al paciente un WhatsApp con este resumen, y
- * el financiamiento existe cuando responde Sí.
+ * el pago en cuotas existe cuando responde Sí.
  */
 export function PasoConfirmar({
   merchantId,
@@ -135,7 +135,7 @@ export function PasoConfirmar({
                   </p>
                 )}
               </div>
-              <div className="text-right">
+              <div className="sm:text-right">
                 <DataLabel>{concepto ?? 'Consulta'} · lo que cobra la clínica</DataLabel>
                 <p className="mt-1 type-panel-hero tabular-nums text-on-surface">
                   {formatUsd(vista.data.baseUsd)}
@@ -171,17 +171,17 @@ export function PasoConfirmar({
           {!vista.data.cabe && (
             <Callout tone="warning" titulo="Este monto no cabe en lo disponible del paciente">
               {vista.data.disponibleUsd !== null
-                ? `Puede financiar hasta ${formatUsd(vista.data.disponibleUsd)}. Baja el monto para seguir.`
+                ? `Tiene disponible hasta ${formatUsd(vista.data.disponibleUsd)}. Baja el monto para seguir.`
                 : 'Baja el monto para seguir.'}
             </Callout>
           )}
 
           {mensajeError && (
             <div className="flex flex-col gap-2">
-              <ErrorBox title="No se registró el financiamiento" detail={mensajeError} />
+              <ErrorBox title="No se registró el pago en cuotas" detail={mensajeError} />
               {!esRechazoDeLaBase(errorAlta) && (
                 <p className="type-panel-body text-on-surface-variant">
-                  Si el problema fue la conexión, vuelve a confirmar: si el financiamiento
+                  Si el problema fue la conexión, vuelve a confirmar: si el pago en cuotas
                   llegó a registrarse no se duplica, te enseñamos el mismo.
                 </p>
               )}
@@ -197,11 +197,11 @@ export function PasoConfirmar({
 
           <p className="type-panel-body text-on-surface">
             {conConfirmacion
-              ? 'Léele al paciente las fechas y los montos de sus cuotas. Al enviar, le llega un WhatsApp con este resumen y tiene 2 horas para responder Sí. Sin su Sí no hay financiamiento.'
+              ? 'Léele al paciente las fechas y los montos de sus cuotas. Al enviar, le llega un WhatsApp con este resumen y tiene 2 horas para responder Sí. Sin su Sí no hay pago en cuotas.'
               : 'Léele al paciente las fechas y los montos de sus cuotas. Si está de acuerdo, confirma.'}
           </p>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
             <BotonConFoco
               type="submit"
               botonRef={confirmarRef}
@@ -218,7 +218,7 @@ export function PasoConfirmar({
                   : 'Registrando…'
                 : conConfirmacion
                   ? 'Enviar al paciente'
-                  : 'Confirmar financiamiento'}
+                  : 'Confirmar pago en cuotas'}
               <Tecla enBoton>Enter</Tecla>
             </BotonConFoco>
             <BotonConFoco variant="text" onClick={() => onIrA('monto')} disabled={confirmando}>

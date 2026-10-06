@@ -81,7 +81,7 @@ begin
   update public.installments set due_date = v_bdate - 2 where user_id = v_x and sequence = 1;
   insert into public.profiles (phone_e164, full_name, document_number)
   values ('+584141000016', 'Sin Cupo', 'E11111117') returning id into v_x;
-  perform pg_temp.prueba_cobro(v_x, v_m, v_br, v_cajero, 345, 'el-sin-cupo');
+  perform pg_temp.prueba_cobro(v_x, v_m, v_br, v_cajero, 145, 'el-sin-cupo');
 
   -- =========================================================================
   -- 1. Formatos y enmascarado
@@ -95,7 +95,7 @@ begin
       raise exception '«%» debía encontrar al paciente V11111111: %', v_doc, v_j;
     end if;
   end loop;
-  if (v_j->>'disponible_usd')::numeric <> 350 or (v_j->>'min_charge_usd')::numeric <> 10
+  if (v_j->>'disponible_usd')::numeric <> 150 or (v_j->>'min_charge_usd')::numeric <> 10
      or v_j->>'nombre_enmascarado' <> 'J*** P***'
      or v_j->>'telefono_enmascarado' <> '0414-***-**67'
      or v_j->>'email_enmascarado' <> 'j***@gmail.com' then
@@ -108,7 +108,7 @@ begin
   end if;
 
   v_j := public.helios_patient_eligibility(v_m, 'E-22.222.222');
-  if v_j->>'estado' <> 'nuevo' or (v_j->>'limite_usd')::numeric <> 350 then
+  if v_j->>'estado' <> 'nuevo' or (v_j->>'limite_usd')::numeric <> 150 then
     raise exception 'Una cédula E desconocida debía ser nueva: %', v_j;
   end if;
 
@@ -141,7 +141,7 @@ begin
     end if;
     v_ref := v_j;
   end loop;
-  if v_ref->>'mensaje' <> 'No podemos financiar a esta persona. Si tiene dudas, puede escribir a Helios al 0424-0009988.'
+  if v_ref->>'mensaje' <> 'Esta persona no puede pagar en cuotas con Helios. Si tiene dudas, puede escribir a Helios al 0424-0009988.'
      or lower(v_ref->>'mensaje') ~ '(mora|lista|bloque|expuls|suspend|vencid|cupo|deuda)' then
     raise exception 'El texto neutro no es el esperado: %', v_ref->>'mensaje';
   end if;
@@ -151,7 +151,7 @@ begin
   update public.platform_contact set whatsapp_number = null;
   set local role authenticated;
   v_j := public.helios_patient_eligibility(v_m, 'V11111112');
-  if v_j->>'mensaje' <> 'No podemos financiar a esta persona. Si tiene dudas, puede escribir a Helios.'
+  if v_j->>'mensaje' <> 'Esta persona no puede pagar en cuotas con Helios. Si tiene dudas, puede escribir a Helios.'
      or v_j->'whatsapp_helios' <> 'null'::jsonb then
     raise exception 'Sin WhatsApp configurado: %', v_j;
   end if;

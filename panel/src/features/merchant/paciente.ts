@@ -2,7 +2,7 @@
 // Los datos del paciente, tal como los teclea la secretaria.
 //
 // Todo lo de aquí es puro —sin red, sin React— para poder probarlo con
-// `npx tsx` y para que la pantalla de Nuevo financiamiento no tenga una sola
+// `npx tsx` y para que la pantalla de Nuevo pago en cuotas no tenga una sola
 // regla escrita dentro de un componente.
 //
 // ⚠️ La autoridad es la base. `create_patient_charge` vuelve a comprobar la

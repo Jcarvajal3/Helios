@@ -4,8 +4,8 @@
  *   npx tsx src/components/admin/inicio/cifras.test.ts
  *
  * Lo que se vigila: que cada tarjeta enseñe su pastilla solo cuando toca (la
- * mora siempre, con color solo al cruzar el umbral), que el medidor del
- * cierre no se salga ni mienta con la caja a cero, que la semana en barras
+ * mora siempre, con color solo al cruzar el umbral), que el medidor del pago
+ * a clínicas no se salga ni mienta con la caja a cero, que la semana en barras
  * distinga un día sin consumos de uno que no ha llegado, y que la tira de la
  * charla diga lo mismo que las tarjetas, sin ceros en lugar de fallos.
  */
@@ -183,7 +183,7 @@ console.log('\n── La tira de la charla ────────────�
     impago: { estado: 'listo', datos: { pct: 100, senal: { tone: 'error', texto: 'Crítico · desde 8 %' } } },
   })
   comprueba(
-    textos(todo) === '4 pendientes [error] · Mora 7,8 % [warning] · Cierre: cubre [success] · Impago cuota 1 100,0 % [error]',
+    textos(todo) === '4 pendientes [error] · Mora 7,8 % [warning] · Pago de hoy: cubre [success] · Impago cuota 1 100,0 % [error]',
     'lo pendiente y las tres cifras, en el orden de la pantalla',
     textos(todo),
   )
@@ -203,7 +203,7 @@ console.log('\n── La tira de la charla ────────────�
     impago: { estado: 'listo', datos: { pct: null, senal: undefined } },
   })
   comprueba(
-    textos(uno) === '1 pendiente [warning] · Cierre: no cubre [error]',
+    textos(uno) === '1 pendiente [warning] · Pago de hoy: no cubre [error]',
     'en singular, y sin mora ni impago que dar no se inventa un 0 %',
     textos(uno),
   )
@@ -216,7 +216,7 @@ console.log('\n── La tira de la charla ────────────�
   })
   comprueba(
     textos(conFallos) ===
-      'Pendiente: no se pudo leer [neutral] · Mora: no se pudo leer [neutral] · Cierre: en camino [neutral] · Impago cuota 1: no se pudo leer [neutral]',
+      'Pendiente: no se pudo leer [neutral] · Mora: no se pudo leer [neutral] · Pago de hoy: en camino [neutral] · Impago cuota 1: no se pudo leer [neutral]',
     'lo que falló lo dice, nunca con un cero',
     textos(conFallos),
   )

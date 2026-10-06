@@ -318,7 +318,7 @@ export function RegistrarTransferencia({
           detail={
             <p className="type-panel-body text-on-surface-variant">
               {parcial
-                ? `Cubre parte de las ${settlementIds.length} liquidaciones marcadas, de la más antigua a la más nueva. La última que alcance queda parcial y vuelve a salir en el próximo cierre por lo que falte.`
+                ? `Cubre parte de las ${settlementIds.length} liquidaciones marcadas, de la más antigua a la más nueva. La última que alcance queda parcial y lo que falte sigue saliendo como atrasado en los pagos de los días siguientes.`
                 : `Cubre ${settlementIds.length} ${settlementIds.length === 1 ? 'liquidación' : 'liquidaciones'} por completo.`}{' '}
               {desglose &&
                 !parcial &&
@@ -329,7 +329,7 @@ export function RegistrarTransferencia({
           }
           nivel="sensible"
           reasonLabel="Motivo"
-          reasonPlaceholder="Cierre del lunes, pagado desde la cuenta del banco"
+          reasonPlaceholder="Pago de hoy, desde la cuenta del banco"
           confirmLabel={`Registrar ${formatUsd(euros)}`}
           busy={mutation.isPending}
           error={mutation.isError ? describeError(mutation.error) : undefined}

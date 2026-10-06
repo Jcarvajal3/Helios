@@ -1,10 +1,10 @@
 # Helios — Plan de implementación
 
-> BNPL para consultas médicas en Venezuela. Solo web, sin app móvil.
-> 0% inicial · 2 cuotas semanales (7 y 14 días) · nivel 1 = **$350** · anclado al **dólar BCV**.
+> Pagos en cuotas para consultas y tratamientos de salud privada en Venezuela (medicina, odontología y cosmetología). Solo web, sin app móvil. Operado por **Quarto Latam, C.A.**
+> 0% inicial · 2 cuotas (7 y 14 días) · comisión de servicio **12% + IVA** · límite inicial **$150** · a la clínica, **a los 8 y 15 días** · anclado al **dólar BCV**.
 > Hermano de Ronda: mismo núcleo (libro contable, mora, liquidaciones, conciliación, paneles), sin nada de la app.
 
-Fecha: 2026-09-30 (actualizado el 2026-10-05: WhatsApp por la API, el "Sí" del paciente y el bot del médico, §5.1 y §15) · Fuente: Ronda-panel @ `f3b5c6a` (2026-09-29) y Ronda-app/supabase @ `20260929140000` (354 migraciones).
+Fecha: 2026-09-30 (actualizado el 2026-10-05: WhatsApp por la API, el "Sí" del paciente y el bot del médico, §5.1 y §15; y el 2026-10-06: las reglas del negocio publicadas, §0.1) · Fuente: Ronda-panel @ `f3b5c6a` (2026-09-29) y Ronda-app/supabase @ `20260929140000` (354 migraciones).
 
 ---
 
@@ -17,19 +17,47 @@ Helios es **Ronda sin la app**. Se reutiliza tal cual el 70-80% del backend y de
 | 1 | El cliente se registra en la app (OTP, PIN, KYC Didit) y "reclama" el cobro escaneando un QR | **La clínica registra al paciente y la consulta en un solo paso**, desde el panel o **desde WhatsApp** (el bot del médico, §15). No hay QR, ni KYC, ni login del paciente. El paciente **acepta respondiendo "Sí" a un WhatsApp de Helios** (§5.1); solo entonces existe la deuda y le llega **por correo el comprobante** con sus cuotas, fechas e instrucciones de pago |
 | 2 | El cliente reporta sus pagos desde la app | **El paciente paga y manda el comprobante por WhatsApp al equipo Helios**, que lo **registra en el superadmin**. Desde ahí sigue la misma cola de conciliación de Ronda |
 | 3 | Avisos por push (Expo) | **WhatsApp por la API (360dialog)** para la confirmación del paciente, la bienvenida y el bot del médico (§15). Los recordatorios de cuotas siguen en la **cola diaria operada por el equipo** (enlace `wa.me` de un clic) hasta que Meta apruebe sus plantillas |
-| 4 | — | **Comisión a la secretaria** ($0,50, modificable) por cada financiamiento confirmado. Se devenga al confirmar y **se paga dentro de la liquidación semanal a la clínica** |
+| 4 | — | **Comisión a la secretaria** ($0,50, modificable) por cada financiamiento confirmado. Se devenga al confirmar y **se paga a la clínica el día siguiente**, con su pago diario |
 
 Además cambian estas cosas:
 - La moneda pasa del euro BCV al **dólar BCV**.
 - El día operativo pasa de "10 AM a 10 AM" a **medianoche**.
-- Solo está activo el nivel 1 (**$350**).
-- Todo el vocabulario de la interfaz cambia (local → clínica, consumo → financiamiento, usuario → paciente, cajero → secretaria).
+- Solo está activo el nivel 1 (**$150** desde el 2026-10-06; antes $350).
+- Todo el vocabulario de la interfaz cambia (local → clínica, consumo → **pago en cuotas** (antes "financiamiento"), usuario → paciente, cajero → secretaria).
+- A la clínica se le paga a los 8 y 15 días, a diario, en lugar del cierre de los lunes (§0.1).
 
 **Estrategia técnica:**
 1. **No se reproducen las 354 migraciones.** Se consolida el estado final de Ronda en una **migración base**, se **podan** con un script los objetos exclusivos de la app y se valida con `plpgsql_check`.
 2. Encima de esa base van **migraciones pequeñas y propias de Helios**.
 3. El panel se copia de Ronda-panel y se poda con el mismo criterio.
 4. Todo vive en **un solo repositorio**, porque ya no hay app que obligue a separarlo.
+
+### 0.1 Las reglas del negocio publicadas (2026-10-06)
+
+Javier fijó la información pública del negocio el 2026-10-06. Manda sobre cualquier cifra anterior de este documento:
+
+| Tema | Regla | Antes | Dónde vive |
+|---|---|---|---|
+| Qué es | Una forma de pagar **consultas y tratamientos de salud privada en cuotas** | "BNPL para consultas médicas" | Portada, condiciones |
+| Especialidades | **Medicina, odontología y cosmetología** | Medicina y odontología | `merchant_category` + `cosmetologia` (20261006001100) |
+| Cómo funciona | El médico registra la consulta → el paciente confirma ("Sí" por WhatsApp) → paga en dos cuotas | — | §2 |
+| Comisión de servicio | **12% + IVA 16%** sobre la comisión, la paga el paciente. Consulta de $100 → $12 + $1,92 = $113,92 → 2 × $56,96 | 20% + IVA ($123,20 → 2 × $61,60) | `consumer_fee_pct` = 12 desde el 2026-10-06 (20261006001000) |
+| Límite | **Límite inicial de $150.** No se dice que "crece": los niveles 2-5 siguen apagados y no hay regla para subir | $350 | `levels` nivel 1 (20261006001000) |
+| Pago a la clínica | **En dos partes, a los 8 y a los 15 días**: cada mitad el día siguiente al vencimiento de su cuota. **Garantizado aunque el paciente no pague.** Se paga a diario | 50% al vencer cada cuota, todo junto el lunes siguiente (8 a 20 días) | `helios_settlement_run_for(d) = d + 1`, `helios_next_settlement_run = hoy` (20261006001200) |
+| Comisión de la secretaria | Se paga **el día siguiente** a la confirmación | El lunes siguiente | La misma regla de arriba |
+| Costo para el médico | **Ninguno**: la comisión la paga el paciente | — | — |
+| Permanencia | **No hay**: el médico o centro cancela con aviso previo | — | Condiciones, contrato |
+| Afiliación | Botón **"Quiero afiliarme"** → WhatsApp de Helios con el mensaje escrito | — | `panel/src/config/legal.ts` (`whatsapp`) |
+| Operador | **Quarto Latam, C.A.**, con términos y condiciones públicos | Razón social por definir | `config/legal.ts`, `/legal/terminos` |
+| Vocabulario | **"Pago en cuotas"** y **"comisión de servicio"**. Nunca "préstamo" ni "financiamiento" en nada externo (portada, panel de la clínica, bot, WhatsApp, correos) | "Financiamiento", "cargo por servicio", "fee" | `CLAUDE.md` › Nombres |
+| No se publica | La tasa del euro BCV, que no se verifica al paciente, los firmantes del contrato, los detalles internos del admin | — | — |
+
+El resto del documento conserva "financiamiento" como término interno del diseño (y la base, sus nombres: `charges`, `comprobante_financiamiento`…); hacia fuera se dice "pago en cuotas".
+
+**Qué cambió en el sistema por estas reglas:**
+- Las cuotas de una consulta de $100 bajan de $61,60 a $56,96. Los pagos en cuotas ya confirmados conservan su desglose.
+- La plantilla de Meta aprobada (`helios_confirmar_financiamiento`, §15.5) dice "20 %" y "financiamiento": deja de usarse hasta que Meta apruebe la v3 (§15.5.2). Mientras tanto, fuera de la ventana de 24 h la pregunta al paciente cae a la cola manual de "Avisos de hoy".
+- El cierre semanal desaparece: el equipo de Helios transfiere a las clínicas **cada día** lo que vence (más trabajo operativo; ver §6 y §8.3).
 
 ---
 
@@ -47,31 +75,35 @@ Además cambian estas cosas:
 | Alta de paciente nuevo por WhatsApp | El médico manda **todos los datos en un solo mensaje**; el bot los interpreta (Gemini desde el 2026-10-06; antes Claude), pide lo que falte y muestra un resumen antes de confirmar | Javier, 2026-10-02 |
 | Proveedor de WhatsApp | **360dialog**, **un solo número con coexistencia**: la app WhatsApp Business para el equipo y la API para el bot y los envíos automáticos | Javier, 2026-10-05 |
 | Total al paciente | **Al paciente sí se le enseña el total con el cargo por servicio**; a la clínica, nunca. Montos de los mensajes al estilo venezolano ($1,92) | Javier, 2026-10-06 |
-| Bot del paciente | Menú con Pagar cuota, Ver financiamientos y Ayuda antes de que atienda una persona (§15.6) | Javier, 2026-10-06 |
+| Bot del paciente | Menú con Pagar cuota, Mis pagos en cuotas y Ayuda antes de que atienda una persona (§15.6) | Javier, 2026-10-06 |
 | IA del bot | **Gemini** en lugar de Claude | Javier, 2026-10-06 |
 | Pago y reporte del paciente | **Por WhatsApp al equipo Helios**, que registra el pago en el superadmin | Javier, 2026-09-30 |
 | Comisión de la secretaria | **Se suma a la liquidación de la clínica**, y la clínica se la entrega a su personal | Javier, 2026-09-30 |
 | Antifraude | **Solo alertas automáticas.** Los topes por clínica, la retención de liquidaciones y el expediente con fotos se evaluarán después (§14) | Javier, 2026-09-30 |
 | Privacidad entre clínicas | Una clínica que busca una cédula solo ve el nombre enmascarado y "disponible $X" o "no disponible", nunca la deuda ni el motivo | Javier, 2026-09-30 |
 | Avisos | **5 momentos** por vencimiento (§7.2), no los 12 de Ronda | Javier, 2026-09-30 |
-| Fee | **20% + IVA** al paciente, 0% a la clínica | Javier, 2026-09-30 |
-| Liquidación a la clínica | Igual que Ronda **por ahora**: 50% al vencer cada cuota, pagado los lunes, cobre Helios o no | Javier, 2026-09-30 |
+| Comisión de servicio | ~~20% + IVA~~ (2026-09-30). **12% + IVA** al paciente, 0% a la clínica | Javier, 2026-10-06 |
+| Liquidación a la clínica | ~~Igual que Ronda: 50% al vencer cada cuota, pagado los lunes~~ (2026-09-30). **50% a los 8 días y 50% a los 15** (el día siguiente a cada vencimiento), a diario, cobre Helios o no | Javier, 2026-10-06 |
+| Especialidades | Medicina, odontología y **cosmetología** | Javier, 2026-10-06 |
+| Permanencia | Ninguna: el médico o centro cancela con aviso previo | Javier, 2026-10-06 |
+| Operador | **Quarto Latam, C.A.** | Javier, 2026-10-06 |
+| Vocabulario externo | "Pago en cuotas" y "comisión de servicio"; nunca "préstamo" ni "financiamiento" | Javier, 2026-10-06 |
 | Cuentas de cobro de Helios | **Configurables** desde Ajustes, como en Ronda; se llenan después | Javier, 2026-09-30 |
 | WhatsApp de Helios | **Configurable** desde Ajustes | Javier, 2026-09-30 |
 | Cuotas | 0% inicial, 2 cuotas a +7 y +14 días desde la fecha del financiamiento | Brief |
-| Niveles | Motor de niveles igual que Ronda. Solo el **nivel 1 ($350)** activo; los niveles 2-5 existen con `is_active = false` | Brief |
+| Niveles | Motor de niveles igual que Ronda. Solo el **nivel 1** activo: ~~$350~~ **$150 desde el 2026-10-06** ("límite inicial"); los niveles 2-5 existen con `is_active = false` | Brief; Javier, 2026-10-06 |
 | Stack | El mismo de Ronda, sin la app: TanStack Start + Supabase + Vercel + Sentry | Brief |
 
 ### 1.1 Reglas heredadas de Ronda tal cual (por defecto, salvo que se diga lo contrario)
 
 | Regla | Valor en Helios | Parámetro |
 |---|---|---|
-| Fee al paciente | **20%** sobre el monto de la consulta, **+ IVA 16%** sobre el fee | `consumer_fee_pct`, `vat_pct` |
+| Comisión de servicio al paciente | **12%** sobre el monto de la consulta, **+ IVA 16%** sobre la comisión (20% hasta el 2026-10-05) | `consumer_fee_pct`, `vat_pct` |
 | El fee no ocupa cupo | Se financia la consulta, no la comisión de Helios | — |
-| Ejemplo con una consulta de $100 | Paciente debe **$123,20** = 2 × $61,60. Clínica recibe **$100**. Ingreso Helios $20. IVA $3,20 | — |
+| Ejemplo con una consulta de $100 | Paciente debe **$113,92** = 2 × $56,96. Clínica recibe **$100**. Ingreso Helios $12. IVA $1,92 | — |
 | Liberación de cupo | Por financiamiento: se libera al pagar **ambas** cuotas. Cualquier cuota vencida deja el disponible en $0 | — |
 | Mora | Día 1: congelado. **Cargo de $2 por cuota tras 3 días de gracia.** Día 30: suspendido (y baja de nivel, que en nivel 1 no cambia nada). Día 60: expulsado, lista negra de la cédula y castigo contable | `late_fee_usd`, `late_fee_grace_days`, `mora_demotion_days`, `mora_expulsion_days` |
-| Liquidación a la clínica | **100% del precio en dos mitades**: el 50% se devenga al vencer cada cuota y se paga en el **cierre de los lunes a las 10:00**, cobre Helios o no | `merchant_terms` (0/50/0, `scheduled`) |
+| Liquidación a la clínica | **100% del precio en dos mitades**: el 50% se devenga al vencer cada cuota (días 7 y 14) y se paga **el día siguiente** (días 8 y 15), cobre Helios o no. Hasta el 2026-10-05, en el cierre de los lunes | `merchant_terms` (0/50/0, `scheduled`), `helios_settlement_run_for` |
 | Monto mínimo | $10 propuesto (en Ronda eran €5; ver D-H7) | nuevo `min_charge_usd` |
 | Tasa | BCV del día; fines de semana y feriados usan la última publicada; ingesta a las 10:00 con reintentos | `sync_fx_rate()` |
 | Frenos de emergencia | Mantenimiento global y bloqueo manual por paciente | — |
@@ -116,7 +148,7 @@ sequenceDiagram
   H->>DB: Registra el pago (admin_register_payment)
   H->>DB: Concilia contra el extracto (admin_reconcile_payment)
   DB->>DB: 10:10 diario: devenga el 50% de la clínica por cuota vencida
-  H->>C: Lunes 10:00: transferencia (consultas + comisiones)
+  H->>C: Días 8 y 15: transferencia (consultas + comisiones)
   H->>DB: admin_report_merchant_payout
 ```
 
@@ -211,7 +243,7 @@ Helios/                          ← repo git (GitHub: Helios)
 | `merchants` / `merchant_branches` | Clínica o consultorio / Sede |
 | `merchant_users` (`gerente`, `cajero`) | Personal: **Administrador** / **Secretaria (recepción)** |
 | `profiles` | Paciente |
-| `charges` / `charge_items` | Financiamiento / Servicios |
+| `charges` / `charge_items` | Pago en cuotas (antes "financiamiento") / Servicios |
 | `installments` | Cuotas |
 | `settlements` / `merchant_payouts` | Devengos / Pagos a la clínica |
 | `payment_reports` | Pagos registrados |
@@ -287,7 +319,7 @@ Cada una es pequeña, lleva su suite de pruebas y usa nombres en español al est
   | Nivel | Límite | Activo | Etiqueta |
   |---|---|---|---|
   | 0 | 0 | no | "Sin nivel" |
-  | **1** | **350** | **sí** | — |
+  | **1** | **150** (350 hasta el 2026-10-05) | **sí** | — |
   | 2 | 500 | **no** | — |
   | 3 | 700 | **no** | — |
   | 4 | 1.000 | **no** | — |
@@ -333,7 +365,7 @@ Cada una es pequeña, lleva su suite de pruebas y usa nombres en español al est
 - Las plantillas pueden usar las variables `{whatsapp_helios}` y `{cuentas_de_cobro}`, que salen de la configuración (H11).
 
 **H8 — `el_personal_de_una_clinica`**
-- `merchant_category`: se añaden `clinica`, `consultorio`, `odontologia`, `laboratorio` e `imagenes` (`otros` se mantiene).
+- `merchant_category`: se añaden `clinica`, `consultorio`, `odontologia`, `laboratorio` e `imagenes` (`otros` se mantiene). El 2026-10-06, `cosmetologia`.
 - Columnas en `merchants`: `specialty`, `mpps_number` (opcional, médico independiente), `phone`, `email`, `address`.
 - Tabla nueva **`merchant_payout_accounts`**: banco, titular, RIF o cédula, número de cuenta y teléfono de Pago Móvil. Hoy Ronda no guarda a dónde se le paga al local.
 - `request_charge` se retira; el rol `inventario` queda sin uso. `products` y `product_categories` se **podan**: sin catálogo (D-H4). `charge_items` se queda con **una línea libre** por financiamiento (`product_id` nulo, `name` = concepto) para no tocar las lecturas de Ronda que la usan.
@@ -458,7 +490,7 @@ Con `patient_confirmation_required = 1`, `create_patient_charge` se parte en dos
 
 ## 6. Comisión de la secretaria (nuevo)
 
-**Regla:** por cada financiamiento **confirmado**, quien lo registró (`charges.requested_by`) gana **$0,50**. Se devenga en el momento y **se paga a la clínica en el cierre del lunes siguiente**, en la misma transferencia que las consultas. La clínica se la entrega a su personal.
+**Regla:** por cada financiamiento **confirmado**, quien lo registró (`charges.requested_by`) gana **$0,50**. Se devenga en el momento y **se paga a la clínica el día siguiente** (hasta el 2026-10-05, en el cierre del lunes siguiente), en la misma transferencia que las consultas de ese día. La clínica se la entrega a su personal.
 
 **Modelo:**
 - Parámetro global `staff_commission_usd = 0.50` en `business_parameters`, con vigencia (el histórico queda).
@@ -467,7 +499,7 @@ Con `patient_confirmation_required = 1`, `create_patient_charge` se parte en dos
 - Tabla `staff_commissions`: `charge_id` (única), `merchant_id`, `staff_user_id`, `amount_usd`, `settlement_id`, `status` (`devengada` | `pagada` | `revertida`).
 - Al confirmar:
   - asiento Dr `commission_expense` / Cr `merchant_payable`;
-  - fila en `settlements` con `reason = 'staff_commission'` y `due_date = business_date`, de modo que entra **en el primer lunes después del alta**, aunque las cuotas de esa consulta vayan más tarde;
+  - fila en `settlements` con `reason = 'staff_commission'` y `due_date = business_date`, de modo que se paga **el día siguiente al alta**, aunque las cuotas de esa consulta vayan más tarde;
   - `run_scheduled_settlements_loop` y `admin_merchant_payables` la recogen sin cambios de lógica, solo reconociendo la nueva `reason`.
 - **Reversa** antes de pagarse: el asiento espejo y el settlement se cancelan. Después de pagada, la reversa sigue bloqueada (regla de Ronda) y el ajuste es manual.
 - El **impago del paciente no quita la comisión** (se gana al confirmar). Por ahora, la defensa contra altas falsas son las alertas de H10; las medidas que bloquean se evaluarán después (§14).
@@ -534,14 +566,14 @@ Es el único documento que recibe el paciente, así que tiene que estar completo
 - Clínica: nombre, RIF, sede y quién registró (solo el nombre de pila).
 - Paciente: nombre y cédula enmascarada.
 - Servicios financiados, con el total de la consulta.
-- **Plan de pagos**: cuota 1 y cuota 2 con fecha y monto en dólares. El fee aparece **solo como línea aparte en el desglose** ("Servicio Helios 20% + IVA"), nunca sumado a la consulta en un total (regla de Ronda).
+- **Plan de pagos**: cuota 1 y cuota 2 con fecha y monto en dólares, y el desglose: consulta, **comisión de servicio (12%)**, IVA de la comisión y total (al paciente sí se le enseña el total, 2026-10-06).
 - Cómo pagar: las cuentas de cobro configuradas (H11), y "se paga en bolívares a la tasa BCV del día del pago".
 - Cómo avisar el pago: el WhatsApp de Helios con un enlace `wa.me` que ya trae el número de financiamiento.
 - Condiciones (`terms_versions` vigente): cargo de $2 por cuota tras 3 días de gracia, congelamiento desde el día 1, y qué pasa a los 30 y 60 días.
 - Pie: "Si no reconoces este financiamiento, escríbenos al …". **Este pie es una alerta temprana gratuita** contra altas falsas: el paciente real que no pidió nada avisa.
 
 **Formalidades:**
-- Asunto: "Tu financiamiento en {clínica} — 2 cuotas de ${monto}".
+- Asunto: "Tu pago en cuotas en {clínica} — 2 cuotas de ${monto}" (hasta el 2026-10-05, "Tu financiamiento en…").
 - Remitente: `sender_name <sender_email>` de `platform_contact`, desde un dominio propio con SPF, DKIM y DMARC; si no, cae en spam.
 - **No es una factura fiscal.** La facturación por cuenta de terceros sigue pendiente, como en Ronda. El texto dice "comprobante", nunca "factura".
 - HTML simple con tablas (compatible con Gmail y Outlook) y versión de texto plano.
@@ -580,7 +612,7 @@ Es el único documento que recibe el paciente, así que tiene que estar completo
 | `/financiamientos/$id` | administrador, secretaria | Detalle: servicios, cuotas (sin estado de pago del paciente), fechas en que se le paga a la clínica, **reenviar al paciente** (pendiente o vencida), **reenviar comprobante** (confirmada) | `/transacciones/$id` |
 | `/comisiones` | administrador (todas), secretaria (las suyas) | Comisiones por persona y semana; pagadas y por pagar | **nuevo** (base: `merchant_sales_by_staff`) |
 | `/metricas` | administrador | KPIs, serie diaria, recurrencia, sin el perfil nocturno | `/metricas` |
-| `/pagos` | administrador | Lo devengado, próximo lunes, transferencias recibidas (consultas + comisiones) | `/liquidaciones` |
+| `/pagos` | administrador | Lo devengado, próximo pago (a diario: días 8 y 15 de cada consulta), transferencias recibidas (consultas + comisiones) | `/liquidaciones` |
 | `/personal` | administrador | Alta y baja de secretarias, contraseñas | `/personal` |
 | `/cuenta` | todos | Rol, cerrar sesión | `/cuenta` |
 
@@ -596,7 +628,7 @@ Es el único documento que recibe el paciente, así que tiene que estar completo
 | **Pagos registrados** | Igual + botón **"Registrar pago"** (§7.1) + importar extracto + abonos sin dueño |
 | **Avisos de hoy** | **Nuevo** (§7.2); sustituye a "Notificaciones" (push) y conserva el editor de plantillas (WhatsApp y email). Incluye el historial de correos enviados, con su estado |
 | **Alertas** | Igual + las nuevas de H10 |
-| **Pagos a clínicas** | Igual (cierre de los lunes, histórico, registrar transferencia con comprobante) + **desglose de comisiones** + **cuenta destino de la clínica** |
+| **Pagos a clínicas** | Igual (histórico, registrar transferencia con comprobante) + **desglose de comisiones** + **cuenta destino de la clínica**. Desde el 2026-10-06 el "cierre" es **diario**: cada día sale lo que venció el día anterior |
 | **Contabilidad** | Igual (libro, cierre de mes, exportación) + cuenta `commission_expense` |
 | **Pacientes** | Ficha con pestañas resumen, **datos y referencia** (en lugar de identidad), financiamientos, pagos, cobranza e historial. Acciones: registrar pago, bloquear, congelar, lista negra, condonar cargo, WhatsApp, **editar datos de contacto** (auditado) y aprobar cambios propuestos por la clínica |
 | **Clínicas** | Alta (categoría médica, especialidad, RIF, MPPS), perfil, condiciones (incluida la comisión propia), **cuenta de pago**, personal, estado (activa/pausada/terminada), sus alertas. En el personal: **WhatsApp del bot** (registrar o revocar el número de cada persona, ver si tiene PIN y **resetearlo**), con bitácora (§15) |
@@ -606,13 +638,14 @@ Es el único documento que recibe el paciente, así que tiene que estar completo
 
 ### 8.4 Marca
 
-- Paleta tomada de `Helios Logo.jpeg`:
-  - primario, azul intenso ≈ `#1A56DB` / `#0B4FD8` (el del logotipo);
-  - acento del degradado ≈ `#60A5FA` → `#BFDBFE`.
+- Paleta tomada del logo en SVG (`brand/helios-logo.svg`, rediseñado el 2026-10-06):
+  - la palabra «Helios» en azul marino `#002770`;
+  - seis rayos en azules planos, sin degradados, de `#045EF3` a `#73C3FE`;
+  - el primario del panel (`#0040B8`) es el azul de acción, entre la palabra y el rayo más oscuro.
   - Se ajustan con el validador de contraste del generador.
 - **Tema claro por defecto** (contexto médico y de recepción) y oscuro opcional. Ronda es oscuro con lima.
 - Tipografía: una geométrica redondeada cercana al logotipo (p. ej. *Outfit* o *Figtree*) para títulos, y *Source Sans 3* (la de Ronda) para texto.
-- **Pendiente:** el logo en **SVG**, porque el JPEG no sirve para la interfaz, y el isotipo aislado para favicon e iconos.
+- Logo en SVG (`brand/helios-logo.svg`) e **isologo** (`brand/helios-isologo.svg`: los rayos en blanco sobre `#157EFD`), que es el favicon del panel (`panel/public/icon.svg`).
 
 ---
 
@@ -709,8 +742,8 @@ Estimación para una persona con asistencia de IA, en semanas de trabajo efectiv
 
 | # | Pregunta | Decisión |
 |---|---|---|
-| D-H1 | ¿Fee del 20% + IVA al paciente y 0% a la clínica? | **Sí** |
-| D-H2 | ¿La clínica cobra como un local de Ronda (50% + 50% al vencer cada cuota, los lunes, cobre Helios o no)? | **Sí, por ahora** |
+| D-H1 | ¿Fee del 20% + IVA al paciente y 0% a la clínica? | **Sí** → sustituida el 2026-10-06: **12% + IVA** (§0.1) |
+| D-H2 | ¿La clínica cobra como un local de Ronda (50% + 50% al vencer cada cuota, los lunes, cobre Helios o no)? | **Sí, por ahora** → sustituida el 2026-10-06: **a los 8 y 15 días**, a diario (§0.1) |
 | D-H3 | ¿Se retiene la liquidación hasta tener la constancia firmada? | **No por ahora.** No hay constancia firmada: se envía un comprobante por correo. Ver §14 |
 | D-H6 | ¿Qué ve la clínica de un paciente conocido? | Solo el nombre enmascarado y "disponible $X" o "no disponible" (§5) |
 | D-H8 | ¿Cuentas de cobro de Helios y titular? | **Configurables** en Ajustes (`payment_destinations`, varias activas); se llenan después |
@@ -739,7 +772,9 @@ Ninguna bloquea empezar la fase 0. Se aplica la propuesta mientras no se diga ot
 | # | Pregunta | Propuesta |
 |---|---|---|
 | D-H7 | ¿Monto mínimo por financiamiento? | Parámetro `min_charge_usd`; arranca en **$10** hasta que se fije |
-| D-H10 | ¿Razón social y RIF de Helios (facturación por cuenta de terceros)? | Por definir con el contador; hace falta para el pie del comprobante |
+| D-H10 | ¿Razón social y RIF de Helios (facturación por cuenta de terceros)? | Razón social: **Quarto Latam, C.A.** (2026-10-06). Falta el **RIF**, por definir con el contador |
+| D-H21 | ¿Plazo del "aviso previo" para que un centro cancele? | Por definir en el contrato de afiliación. Hacia fuera solo se dice "con aviso previo" |
+| D-H22 | ¿Número de WhatsApp para "Quiero afiliarme"? | El de Helios (el mismo del bot); falta publicarlo en `panel/src/config/legal.ts`. Mientras tanto el botón lleva a `/soporte` |
 | D-H12 | ¿Se porta el asistente IA en el lanzamiento? | No: fase 5 |
 | D-H13 | ¿Dominio para enviar los correos? | **Resend**, se configura después. Mientras tanto la cola funciona y los correos quedan en `pendiente` sin clave |
 
@@ -896,11 +931,45 @@ La v1 (arriba) está **aprobada** desde el 2026-10-06 y es la que se usa fuera d
    where key = 'confirmar_financiamiento';
   ```
 
+#### 15.5.2 La v3 (2026-10-06): sin "financiamiento"
+
+La v1 y la v2 dicen "financiamiento", que desde el 2026-10-06 no se usa hacia fuera, y la v1 además lleva "20 %" escrito, que ya no es la comisión. Por eso `confirmar_financiamiento` deja de tener `wa_template_name` (20261006002000): fuera de la ventana de 24 h la pregunta cae a la cola manual hasta que Meta apruebe la v3. Dentro de la ventana sale el texto libre nuevo.
+
+- Nombre: `helios_confirmar_pago_en_cuotas` · Categoría: **Utility** · Idioma: `es` · Variables **numéricas** · Botones de respuesta rápida: **Sí** · **No**.
+- Cuerpo:
+
+  > 👋 Hola, {{1}}. Bienvenido a Helios 💙
+  >
+  > {{2}} registró tu consulta de ${{3}} para pagarla en 2 cuotas, sin inicial.
+  >
+  > * Consulta: ${{4}}
+  > * Comisión de servicio ({{5}}%): ${{6}}
+  > * IVA de la comisión ({{7}}%): ${{8}}
+  > * Total: ${{9}}
+  >
+  > Tus cuotas serán de {{10}}:
+  > 📅 {{11}}
+  >
+  > ¿Confirmas tu pago en cuotas? Responde Sí o No.
+  > Tienes 2 horas para confirmar.
+
+- Ejemplo: {{1}} `Javier`, {{2}} `Clínica Test`, {{3}} `100`, {{4}} `100`, {{5}} `12`, {{6}} `12`, {{7}} `16`, {{8}} `1,92`, {{9}} `113,92`, {{10}} `$56,96`, {{11}} `13/10 y 20/10`.
+- Cuando Meta la apruebe (y entonces `whatsapp_dispatch_smoke`, que simula la v1 de 6 parámetros, se ajusta a 11):
+
+  ```sql
+  update public.notification_templates
+     set wa_template_name = 'helios_confirmar_pago_en_cuotas',
+         wa_template_lang = 'es',
+         wa_template_params = array['nombre','clinica','monto_consulta','monto_consulta','servicio_pct',
+                                    'cargo_servicio','iva_pct','iva_cargo_servicio','total','cuotas_monto','cuotas_fechas']
+   where key = 'confirmar_financiamiento';
+  ```
+
 ### 15.6 El bot del paciente (2026-10-06)
 
 Decidido por Javier el 2026-10-06. Si un paciente le escribe a Helios (y no es su respuesta a una confirmación), antes de que lo atienda una persona:
 
-- **Cualquier mensaje** → «💙 Gracias por escribirnos, {nombre}…» con tres botones: **Pagar cuota**, **Ver financiamientos**, **Ayuda**. Como mucho una vez cada **2 h**; si ya lo vio, el bot se calla y lo ve el equipo en la app.
+- **Cualquier mensaje** → «💙 Gracias por escribirnos, {nombre}…» con tres botones: **Pagar cuota**, **Mis pagos en cuotas** (antes "Ver financiamientos"), **Ayuda**. Como mucho una vez cada **2 h**; si ya lo vio, el bot se calla y lo ve el equipo en la app.
 - **Pagar cuota** → las cuotas vencidas (o, si no hay, la próxima), con su cargo por atraso, el total en dólares y en bolívares a la tasa BCV de hoy, las cuentas de cobro y «envíanos el comprobante por este chat».
 - **Ver financiamientos** → los activos, con sus cuotas pendientes y el saldo (con el cargo por servicio: es lo que debe).
 - **Ayuda** → «una persona te atenderá» y el bot se calla **24 h** con ese número.

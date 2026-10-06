@@ -41,11 +41,12 @@ igual(
 console.log('\n── previsión ─────────────────────────────────────────────────')
 const sinReparto = leerPrevision({
   today_date: '2026-09-30',
-  next_run_date: '2026-10-05',
+  next_run_date: '2026-10-01',
   next_run_usd: '150.50',
   total_pending_usd: 300,
 })
-igual(sinReparto.nextRunUsd, 150.5, 'lo del lunes')
+igual(sinReparto.nextRunUsd, 150.5, 'lo del próximo pago')
+igual(sinReparto.nextRunDate, '2026-10-01', 'la fecha del próximo pago es la de la base (el día siguiente)')
 igual(sinReparto.nextRun, null, 'sin reparto de la base, no se inventa')
 igual(
   leerPrevision({ next_run_consultas_usd: 150, next_run_comisiones_usd: '0.50' }).nextRun,

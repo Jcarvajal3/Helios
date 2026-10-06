@@ -120,7 +120,7 @@ export function useBloqueoDeCuenta(userId: string): BloqueoDeCuenta {
       dialogo === 'bloquear' ? (
         <ConfirmDialog
           title="Bloquear la cuenta"
-          summary="Ninguna clínica podrá financiarle hasta que alguien levante el bloqueo. Puede seguir pagando."
+          summary="No podrá pagar en cuotas en ninguna clínica hasta que alguien levante el bloqueo. Puede seguir pagando sus cuotas."
           detail={
             <Textarea
               id="bloqueo-mensaje"

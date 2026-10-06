@@ -7,9 +7,13 @@ import {
   MENU_PACIENTE,
   cuotasAPagar,
   fechaLarga,
+  mensajeAyuda,
+  mensajeComprobante,
   mensajeFinanciamientos,
   mensajeGenerico,
   mensajePagar,
+  mensajePedirCedula,
+  mensajeSinFinanciamientos,
 } from './textos_paciente.ts'
 import type { ResumenDelPaciente } from './textos_paciente.ts'
 
@@ -87,14 +91,14 @@ comprueba(
   'al día',
 )
 
-console.log('\nVer financiamientos')
+console.log('\nMis pagos en cuotas')
 const ver = mensajeFinanciamientos(base)
 comprueba(
   ver.includes('🩺 #1718 · Clínica Test (consulta $100)') &&
     ver.includes('* $56,96 — 19/10/2026') &&
     ver.includes('Saldo: $113,92') &&
     !ver.includes('Saldo total'),
-  'un financiamiento con su saldo',
+  'un pago en cuotas con su saldo',
   ver,
 )
 const dos = mensajeFinanciamientos({
@@ -105,8 +109,28 @@ const dos = mensajeFinanciamientos({
   ],
 })
 comprueba(dos.includes('Saldo total: $142,40'), 'con dos, el saldo total', dos)
-comprueba(mensajeFinanciamientos({ ...base, financiamientos: [] }).startsWith('No tienes financiamientos activos'), 'sin activos')
+comprueba(mensajeFinanciamientos({ ...base, financiamientos: [] }).startsWith('No tienes pagos en cuotas activos'), 'sin activos')
+comprueba(ver.startsWith('📋 Tus pagos en cuotas activos:'), 'el título de la lista', ver)
 comprueba(fechaLarga('2026-10-12') === '12/10/2026', 'fecha larga')
+
+console.log('\nVocabulario')
+const PROHIBIDAS = /pr[ée]stamo|financ|cr[ée]dito/i
+const todos = [
+  ...MENU_PACIENTE.map((b) => b.title),
+  mensajeGenerico('Javier'),
+  mensajeSinFinanciamientos(),
+  mensajeComprobante('Javier'),
+  mensajeAyuda('Javier'),
+  mensajePedirCedula(),
+  pagar,
+  pagarVencida,
+  ver,
+  dos,
+  mensajeFinanciamientos({ ...base, financiamientos: [] }),
+  mensajePagar({ ...base, financiamientos: [] }),
+]
+const conPalabras = todos.filter((t) => PROHIBIDAS.test(t))
+comprueba(conPalabras.length === 0, 'ningún texto dice préstamo, financiamiento ni crédito', conPalabras.join(' | '))
 
 console.log(fallos === 0 ? '\nTODO BIEN' : `\n${fallos} FALLOS`)
 process.exit(fallos === 0 ? 0 : 1)

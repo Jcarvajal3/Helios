@@ -120,7 +120,7 @@ export function resumirAbonos(
   })
 }
 
-/** Los locales con cierres pasados sin transferir. Ya es un atraso. */
+/** Los locales con pagos de días anteriores sin transferir. Ya es un atraso. */
 export function resumirPagosALocales(liquidaciones: ReadonlyArray<MerchantPayable>): Resumen {
   const totales = payablesTotals([...liquidaciones])
   return resumen({

@@ -21,10 +21,15 @@ export type NavItem = {
   espacio?: Ambito
   /**
    * La acción principal del panel, pintada como botón y no como enlace. Solo
-   * la lleva «Nuevo financiamiento» de la clínica: es lo que se hace veinte
+   * la lleva «Nuevo pago en cuotas» de la clínica: es lo que se hace veinte
    * veces al día, y tiene que encontrarse sin leer el menú.
    */
   destacado?: boolean
+  /**
+   * El nombre en la barra de abajo del teléfono, si el de siempre no cabe en
+   * un cuarto de pantalla: «Nuevo» por «Nuevo pago en cuotas».
+   */
+  corto?: string
 }
 
 /**
@@ -52,21 +57,24 @@ export const merchantNavGroups: MerchantNavGroup[] = [
   {
     items: [
       // Los nombres son los de la recepción, no los del sistema: se
-      // «registra» un financiamiento; lo que Helios le transfiere a la
-      // clínica son sus «Pagos». En el orden del trabajo: registrar, mirar
+      // «registra» un pago en cuotas; lo que Helios le transfiere a la
+      // clínica son «Lo que recibo» (antes «Pagos», que con «Pagos en cuotas»
+      // justo encima se confundía). En el orden del trabajo: registrar, mirar
       // lo registrado y lo ganado, y después el dinero de la clínica.
       {
-        label: 'Nuevo financiamiento',
+        label: 'Nuevo pago en cuotas',
         path: '/registrar',
         icon: FilePlus2,
         section: 'registrar',
         destacado: true,
+        corto: 'Nuevo',
       },
       {
-        label: 'Financiamientos',
+        label: 'Pagos en cuotas',
         path: '/financiamientos',
         icon: FileText,
         section: 'financiamientos',
+        corto: 'Cuotas',
       },
       {
         label: 'Comisiones',
@@ -75,7 +83,7 @@ export const merchantNavGroups: MerchantNavGroup[] = [
         section: 'comisiones',
       },
       {
-        label: 'Pagos',
+        label: 'Lo que recibo',
         path: '/pagos',
         icon: Landmark,
         section: 'pagos',
@@ -214,4 +222,29 @@ export function visibleGroups(
       items: group.items.filter((i) => !i.superAdminOnly),
     }))
     .filter((group) => group.items.length > 0)
+}
+
+/**
+ * Lo que va en la barra de abajo del teléfono, en este orden de preferencia.
+ *
+ * Caben tres y el botón del menú. Cada rol se queda con lo que más usa: la
+ * secretaria registra, mira lo registrado y sus comisiones; el administrador
+ * cambia sus comisiones por los pagos de Helios, que es el dinero de la
+ * clínica. El resto sigue en el menú, a un toque.
+ */
+const PREFERENCIA_EN_LA_BARRA: ReadonlyArray<string> = [
+  '/registrar',
+  '/financiamientos',
+  '/pagos',
+  '/comisiones',
+]
+
+/** Hasta tres: con el menú son cuatro huecos de 94 px, donde cabe «Comisiones» (y «Cuotas»). */
+const HUECOS_DE_LA_BARRA = 3
+
+export function merchantBarraInferiorFor(role: MerchantRole): NavItem[] {
+  const visibles = merchantNavGroupsFor(role).flatMap((g) => g.items)
+  return PREFERENCIA_EN_LA_BARRA.map((path) => visibles.find((i) => i.path === path))
+    .filter((i): i is NavItem => i !== undefined)
+    .slice(0, HUECOS_DE_LA_BARRA)
 }

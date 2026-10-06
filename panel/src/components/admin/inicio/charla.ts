@@ -51,9 +51,9 @@ function deMora(l: LecturaDeCifra<Pick<DeudaVencida, 'senal'> | null>): Pastilla
 function deCierre(l: LecturaDeCifra<{ veredicto: VeredictoDelCierre }>): PastillaDeLaCharla | null {
   const base: Base = { clave: 'cierre', destino: AL_CIERRE }
   if (l.estado === 'cargando') return null
-  if (l.estado === 'error') return { ...base, texto: `Cierre: ${SIN_LEER}`, tono: 'neutral' }
+  if (l.estado === 'error') return { ...base, texto: `Pago de hoy: ${SIN_LEER}`, tono: 'neutral' }
   const senal = senalDelCierre(l.datos.veredicto)
-  return { ...base, texto: `Cierre: ${senal.texto.toLocaleLowerCase('es')}`, tono: senal.tone }
+  return { ...base, texto: `Pago de hoy: ${senal.texto.toLocaleLowerCase('es')}`, tono: senal.tone }
 }
 
 function deImpago(l: LecturaDeCifra<Pick<ImpagoPrimeraCuota, 'pct' | 'senal'>>): PastillaDeLaCharla | null {

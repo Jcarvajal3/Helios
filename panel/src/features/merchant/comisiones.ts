@@ -5,13 +5,14 @@ import { comoFila, comoLista, numero, texto, textoONulo } from '@/lib/json'
 // ═══════════════════════════════════════════════════════════════════════════
 // Las comisiones del personal (plan §6, contrato §1.6).
 //
-// Por cada financiamiento confirmado, quien lo registró gana una comisión
+// Por cada pago en cuotas confirmado, quien lo registró gana una comisión
 // ($0,50 por defecto). Se devenga al confirmar y Helios la paga a la clínica
-// en el cierre del lunes siguiente, dentro de la misma transferencia que las
-// consultas; la clínica se la entrega a su personal.
+// el día siguiente a la confirmación, dentro de la misma transferencia que
+// las consultas de ese día; la clínica se la entrega a su personal. No hay
+// cierre semanal: el pago a la clínica es diario.
 //
 //   merchant_commissions(p_from, p_to)                 → una fila por persona
-//   merchant_commission_items(p_from, p_to, p_staff)   → una por financiamiento
+//   merchant_commission_items(p_from, p_to, p_staff)   → una por pago en cuotas
 //
 // El administrador ve las de todo el personal; la secretaria, solo las suyas.
 // Ese corte lo hace la base: aquí no hay ninguna rama por rol.
@@ -24,13 +25,13 @@ import { comoFila, comoLista, numero, texto, textoONulo } from '@/lib/json'
 export type ComisionDePersona = {
   staffUserId: string
   staffName: string
-  /** Financiamientos confirmados en el rango. */
+  /** Pagos en cuotas confirmados en el rango. */
   chargeCount: number
   /** Devengado: lo ganado en el rango. */
   amountUsd: number
   /** Ya incluido en una transferencia a la clínica. */
   paidUsd: number
-  /** Por pagar en el próximo lunes. */
+  /** Devengado y todavía sin transferir (se paga el día siguiente a confirmar). */
   pendingUsd: number
 }
 
@@ -50,11 +51,13 @@ export function leerComisiones(v: unknown): ComisionDePersona[] {
 
 export type EstadoDeComision = 'devengada' | 'pagada' | 'revertida'
 
-/** Una comisión: la de un financiamiento. */
+/** Una comisión: la de un pago en cuotas. */
 export type ItemDeComision = {
   chargeId: string
   orderNumber: number
   createdAt: string
+  /** Cuándo dijo Sí el paciente, si la base lo manda. Si no, vale `createdAt`. */
+  confirmedAt: string | null
   amountUsd: number
   status: EstadoDeComision | null
   payoutId: string | null
@@ -71,6 +74,7 @@ export function leerItemsDeComision(v: unknown): ItemDeComision[] {
       chargeId: texto(r.charge_id),
       orderNumber: numero(r.order_number),
       createdAt: texto(r.created_at),
+      confirmedAt: textoONulo(r.confirmed_at),
       amountUsd: numero(r.amount_usd),
       status: ESTADOS.find((e) => e === r.status) ?? null,
       payoutId: textoONulo(r.payout_id),
@@ -113,11 +117,26 @@ export function totales(rows: ReadonlyArray<ComisionDePersona>): Totales {
   )
 }
 
+// ── Día de pago ───────────────────────────────────────────────────────────
+//
+// La comisión se paga el día siguiente a que el paciente confirma: el
+// settlement nace con `due_date` = el día operativo de la confirmación y la
+// base lo paga en `helios_settlement_run_for(due_date)` = `due_date + 1`.
+
+/**
+ * El día en que Helios le paga a la clínica una comisión: el siguiente al de
+ * la confirmación, en Caracas. Sin `confirmedAt`, el del alta: el paciente
+ * tiene dos horas para responder, así que casi siempre es el mismo día.
+ */
+export function diaDePagoDeComision(item: Pick<ItemDeComision, 'createdAt' | 'confirmedAt'>): string {
+  return sumarDias(diaEnCaracas(item.confirmedAt ?? item.createdAt), 1)
+}
+
 // ── Semanas ───────────────────────────────────────────────────────────────
 //
-// La semana de las comisiones va de lunes a domingo: lo que se registra en
-// ella entra en el cierre del lunes siguiente (el settlement nace con
-// `due_date = business_date`, plan §6).
+// Las comisiones se leen por semanas de lunes a domingo, como en el
+// calendario. Es solo una forma de agruparlas: cada una se paga el día
+// siguiente a su confirmación, no al acabar la semana.
 
 /** El lunes de la semana de `dia` ('YYYY-MM-DD'). */
 export function lunesDe(dia: string): string {
@@ -126,14 +145,9 @@ export function lunesDe(dia: string): string {
   return sumarDias(dia, -((semana + 6) % 7))
 }
 
-/** El lunes en que Helios paga lo registrado en la semana que empieza en `lunes`. */
-export function lunesDePago(lunes: string): string {
-  return sumarDias(lunesDe(lunes), 7)
-}
-
 /**
  * Las semanas (de lunes a domingo) que toca el rango, recortadas a él y de
- * la más reciente a la más antigua: la de arriba es la que se va a cobrar.
+ * la más reciente a la más antigua.
  */
 export function semanasDelRango(r: Rango): Rango[] {
   if (r.from > r.to) return []
@@ -192,7 +206,7 @@ export function agruparPorSemana(items: ReadonlyArray<ItemDeComision>): SemanaDe
     })
 }
 
-/** Los atajos del periodo, pensados en semanas de cobro. */
+/** Los atajos del periodo, en semanas y meses de calendario. */
 export function atajosDeComisiones(hoy: string): Array<{ label: string; rango: Rango }> {
   const lunes = lunesDe(hoy)
   const mesPasado = sumarDias(primeroDelMes(hoy), -1)

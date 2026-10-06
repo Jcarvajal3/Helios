@@ -67,7 +67,11 @@ function DeudaVencida() {
   )
 }
 
-/** Caja: lo que sale en el próximo cierre, contra la caja. */
+/**
+ * Caja: lo que sale hoy hacia las clínicas, contra la caja. Se les paga a
+ * diario (cada liquidación, el día siguiente a su vencimiento), así que el
+ * próximo pago es hoy.
+ */
 function SaleEnElCierre({ hoy }: { hoy: string }) {
   const lectura = useCierreDeHoy(hoy)
   const c = datosDe(lectura)
@@ -79,8 +83,12 @@ function SaleEnElCierre({ hoy }: { hoy: string }) {
     <TarjetaDeArea
       area={p.espacio}
       icono={p.icono}
-      rotulo={c?.fechaCierre ? `Sale en el cierre del ${diaDelCierre(c.fechaCierre)}` : 'Sale en el próximo cierre'}
-      info="Lo que hay que transferirles a las clínicas en el próximo cierre, atrasados incluidos, frente a la caja según el libro. «En camino»: la caja no alcanza todavía, pero lo que vence antes del cierre sí y nadie está en mora."
+      rotulo={
+        !c?.fechaCierre || c.fechaCierre === hoy
+          ? 'Sale hoy hacia las clínicas'
+          : `Sale el ${diaDelCierre(c.fechaCierre)} hacia las clínicas`
+      }
+      info="Lo que hay que transferirles hoy a las clínicas, con lo atrasado de días anteriores, frente a la caja según el libro. Se les paga a diario: cada liquidación, el día siguiente a su vencimiento (la consulta, a los 8 y a los 15 días; la comisión de la secretaria, el día siguiente a la confirmación). «No cubre»: la caja de hoy no alcanza para el pago de hoy."
       destino={p.destino}
       {...estadoDe(lectura)}
       valor={c ? formatUsd(c.salen) : ''}
@@ -91,7 +99,7 @@ function SaleEnElCierre({ hoy }: { hoy: string }) {
             valor={medidor.valor}
             max={medidor.max}
             tono={c.veredicto === 'urgente' ? 'error' : 'area'}
-            rotulo={`Sale en el cierre: ${formatUsd(c.salen)} de ${formatUsd(c.caja)} en caja`}
+            rotulo={`Sale hoy: ${formatUsd(c.salen)} de ${formatUsd(c.caja)} en caja`}
           />
         ) : undefined
       }

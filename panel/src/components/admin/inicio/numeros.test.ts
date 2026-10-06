@@ -6,8 +6,8 @@
  *
  * Lo que se vigila: que el día operativo cambie a medianoche en Caracas y no
  * antes, que cada bloqueo salga solo cuando hay algo que arreglar, que el
- * cierre mire hasta la víspera y solo sea rojo cuando esperar ya no basta, y
- * que el último mes maduro no sea uno a medias.
+ * semáforo del pago a clínicas mire hasta la víspera y solo sea rojo cuando
+ * esperar ya no basta, y que el último mes maduro no sea uno a medias.
  */
 import { formatWaitingHours } from '@/components/ui'
 import {

@@ -150,8 +150,9 @@ export function globoDeDeudaVencida(
 // ── Caja ───────────────────────────────────────────────────────────────────
 
 /**
- * La pastilla del cierre. Solo es roja cuando hay que hacer algo: «en camino»
- * no es un aviso, es lo normal un martes.
+ * La pastilla del pago a las clínicas. Solo es roja cuando hay que hacer algo:
+ * «en camino» no es un aviso. Con el pago diario casi no sale: el pago que
+ * viene es siempre hoy.
  */
 export function senalDelCierre(veredicto: VeredictoDelCierre): SenalDeCifra {
   switch (veredicto) {
@@ -164,14 +165,14 @@ export function senalDelCierre(veredicto: VeredictoDelCierre): SenalDeCifra {
   }
 }
 
-/** El día del cierre, con su nombre: '2026-09-28' → 'lunes 28'. */
+/** El día del pago, con su nombre: '2026-09-28' → 'lunes 28'. */
 export function diaDelCierre(fecha: string): string {
   return `${diaDeLaSemana(fecha)} ${Number(fecha.slice(8, 10))}`
 }
 
 /**
  * El medidor de lo que sale frente a la caja: cuánto de la caja se va en el
- * cierre. Si sale más de lo que hay, la barra se llena entera; con la caja en
+ * pago de hoy. Si sale más de lo que hay, la barra se llena entera; con la caja en
  * cero o negativa también, porque todo lo que sale falta.
  */
 export function medidorDelCierre(salen: number, caja: number): { valor: number; max: number } {

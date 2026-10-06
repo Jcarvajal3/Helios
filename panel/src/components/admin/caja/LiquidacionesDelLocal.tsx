@@ -19,7 +19,7 @@ import type { Settlement } from '@/features/admin/api'
 import { partirPorMotivo } from '@/features/admin/clinicas/clinicas'
 import { MOTIVO_DE_LIQUIDACION } from '@/features/admin/liquidaciones'
 
-/** Cuántas líneas se enseñan de un cierre antes de pedir ver el resto. */
+/** Cuántas líneas se enseñan de un día de pago antes de pedir ver el resto. */
 const LINEAS_VISIBLES = 8
 
 /** Por debajo de medio céntimo, una liquidación está pagada. */
@@ -30,22 +30,26 @@ type Grupo = {
   lineas: Settlement[]
   /** Lo que falta de las líneas del grupo. */
   pendienteUsd: number
-  /** Ya debió pagarse en un cierre que pasó. */
+  /** Ya debió pagarse un día que pasó. */
   atrasado: boolean
-  /** Entra en el cierre que viene. */
+  /** Entra en el pago de hoy. */
   esteCierre: boolean
 }
 
 /**
- * Lo que se le debe a un local, AGRUPADO POR CIERRE, y desde aquí se le paga.
+ * Lo que se le debe a un local, AGRUPADO POR DÍA DE PAGO, y desde aquí se le
+ * paga.
  *
- * La unidad de trabajo es la semana de caja: nadie paga «la cuota de la orden
- * 1187», se paga un cierre. Cada cierre lleva su estado, su total y una
- * casilla que marca el bloque entero; vienen marcados los atrasados y el de
- * este lunes, que es lo que hay que transferir.
+ * Desde el 2026-10-06 se paga a diario: cada liquidación, el día siguiente a
+ * su vencimiento (la consulta a los días 8 y 15, la comisión de la secretaria
+ * el día siguiente a la confirmación). La unidad de trabajo es el día de pago
+ * (el «cierre» de la base): nadie paga «la cuota de la orden 1187», se paga un
+ * día. Cada uno lleva su estado, su total y una casilla que marca el bloque
+ * entero; vienen marcados los atrasados y el de hoy, que es lo que hay que
+ * transferir.
  *
- * Si se llega desde un cierre concreto (`cierre`), se enseña ese y nada más,
- * con TODAS sus líneas: también las ya pagadas. Un cierre saldado tiene que
+ * Si se llega desde un día de pago concreto (`cierre`), se enseña ese y nada
+ * más, con TODAS sus líneas: también las ya pagadas. Un pago saldado tiene que
  * poder contar qué se pagó, no decir que no queda nada.
  */
 export function LiquidacionesDelLocal({
@@ -57,14 +61,14 @@ export function LiquidacionesDelLocal({
 }: {
   merchantId: string
   merchantName: string
-  /** El lunes del próximo cierre, según el servidor. */
+  /** El día del próximo pago (hoy), según el servidor. */
   nextRunDate: string | null
   cierre: string | null
   onVerTodos: () => void
 }) {
   const settlements = useQuery({
     queryKey: ['settlements', merchantId, cierre ?? 'abiertas'],
-    // Con el cierre, el servidor trae las de esa semana en cualquier estado.
+    // Con el día de pago, el servidor trae las de ese día en cualquier estado.
     queryFn: () => fetchMerchantSettlements(merchantId, cierre ?? undefined),
   })
 
@@ -148,14 +152,14 @@ export function LiquidacionesDelLocal({
 
   if (lineas.length === 0) {
     return (
-      <Seccion titulo="Por cierre">
+      <Seccion titulo="Por día de pago">
         {cierre && <AvisoDelCierre cierre={cierre} saldado={false} onVerTodos={onVerTodos} />}
         <EmptyState
           icon={<Landmark size={40} />}
-          title={cierre ? 'Esta clínica no tiene liquidaciones en ese cierre' : 'No se le debe nada'}
+          title={cierre ? 'Esta clínica no tiene liquidaciones ese día' : 'No se le debe nada'}
           description={
             cierre
-              ? 'Ninguna de sus liquidaciones vencía en esa semana.'
+              ? 'Ninguna de sus liquidaciones tocaba pagarse ese día.'
               : 'No queda ninguna liquidación pendiente con esta clínica.'
           }
         />
@@ -167,11 +171,11 @@ export function LiquidacionesDelLocal({
 
   return (
     <Seccion
-      titulo="Por cierre"
-      info="Se paga un cierre, no una cuota suelta: cada semana de caja lleva su estado, su total y una casilla que la marca entera. Vienen marcados los atrasados y el de este lunes."
+      titulo="Por día de pago"
+      info="Cada liquidación se paga el día siguiente a su vencimiento (la consulta, a los 8 y a los 15 días; la comisión de la secretaria, el día siguiente a la confirmación). Se paga un día, no una cuota suelta: cada día de pago lleva su estado, su total y una casilla que lo marca entero. Vienen marcados los atrasados y el de hoy."
       controles={
         <span className="type-panel-caption text-panel-muted">
-          {grupos.length} {grupos.length === 1 ? 'cierre' : 'cierres'} · {lineas.length}{' '}
+          {grupos.length} {grupos.length === 1 ? 'día de pago' : 'días de pago'} · {lineas.length}{' '}
           {lineas.length === 1 ? 'liquidación' : 'liquidaciones'}
         </span>
       }
@@ -198,8 +202,8 @@ export function LiquidacionesDelLocal({
               key={grupo.runDate}
               className="overflow-hidden rounded-panel-card border border-panel-hairline bg-panel-card"
             >
-              {/* Marcar un cierre entero es lo que se hace siempre; abrirlo es
-                  lo raro. Por eso son dos objetivos distintos. */}
+              {/* Marcar un día de pago entero es lo que se hace siempre;
+                  abrirlo es lo raro. Por eso son dos objetivos distintos. */}
               <div className="flex items-center gap-3 p-3">
                 {/* Casilla cruda y no `Checkbox` del kit: necesita el estado
                     «a medias» (`indeterminate`), que el kit no tiene. */}
@@ -211,7 +215,7 @@ export function LiquidacionesDelLocal({
                     if (el) el.indeterminate = algunas
                   }}
                   onChange={() => alternar(idsPendientes, !todas)}
-                  aria-label={`Marcar el cierre del ${formatDay(grupo.runDate)}`}
+                  aria-label={`Marcar el pago del ${formatDay(grupo.runDate)}`}
                   className="size-4 shrink-0 accent-on-surface disabled:opacity-30"
                 />
 
@@ -230,7 +234,7 @@ export function LiquidacionesDelLocal({
                   <span className="flex-1">
                     <span className="flex flex-wrap items-center gap-2">
                       <span className="type-panel-body font-semibold text-on-surface">
-                        Cierre del {formatDay(grupo.runDate)}
+                        Pago del {formatDay(grupo.runDate)}
                       </span>
                       <EstadoDelGrupo grupo={grupo} />
                     </span>
@@ -296,7 +300,7 @@ export function LiquidacionesDelLocal({
   )
 }
 
-/** Por qué se ve un solo cierre, con la salida al lado. */
+/** Por qué se ve un solo día de pago, con la salida al lado. */
 function AvisoDelCierre({
   cierre,
   saldado,
@@ -309,7 +313,7 @@ function AvisoDelCierre({
   return (
     <Callout
       tone="info"
-      titulo={`Solo el cierre del ${formatDay(cierre)}`}
+      titulo={`Solo el pago del ${formatDay(cierre)}`}
       accion={
         <Button variant="tonal" size="sm" onClick={onVerTodos}>
           Ver todo lo que se le debe
@@ -347,7 +351,7 @@ function EstadoDelGrupo({ grupo }: { grupo: Grupo }) {
 }
 
 /**
- * Una liquidación dentro de su cierre: qué se devengó, de qué orden y cuánto
+ * Una liquidación dentro de su día de pago: qué se devengó, de qué orden y cuánto
  * falta. En una pagada a medias, el monto original va al lado en pequeño. Una
  * ya pagada no se puede marcar.
  */

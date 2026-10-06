@@ -134,7 +134,7 @@ export function columnasLocales(porPagar: PorPagar): Array<Column<MerchantRow>> 
     {
       key: 'por-pagar',
       header: 'Por pagar a la clínica',
-      info: 'Lo que Helios le debe a la clínica: liquidaciones devengadas sin transferir más su parte de las cuotas que aún no vencen; debajo, lo de cierres ya pasados sin transferir; abre la página de sus pagos.',
+      info: 'Lo que Helios le debe a la clínica: liquidaciones devengadas sin transferir más su parte de las cuotas que aún no vencen; debajo, lo que tocaba pagarle ayer o antes y sigue sin transferir; abre la página de sus pagos.',
       type: 'number',
       sortDir: 'desc',
       sort: (m) => deudaDe(m)?.total ?? null,

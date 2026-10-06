@@ -123,7 +123,7 @@ export function BalanceDelDinero({ semana, local }: { semana: string; local: str
             info={`Calculado de las liquidaciones a clínicas (lo mismo que Pagos a clínicas), no del libro contable. Es su neto: no lleva el service fee. ${DEFINICIONES.porPagarLocales.what}`}
             hint={
               pp &&
-              `Este cierre${pp.fechaCierre ? ` (${formatDayShort(pp.fechaCierre)})` : ''}: ${formatUsd(pp.esteCierreUsd)}${
+              `Sale hoy${pp.fechaCierre ? ` (${formatDayShort(pp.fechaCierre)})` : ''}: ${formatUsd(pp.esteCierreUsd)}${
                 pp.atrasadoUsd > CENTIMO ? `, de eso atrasado ${formatUsd(pp.atrasadoUsd)}` : ''
               }`
             }

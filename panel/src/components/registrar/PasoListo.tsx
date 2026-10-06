@@ -34,7 +34,7 @@ import { DesgloseDelServicio, PlanDePagos } from './PlanDePagos'
  *
  * Con la confirmación del paciente, la orden llega aquí PENDIENTE: la pantalla
  * espera su «Sí» (`ConfirmacionDelPaciente`) y vuelve a pedir el
- * financiamiento cada pocos segundos hasta que acepta, rechaza o vence.
+ * orden cada pocos segundos hasta que acepta, rechaza o vence.
  *
  * El foco cae en «Registrar otro», que es lo siguiente que se hace en una
  * recepción con cola.
@@ -81,7 +81,7 @@ export function PasoListo({
     if (f.status === statusAnterior.current) return
     statusAnterior.current = f.status
     setComprobante({ estado: f.receipt, correo: f.emailEnmascarado })
-    if (f.status === 'confirmed') avisar('El paciente aceptó: financiamiento confirmado')
+    if (f.status === 'confirmed') avisar('El paciente aceptó: pago en cuotas confirmado')
     void queryClient.invalidateQueries({ queryKey: ['merchant-transactions'] })
     void queryClient.invalidateQueries({ queryKey: ['merchant-transactions-summary'] })
     void queryClient.invalidateQueries({ queryKey: ['comisiones'] })
@@ -103,7 +103,7 @@ export function PasoListo({
   const estado = comprobante.estado
   const confirmado = f.status === 'confirmed'
   const titulo = confirmado
-    ? `Financiamiento #${f.orderNumber} registrado`
+    ? `Orden #${f.orderNumber} registrada`
     : f.status === 'pending'
       ? `Orden #${f.orderNumber} enviada al paciente`
       : f.status === 'expired'
@@ -121,14 +121,14 @@ export function PasoListo({
       {!coincide && (
         <Callout
           tone="warning"
-          titulo="Esto es un financiamiento que ya estaba registrado"
+          titulo="Esto es un pago en cuotas que ya estaba registrado"
           accion={
             <Button size="sm" variant="tonal" onClick={onRegistrarElQueQueria}>
               Registrar el que querías
             </Button>
           }
         >
-          La conexión falló en un intento anterior y ese financiamiento sí se había
+          La conexión falló en un intento anterior y ese pago en cuotas sí se había
           registrado: es este. No se creó uno nuevo con los datos que acabas de confirmar.
         </Callout>
       )}
@@ -202,7 +202,7 @@ export function PasoListo({
         )}
       </Card>
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
         <BotonConFoco botonRef={otroRef} onClick={onOtro}>
           <FilePlus2 size={16} aria-hidden />
           Registrar otro
@@ -213,7 +213,7 @@ export function PasoListo({
           params={{ id: f.id }}
           className={claseDeBoton('text', 'md')}
         >
-          Ver el financiamiento
+          Ver el pago en cuotas
         </Link>
       </div>
     </div>

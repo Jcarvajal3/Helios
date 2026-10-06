@@ -83,7 +83,7 @@ export function EnlaceDelMenu({
       <Link
         to={item.path}
         title={plegado ? item.label : undefined}
-        className={`relative mb-2 flex h-panel-control-md items-center gap-2.5 rounded-panel-control bg-primary px-2.5 type-panel-control text-on-primary transition-colors duration-(--transition-fast) hover:bg-primary-bright ${
+        className={`relative mb-2 flex h-panel-control-md items-center pointer-coarse:h-11 gap-2.5 rounded-panel-control bg-primary px-2.5 type-panel-control text-on-primary transition-colors duration-(--transition-fast) hover:bg-primary-bright ${
           plegado ? 'lg:justify-center lg:px-0' : ''
         }`}
       >
@@ -104,7 +104,7 @@ export function EnlaceDelMenu({
       // Plegada, el nombre solo existe aquí. Sin esto la barra a 64 px es una
       // columna de iconos que hay que adivinar.
       title={plegado ? item.label : undefined}
-      className={`relative flex h-panel-control-sm items-center gap-2.5 rounded-panel-control px-2.5 type-panel-control transition-colors duration-(--transition-fast) ${
+      className={`relative flex h-panel-control-sm items-center gap-2.5 pointer-coarse:h-11 rounded-panel-control px-2.5 type-panel-control transition-colors duration-(--transition-fast) ${
         plegado ? 'lg:justify-center lg:px-0' : ''
       } ${
         activo

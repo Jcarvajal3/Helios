@@ -307,7 +307,7 @@ function DescartarAbono({ deposit, onClose }: { deposit: UnmatchedDeposit; onClo
       }
       nivel="sensible"
       reasonLabel="Qué es este abono"
-      reasonPlaceholder="Depósito propio para cubrir el cierre del lunes"
+      reasonPlaceholder="Depósito propio para cubrir el pago de hoy a las clínicas"
       confirmLabel="Sacarlo de la lista"
       busy={mutation.isPending}
       error={mutation.isError ? describeError(mutation.error) : undefined}

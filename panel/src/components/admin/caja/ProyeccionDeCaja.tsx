@@ -124,7 +124,7 @@ function TablaDeProyeccion({ d, caja, local }: { d: Proyeccion; caja: number | n
     },
     {
       label: local ? 'A transferir a la clínica' : 'A transferir a clínicas',
-      info: 'Las liquidaciones ya generadas con cierre en esa semana: el neto de la clínica, sin el service fee. Lo atrasado cae en la primera. No incluye lo que todavía no se ha financiado.',
+      info: 'Las liquidaciones ya generadas que toca pagar esa semana (cada una, el día siguiente a su vencimiento): el neto de la clínica, sin el service fee. Lo atrasado cae en la primera. No incluye lo que todavía no se ha financiado.',
     },
     { label: 'Neto', info: 'Lo que se espera cobrar menos lo que hay que transferir esa semana.' },
     ...(caja === null

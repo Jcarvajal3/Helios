@@ -86,7 +86,7 @@ export function PersonalDelLocal({ merchantId }: { merchantId: string }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="max-w-prose type-panel-body text-on-surface-variant">
           Quién puede entrar al panel de esta clínica y qué puede hacer dentro. Cada
-          cuenta es personal: por ella se sabe quién generó cada financiamiento.
+          cuenta es personal: por ella se sabe quién registró cada pago en cuotas.
         </p>
         <Button size="md" onClick={() => setAnadiendo(true)}>
           <UserPlus size={16} />
@@ -98,7 +98,7 @@ export function PersonalDelLocal({ merchantId }: { merchantId: string }) {
         <EmptyState
           icon={<Users size={44} />}
           title="Todavía no hay nadie"
-          description="Sin personal, esta clínica no puede generar financiamientos. Añade al menos una cuenta de secretaria."
+          description="Sin personal, esta clínica no puede registrar pagos en cuotas. Añade al menos una cuenta de secretaria."
         />
       ) : (
         <div className="flex flex-col gap-2">
@@ -655,7 +655,7 @@ function Baja({
       summary={`${quien} deja de poder entrar al panel de esta clínica, con efecto inmediato.`}
       detail={
         <p className="type-panel-body leading-5 text-on-surface-variant">
-          La cuenta no se borra: los financiamientos que generó siguen apuntando a ella, y sin
+          La cuenta no se borra: los pagos en cuotas que registró siguen apuntando a ella, y sin
           eso el historial no sabría quién cobró. Si vuelve, se le da de alta otra
           vez.
         </p>

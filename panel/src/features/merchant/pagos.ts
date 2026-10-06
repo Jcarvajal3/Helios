@@ -4,12 +4,15 @@ import { comoFila, filaONula, filas, numero, numeroONulo, texto, textoONulo } fr
 // Lo que Helios le paga a la clínica, partido en sus dos conceptos
 // (contrato §1.5, plan §6):
 //
-//   Consultas                la mitad de cada financiamiento al vencer cada
-//                            cuota del paciente (`scheduled_installment`)
+//   Consultas                la mitad de cada pago en cuotas, el día
+//                            siguiente al vencimiento de cada cuota del
+//                            paciente (`scheduled_installment`)
 //   Comisiones del personal  la comisión de quien registró cada uno
-//                            (`staff_commission`), en el lunes siguiente
+//                            (`staff_commission`), el día siguiente a la
+//                            confirmación
 //
-// Las dos viajan en la MISMA transferencia de los lunes; la clínica le
+// No hay cierre semanal: Helios paga cada día lo que vence ese día, y las dos
+// viajan en la MISMA transferencia del día; la clínica le
 // entrega las comisiones a su personal. Por eso cada transferencia y cada
 // una de sus líneas se enseñan partidas: si no, la secretaria que pregunta
 // por sus comisiones no las encuentra en ninguna parte.
@@ -75,15 +78,16 @@ export function repartir(
 
 /**
  * Lo que se le debe a la clínica, en lo que ya nació y lo que nacerá
- * (`merchant_settlement_outlook`). El reparto del próximo cierre llega solo
- * si la base lo manda; no se calcula aquí, porque qué entra en un cierre lo
- * decide el calendario de la base, no esta pantalla.
+ * (`merchant_settlement_outlook`). El reparto del próximo pago llega solo
+ * si la base lo manda; no se calcula aquí, porque qué entra en cada pago lo
+ * decide el calendario de la base (`helios_settlement_run_for(d) = d + 1`),
+ * no esta pantalla.
  */
 export type Prevision = {
   todayDate: string
   nextRunDate: string
   nextRunUsd: number
-  /** El reparto del próximo cierre, si la base lo manda. */
+  /** El reparto del próximo pago, si la base lo manda. */
   nextRun: Reparto | null
   accruedUsd: number
   accruedCount: number
@@ -117,7 +121,7 @@ export function leerPrevision(v: unknown): Prevision {
   }
 }
 
-/** Una liquidación: una mitad de un financiamiento, o una comisión. */
+/** Una liquidación: una mitad de un pago en cuotas, o una comisión. */
 export type Liquidacion = {
   id: string
   motivo: MotivoDeLiquidacion | null
@@ -213,7 +217,7 @@ export function leerLineaDeTransferencia(v: unknown): Liquidacion | null {
 
 export type GrupoDeLineas = {
   concepto: Concepto
-  /** El día del financiamiento de las consultas; null en las comisiones. */
+  /** El día de la orden de las consultas; null en las comisiones. */
   businessDate: string | null
   count: number
   amountUsd: number
@@ -221,7 +225,7 @@ export type GrupoDeLineas = {
 
 /**
  * Lo que cubrió una transferencia, para leerlo: las consultas por el día
- * del financiamiento que las originó, y las comisiones juntas en una línea
+ * de la orden que las originó, y las comisiones juntas en una línea
  * (van a repartirse por persona, y eso está en Comisiones).
  */
 export function agruparLineas(lineas: ReadonlyArray<Liquidacion>): GrupoDeLineas[] {

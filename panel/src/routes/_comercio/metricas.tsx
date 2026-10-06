@@ -101,7 +101,7 @@ function MetricasPage() {
       <EmptyState
         icon={<Lock size={48} />}
         title="Esto lo ve el administrador"
-        description="Lo que financia la clínica entera es información del administrador. Tu cuenta registra financiamientos y consulta los suyos."
+        description="Lo que registra la clínica entera es información del administrador. Tu cuenta registra pagos en cuotas y consulta los suyos."
       />
     )
   }
@@ -127,7 +127,7 @@ function MetricasPage() {
         <>
           <StatGrid className="mt-6">
             <Stat
-              label="Financiado"
+              label="Registrado"
               value={formatUsd(overview.data.soldUsd)}
               tone="success"
               hint={
@@ -151,7 +151,7 @@ function MetricasPage() {
               }
             />
             <Stat
-              label="Financiamientos"
+              label="Órdenes"
               value={String(overview.data.chargeCount)}
               hint={
                 <Delta
@@ -164,17 +164,17 @@ function MetricasPage() {
             <Stat
               label="Consulta promedio"
               value={formatUsd(overview.data.avgTicketUsd)}
-              hint="Financiado ÷ financiamientos"
+              hint="Registrado ÷ órdenes"
             />
           </StatGrid>
 
-          {/* Los días con financiamientos no son parte del promedio, que va
-              por financiamiento y no por día: aquí abajo son contexto del
+          {/* Los días con órdenes no son parte del promedio, que va
+              por orden y no por día: aquí abajo son contexto del
               periodo. */}
           {overview.data.activeDays > 0 && (
             <p className="mt-3 type-label-medium text-on-surface-variant">
               {overview.data.activeDays}{' '}
-              {overview.data.activeDays === 1 ? 'día' : 'días'} con financiamientos en el
+              {overview.data.activeDays === 1 ? 'día' : 'días'} con pagos en cuotas en el
               periodo.
               {overview.data.bestDate &&
                 ` El mejor fue el ${formatDay(overview.data.bestDate)}, con ${formatUsd(
@@ -203,8 +203,8 @@ function MetricasPage() {
 
       {!overview.isError && overview.data?.chargeCount === 0 && (
         <EmptyState
-          title="Todavía no hay financiamientos en este periodo"
-          description="En cuanto registres el primero, aquí verás cuánto se financia en tu clínica."
+          title="Todavía no hay pagos en cuotas en este periodo"
+          description="En cuanto registres el primero, aquí verás cuánto se paga en cuotas en tu clínica."
         />
       )}
     </>
@@ -245,13 +245,13 @@ function Delta({
  * CUÁNTOS DE TUS PACIENTES VUELVEN.
  * ══════════════════════════════════════════════════════════════════════════
  *
- * La cifra de arriba —"Financiado"— no distingue entre cien pacientes que
+ * La cifra de arriba —"Registrado"— no distingue entre cien pacientes que
  * vinieron una vez y veinticinco que vinieron cuatro. Para una clínica son
  * dos cosas distintas: los segundos están en tratamiento o en control, y
- * vuelven a financiar con Helios.
+ * vuelven a pagar en cuotas con Helios.
  *
- * **Una visita es un financiamiento de un paciente**, y se cuenta por
- * persona: por eso este bloque no se deriva de los financiamientos de arriba.
+ * **Una visita es un pago en cuotas de un paciente**, y se cuenta por
+ * persona: por eso este bloque no se deriva de las órdenes de arriba.
  *
  * En cubos y no en un promedio: "mis pacientes vienen 1,8 veces" no se puede
  * accionar; "tengo 12 que vinieron 4 veces o más y me dejaron $840" sí.
@@ -300,12 +300,12 @@ function Recurrence({ data }: { data: MerchantRecurrence }) {
         <Stat
           label="Visitas"
           value={String(bucket.visits)}
-          hint="Cada financiamiento suyo cuenta una"
+          hint="Cada pago en cuotas suyo cuenta una"
         />
         <Stat
           label="Te dejaron"
           value={formatUsd(bucket.saleUsd)}
-          hint="Sus consultas, sin el servicio Helios"
+          hint="Sus consultas, sin la comisión de servicio"
         />
       </StatGrid>
     </div>
@@ -313,12 +313,12 @@ function Recurrence({ data }: { data: MerchantRecurrence }) {
 }
 
 /**
- * Lo financiado por día. Una serie y hasta noventa barras, dibujadas por el
+ * Lo registrado por día. Una serie y hasta noventa barras, dibujadas por el
  * kit de `components/charts`: eje, rejilla, la cifra del mejor día escrita
  * encima de su barra y los números en una tabla desplegable.
  *
  * La media va de línea de referencia y se calcula sobre TODOS los días de la
- * ventana, no solo sobre los que hubo financiamientos. Una clínica que
+ * ventana, no solo sobre los que hubo órdenes. Una clínica que
  * atiende tres días por semana tiene una media más baja que la de sus días de
  * consulta, y la que decide si el mes sale son los siete días.
  */
@@ -328,18 +328,18 @@ function DailyChart({ points }: { points: MerchantDayPoint[] }) {
 
   return (
     <BarChart
-      title="Financiado por día"
-      series={[{ key: 'sold', label: 'Financiado' }]}
+      title="Registrado por día"
+      series={[{ key: 'sold', label: 'Registrado' }]}
       points={points.map((p) => ({
         key: p.businessDate,
         label: formatDay(p.businessDate),
         values: [p.soldUsd],
-        note: `${p.chargeCount} ${p.chargeCount === 1 ? 'financiamiento' : 'financiamientos'}`,
+        note: `${p.chargeCount} ${p.chargeCount === 1 ? 'orden' : 'órdenes'}`,
       }))}
       format={formatUsd}
       formatShort={formatUsdShort}
       ejeLabel="Día"
-      unidadLabel="Financiamientos"
+      unidadLabel="Órdenes"
       reference={{ value: media, label: `Media ${formatUsdShort(media)} al día` }}
       summary={
         <>

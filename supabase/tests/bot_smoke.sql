@@ -211,7 +211,7 @@ begin
   select * into v_row from public.outbound_messages
   where recipient_staff_id = v_doc and template_key = 'bot_respuesta' order by created_at desc limit 1;
   if v_row.id is null or v_row.profile_id is not null or v_row.recipient <> '+' || v_tel
-     or v_row.rendered_text not like '✅ José P. aceptó. Financiamiento #% confirmado: consulta de $100.' then
+     or v_row.rendered_text not like '✅ José P. aceptó. Orden #% confirmada: consulta de $100.' then
     raise exception 'El médico debía enterarse de que aceptó: %', to_jsonb(v_row);
   end if;
 

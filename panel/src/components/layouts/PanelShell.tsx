@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { useRouterState } from '@tanstack/react-router'
 
 import { MaintenanceBanner } from '@/components/MaintenanceBanner'
+import { BarraInferior } from '@/components/layouts/BarraInferior'
 import { ToastProvider } from '@/components/Toast'
 import { PageActionProvider, PageTitleProvider } from '@/components/layouts/PageAction'
 import { Sidebar } from '@/components/layouts/Sidebar'
@@ -52,6 +53,7 @@ export function PanelShell({
   search,
   asistente,
   lateral,
+  barraInferior,
   children,
   className = '',
 }: {
@@ -80,6 +82,12 @@ export function PanelShell({
    * 1280 px se pone encima, y por debajo ocupa la pantalla entera.
    */
   lateral?: { abierto: boolean; contenido: ReactNode }
+  /**
+   * Las pantallas de la barra de abajo del teléfono (por debajo de 768 px).
+   * Solo la pasa la clínica: con ella la hamburguesa de arriba sobra en el
+   * teléfono, porque «Menú» abre el mismo cajón desde abajo.
+   */
+  barraInferior?: ReadonlyArray<NavItem>
   children: ReactNode
   /**
    * Del marco entero hacia abajo. Va aquí y no en cada pantalla porque las
@@ -134,7 +142,12 @@ export function PanelShell({
   return (
     <CuentaProvider account={account}>
       <div
-        className={`min-h-dvh ${className}`}
+        // `--hueco-inferior`: lo que tapa la barra de abajo en el teléfono.
+        // Lo leen el contenido, para que lo último no quede debajo, y los
+        // avisos, para salir por encima de ella.
+        className={`min-h-dvh ${
+          barraInferior ? 'max-md:[--hueco-inferior:calc(4rem+env(safe-area-inset-bottom))]' : ''
+        } ${className}`}
         style={
           {
             '--sidebar-actual': plegado
@@ -169,13 +182,14 @@ export function PanelShell({
                   search={search}
                   asistente={asistente}
                   inmersiva={inmersiva}
+                  conBarraInferior={!!barraInferior}
                   onAbrirCajon={() => setCajonAbierto(true)}
                   slotRef={setSlot}
                 />
 
                 <main
                   data-area={tonoDeRuta(pathname)}
-                  className={`flex-1 px-4 py-5 lg:px-8 lg:py-6 ${inmersiva ? 'flex flex-col' : ''}`}
+                  className={`flex-1 px-4 pt-5 pb-[calc(1.25rem+var(--hueco-inferior,0px))] lg:px-8 lg:py-6 ${inmersiva ? 'flex flex-col' : ''}`}
                 >
                   {/* En una pantalla inmersiva el contenido es una columna que
                       ocupa todo el alto: Inicio centra su barra en lo que
@@ -196,6 +210,14 @@ export function PanelShell({
             </PageActionProvider>
           </ToastProvider>
         </div>
+
+        {barraInferior && (
+          <BarraInferior
+            items={barraInferior}
+            menuAbierto={cajonAbierto}
+            onMenu={() => setCajonAbierto(true)}
+          />
+        )}
 
         {/* Por encima de la barra de arriba (z-20) y por debajo del menú en
             cajón (z-40) y de las ventanas (z-50). */}

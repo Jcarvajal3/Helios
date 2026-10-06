@@ -8,7 +8,7 @@ import type { FilaDeVentas } from './ventas'
 export { QUE_LLEVA } from './ventas'
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Descargar el libro de financiamientos de la clínica. Lo que lleva cada
+// Descargar el libro de pagos en cuotas de la clínica. Lo que lleva cada
 // fila, y por qué, está en `ventas.ts`; aquí solo la llamada y el archivo.
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -41,6 +41,6 @@ export async function descargarVentas(params: {
     .toLowerCase()
 
   const filas = await fetchSalesExport(params)
-  descargarCsv(`helios_${clinica}_financiamientos_${rango}`, construirCsv(COLUMNAS_VENTAS, filas))
+  descargarCsv(`helios_${clinica}_pagos-en-cuotas_${rango}`, construirCsv(COLUMNAS_VENTAS, filas))
   return filas.length
 }

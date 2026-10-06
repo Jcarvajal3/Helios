@@ -13,7 +13,7 @@ import { tonoImpago } from '@/features/admin/umbrales'
 //
 // Aquí se decide **cómo se llama cada cifra y qué la compone**, una sola vez.
 // Riesgo de crédito y Dinero leen de `buildMetrics`; Hoy solo toma
-// `payablesTotals` para su semáforo del cierre, y el Resumen de Gerencia toma
+// `payablesTotals` para su semáforo del pago de hoy, y el Resumen de Gerencia toma
 // de `DEFINICIONES` el nombre y la explicación de las cifras que repite.
 // Ninguna vuelve a sumar nada. El cálculo de verdad sigue viviendo en la base
 // (el libro de asientos manda); lo que vive aquí es el nombre, la explicación
@@ -114,14 +114,14 @@ export const DEFINICIONES: Record<MetricKey, { label: string; what: string }> = 
   },
   porPagarLocales: {
     label: 'Por pagar a clínicas',
-    what: 'Lo que Helios les debe a las clínicas (sin los de prueba) por lo que ya se financiaron sus pacientes y todavía no se ha transferido: el financiado (sin fee) menos la comisión de la clínica, partido en atrasado (su cierre ya pasó) y por vencer.',
+    what: 'Lo que Helios les debe a las clínicas (sin los de prueba) por lo que ya se financiaron sus pacientes y todavía no se ha transferido: el financiado (sin fee) menos la comisión de la clínica, partido en atrasado (tocaba pagarlo ayer o antes) y por vencer.',
   },
   capitalLibre: {
     // El rótulo va delante del número, en el pie: «Caja tras pagar a todos los
     // locales −€642,00». «Capital libre» obligaba a saber de antemano qué
     // capital y libre de qué.
     label: 'Caja tras pagar a todas las clínicas',
-    what: 'Dinero en caja menos lo que se les debe a las clínicas y no cubre su garantía, que sale negativo casi siempre porque a las clínicas se les paga por fecha de cierre y la deuda entera nunca vence el mismo día.',
+    what: 'Dinero en caja menos lo que se les debe a las clínicas y no cubre su garantía, que sale negativo casi siempre porque a cada clínica se le paga cada consulta en dos partes, el día siguiente a cada cuota del paciente, y la deuda entera nunca vence el mismo día.',
   },
   comisionDevengada: {
     label: 'Service fee sin IVA',
@@ -154,22 +154,22 @@ export const DEFINICIONES: Record<MetricKey, { label: string; what: string }> = 
 }
 /** Lo que suman todos los locales, que es lo que miran Hoy y Dinero. */
 export type PayablesTotals = {
-  /** Lo que hay que transferir en el próximo cierre, atrasados incluidos. */
+  /** Lo que hay que transferir hoy, atrasados incluidos (se paga a diario). */
   saleEsteCierre: number
-  /** Cierres que ya pasaron y siguen sin transferirse. */
+  /** Pagos de días anteriores que siguen sin transferirse. */
   atrasado: number
-  /** Lo pendiente después del próximo cierre: sobre todo previsión de cuotas por vencer, que todavía no son liquidaciones. */
+  /** Lo pendiente después del pago de hoy: lo que vence hoy (sale mañana) y, sobre todo, la previsión de cuotas por vencer, que todavía no son liquidaciones. */
   comprometidoFuturo: number
   totalPendiente: number
-  /** El lunes del próximo cierre. Igual para todos los locales. */
+  /** El día del próximo pago: hoy. Igual para todos los locales. */
   fechaCierre: string | null
   /** Cuántos locales tienen algo atrasado. */
   localesAtrasados: number
 }
 
 /**
- * Lo que se le deberá a un local después del próximo cierre: todo lo
- * pendiente menos lo que sale en ese cierre, que ya lleva dentro lo atrasado.
+ * Lo que se le deberá a un local después del pago de hoy: todo lo pendiente
+ * menos lo que sale hoy, que ya lleva dentro lo atrasado.
  */
 export function comprometidoFuturoDe(m: Pick<MerchantPayable, 'totalPendingUsd' | 'nextRunUsd'>): number {
   return Math.max(0, m.totalPendingUsd - m.nextRunUsd)
@@ -185,12 +185,12 @@ export function payablesTotals(rows: MerchantPayable[] | undefined): PayablesTot
   const atrasado = list.reduce((s, m) => s + m.overdueUsd, 0)
 
   return {
-    // "Salen el lunes" incluye lo que debió salir en cierres anteriores: el
-    // dinero atrasado no deja de tener que salir por haberse retrasado. Y
+    // "Sale hoy" incluye lo que debió salir en días anteriores: el dinero
+    // atrasado no deja de tener que salir por haberse retrasado. Y
     // `next_run_usd` (`helios_settlement_outlook`) YA lo lleva dentro: cuenta
-    // todo lo devengado con vencimiento anterior al próximo cierre, atrasos
-    // incluidos. Sumarle `overdue_usd` otra vez inflaba el cierre y dejaba
-    // corto lo comprometido a futuro.
+    // todo lo devengado cuyo día de pago es hoy o anterior, atrasos incluidos.
+    // Sumarle `overdue_usd` otra vez inflaba el pago y dejaba corto lo
+    // comprometido a futuro.
     saleEsteCierre: list.reduce((s, m) => s + m.nextRunUsd, 0),
     atrasado,
     comprometidoFuturo: list.reduce((s, m) => s + comprometidoFuturoDe(m), 0),

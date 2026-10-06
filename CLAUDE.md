@@ -1,6 +1,8 @@
 # Helios — reglas para trabajar en este repo
 
-BNPL para consultas médicas en Venezuela, **solo web**. Es un fork de Ronda
+Pagos en cuotas para consultas y tratamientos de salud privada en Venezuela
+(medicina, odontología y cosmetología), **solo web**, operado por **Quarto
+Latam, C.A.** Es un fork de Ronda
 (`C:\Users\Javie\Documents\Work\Ronda`): el panel sale de `Ronda-panel/` y la
 base de `Ronda-app/supabase/`. Ante cualquier duda de comportamiento, mira
 primero cómo lo resuelve Ronda y reutilízalo.
@@ -18,6 +20,20 @@ scripts/    portar-de-ronda.mjs (transforma SQL de Ronda al vocabulario de Helio
 docs/       plan, contrato, reglas
 ```
 
+## El negocio, en cifras (2026-10-06)
+
+- Paciente: **2 cuotas a los 7 y 14 días**, sin inicial. **Comisión de
+  servicio del 12% + IVA 16%** sobre la comisión (`consumer_fee_pct`,
+  `vat_pct`): consulta de $100 → $12 + $1,92 → 2 cuotas de $56,96.
+  **Límite inicial de $150** (nivel 1; los demás niveles están apagados, así
+  que hacia fuera nunca se dice que el límite «crece»).
+- Médico o centro: recibe el **100%** de la consulta en dos mitades, **a los
+  8 y 15 días** (cada mitad, el día siguiente al vencimiento de su cuota:
+  `helios_settlement_run_for(d) = d + 1`; se paga a diario, ya no los
+  lunes), **pague o no el paciente**. No le cuesta nada y no hay permanencia
+  (cancela con aviso previo).
+- Especialidades: medicina, odontología y cosmetología.
+
 ## Reglas no negociables (heredadas de Ronda)
 
 - **Dinero**: `numeric(18,4)` en USD (los sufijos `_usd` son literales). VES
@@ -27,11 +43,11 @@ docs/       plan, contrato, reglas
   **medianoche** (`helios_business_date`), no a las 10 AM como en Ronda.
 - **Libro contable**: partida doble, append-only, `idempotency_key` en toda
   mutación de dinero. La única función que crea deuda es `helios_assign_debt`.
-- **A la clínica, ningún total incluye el fee de Helios.** El fee (% +
-  IVA, parámetro `consumer_fee_pct`) aparece solo dentro de las cuotas o como
-  línea aparte en un desglose. La clínica ve solo montos sin fee. **Al
-  paciente sí** se le enseña el total con el fee (decisión de Javier,
-  2026-10-06: es lo que paga).
+- **A la clínica, ningún total incluye la comisión de servicio.** La
+  comisión (12% + IVA, parámetro `consumer_fee_pct`) aparece solo dentro de
+  las cuotas o como línea aparte en un desglose. La clínica ve solo montos
+  sin comisión. **Al paciente sí** se le enseña el total con la comisión
+  (decisión de Javier, 2026-10-06: es lo que paga).
 - Los montos en los mensajes (WhatsApp, correo) van al estilo venezolano:
   `helios_money_text` → «$100», «$1,92», «$1.250,50».
 - **Seguridad en la base, no en el router**: RLS + RPC `security definer` con
@@ -48,8 +64,16 @@ docs/       plan, contrato, reglas
   `charges`, `installments`, `settlements`, `merchant_users`…). Solo el prefijo
   de marca cambia: `ronda_` → `helios_`. Así los arreglos de Ronda se portan
   con `scripts/portar-de-ronda.mjs`.
-- La interfaz habla en vocabulario médico: clínica, sede, paciente,
-  financiamiento, secretaria (rol `cajero`), administrador (rol `gerente`).
+- La interfaz habla en vocabulario médico: médico, centro o clínica, sede,
+  paciente, **pago en cuotas** (u «orden» con su número), **comisión de
+  servicio**, secretaria (rol `cajero`), administrador (rol `gerente`).
+- **Prohibido en todo lo externo** (portada, panel de la clínica, bot,
+  WhatsApp, correos, errores que ve una clínica): «préstamo»,
+  «financiamiento», «financiar», «crédito», «fee». Tampoco se publica la tasa
+  del euro, que no se verifica la identidad del paciente, quién firma los
+  contratos ni detalles internos del equipo. El superadmin (interno) y los
+  identificadores de la base (`charges`, `comprobante_financiamiento`, rutas
+  como `/financiamientos`) conservan sus nombres.
 - Código, comentarios, migraciones y textos: **en español**, como en Ronda.
   Migraciones con nombre descriptivo: `YYYYMMDDHHMMSS_el_paciente_no_tiene_cuenta.sql`.
 

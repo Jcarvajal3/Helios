@@ -43,7 +43,7 @@ export function DescargarVentas({
       setAbierto(false)
       avisar(
         filas === 0
-          ? 'No hay financiamientos en ese rango: el archivo va vacío'
+          ? 'No hay pagos en cuotas en ese rango: el archivo va vacío'
           : `${filas} ${filas === 1 ? 'fila descargada' : 'filas descargadas'}`,
       )
     },
@@ -61,7 +61,7 @@ export function DescargarVentas({
       {abierto && (
         <ConfirmDialog
           title="Descargar para contabilidad"
-          summary="Un archivo CSV que se abre en Excel con doble clic. Lleva el desglose completo de cada financiamiento: base, IVA, comisiones y cuándo te pagamos."
+          summary="Un archivo CSV que se abre en Excel con doble clic. Lleva el desglose completo de cada pago en cuotas: base, IVA, comisiones y cuándo te pagamos."
           detail={
             <div className="flex flex-col gap-4">
               <p className="type-panel-body leading-5 text-on-surface-variant">{QUE_LLEVA}</p>

@@ -339,7 +339,7 @@ export function PasoDatos({
         </div>
       </Card>
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
         <BotonConFoco type="submit">
           Continuar al monto
           <Tecla enBoton>Enter</Tecla>

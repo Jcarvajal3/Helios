@@ -1,5 +1,5 @@
 /**
- * Pruebas de los lectores y las reglas del alta (Nuevo financiamiento).
+ * Pruebas de los lectores y las reglas del alta (Nuevo pago en cuotas).
  *
  *   npx tsx src/features/merchant/registro.test.ts
  */
@@ -52,8 +52,8 @@ const usd = (n: number) => `$${n.toFixed(2).replace('.', ',')}`
 
 console.log('── elegibilidad ──────────────────────────────────────────────')
 igual(
-  leerElegibilidad({ estado: 'nuevo', min_charge_usd: 10, limite_usd: 350 }),
-  { estado: 'nuevo', minChargeUsd: 10, limiteUsd: 350 },
+  leerElegibilidad({ estado: 'nuevo', min_charge_usd: 10, limite_usd: 150 }),
+  { estado: 'nuevo', minChargeUsd: 10, limiteUsd: 150 },
   'paciente nuevo',
 )
 igual(
@@ -76,8 +76,8 @@ igual(
   'paciente conocido: numeric como texto se lee',
 )
 igual(
-  leerElegibilidad({ estado: 'no_disponible', mensaje: 'No podemos financiar…', whatsapp_helios: null }),
-  { estado: 'no_disponible', mensaje: 'No podemos financiar…', whatsappHelios: null },
+  leerElegibilidad({ estado: 'no_disponible', mensaje: 'Esta persona no puede pagar en cuotas…', whatsapp_helios: null }),
+  { estado: 'no_disponible', mensaje: 'Esta persona no puede pagar en cuotas…', whatsappHelios: null },
   'no disponible sin WhatsApp configurado',
 )
 const noDisp = leerElegibilidad({ estado: 'no_disponible', motivo: 'mora', deuda_usd: 50 })
@@ -86,13 +86,22 @@ comprueba(
   'no disponible: aunque la base mandara un motivo, no pasa al panel',
 )
 igual(
-  leerElegibilidad({ estado: 'nuevo', limite_usd: 350 }),
-  { estado: 'nuevo', minChargeUsd: 10, limiteUsd: 350 },
+  leerElegibilidad({ estado: 'nuevo', limite_usd: 150 }),
+  { estado: 'nuevo', minChargeUsd: 10, limiteUsd: 150 },
   'sin mínimo, el del contrato',
 )
 lanza(() => leerElegibilidad({ estado: 'raro' }), 'un estado desconocido es un fallo del contrato')
 lanza(() => leerElegibilidad(null), 'una respuesta vacía también')
-igual(maximoParaFinanciar({ estado: 'nuevo', minChargeUsd: 10, limiteUsd: 350 }), 350, 'nuevo: el límite')
+igual(maximoParaFinanciar({ estado: 'nuevo', minChargeUsd: 10, limiteUsd: 150 }), 150, 'nuevo: el límite')
+igual(
+  leerElegibilidad({ estado: 'no_disponible' }),
+  {
+    estado: 'no_disponible',
+    mensaje: 'Esta persona no puede pagar en cuotas con Helios. Si tiene dudas, puede escribir a Helios.',
+    whatsappHelios: null,
+  },
+  'sin texto de la base, el neutro del panel',
+)
 igual(
   maximoParaFinanciar({ estado: 'no_disponible', mensaje: '', whatsappHelios: null }),
   null,
@@ -107,7 +116,7 @@ igual(leerMontoDeConsulta('$ 45.50', lim, usd), { ok: true, usd: 45.5 }, 'con s�
 igual(leerMontoDeConsulta('212,40', lim, usd), { ok: true, usd: 212.4 }, 'justo lo disponible')
 igual(
   leerMontoDeConsulta('212,41', lim, usd),
-  { ok: false, problema: 'El monto supera lo disponible para financiar ($212,40).' },
+  { ok: false, problema: 'El monto supera lo disponible ($212,40).' },
   'un céntimo de más',
 )
 igual(leerMontoDeConsulta('9,99', lim, usd), { ok: false, problema: 'El monto mínimo es $10,00.' }, 'bajo el mínimo')
@@ -124,13 +133,13 @@ igual(leerMontoDeConsulta('0,1', { minimo: 0, maximo: null }, usd), { ok: true, 
 console.log('\n── vista previa ──────────────────────────────────────────────')
 const vp = leerVistaPrevia({
   base_usd: 100,
-  consumer_fee_pct: 20,
-  consumer_fee_usd: 20,
-  consumer_fee_vat_usd: '3.20',
+  consumer_fee_pct: 12,
+  consumer_fee_usd: 12,
+  consumer_fee_vat_usd: '1.92',
   business_date: '2026-10-01',
   installments: [
-    { sequence: 2, due_date: '2026-10-15', amount_usd: 61.6, financed_usd: 50 },
-    { sequence: 1, due_date: '2026-10-08', amount_usd: 61.6, financed_usd: 50 },
+    { sequence: 2, due_date: '2026-10-15', amount_usd: 56.96, financed_usd: 50 },
+    { sequence: 1, due_date: '2026-10-08', amount_usd: 56.96, financed_usd: 50 },
   ],
   late_fee_usd: 2,
   late_fee_grace_days: 3,
@@ -138,13 +147,14 @@ const vp = leerVistaPrevia({
   disponible_usd: null,
 })
 igual(vp.cuotas.map((c) => c.sequence), [1, 2], 'las cuotas salen en orden')
-igual(vp.feeVatUsd, 3.2, 'el IVA del servicio')
+igual(vp.feeVatUsd, 1.92, 'el IVA de la comisión de servicio')
+igual(leerVistaPrevia({}).feePct, 12, 'sin porcentaje de la base, el 12 % de la regla')
 igual(vp.disponibleUsd, null, 'nuevo: sin disponible')
 comprueba(vp.cabe, 'cabe')
 comprueba(!leerVistaPrevia({ cabe: false }).cabe, 'no cabe')
 comprueba(leerVistaPrevia({}).cabe, 'sin el dato, se asume que cabe (la base vuelve a validar)')
-igual(rotuloDelServicio(20), 'Servicio Helios 20% + IVA', 'el rótulo del servicio')
-igual(rotuloDelServicio(12.5), 'Servicio Helios 12,5% + IVA', 'con decimales')
+igual(rotuloDelServicio(12), 'Comisión de servicio 12% + IVA', 'el rótulo de la comisión de servicio')
+igual(rotuloDelServicio(12.5), 'Comisión de servicio 12,5% + IVA', 'con decimales')
 igual(
   reglaDelAtraso(vp, usd),
   'Si una cuota se paga con más de 3 días de atraso, se suma un cargo de $2,00 a esa cuota.',
@@ -154,7 +164,7 @@ igual(reglaDelAtraso({ lateFeeUsd: null, lateFeeGraceDays: 3 }, usd), null, 'sin
 igual(diaDeLaSemana('2026-10-08'), 'jueves', 'el 8 de octubre de 2026 es jueves')
 igual(diaDeLaSemana('2026-10-05'), 'lunes', 'el 5 de octubre de 2026 es lunes')
 
-console.log('\n── financiamiento creado ─────────────────────────────────────')
+console.log('\n── pago en cuotas creado ─────────────────────────────────────')
 const creado = leerFinanciamiento({
   id: 'c1',
   order_number: 1042,
@@ -166,10 +176,10 @@ const creado = leerFinanciamiento({
   beneficiary_name: null,
   patient: { nombre: 'José Pérez', documento_enmascarado: 'V-****5678', email_enmascarado: 'j***@gmail.com' },
   installments: [
-    { sequence: 1, due_date: '2026-10-08', amount_usd: 61.6 },
-    { sequence: 2, due_date: '2026-10-15', amount_usd: 61.6 },
+    { sequence: 1, due_date: '2026-10-08', amount_usd: 56.96 },
+    { sequence: 2, due_date: '2026-10-15', amount_usd: 56.96 },
   ],
-  breakdown: { base_usd: 100, consumer_fee_usd: 20, consumer_fee_vat_usd: 3.2 },
+  breakdown: { base_usd: 100, consumer_fee_usd: 12, consumer_fee_vat_usd: 1.92 },
   receipt: { status: 'pendiente' },
   registered_by: 'Ana (Secretaria)',
   staff_commission_usd: 0.5,
@@ -179,9 +189,9 @@ igual(creado.patientName, 'José Pérez', 'nombre del paciente')
 igual(creado.receipt, 'pendiente', 'estado del comprobante')
 igual(creado.cuotas.length, 2, 'dos cuotas')
 igual(creado.staffCommissionUsd, 0.5, 'la comisión')
-igual(creado.feePct, 20, 'el porcentaje sale de las cifras')
-igual(porcentajeDelServicio(0, 5), 20, 'sin base, el del contrato')
-lanza(() => leerFinanciamiento({ order_number: 1 }), 'sin id no hay financiamiento que enseñar')
+igual(creado.feePct, 12, 'el porcentaje sale de las cifras')
+igual(porcentajeDelServicio(0, 5), 12, 'sin base, el de la regla (12 %)')
+lanza(() => leerFinanciamiento({ order_number: 1 }), 'sin id no hay orden que enseñar')
 igual(leerEstadoDelComprobante('rebotado'), 'rebotado', 'estado conocido')
 igual(leerEstadoDelComprobante('perdido'), null, 'estado desconocido es null')
 
@@ -208,12 +218,14 @@ lanza(() => leerReenvio({ ok: false }), 'reenvío con ok=false')
 
 console.log('\n── a qué paso lleva cada error ───────────────────────────────')
 igual(pasoDelError('El monto mínimo es $10', true), 'monto', 'monto mínimo')
-igual(pasoDelError('El monto supera lo disponible para financiar ($50)', false), 'monto', 'cupo')
+igual(pasoDelError('El monto supera lo disponible para financiar ($50)', false), 'monto', 'cupo (redacción de antes)')
+igual(pasoDelError('El monto supera lo disponible ($50)', false), 'monto', 'cupo')
 igual(pasoDelError('Teléfono móvil inválido', true), 'datos', 'teléfono de un nuevo')
 igual(pasoDelError('Correo inválido', false), null, 'correo de un conocido: no hay datos que corregir')
 igual(pasoDelError('Falta el contacto de referencia', true), 'datos', 'referencia')
 igual(pasoDelError('El titular debe ser mayor de edad. Si el paciente es menor…', true), 'datos', 'menor')
-igual(pasoDelError('No podemos financiar a esta persona. Puede escribir…', true), 'cedula', 'no disponible')
+igual(pasoDelError('No podemos financiar a esta persona. Puede escribir…', true), 'cedula', 'no disponible (redacción de antes)')
+igual(pasoDelError('Esta persona no puede pagar en cuotas con Helios.', true), 'cedula', 'no disponible')
 igual(pasoDelError('La clínica está pausada', true), null, 'clínica pausada: nada que corregir')
 igual(pasoDelError(undefined, true), null, 'sin mensaje')
 
@@ -271,7 +283,7 @@ const pendiente = leerFinanciamiento({
   channel: 'whatsapp',
   expires_at: '2026-10-05T16:40:00-04:00',
   merchant_sale_usd: 100,
-  breakdown: { base_usd: 100, consumer_fee_pct: 20, consumer_fee_usd: 20, consumer_fee_vat_usd: 3.2 },
+  breakdown: { base_usd: 100, consumer_fee_pct: 12, consumer_fee_usd: 12, consumer_fee_vat_usd: 1.92 },
   receipt: { status: 'sin_enviar', email_enmascarado: 'j***@gmail.com' },
   confirmation: {
     status: 'entregada',
@@ -281,8 +293,8 @@ const pendiente = leerFinanciamiento({
     resends_today: 1,
   },
   installments: [
-    { sequence: 1, due_date: '2026-10-12', amount_usd: 61.6 },
-    { sequence: 2, due_date: '2026-10-19', amount_usd: 61.6 },
+    { sequence: 1, due_date: '2026-10-12', amount_usd: 56.96 },
+    { sequence: 2, due_date: '2026-10-19', amount_usd: 56.96 },
   ],
 })
 comprueba(
@@ -324,11 +336,11 @@ const rechazado = leerFinanciamiento({
   status: 'declined',
   merchant_sale_usd: 10,
   decline_reason: 'no_disponible',
-  decline_message: 'No podemos financiar a esta persona.',
+  decline_message: 'Esta persona no puede pagar en cuotas con Helios.',
 })
 comprueba(
   rechazado.declineReason === 'no_disponible' &&
-    rechazado.declineMessage === 'No podemos financiar a esta persona.',
+    rechazado.declineMessage === 'Esta persona no puede pagar en cuotas con Helios.',
   'lee el motivo y el texto del rechazo',
 )
 comprueba(

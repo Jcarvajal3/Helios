@@ -15,9 +15,9 @@ import { describeError } from '@/lib/supabase'
 type PagosSearch = {
   /** `pagos` es el histórico de transferencias; sin valor, lo que se debe. */
   vista?: 'pagos'
-  /** Un cierre concreto (su lunes); sin él, lo que se debe hoy. */
+  /** Un día de pago concreto (el «cierre» de la base); sin él, lo que se debe hoy. */
   cierre?: string
-  /** Lo que se debe hoy, acotado a los locales con atraso o que cobran este lunes. */
+  /** Lo que se debe hoy, acotado a los locales con atraso o que cobran hoy. */
   solo?: SoloLocales
   local?: string
   desde?: string
@@ -48,8 +48,10 @@ export const Route = createFileRoute('/admin/pagos-clinicas')({
  *
  * Dos preguntas, dos pestañas, y cada fila abre una página propia.
  *
- *   POR PAGAR      ¿a quién le debo y cuánto? Es la tarea del lunes. Trae el
- *                  selector de cierre, para mirar cualquier semana de caja.
+ *   POR PAGAR      ¿a quién le debo y cuánto? Es la tarea de cada día: desde
+ *                  el 2026-10-06 cada liquidación se paga el día siguiente a
+ *                  su vencimiento. Trae el selector de días de pago, para
+ *                  mirar cualquier día que ya pasó.
  *   TRANSFERENCIAS ¿qué se les ha pagado a los locales? El histórico
  *                  completo, filtrable por local, fechas y medio.
  */
@@ -101,13 +103,13 @@ function PorPagar({
 
   const elegido = (runs.data ?? []).find((r) => r.runDate === cierre)
 
-  // Un desplegable y no una tira de pestañas: la lista crece un lunes por
-  // semana y para siempre.
+  // Un desplegable y no una tira de pestañas: la lista crece un día de pago
+  // cada día y para siempre. Viene del más nuevo al más viejo.
   const opciones = [
     { value: '', label: 'Lo que se debe hoy' },
     ...(runs.data ?? []).map((r) => ({
       value: r.runDate,
-      label: `Cierre del ${formatDay(r.runDate)} · ${estadoDelCierre(r)}`,
+      label: `Pago del ${formatDay(r.runDate)} · ${estadoDelCierre(r)}`,
     })),
   ]
 
@@ -116,7 +118,7 @@ function PorPagar({
       <FilterBar>
         <Select
           id="cierre-de-caja"
-          label="Cierre de caja"
+          label="Día de pago"
           value={cierre ?? ''}
           options={opciones}
           onChange={(value) => onCambiar({ cierre: value || undefined, solo: undefined })}
@@ -135,7 +137,7 @@ function PorPagar({
 
       {runs.isError && (
         <div className="mb-6">
-          <ErrorBox title="No se pudo cargar la lista de cierres" detail={describeError(runs.error)} />
+          <ErrorBox title="No se pudo cargar la lista de días de pago" detail={describeError(runs.error)} />
         </div>
       )}
 

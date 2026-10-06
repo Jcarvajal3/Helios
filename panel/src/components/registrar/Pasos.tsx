@@ -23,17 +23,17 @@ export function Pasos({ actual, sinDatos }: { actual: PasoDelAlta; sinDatos: boo
   const indice = PASOS.findIndex((p) => p.paso === actual)
 
   return (
-    <ol aria-label="Pasos del alta" className="mb-6 flex flex-wrap items-center gap-x-2 gap-y-2">
+    <ol aria-label="Pasos del alta" className="mb-5 flex flex-wrap items-center gap-x-2 gap-y-2 sm:mb-6">
       {PASOS.map((p, i) => {
         const hecho = i < indice
         const esActual = i === indice
         const saltado = p.paso === 'datos' && sinDatos
         return (
           <li key={p.paso} className="flex items-center gap-2">
-            {i > 0 && <span aria-hidden className="h-px w-5 bg-panel-hairline-strong" />}
+            {i > 0 && <span aria-hidden className="h-px w-3 bg-panel-hairline-strong sm:w-5" />}
             <span
               aria-current={esActual ? 'step' : undefined}
-              className={`inline-flex h-8 items-center gap-2 rounded-full px-3 type-panel-label ${
+              className={`inline-flex h-8 items-center gap-2 rounded-full px-3 type-panel-label ${esActual ? '' : 'max-sm:px-1.5'} ${
                 esActual
                   ? 'bg-panel-control font-semibold text-on-surface'
                   : 'text-panel-muted'
@@ -51,7 +51,11 @@ export function Pasos({ actual, sinDatos }: { actual: PasoDelAlta; sinDatos: boo
               >
                 {hecho ? <Check size={12} strokeWidth={3} /> : i + 1}
               </span>
-              {p.label}
+              {/* En el teléfono solo el paso actual dice su nombre: los
+                  cuatro rótulos partían la fila en dos y empujaban el
+                  formulario media pantalla abajo. Los demás quedan para el
+                  lector de pantalla. */}
+              <span className={esActual ? undefined : 'max-sm:sr-only'}>{p.label}</span>
               {saltado && <span className="sr-only"> (no hace falta: paciente conocido)</span>}
               {hecho && !saltado && <span className="sr-only"> (hecho)</span>}
             </span>

@@ -56,12 +56,14 @@ clínica (`gerente` o `cajero`).
   descuenta también las **órdenes pendientes vigentes** del paciente
   (`helios_credit_reserved_usd`, §5.1 del plan). `no_disponible` trae siempre
   exactamente esas tres claves y el mismo texto, sea cual sea el motivo. Sin
-  WhatsApp configurado: "No podemos financiar a esta persona. Si tiene dudas,
-  puede escribir a Helios." y `whatsapp_helios` null.
+  WhatsApp configurado: "Esta persona no puede pagar en cuotas con Helios. Si
+  tiene dudas, puede escribir a Helios." (hasta el 2026-10-05, "No podemos
+  financiar a esta persona…") y `whatsapp_helios` null. El error de cupo de
+  `create_patient_charge` es exactamente "El monto supera lo disponible ($X)."
 
 ```jsonc
 // Paciente nuevo
-{ "estado": "nuevo", "min_charge_usd": 10, "limite_usd": 350 }
+{ "estado": "nuevo", "min_charge_usd": 10, "limite_usd": 150 }
 
 // Paciente conocido, puede financiar
 { "estado": "disponible",
@@ -111,8 +113,9 @@ y, si el paciente existe, que quepa en su disponible.
 }
 ```
 
-Regla de presentación: la clínica muestra `base_usd` y las dos cuotas. El fee
-va solo como línea del desglose ("Servicio Helios 20% + IVA").
+Regla de presentación: la clínica muestra `base_usd` y las dos cuotas. La
+comisión de servicio va solo como línea del desglose ("Comisión de servicio
+12% + IVA", leyendo `consumer_fee_pct`).
 
 ### 1.3 `create_patient_charge(...) → jsonb`
 
@@ -299,7 +302,8 @@ Implementado en 20261003000500 y 000600.
 - `merchant_charge_detail(p_charge_id uuid)`: añade `concept`,
   `beneficiary_name`, `receipt` (`{status, sent_at, last_event, email_enmascarado}`),
   `staff_commission_usd`, `commission_staff_name` e `installments`
-  (`[{sequence, due_date, run_date, paid_to_merchant_on}]`: **no** incluye el
+  (`[{sequence, due_date, run_date, paid_to_merchant_on}]`; **(2026-10-06)**
+  `run_date` = `due_date` + 1, los días 8 y 15 de la consulta: **no** incluye el
   estado de pago ni el monto de las cuotas del paciente). `payouts` añade
   `kind` = `staff_commission` (su monto lo ve también la secretaria).
 - `merchant_settlement_outlook()` añade `next_run_consultas_usd`,
@@ -330,7 +334,7 @@ Implementado en 20261003000500 y 000600.
 | charge_count | int | financiamientos confirmados en el rango |
 | amount_usd | numeric | devengado |
 | paid_usd | numeric | ya incluido en una transferencia a la clínica |
-| pending_usd | numeric | por pagar en el próximo lunes |
+| pending_usd | numeric | por pagar (se paga el día siguiente a su devengo; hasta el 2026-10-05, el lunes siguiente) |
 
 El `gerente` ve todas; el `cajero`, solo su fila.
 

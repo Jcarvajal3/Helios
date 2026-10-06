@@ -2,30 +2,53 @@ import { Link } from '@tanstack/react-router'
 
 import type { CSSProperties, ReactNode } from 'react'
 import { HeliosLogo } from '@/components/HeliosLogo'
-import { RESPONSABLE } from '@/config/legal'
+import { enlaceAfiliacion, operador } from '@/config/legal'
 
 /**
  * LA PORTADA — todo lo que se lee en `/`.
  * ══════════════════════════════════════════════════════════════════════════
  *
- * Versión corta de la portada de Ronda (`Ronda-panel/src/components/portada`):
- * el mismo orden —qué es, cómo se usa, las reglas enteras, preguntas— sin la
- * app, porque Helios no la tiene. Le habla al PACIENTE; la clínica tiene una
- * tarjeta abajo, como el local en Ronda.
+ * Versión corta de la portada de Ronda (`Ronda-panel/src/components/portada`)
+ * con la información del negocio que publicó Javier el 2026-10-06. Le habla a
+ * dos públicos, cada uno con su sección:
  *
- * Las cifras salen de las reglas confirmadas (docs/00 §1 y §1.1). Si una
- * cambia, esta página miente y hay que venir a arreglarla:
+ *   · para todos: qué es Helios, qué cubre y los tres pasos;
+ *   · médicos y centros: pago garantizado, a los 8 y 15 días, sin costo,
+ *     registro simple, sin permanencia, «Quiero afiliarme»;
+ *   · pacientes: dos cuotas a los 7 y 14 días, comisión del 12% explicada,
+ *     límite inicial de $150 y un ejemplo con números.
  *
- *   · 0% inicial, 2 cuotas a +7 y +14 días
- *   · Servicio 20% + IVA 16% sobre el servicio, solo al paciente
- *   · Disponible del nivel 1: $350; se libera al pagar las dos cuotas
- *   · $2 por cuota vencida tras 3 días de gracia; congelado desde el día 1
- *   · La clínica cobra el 100%, en dos mitades, los lunes
+ * Las cifras salen de las reglas vigentes (docs/00 §1 y §1.1). Si una cambia,
+ * esta página miente y hay que venir a arreglarla:
  *
- * Y la regla de Helios que aquí también vale: **ningún total incluye el
- * servicio.** El ejemplo enseña las cuotas y el servicio como línea aparte,
- * nunca "total a pagar".
+ *   · 0 al registrar, 2 cuotas a +7 y +14 días
+ *   · Comisión de servicio 12% + IVA 16% sobre la comisión, la paga el paciente
+ *   · Límite inicial $150 (no decir que «crece»: no hay reglas para subirlo)
+ *   · $2 por cuota vencida tras 3 días de gracia
+ *   · La clínica cobra el 100%, en dos mitades, a los 8 y 15 días
+ *
+ * Lo que NO se dice aquí (decisión de 2026-10-06): «préstamo» ni
+ * «financiamiento» (se dice «pago en cuotas» y «comisión de servicio»), la
+ * tasa del euro, cómo se verifica o no al paciente, quién firma los contratos
+ * ni nada interno del equipo.
  */
+
+// ── El ejemplo ────────────────────────────────────────────────────────────
+
+const CONSULTA = 100
+const COMISION_PCT = 12
+const IVA_PCT = 16
+
+/** Al céntimo, al estilo venezolano: 113.92 → «$113,92». */
+function dolares(n: number): string {
+  const [entero, centimos] = (Math.round(n * 100) / 100).toFixed(2).split('.')
+  return `$${entero.replace(/\B(?=(\d{3})+(?!\d))/g, '.')},${centimos}`
+}
+
+const comision = Math.round(CONSULTA * COMISION_PCT) / 100
+const iva = Math.round(comision * IVA_PCT) / 100
+const total = CONSULTA + comision + iva
+const cuota = Math.round((total / 2) * 100) / 100
 
 // ── Piezas ────────────────────────────────────────────────────────────────
 
@@ -85,11 +108,13 @@ function Boton({
   children,
   to,
   href,
+  externo = false,
   tono = 'lleno',
 }: {
   children: ReactNode
   to?: string
   href?: string
+  externo?: boolean
   tono?: 'lleno' | 'contorno'
 }) {
   const tonos = {
@@ -104,9 +129,27 @@ function Boton({
       {children}
     </Link>
   ) : (
-    <a href={href} className={forma}>
+    <a
+      href={href}
+      className={forma}
+      {...(externo ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+    >
       {children}
     </a>
+  )
+}
+
+/** «Quiero afiliarme»: al WhatsApp de Helios, o a soporte si aún no hay número. */
+function BotonAfiliarme({ tono = 'lleno' }: { tono?: 'lleno' | 'contorno' }) {
+  const { href, externo } = enlaceAfiliacion()
+  return externo ? (
+    <Boton href={href} externo tono={tono}>
+      Quiero afiliarme
+    </Boton>
+  ) : (
+    <Boton to={href} tono={tono}>
+      Quiero afiliarme
+    </Boton>
   )
 }
 
@@ -128,13 +171,38 @@ function Entra({
   )
 }
 
+/** Una cuadrícula de tarjetas de texto, con las líneas finas entre ellas. */
+function Rejilla({
+  items,
+  columnas = 'sm:grid-cols-2 lg:grid-cols-3',
+}: {
+  items: ReadonlyArray<{ titulo: string; texto: string }>
+  columnas?: string
+}) {
+  return (
+    <div
+      className={`grid gap-px overflow-hidden rounded-[var(--radius-portada-card)] border border-outline-variant bg-outline-variant ${columnas}`}
+    >
+      {items.map((item) => (
+        <div key={item.titulo} className="bg-shell-canvas p-6 sm:p-7">
+          <h3 className="type-portada-title text-on-surface">{item.titulo}</h3>
+          <p className="type-portada-body mt-3 text-on-surface-variant">
+            {item.texto}
+          </p>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 // ══════════════════════════════════════════════════════════════════════════
 // 1 · El menú
 // ══════════════════════════════════════════════════════════════════════════
 
 const MENU = [
   { href: '#como-funciona', texto: 'Cómo funciona' },
-  { href: '#reglas', texto: 'Las reglas' },
+  { href: '#medicos', texto: 'Médicos y centros' },
+  { href: '#pacientes', texto: 'Pacientes' },
   { href: '#preguntas', texto: 'Preguntas' },
 ]
 
@@ -150,7 +218,7 @@ export function Menu() {
           <HeliosLogo height={26} />
         </a>
 
-        <ul className="hidden items-center gap-8 md:flex">
+        <ul className="hidden items-center gap-8 lg:flex">
           {MENU.map((item) => (
             <li key={item.href}>
               <a
@@ -163,7 +231,7 @@ export function Menu() {
           ))}
         </ul>
 
-        {/* "Entrar" es del personal de la clínica: el panel no tiene otra puerta. */}
+        {/* "Entrar" es de los médicos y del personal de los centros. */}
         <Link
           to="/login"
           className="inline-flex h-10 shrink-0 items-center rounded-[var(--radius-portada-control)] bg-primary px-5 type-portada-body font-semibold text-on-primary transition-colors duration-[var(--transition-fast)] hover:bg-primary-dim"
@@ -176,14 +244,15 @@ export function Menu() {
 }
 
 // ══════════════════════════════════════════════════════════════════════════
-// 2 · La primera pantalla
+// 2 · La primera pantalla: qué es
 // ══════════════════════════════════════════════════════════════════════════
 
-/** El ejemplo del plan (docs/00 §1.1): una consulta de $100. */
-const EJEMPLO = [
-  { concepto: 'Hoy, en la clínica', monto: '$0,00' },
-  { concepto: 'Cuota 1 · a los 7 días', monto: '$61,60' },
-  { concepto: 'Cuota 2 · a los 14 días', monto: '$61,60' },
+const ESPECIALIDADES = ['Medicina', 'Odontología', 'Cosmetología']
+
+const RESUMEN_EJEMPLO = [
+  { concepto: 'Hoy, en la consulta', monto: dolares(0) },
+  { concepto: 'Cuota 1 · a los 7 días', monto: dolares(cuota) },
+  { concepto: 'Cuota 2 · a los 14 días', monto: dolares(cuota) },
 ]
 
 export function Heroe() {
@@ -197,30 +266,44 @@ export function Heroe() {
       <Seccion className="relative grid items-center gap-12 pt-14 lg:grid-cols-[1.15fr_0.85fr] lg:gap-16 lg:pt-20">
         <div>
           <Entra>
-            <Rotulo>Para tus consultas médicas</Rotulo>
+            <Rotulo>Salud privada en cuotas</Rotulo>
           </Entra>
 
           <Entra retraso={80}>
             <h1 className="type-portada-display mt-6 text-balance text-on-surface">
               <span className="block">Tu consulta hoy.</span>
-              <span className="block text-primary">Págala en dos semanas.</span>
+              <span className="block text-primary">Págala en dos cuotas.</span>
             </h1>
           </Entra>
 
           <Entra retraso={160}>
             <p className="type-portada-lead mt-6 max-w-[52ch] text-on-surface-variant">
-              En las clínicas afiliadas pides pagar con Helios en recepción y la
-              consulta se divide en dos cuotas: una a los 7 días y otra a los
-              14. Hoy no pagas nada, y no hay app que descargar.
+              Helios es una forma de pagar consultas y tratamientos de salud
+              privada en cuotas. Hoy no pagas nada: pagas en dos cuotas, a los
+              7 y a los 14 días.
             </p>
+          </Entra>
+
+          <Entra retraso={200}>
+            <ul
+              aria-label="Especialidades"
+              className="mt-6 flex flex-wrap gap-2"
+            >
+              {ESPECIALIDADES.map((e) => (
+                <li
+                  key={e}
+                  className="rounded-full border border-outline-variant bg-surface px-3.5 py-1.5 type-portada-body text-on-surface"
+                >
+                  {e}
+                </li>
+              ))}
+            </ul>
           </Entra>
 
           <Entra retraso={240}>
             <div className="mt-9 flex flex-wrap gap-3">
               <Boton href="#como-funciona">Ver cómo funciona</Boton>
-              <Boton href="#clinicas" tono="contorno">
-                Tengo una clínica
-              </Boton>
+              <BotonAfiliarme tono="contorno" />
             </div>
           </Entra>
         </div>
@@ -231,11 +314,11 @@ export function Heroe() {
               Ejemplo
             </p>
             <p className="type-portada-title mt-3 text-on-surface">
-              Una consulta de $100
+              Una consulta de {dolares(CONSULTA).replace(',00', '')}
             </p>
 
             <ul className="mt-6 divide-y divide-outline-variant border-y border-outline-variant">
-              {EJEMPLO.map((fila) => (
+              {RESUMEN_EJEMPLO.map((fila) => (
                 <li
                   key={fila.concepto}
                   className="flex items-baseline justify-between gap-4 py-3.5"
@@ -251,9 +334,15 @@ export function Heroe() {
             </ul>
 
             <p className="mt-5 text-sm leading-relaxed text-on-surface-faint">
-              Cada cuota incluye el servicio de Helios: 20% de la consulta más
-              IVA ($23,20 en este ejemplo). En dólares BCV; pagas en bolívares a
-              la tasa del día en que pagas.
+              Las cuotas incluyen la comisión de servicio: {COMISION_PCT}% de la
+              consulta más el IVA de la comisión ({dolares(comision + iva)} en
+              este ejemplo).{' '}
+              <a
+                href="#pacientes"
+                className="text-primary underline-offset-4 hover:underline"
+              >
+                Ver el detalle
+              </a>
             </p>
           </div>
         </Entra>
@@ -269,33 +358,30 @@ export function Heroe() {
 const PASOS = [
   {
     n: '01',
-    titulo: 'Lo pides en recepción',
+    titulo: 'El médico registra la consulta',
     texto:
-      'La secretaria te registra con tu cédula en un par de minutos y te enseña las dos cuotas con sus fechas antes de confirmar.',
+      'Desde la plataforma de Helios o por WhatsApp, con la cédula del paciente y el monto. Toma un par de minutos.',
   },
   {
     n: '02',
-    titulo: 'Te llega el comprobante',
+    titulo: 'El paciente confirma',
     texto:
-      'Por correo, en segundos: la consulta, tus dos cuotas, cuándo vence cada una y cómo pagarlas.',
+      'Le llega un WhatsApp con el monto, la comisión de servicio y sus dos cuotas con fecha. Responde «Sí» y el comprobante le llega por correo.',
   },
   {
     n: '03',
-    titulo: 'Pagas y nos avisas',
+    titulo: 'Paga en dos cuotas',
     texto:
-      'Por Pago Móvil o transferencia, y nos mandas el comprobante por WhatsApp. Te escribimos antes de cada fecha.',
+      'A los 7 y a los 14 días, por Pago Móvil o transferencia. Le recordamos cada fecha por WhatsApp.',
   },
 ]
 
 export function ComoFunciona() {
   return (
     <Seccion id="como-funciona">
-      <Cabecera
-        rotulo="Cómo funciona"
-        titulo="Tres pasos, y el primero lo da la clínica."
-      >
-        Sin cuenta, sin contraseña y sin app. Todo lo que necesitas saber llega
-        a tu correo.
+      <Cabecera rotulo="Cómo funciona" titulo="Tres pasos, y listo.">
+        Sin app, sin cuenta y sin contraseña, ni para el médico ni para el
+        paciente.
       </Cabecera>
 
       <div className="mt-12 grid gap-4 md:grid-cols-3">
@@ -321,89 +407,192 @@ export function ComoFunciona() {
 }
 
 // ══════════════════════════════════════════════════════════════════════════
-// 4 · Las reglas
+// 4 · Para médicos y centros
 // ══════════════════════════════════════════════════════════════════════════
 
-const REGLAS = [
+const PARA_MEDICOS = [
   {
-    titulo: 'Lo que cuesta, dicho una vez',
+    titulo: 'Cobras a los 8 y a los 15 días',
     texto:
-      'El 20% de la consulta más el IVA de ese 20%, repartido en las dos cuotas. Sin inscripción ni mensualidad.',
+      'Recibes el precio de la consulta en dos partes: la mitad a los 8 días y la otra mitad a los 15.',
   },
   {
-    titulo: 'Las dos fechas no se mueven',
+    titulo: 'No te cuesta nada',
     texto:
-      'A los 7 y a los 14 días de la consulta. Quedan escritas en el comprobante desde el primer minuto.',
+      'La comisión de servicio la paga el paciente. Tú recibes el 100% del precio, sin descuentos.',
   },
   {
-    titulo: 'Si te retrasas',
+    titulo: 'Registro simple',
     texto:
-      'Desde el día siguiente no puedes financiar otra consulta hasta ponerte al día. Tras 3 días de gracia se suman $2 por cada cuota vencida.',
+      'Registras la consulta desde la plataforma de Helios o por WhatsApp. Sin equipos ni puntos de venta.',
   },
   {
-    titulo: 'Nada se cobra solo',
-    texto:
-      'No guardamos tarjetas ni sacamos dinero de ninguna cuenta. Tú pagas cuando toca y nos mandas el comprobante.',
-  },
-  {
-    titulo: 'Hasta $350 disponibles',
-    texto:
-      'Lo que usaste en una consulta vuelve a estar disponible cuando pagas sus dos cuotas.',
-  },
-  {
-    titulo: 'Mayor de 18, con cédula',
-    texto:
-      'Si quien se atiende es menor de edad, el financiamiento va a nombre de su representante.',
+    titulo: 'Sin permanencia',
+    texto: 'Puedes cancelar tu afiliación cuando quieras, con aviso previo.',
   },
 ]
 
-export function Reglas() {
+export function Medicos() {
   return (
-    <Seccion id="reglas">
-      <Cabecera rotulo="Sin letra pequeña" titulo="Las reglas, todas, aquí.">
-        Son seis y caben en una pantalla. Las mismas van en tu comprobante.
-      </Cabecera>
+    <Seccion id="medicos">
+      <div className="rounded-[var(--radius-portada-card)] border border-primary-container bg-primary-container/50 p-7 sm:p-10">
+        <Rotulo>Para médicos y centros</Rotulo>
+        <h2 className="type-portada-headline mt-5 max-w-[24ch] text-balance text-on-surface">
+          Tu pago está garantizado, aunque el paciente no pague.
+        </h2>
+        <p className="type-portada-lead mt-5 max-w-[var(--portada-lectura)] text-on-surface-variant">
+          Atiendes hoy y Helios te paga la consulta completa. El cobro al
+          paciente corre por nuestra cuenta.
+        </p>
 
-      <div className="mt-12 grid gap-px overflow-hidden rounded-[var(--radius-portada-card)] border border-outline-variant bg-outline-variant sm:grid-cols-2 lg:grid-cols-3">
-        {REGLAS.map((regla) => (
-          <div key={regla.titulo} className="bg-shell-canvas p-6 sm:p-7">
-            <h3 className="type-portada-title text-on-surface">
-              {regla.titulo}
-            </h3>
-            <p className="type-portada-body mt-3 text-on-surface-variant">
-              {regla.texto}
-            </p>
-          </div>
-        ))}
+        <div className="mt-10">
+          <Rejilla items={PARA_MEDICOS} columnas="sm:grid-cols-2 lg:grid-cols-4" />
+        </div>
+
+        <div className="mt-9 flex flex-wrap gap-3">
+          <BotonAfiliarme />
+          <Boton to="/login" tono="contorno">
+            Entrar a la plataforma
+          </Boton>
+        </div>
       </div>
     </Seccion>
   )
 }
 
 // ══════════════════════════════════════════════════════════════════════════
-// 5 · Preguntas
+// 5 · Para pacientes
+// ══════════════════════════════════════════════════════════════════════════
+
+const DETALLE_EJEMPLO = [
+  { concepto: 'Consulta', monto: dolares(CONSULTA) },
+  { concepto: `Comisión de servicio (${COMISION_PCT}%)`, monto: dolares(comision) },
+  { concepto: `IVA de la comisión (${IVA_PCT}%)`, monto: dolares(iva) },
+]
+
+const PARA_PACIENTES = [
+  {
+    titulo: 'Dos cuotas, a los 7 y a los 14 días',
+    texto:
+      'Sin inicial. Las fechas van en el mensaje que confirmas y en tu comprobante, y no se mueven.',
+  },
+  {
+    titulo: `Comisión de servicio del ${COMISION_PCT}%`,
+    texto: `Es el ${COMISION_PCT}% del monto de la consulta, más el IVA de esa comisión, y va incluida en tus cuotas. Sin inscripción ni mensualidad.`,
+  },
+  {
+    titulo: 'Límite inicial de $150',
+    texto:
+      'Es lo máximo que puedes tener en cuotas a la vez. Lo que usaste vuelve a estar disponible cuando pagas las dos cuotas.',
+  },
+  {
+    titulo: 'Pagas en bolívares',
+    texto:
+      'Las cuotas están en dólares. Pagas en bolívares a la tasa oficial del BCV del día en que pagas.',
+  },
+  {
+    titulo: 'Si te retrasas',
+    texto:
+      'No puedes registrar otro pago en cuotas hasta ponerte al día. Tras 3 días de gracia se suman $2 por cada cuota vencida.',
+  },
+  {
+    titulo: 'Mayor de 18, con cédula',
+    texto:
+      'Si quien se atiende es menor de edad, el pago en cuotas va a nombre de su representante.',
+  },
+]
+
+export function Pacientes() {
+  return (
+    <Seccion id="pacientes">
+      <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-end lg:gap-16">
+        <Cabecera
+          rotulo="Para pacientes"
+          titulo="Lo que pagas, con todos sus números."
+        >
+          Una sola comisión, dicha desde el principio. Antes de confirmar ves
+          el monto, la comisión y tus dos cuotas.
+        </Cabecera>
+
+        <div className="rounded-[var(--radius-portada-card)] border border-outline-variant bg-surface p-6 sm:p-7">
+          <p className="type-portada-eyebrow text-on-surface-faint">
+            Ejemplo · una consulta de {dolares(CONSULTA).replace(',00', '')}
+          </p>
+
+          <ul className="mt-4 divide-y divide-outline-variant border-y border-outline-variant">
+            {DETALLE_EJEMPLO.map((fila) => (
+              <li
+                key={fila.concepto}
+                className="flex items-baseline justify-between gap-4 py-3"
+              >
+                <span className="type-portada-body text-on-surface-variant">
+                  {fila.concepto}
+                </span>
+                <span className="font-display font-semibold tabular-nums text-on-surface">
+                  {fila.monto}
+                </span>
+              </li>
+            ))}
+            <li className="flex items-baseline justify-between gap-4 py-3">
+              <span className="type-portada-body font-semibold text-on-surface">
+                Total
+              </span>
+              <span className="font-display text-lg font-semibold tabular-nums text-on-surface">
+                {dolares(total)}
+              </span>
+            </li>
+          </ul>
+
+          <p className="mt-4 type-portada-body text-on-surface-variant">
+            Pagas <strong className="text-on-surface">{dolares(cuota)}</strong>{' '}
+            a los 7 días y{' '}
+            <strong className="text-on-surface">{dolares(cuota)}</strong> a los
+            14. Hoy, nada.
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-12">
+        <Rejilla items={PARA_PACIENTES} />
+      </div>
+    </Seccion>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// 6 · Preguntas
 // ══════════════════════════════════════════════════════════════════════════
 
 const PREGUNTAS = [
   {
     pregunta: '¿Dónde puedo usarlo?',
     respuesta:
-      'En las clínicas y consultorios afiliados a Helios. Pregunta en recepción antes de la consulta.',
+      'En los consultorios y centros de salud afiliados a Helios, de medicina, odontología y cosmetología. Pregunta antes de tu consulta.',
   },
   {
     pregunta: '¿Tengo que descargar algo o crear una cuenta?',
     respuesta:
-      'No. La secretaria te registra con tu cédula, tu correo y tu teléfono. El comprobante te llega por correo y hablamos contigo por WhatsApp.',
+      'No. El médico te registra con tu cédula, tu correo y tu teléfono. Confirmas por WhatsApp y el comprobante te llega por correo.',
   },
   {
     pregunta: '¿Cuánto pago en bolívares?',
     respuesta:
-      'Las cuotas están en dólares BCV. Pagas en bolívares a la tasa oficial del día en que haces el pago.',
+      'Las cuotas están en dólares. Pagas en bolívares a la tasa oficial del BCV del día en que haces el pago.',
   },
   {
-    pregunta: '¿La clínica ve lo que debo?',
+    pregunta: '¿El médico ve lo que debo?',
     respuesta:
-      'No. Ninguna clínica ve tus cuotas, si estás al día ni dónde te atendiste antes. Solo sabe si Helios puede financiar esa consulta.',
+      'No. Ningún médico ni centro ve tus cuotas, si estás al día ni dónde te atendiste antes. Solo sabe si puedes pagar esa consulta en cuotas.',
+  },
+  {
+    pregunta: 'Soy médico: ¿qué pasa si el paciente no paga?',
+    respuesta:
+      'Te pagamos igual, a los 8 y a los 15 días. El cobro al paciente es responsabilidad de Helios.',
+  },
+  {
+    pregunta: 'Soy médico: ¿cuánto me cuesta afiliarme?',
+    respuesta:
+      'Nada. No hay inscripción ni mensualidad, y la comisión de servicio la paga el paciente. Tampoco hay permanencia: puedes cancelar con aviso previo.',
   },
 ]
 
@@ -451,49 +640,6 @@ export function Preguntas() {
 }
 
 // ══════════════════════════════════════════════════════════════════════════
-// 6 · Para clínicas
-// ══════════════════════════════════════════════════════════════════════════
-
-/**
- * La única tarjeta dirigida a la clínica. Mientras no haya canal de soporte
- * (`RESPONSABLE.soporte`, H11) no se ofrece un "Escríbenos" que no lleva a
- * ningún sitio: queda solo la puerta del panel.
- */
-export function Clinicas() {
-  return (
-    <Seccion id="clinicas">
-      <div className="flex flex-col gap-8 rounded-[var(--radius-portada-card)] border border-primary-container bg-primary-container/50 p-7 sm:p-10 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <Rotulo>Para clínicas</Rotulo>
-          <h2 className="type-portada-headline mt-5 max-w-[20ch] text-on-surface">
-            Cobras la consulta completa.
-          </h2>
-          <p className="type-portada-lead mt-4 max-w-[56ch] text-on-surface-variant">
-            La clínica recibe el 100% del precio, sin comisión, en dos mitades
-            que se pagan los lunes, pague el paciente a tiempo o no.
-          </p>
-        </div>
-
-        <div className="flex shrink-0 flex-wrap gap-3">
-          {RESPONSABLE.soporte ? (
-            <Boton
-              href={`mailto:${RESPONSABLE.soporte}?subject=${encodeURIComponent(
-                'Quiero ofrecer Helios en mi clínica',
-              )}`}
-            >
-              Escríbenos
-            </Boton>
-          ) : null}
-          <Boton to="/login" tono={RESPONSABLE.soporte ? 'contorno' : 'lleno'}>
-            Entrar al panel
-          </Boton>
-        </div>
-      </div>
-    </Seccion>
-  )
-}
-
-// ══════════════════════════════════════════════════════════════════════════
 // 7 · El pie
 // ══════════════════════════════════════════════════════════════════════════
 
@@ -513,8 +659,8 @@ export function Pie() {
 
         <ul className="flex flex-wrap gap-x-8 gap-y-3">
           <li>
-            <Link to="/soporte" className={enlace}>
-              Soporte
+            <Link to="/legal/terminos" className={enlace}>
+              Términos y condiciones
             </Link>
           </li>
           <li>
@@ -523,8 +669,13 @@ export function Pie() {
             </Link>
           </li>
           <li>
+            <Link to="/soporte" className={enlace}>
+              Soporte
+            </Link>
+          </li>
+          <li>
             <Link to="/login" className={enlace}>
-              Entrar al panel
+              Entrar
             </Link>
           </li>
         </ul>
@@ -532,10 +683,8 @@ export function Pie() {
 
       <div className="mx-auto w-full max-w-[var(--portada-ancho)] px-4 pb-12 sm:px-8">
         <p className="border-t border-outline-variant pt-6 text-[0.8125rem] leading-relaxed text-on-surface-faint">
-          {RESPONSABLE.razonSocial
-            ? `${RESPONSABLE.razonSocial} · RIF ${RESPONSABLE.rif} · `
-            : ''}
-          Venezuela · Solo para mayores de 18 años.
+          Helios es operado por {operador()} · Venezuela · Solo para mayores de
+          18 años.
         </p>
       </div>
     </footer>
