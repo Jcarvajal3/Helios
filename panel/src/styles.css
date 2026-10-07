@@ -714,11 +714,3 @@ input[type='search']::-webkit-search-decoration {
 @media (width < 40rem) and (prefers-reduced-motion: reduce) {
   .anim-ventana { animation: none; }
 }
-
-/* ── La barra de abajo, mientras se escribe ──────────────────────────────
-   En Android el teclado encoge la ventana y la barra de abajo sube pegada a
-   él, tapando el campo en el que se está escribiendo. Con el foco en un
-   campo de texto no hay nada que navegar: se aparta. */
-body:has(:is(input:not([type='checkbox'], [type='radio']), select, textarea):focus) .barra-inferior {
-  display: none;
-}

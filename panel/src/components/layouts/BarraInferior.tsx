@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Link, useRouterState } from '@tanstack/react-router'
 import { Menu } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -18,8 +19,8 @@ import type { NavItem } from '@/config/navigation'
  * barra (Métricas, Personal), se marca «Menú»: el «estás aquí» nunca queda
  * sin marcar.
  *
- * Se esconde mientras se escribe (`.barra-inferior` en styles.css): en
- * Android el teclado sube la barra con él y se come el campo.
+ * Se esconde solo con el teclado en pantalla abierto (`useTecladoAbierto`):
+ * en Android el teclado sube la barra con él y se come el campo.
  */
 export function BarraInferior({
   items,
@@ -34,11 +35,14 @@ export function BarraInferior({
   const activo = (item: NavItem) =>
     pathname === item.path || pathname.startsWith(`${item.path}/`)
   const algunoActivo = items.some(activo)
+  const teclado = useTecladoAbierto()
+
+  if (teclado) return null
 
   return (
     <nav
       aria-label="Accesos rápidos"
-      className="barra-inferior fixed inset-x-0 bottom-0 z-30 border-t border-panel-hairline bg-panel-bar/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
+      className="fixed inset-x-0 bottom-0 z-30 border-t border-panel-hairline bg-panel-bar/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
     >
       <ul className="flex h-16">
         {items.map((item) => (
@@ -69,6 +73,55 @@ export function BarraInferior({
       </ul>
     </nav>
   )
+}
+
+/**
+ * Si el teclado del teléfono está abierto ahora mismo.
+ *
+ * No basta con mirar si hay un campo con el foco: el alta lleva el cursor a
+ * la cédula al abrirse, para quien teclea en el escritorio, y con esa regla
+ * la barra desaparecía justo en la pantalla con la que arranca el panel, sin
+ * otra manera de ir a ninguna parte. Un foco puesto desde el código no abre
+ * el teclado del teléfono; lo abre el toque.
+ *
+ * Lo que se mira es lo que el teclado hace: encoger la ventana visible. Se
+ * compara con lo más alto que se ha visto, porque según el navegador el
+ * teclado encoge solo `visualViewport` o también `innerHeight`. Un cuarto
+ * menos es teclado: la barra de direcciones que se esconde al desplazarse
+ * no llega a tanto.
+ */
+function useTecladoAbierto(): boolean {
+  const [abierto, setAbierto] = useState(false)
+
+  useEffect(() => {
+    const vista = window.visualViewport
+    if (!vista) return
+    let maximo = Math.max(vista.height, window.innerHeight)
+
+    function medir() {
+      if (!vista) return
+      maximo = Math.max(maximo, vista.height)
+      const escribiendo = document.activeElement?.matches('input, select, textarea') ?? false
+      setAbierto(escribiendo && vista.height < maximo * 0.75)
+    }
+
+    // Girar el teléfono cambia el alto de verdad: lo de antes ya no sirve.
+    function girar() {
+      maximo = 0
+      medir()
+    }
+
+    vista.addEventListener('resize', medir)
+    window.addEventListener('orientationchange', girar)
+    document.addEventListener('focusout', medir)
+    return () => {
+      vista.removeEventListener('resize', medir)
+      window.removeEventListener('orientationchange', girar)
+      document.removeEventListener('focusout', medir)
+    }
+  }, [])
+
+  return abierto
 }
 
 /** El icono en su pastilla y el nombre debajo, como en la barra de la app. */
