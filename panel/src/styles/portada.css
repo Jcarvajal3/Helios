@@ -1,107 +1,668 @@
 /* ═══════════════════════════════════════════════════════════════════════════
    La capa de la portada — `/`.
 
-   Versión reducida de la de Ronda (`Ronda-panel/src/styles/portada.css`):
-   la misma tipografía fluida y la misma forma (tarjeta de 20, botones en
-   píldora), sin la cinta, sin los huecos de animación y sin la aparición al
-   desplazarse. La página es corta y se lee de una vez.
+   La portada va SIEMPRE en claro. No usa los tokens del sistema (que cambian
+   con `data-theme`) sino esta paleta fija, sacada del logotipo: los azules
+   de los rayos y el marino de la palabra. La regla de Ronda sigue: fuera de
+   la portada no se usa nada de --*-portada-*.
 
-   La regla de Ronda sigue: fuera de la portada no se usa nada de
-   --*-portada-*. El color es el del sistema, así que la portada cambia con el
-   tema igual que el panel.
+   Tipografía propia, que solo se descarga en `/` (ver routes/index.tsx):
+   Geist para todo, Geist Mono para los rótulos e Instrument Serif, en
+   cursiva, para la palabra que se quiere subrayar de cada titular.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 @theme {
-  --radius-portada-card: 20px;
-  --radius-portada-control: var(--radius-full);
+  /* Tinta: el marino del logotipo, oscurecido para el texto largo. */
+  --color-portada-tinta: #050f2c;
+  --color-portada-tinta-2: #46526f;
+  --color-portada-tinta-3: #6b7690;
+  --color-portada-marino: #002770;
 
-  /* El lienzo entero y la columna de lectura (~90 caracteres a 18 px). */
-  --portada-ancho: 1120px;
-  --portada-lectura: 720px;
+  /* Los rayos del isotipo. */
+  --color-portada-azul: #045ef3;
+  --color-portada-cielo: #45a8fd;
+  --color-portada-cielo-2: #73c3fe;
+  --color-portada-cielo-3: #e8f3ff;
+
+  /* Superficies. */
+  --color-portada-niebla: #f4f6fa;
+  --color-portada-linea: #e3e8f1;
+
+  --font-portada:
+    'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-portada-mono:
+    'Geist Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  --font-portada-serif: 'Instrument Serif', ui-serif, Georgia, serif;
+
+  --portada-ancho: 1240px;
 }
 
-@layer components {
-  .type-portada-display {
-    font-family: var(--font-display);
-    font-size: clamp(2.5rem, 1.4rem + 4.8vw, 4.75rem);
-    line-height: 1;
-    letter-spacing: -0.03em;
-    font-weight: 700;
-  }
+/* ── La raíz ──────────────────────────────────────────────────────────────── */
 
-  .type-portada-headline {
-    font-family: var(--font-display);
-    font-size: clamp(1.75rem, 1.1rem + 2.6vw, 2.75rem);
-    line-height: 1.08;
-    letter-spacing: -0.022em;
-    font-weight: 700;
-  }
-
-  .type-portada-title {
-    font-family: var(--font-display);
-    font-size: clamp(1.0625rem, 1rem + 0.4vw, 1.25rem);
-    line-height: 1.3;
-    letter-spacing: -0.01em;
-    font-weight: 600;
-  }
-
-  .type-portada-lead {
-    font-family: var(--font-body);
-    font-size: clamp(1.0625rem, 1rem + 0.4vw, 1.25rem);
-    line-height: 1.55;
-    font-weight: 400;
-  }
-
-  .type-portada-body {
-    font-family: var(--font-body);
-    font-size: 1rem;
-    line-height: 1.6;
-    font-weight: 400;
-  }
-
-  .type-portada-eyebrow {
-    font-family: var(--font-body);
-    font-size: 0.75rem;
-    line-height: 1rem;
-    letter-spacing: 0.09em;
-    font-weight: 600;
-    text-transform: uppercase;
-  }
+html:has(.portada-raiz) {
+  color-scheme: light;
+  background: #fff;
 }
 
-/* Una sola animación: la primera pantalla entra al cargar. */
-@keyframes portada-entra {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.portada-raiz {
+  color-scheme: light;
+  background: #fff;
+  color: var(--color-portada-tinta);
+  font-family: var(--font-portada);
+  font-feature-settings: 'ss01', 'cv11';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  interpolate-size: allow-keywords;
+}
+
+.portada-raiz ::selection {
+  background: color-mix(in srgb, var(--color-portada-azul) 18%, transparent);
+  color: var(--color-portada-tinta);
+}
+
+.portada-raiz :focus-visible {
+  outline: 2px solid var(--color-portada-azul);
+  outline-offset: 3px;
+  border-radius: 999px;
+}
+
+/* El menú flota: un salto a `#pacientes` no debe dejar el titular debajo. */
+.portada-raiz [id] {
+  scroll-margin-top: 88px;
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .portada-entra {
-    animation: portada-entra 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
-    animation-delay: var(--retraso, 0ms);
-  }
-
   html:has(.portada-raiz) {
     scroll-behavior: smooth;
   }
 }
 
-/* El menú flota: un salto a `#reglas` no debe dejar el titular debajo. */
-.portada-raiz [id] {
-  scroll-margin-top: 96px;
+/* ── Tipografía ───────────────────────────────────────────────────────────── */
+
+@layer components {
+  .portada-display {
+    font-family: var(--font-portada);
+    font-size: clamp(2.75rem, 1.05rem + 6.1vw, 6.5rem);
+    line-height: 0.98;
+    letter-spacing: -0.052em;
+    font-weight: 500;
+    text-wrap: balance;
+  }
+
+  .portada-titular {
+    font-family: var(--font-portada);
+    font-size: clamp(2.3rem, 1.25rem + 3.7vw, 4.5rem);
+    line-height: 1.02;
+    letter-spacing: -0.047em;
+    font-weight: 500;
+    text-wrap: balance;
+  }
+
+  .portada-manifiesto {
+    font-family: var(--font-portada);
+    font-size: clamp(2rem, 1.05rem + 3.4vw, 4.25rem);
+    line-height: 1.08;
+    letter-spacing: -0.045em;
+    font-weight: 500;
+  }
+
+  .portada-cifra {
+    font-family: var(--font-portada);
+    font-size: clamp(3.2rem, 2.1rem + 3.6vw, 5.5rem);
+    line-height: 1;
+    letter-spacing: -0.06em;
+    font-weight: 400;
+  }
+
+  .portada-entrada {
+    font-size: clamp(1.05rem, 0.98rem + 0.3vw, 1.22rem);
+    line-height: 1.55;
+    letter-spacing: -0.012em;
+  }
+
+  .portada-etiqueta {
+    font-family: var(--font-portada-mono);
+    font-size: 0.72rem;
+    line-height: 1rem;
+    letter-spacing: 0.12em;
+    font-weight: 500;
+    text-transform: uppercase;
+  }
+
+  /* La palabra en cursiva de cada titular. */
+  .portada-serif {
+    font-family: var(--font-portada-serif);
+    font-style: italic;
+    font-weight: 400;
+    font-size: 1.08em;
+    letter-spacing: -0.02em;
+    line-height: 0.9;
+  }
+
+  .portada-degradado {
+    background: linear-gradient(
+      100deg,
+      #045ef3 5%,
+      #157efd 40%,
+      #1f99fe 70%,
+      #45a8fd 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
 }
 
-/* El resplandor detrás del titular: el azul de los rayos, muy diluido. */
-.portada-resplandor {
+/* ── El menú ──────────────────────────────────────────────────────────────── */
+
+.portada-menu-barra {
+  border: 1px solid transparent;
+  transition:
+    background-color 500ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 500ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 500ms cubic-bezier(0.22, 1, 0.36, 1),
+    backdrop-filter 500ms;
+}
+
+.portada-menu-barra[data-bajo] {
+  background: rgb(255 255 255 / 0.74);
+  border-color: rgb(5 15 44 / 0.07);
+  box-shadow: 0 12px 40px -18px rgb(0 39 112 / 0.25);
+  backdrop-filter: blur(18px) saturate(1.6);
+  -webkit-backdrop-filter: blur(18px) saturate(1.6);
+}
+
+.portada-menu-hoja {
+  background: rgb(255 255 255 / 0.96);
+  border: 1px solid rgb(5 15 44 / 0.07);
+  box-shadow: 0 30px 60px -30px rgb(0 39 112 / 0.35);
+  backdrop-filter: blur(18px);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-8px) scale(0.98);
+  transform-origin: top center;
+  transition:
+    opacity 300ms ease,
+    transform 500ms cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0s 300ms;
+}
+
+.portada-menu-hoja[data-abierto] {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  transition:
+    opacity 300ms ease,
+    transform 500ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.portada-menu-hoja li {
+  opacity: 0;
+  transform: translateY(-6px);
+  transition:
+    opacity 400ms ease,
+    transform 500ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.portada-menu-hoja[data-abierto] li {
+  opacity: 1;
+  transform: none;
+}
+
+/* ── Botones ──────────────────────────────────────────────────────────────── */
+
+.portada-boton-flecha svg {
+  transition: transform 450ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.portada-boton-flecha svg:last-child {
+  transform: translateX(-160%);
+}
+.portada-boton:hover .portada-boton-flecha svg:first-child {
+  transform: translateX(160%);
+}
+.portada-boton:hover .portada-boton-flecha svg:last-child {
+  transform: none;
+}
+
+/* El punto del rótulo late. */
+.portada-latido::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: currentColor;
+  animation: portada-latido 2.4s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+@keyframes portada-latido {
+  from {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  70%,
+  to {
+    transform: scale(3.2);
+    opacity: 0;
+  }
+}
+
+/* ── La primera pantalla ──────────────────────────────────────────────────── */
+
+@keyframes portada-entra {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+@keyframes portada-linea {
+  from {
+    transform: translateY(108%) rotate(1.5deg);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes portada-aparece {
+  from {
+    opacity: 0;
+    transform: scale(1.06);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.portada-linea {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.12em;
+  margin-bottom: -0.12em;
+}
+
+.portada-linea > span {
+  display: inline-block;
+}
+
+.portada-velo-heroe {
+  background:
+    radial-gradient(
+      ellipse 52% 42% at 16% 62%,
+      rgb(255 255 255 / 0.62),
+      rgb(255 255 255 / 0.3) 50%,
+      transparent 80%
+    ),
+    linear-gradient(to top, #fff 0%, rgb(255 255 255 / 0) 18%),
+    linear-gradient(
+      to bottom,
+      #fff 0%,
+      rgb(255 255 255 / 0.7) 6%,
+      rgb(255 255 255 / 0) 14%
+    );
+}
+
+@media (max-width: 1023px) {
+  .portada-velo-heroe {
+    background:
+      linear-gradient(
+        to top,
+        #fff 0%,
+        rgb(255 255 255 / 0.7) 14%,
+        transparent 34%
+      ),
+      linear-gradient(to bottom, #fff 0%, rgb(255 255 255 / 0) 12%);
+  }
+}
+
+.portada-vidrio {
+  background: rgb(255 255 255 / 0.72);
+  backdrop-filter: blur(20px) saturate(1.6);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  border: 1px solid rgb(255 255 255 / 0.9);
+  box-shadow:
+    0 0 0 1px rgb(5 15 44 / 0.05),
+    0 50px 100px -40px rgb(0 39 112 / 0.4),
+    inset 0 1px 0 rgb(255 255 255 / 0.9);
+}
+
+.portada-vidrio-oscuro {
+  background: linear-gradient(
+    160deg,
+    rgb(255 255 255 / 0.07),
+    rgb(255 255 255 / 0.02)
+  );
+  border: 1px solid rgb(255 255 255 / 0.1);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.08),
+    0 40px 80px -40px rgb(0 0 0 / 0.6);
+}
+
+.portada-recibo-riel {
+  background: linear-gradient(
+    to bottom,
+    var(--color-portada-azul),
+    color-mix(in srgb, var(--color-portada-azul) 15%, transparent)
+  );
+  transform-origin: top;
+}
+
+.portada-desliza::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--color-portada-tinta);
+  animation: portada-desliza 2.2s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+@keyframes portada-desliza {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .portada-entra {
+    animation: portada-entra 1000ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: var(--retraso, 0ms);
+  }
+
+  .portada-linea > span {
+    animation: portada-linea 1200ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: var(--retraso, 0ms);
+  }
+
+  .portada-aparece {
+    animation: portada-aparece 2200ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: 150ms;
+  }
+
+  .portada-recibo-fila {
+    animation: portada-entra 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: calc(1000ms + var(--i) * 160ms);
+  }
+
+  .portada-recibo-riel {
+    animation: portada-riel 1100ms cubic-bezier(0.65, 0, 0.35, 1) both;
+    animation-delay: 1050ms;
+  }
+}
+
+@keyframes portada-riel {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: none;
+  }
+}
+
+/* ── Aparecer al desplazarse ──────────────────────────────────────────────── */
+
+[data-revelar] {
+  transition:
+    opacity 1000ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 1100ms cubic-bezier(0.16, 1, 0.3, 1),
+    filter 1000ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition-delay: var(--retraso, 0ms);
+}
+
+[data-revelar='espera'] {
+  opacity: 0;
+  transform: translateY(36px);
+  filter: blur(8px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-revelar='espera'] {
+    transform: none;
+    filter: none;
+  }
+}
+
+/* ── El manifiesto: se enciende palabra a palabra ─────────────────────────── */
+
+.portada-manifiesto > span {
+  opacity: clamp(0.14, calc((var(--p) * (var(--n) + 4) - var(--i)) / 4), 1);
+  transition: opacity 200ms linear;
+}
+
+/* ── Cómo funciona ────────────────────────────────────────────────────────── */
+
+.portada-tarjeta {
+  box-shadow:
+    0 0 0 1px rgb(5 15 44 / 0.06),
+    0 40px 80px -50px rgb(0 20 70 / 0.6);
+  transition:
+    transform 700ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 700ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.portada-miniatura {
+  transition: transform 800ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (hover: hover) {
+  .portada-tarjeta:hover {
+    transform: translateY(-6px);
+    box-shadow:
+      0 0 0 1px rgb(5 15 44 / 0.06),
+      0 60px 100px -50px rgb(0 20 70 / 0.75);
+  }
+  .portada-tarjeta:hover .portada-miniatura {
+    transform: translateY(-6px) scale(1.025);
+  }
+}
+
+.portada-campo {
+  display: flex;
+  align-items: center;
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid var(--color-portada-linea);
+  background: #fff;
+  font-family: var(--font-portada-mono);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--color-portada-tinta);
+  transition:
+    border-color 300ms,
+    box-shadow 300ms;
+}
+
+.portada-campo-activo {
+  border-color: var(--color-portada-azul);
+  box-shadow: 0 0 0 4px
+    color-mix(in srgb, var(--color-portada-azul) 14%, transparent);
+}
+
+.portada-tecleo {
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  border-right: 1.5px solid var(--color-portada-azul);
+  animation:
+    portada-tecleo 900ms steps(var(--letras)) both,
+    portada-cursor 700ms step-end infinite;
+}
+
+@keyframes portada-tecleo {
+  from {
+    width: 0;
+  }
+  to {
+    width: calc(var(--letras) * 1ch + 1px);
+  }
+}
+
+@keyframes portada-cursor {
+  50% {
+    border-color: transparent;
+  }
+}
+
+.portada-burbuja-entra {
+  animation: portada-burbuja 550ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes portada-burbuja {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.portada-punto-escribe {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #fff;
+  animation: portada-escribe 1s ease-in-out infinite;
+}
+
+@keyframes portada-escribe {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.5;
+  }
+  30% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+
+.portada-salta {
+  animation: portada-salta 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes portada-salta {
+  from {
+    opacity: 0.2;
+    transform: translateY(10px);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+/* ── Pacientes ────────────────────────────────────────────────────────────── */
+
+.portada-aurora {
   background: radial-gradient(
     closest-side,
-    color-mix(in srgb, var(--color-primary-bright) 16%, transparent),
+    rgb(115 195 254 / 0.22),
+    rgb(4 94 243 / 0.06) 55%,
     transparent
   );
+  filter: blur(20px);
+  pointer-events: none;
+}
+
+.portada-desglose-barra {
+  width: var(--ancho);
+  flex: none;
+  transition: width 1100ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: calc(300ms + var(--i) * 220ms);
+}
+
+.portada-desglose:not([data-visto]) .portada-desglose-barra {
+  width: 0;
+}
+
+.portada-desglose-cuota {
+  transition:
+    transform 900ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 900ms;
+  transition-delay: calc(1100ms + var(--i) * 150ms);
+}
+
+.portada-desglose:not([data-visto]) .portada-desglose-cuota {
+  transform: translateY(10px);
+  opacity: 0.4;
+}
+
+.portada-regla {
+  transition:
+    transform 600ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 600ms,
+    box-shadow 600ms;
+}
+
+@media (hover: hover) {
+  .portada-regla:hover {
+    transform: translateY(-4px);
+    border-color: color-mix(
+      in srgb,
+      var(--color-portada-azul) 22%,
+      transparent
+    );
+    box-shadow: 0 30px 60px -36px rgb(0 39 112 / 0.35);
+  }
+}
+
+/* ── Preguntas: la altura se anima donde el navegador sabe ────────────────── */
+
+@supports selector(::details-content) {
+  .portada-pregunta::details-content {
+    block-size: 0;
+    overflow: clip;
+    opacity: 0;
+    transition:
+      block-size 550ms cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 400ms ease,
+      content-visibility 550ms allow-discrete;
+  }
+
+  .portada-pregunta[open]::details-content {
+    block-size: auto;
+    opacity: 1;
+  }
+}
+
+/* ── El pie ───────────────────────────────────────────────────────────────── */
+
+.portada-firma {
+  margin-bottom: -7%;
+  opacity: 0.95;
+  -webkit-mask-image: linear-gradient(to bottom, #000 10%, transparent 88%);
+  mask-image: linear-gradient(to bottom, #000 10%, transparent 88%);
+}
+
+/* ── Movimiento reducido ──────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .portada-latido::after,
+  .portada-desliza::after,
+  .portada-tecleo,
+  .portada-punto-escribe {
+    animation: none;
+  }
+  .portada-desglose-barra,
+  .portada-desglose-cuota,
+  [data-revelar] {
+    transition: none;
+  }
 }
