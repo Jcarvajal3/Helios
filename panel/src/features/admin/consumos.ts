@@ -8,6 +8,8 @@ import {
   textoONulo,
 } from '@/lib/json'
 import { supabase } from '@/lib/supabase'
+import { leerMoneda } from '@/components/ui'
+import type { Moneda } from '@/components/ui'
 
 /**
  * LA FACTURA DE UN CONSUMO, tal y como la lee el cliente en su teléfono.
@@ -47,6 +49,8 @@ export type ChargeInstallment = {
   amountUsd: number
   /** La parte de esa cuota que era consumo. */
   financedUsd: number
+  /** La cuota en la moneda de su orden (en una de dólares, igual a `amountUsd`). */
+  amountCur: number
   dueDate: string
   status: 'pending' | 'paid'
   paidAt: string | null
@@ -73,6 +77,19 @@ export type ChargeDetail = {
   /** El IVA de la comisión del local: `merchantNetUsd` = consumo − comisión − este IVA. */
   merchantFeeVatUsd: number | null
   merchantNetUsd: number | null
+  /**
+   * La moneda en que el médico cobró la orden (2026-10-07). Todas las cifras
+   * `Usd` de arriba siguen en dólares: una orden en euros se pasó a dólares
+   * con la tasa cruzada del BCV del día en que se registró.
+   */
+  currency: Moneda
+  /** Dólares por unidad de la moneda el día del registro (1 en las de dólares). */
+  fxUsdPerUnit: number | null
+  /** El desglose en la moneda de la orden: lo que vieron el paciente y la clínica. */
+  amountCur: number | null
+  baseCur: number | null
+  consumerFeeCur: number | null
+  consumerFeeVatCur: number | null
   isTest: boolean
   merchant: { id: string; name: string; legalName: string | null; taxId: string | null }
   branch: { id: string; name: string | null; address: string | null } | null
@@ -114,6 +131,12 @@ export async function fetchChargeDetail(chargeId: string): Promise<ChargeDetail>
     merchantFeeUsd: numeroONulo(raw.merchant_fee_usd),
     merchantFeeVatUsd: numeroONulo(raw.merchant_fee_vat_usd),
     merchantNetUsd: numeroONulo(raw.merchant_net_usd),
+    currency: leerMoneda(raw.currency),
+    fxUsdPerUnit: numeroONulo(raw.fx_usd_per_unit),
+    amountCur: numeroONulo(raw.amount_cur),
+    baseCur: numeroONulo(raw.base_cur),
+    consumerFeeCur: numeroONulo(raw.consumer_fee_cur),
+    consumerFeeVatCur: numeroONulo(raw.consumer_fee_vat_cur),
     isTest: raw.is_test === true,
     merchant: {
       id: texto(merchant.id),
@@ -140,6 +163,7 @@ export async function fetchChargeDetail(chargeId: string): Promise<ChargeDetail>
       sequence: numero(i.sequence),
       amountUsd: numero(i.amount_usd),
       financedUsd: numero(i.financed_usd),
+      amountCur: numeroONulo(i.amount_cur) ?? numero(i.amount_usd),
       dueDate: texto(i.due_date),
       status: i.status === 'paid' ? 'paid' : 'pending',
       paidAt: textoONulo(i.paid_at),

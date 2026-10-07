@@ -160,7 +160,7 @@ export function consultaPlantillas() {
 }
 
 export function consultaTasa() {
-  return queryOptions({ queryKey: ['fx-status'], queryFn: fetchFxStatus })
+  return queryOptions({ queryKey: ['fx-status'], queryFn: () => fetchFxStatus() })
 }
 
 export function consultaCuentasDeCobro() {

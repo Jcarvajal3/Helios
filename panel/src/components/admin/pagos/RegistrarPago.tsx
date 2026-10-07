@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowRight, HandCoins, Search } from 'lucide-react'
 
 import { AdjuntarComprobante } from '@/components/admin/caja/AdjuntarComprobante'
@@ -20,34 +20,38 @@ import {
   claseDeBoton,
   diaOperativo,
   formatBcvRate,
+  formatBcvRateDe,
   formatDay,
   formatDocument,
   formatPhone,
+  formatMoneda,
   formatUsd,
   formatVes,
 } from '@/components/ui'
 import { BANKS } from '@/features/admin/banks'
-import { consultaCargosPorAtraso, consultaTasa } from '@/features/admin/cobranza/consultas'
-import { METODOS_DE_PAGO, medioConReferencia } from '@/features/admin/liquidaciones'
-import type { PayoutMethod } from '@/features/admin/liquidaciones'
+import { consultaCargosPorAtraso } from '@/features/admin/cobranza/consultas'
 import { valorDe } from '@/features/admin/parametros'
 import { useParametros } from '@/features/admin/useParametros'
 import { fetchUserDetail, fetchUsers } from '@/features/admin/users'
 import type { UserRow } from '@/features/admin/users'
-import { registrarPago, subirComprobanteDePago } from '@/features/admin/pagosRegistrados/api'
+import { preverPago, registrarPago, subirComprobanteDePago } from '@/features/admin/pagosRegistrados/api'
 import {
+  METODOS_DEL_PACIENTE,
   alternarCuota,
   armarCuotas,
-  bolivaresEsperados,
   diferenciaEnBs,
   fraseDelExtracto,
-  medioConBanco,
-  medioEnBolivares,
+  montoDeLaCuota,
   motivoDeArchivo,
   motivoDeSeleccion,
   totalDeLaSeleccion,
 } from '@/features/admin/pagosRegistrados/registrarPago'
-import type { CuotaParaPagar, PagoRegistrado } from '@/features/admin/pagosRegistrados/registrarPago'
+import type {
+  CuotaParaPagar,
+  MetodoDelPaciente,
+  PagoRegistrado,
+  PrevisionDelPago,
+} from '@/features/admin/pagosRegistrados/registrarPago'
 import { leerMonto } from '@/lib/montos'
 import { describeError } from '@/lib/supabase'
 
@@ -62,6 +66,11 @@ export type PacienteDelPago = { userId: string; nombre: string | null }
  * empieza por buscarlo. Se eligen las cuotas —lo vencido primero—, se copia
  * lo que dice el comprobante y se sube la captura. El pago queda en la cola
  * de Pagos reportados y se aprueba allí contra el extracto.
+ *
+ * El paciente solo paga en bolívares (Pago Móvil o transferencia), cada cuota
+ * a la tasa BCV de la moneda de su orden del día en que pagó. Lo que debería
+ * decir el comprobante lo da la base para esas cuotas y esa fecha
+ * (`admin_payment_preview`): no se multiplica aquí por una sola tasa.
  */
 export function RegistrarPago({
   paciente,
@@ -182,7 +191,6 @@ function FormularioDelPago({
   const detalle = useQuery({ queryKey: ['admin-user', paciente.userId], queryFn: () => fetchUserDetail(paciente.userId) })
   const cargos = useQuery(consultaCargosPorAtraso(paciente.userId))
   const cola = useQuery(consultaPagosPorAprobar())
-  const tasa = useQuery(consultaTasa())
   const parametros = useParametros()
 
   // Las cuotas que ya tienen un pago registrado sin aprobar.
@@ -201,7 +209,7 @@ function FormularioDelPago({
   )
 
   const [seleccion, setSeleccion] = useState<Set<string>>(new Set())
-  const [metodo, setMetodo] = useState<PayoutMethod>('pago_movil')
+  const [metodo, setMetodo] = useState<MetodoDelPaciente>('pago_movil')
   const [banco, setBanco] = useState('')
   const [referencia, setReferencia] = useState('')
   const [pagadoEl, setPagadoEl] = useState(hoy)
@@ -210,20 +218,30 @@ function FormularioDelPago({
   const [nota, setNota] = useState('')
 
   const total = totalDeLaSeleccion(seleccion, cuotas, cargosSueltosUsd)
-  const tasaHoy = tasa.data?.rate ?? null
-  const esperadoBs = bolivaresEsperados(total.totalUsd, tasaHoy)
-  const enBs = medioEnBolivares(metodo)
-  const escritoBs = enBs ? leerMonto(montoBs) : null
-  const diferencia = enBs ? diferenciaEnBs(escritoBs, esperadoBs, tasaHoy) : null
+  const idsMarcados = cuotas.filter((c) => seleccion.has(c.id)).map((c) => c.id)
+  const fechaValida = pagadoEl !== '' && pagadoEl <= hoy
+  // Lo que debería decir el comprobante, según la base: cada parte a la tasa
+  // BCV de su moneda del día del pago. Mientras se cambia la selección se
+  // queda la cifra anterior en vez de parpadear.
+  const prevision = useQuery({
+    queryKey: ['admin-payment-preview', paciente.userId, idsMarcados, pagadoEl],
+    queryFn: () => preverPago({ userId: paciente.userId, installmentIds: idsMarcados, paidOn: pagadoEl }),
+    enabled: idsMarcados.length > 0 && fechaValida,
+    placeholderData: keepPreviousData,
+  })
+  const esperado = idsMarcados.length > 0 ? (prevision.data ?? null) : null
+  const esperadoBs = esperado?.amountVes ?? null
+  const escritoBs = leerMonto(montoBs)
+  const diferencia = diferenciaEnBs(escritoBs, esperadoBs, esperado?.fxRate ?? null)
   const cuatroOjos = valorDe(parametros.data, 'payment_four_eyes') === 1
 
   const faltan: string[] = []
   const motivoCuotas = motivoDeSeleccion(seleccion, cuotas, hoy)
   if (motivoCuotas) faltan.push(motivoCuotas)
-  if (medioConBanco(metodo) && !banco) faltan.push('Elige el banco desde el que pagó.')
-  if (medioConReferencia(metodo) && referencia.trim().length < 4) faltan.push('Escribe la referencia del comprobante.')
-  if (!pagadoEl || pagadoEl > hoy) faltan.push('La fecha del pago no puede ser futura.')
-  if (enBs && (escritoBs === null || escritoBs <= 0)) faltan.push('Escribe el monto en bolívares que dice el comprobante.')
+  if (!banco) faltan.push('Elige el banco desde el que pagó.')
+  if (referencia.trim().length < 4) faltan.push('Escribe la referencia del comprobante.')
+  if (!fechaValida) faltan.push('La fecha del pago no puede ser futura.')
+  if (escritoBs === null || escritoBs <= 0) faltan.push('Escribe el monto en bolívares que dice el comprobante.')
   const motivoArchivo = archivo ? motivoDeArchivo(archivo) : null
   if (motivoArchivo) faltan.push(motivoArchivo)
 
@@ -232,12 +250,13 @@ function FormularioDelPago({
       const ruta = archivo ? await subirComprobanteDePago({ userId: paciente.userId, file: archivo }) : null
       return registrarPago({
         userId: paciente.userId,
-        installmentIds: cuotas.filter((c) => seleccion.has(c.id)).map((c) => c.id),
+        installmentIds: idsMarcados,
         method: metodo,
-        bank: medioConBanco(metodo) ? banco : null,
+        bank: banco,
         reference: referencia,
         paidOn: pagadoEl,
-        amountVes: enBs ? escritoBs : null,
+        // `faltan` ya impide llegar aquí sin él.
+        amountVes: escritoBs ?? 0,
         receiptPath: ruta,
         note: nota,
       })
@@ -290,35 +309,35 @@ function FormularioDelPago({
           <Fila rotulo={`${seleccion.size} ${seleccion.size === 1 ? 'cuota' : 'cuotas'}, con fee`} valor={formatUsd(total.cuotasUsd)} />
           {total.cargosUsd > 0 && <Fila rotulo="Cargos por atraso que viajan con ellas" valor={formatUsd(total.cargosUsd)} />}
           <Fila rotulo="Total a pagar" valor={formatUsd(total.totalUsd)} fuerte />
-          <p className="mt-1 type-panel-caption text-on-surface-variant">
-            {esperadoBs !== null && tasaHoy !== null
-              ? `A la tasa BCV de hoy (${formatBcvRate(tasaHoy)}): ${formatVes(esperadoBs)}.`
-              : 'Sin tasa BCV cargada no se puede calcular el monto en bolívares.'}
-          </p>
+          <LoQueDiceElComprobante
+            prevision={esperado}
+            cargando={prevision.isFetching && !esperado}
+            error={prevision.isError}
+            dia={pagadoEl}
+            hoy={hoy}
+          />
         </div>
       )}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Select
           id="registrar-pago-metodo"
-          label="Cómo pagó"
+          label="Cómo pagó (solo en bolívares)"
           value={metodo}
-          options={METODOS_DE_PAGO}
+          options={METODOS_DEL_PACIENTE}
           onChange={setMetodo}
         />
-        {medioConBanco(metodo) && (
-          <Select
-            id="registrar-pago-banco"
-            label="Desde qué banco"
-            value={banco}
-            placeholder="Elige el banco"
-            options={BANKS.map((b) => ({ value: b.name, label: b.name }))}
-            onChange={setBanco}
-          />
-        )}
+        <Select
+          id="registrar-pago-banco"
+          label="Desde qué banco"
+          value={banco}
+          placeholder="Elige el banco"
+          options={BANKS.map((b) => ({ value: b.name, label: b.name }))}
+          onChange={setBanco}
+        />
         <Input
           id="registrar-pago-referencia"
-          label={medioConReferencia(metodo) ? 'Referencia' : 'Referencia (opcional)'}
+          label="Referencia"
           value={referencia}
           onChange={setReferencia}
           placeholder="Los últimos dígitos del comprobante"
@@ -332,24 +351,22 @@ function FormularioDelPago({
           onChange={setPagadoEl}
           max={hoy}
         />
-        {enBs && (
-          <Input
-            id="registrar-pago-monto"
-            label="Monto en bolívares (lo que dice el comprobante)"
-            value={montoBs}
-            onChange={setMontoBs}
-            inputMode="decimal"
-            placeholder={esperadoBs !== null ? formatVes(esperadoBs) : 'Bs'}
-            hint={
-              diferencia === null
-                ? undefined
-                : diferencia.cuadra
-                  ? 'Cuadra con lo esperado a la tasa de hoy.'
-                  : `${diferencia.bs > 0 ? 'Pagó de más' : 'Faltan'} ${formatVes(Math.abs(diferencia.bs))} (≈ ${formatUsd(Math.abs(diferencia.usd))}) respecto a lo esperado a la tasa de hoy.`
-            }
-            error={diferencia !== null && !diferencia.cuadra}
-          />
-        )}
+        <Input
+          id="registrar-pago-monto"
+          label="Monto en bolívares (lo que dice el comprobante)"
+          value={montoBs}
+          onChange={setMontoBs}
+          inputMode="decimal"
+          placeholder={esperadoBs !== null ? formatVes(esperadoBs) : 'Bs'}
+          hint={
+            diferencia === null
+              ? undefined
+              : diferencia.cuadra
+                ? `Cuadra con lo esperado a las tasas del ${formatDay(pagadoEl)}.`
+                : `${diferencia.bs > 0 ? 'Pagó de más' : 'Faltan'} ${formatVes(Math.abs(diferencia.bs))} (≈ ${formatUsd(Math.abs(diferencia.usd))}) respecto a lo esperado a las tasas del ${formatDay(pagadoEl)}.`
+          }
+          error={diferencia !== null && !diferencia.cuadra}
+        />
         <AdjuntarComprobante id="registrar-pago-captura" file={archivo} onChange={setArchivo} />
       </div>
 
@@ -380,6 +397,61 @@ function FormularioDelPago({
         {mutation.isPending ? 'Registrando…' : `Registrar el pago de ${formatUsd(total.totalUsd)}`}
       </Button>
     </div>
+  )
+}
+
+/**
+ * Lo que debería decir el comprobante en bolívares, según la base: el total
+ * y, si hay cuotas de órdenes en euros, qué parte va a la tasa del euro y qué
+ * parte a la del dólar.
+ */
+function LoQueDiceElComprobante({
+  prevision,
+  cargando,
+  error,
+  dia,
+  hoy,
+}: {
+  prevision: PrevisionDelPago | null
+  cargando: boolean
+  error: boolean
+  dia: string
+  hoy: string
+}) {
+  const cuando = dia === hoy ? 'de hoy' : `del ${formatDay(dia)}`
+  if (error) {
+    return (
+      <p className="mt-1 type-panel-caption text-warning">
+        No se pudo calcular el monto en bolívares. El servidor lo calculará al registrar.
+      </p>
+    )
+  }
+  if (cargando || !prevision) {
+    return <p className="mt-1 type-panel-caption text-on-surface-variant">Calculando los bolívares…</p>
+  }
+  if (prevision.amountVes === null) {
+    const falta = prevision.amountEur > 0 && prevision.fxRateEur === null ? 'del euro' : 'del dólar'
+    return (
+      <p className="mt-1 type-panel-caption text-warning">
+        Falta la tasa BCV {falta} {cuando}: sin ella no se puede calcular el monto en bolívares. Cárgala en
+        Ajustes › Tasa BCV.
+      </p>
+    )
+  }
+  const partes = [
+    prevision.amountEur > 0 && prevision.fxRateEur !== null
+      ? `${formatMoneda(prevision.amountEur, 'EUR')} a la ${formatBcvRateDe(prevision.fxRateEur, 'EUR')}`
+      : null,
+    prevision.amountUsdPart > 0 && prevision.fxRate !== null
+      ? `${formatUsd(prevision.amountUsdPart)} a la ${formatBcvRate(prevision.fxRate)}`
+      : null,
+  ].filter((p): p is string => p !== null)
+  return (
+    <p className="mt-1 type-panel-caption text-on-surface-variant">
+      En bolívares, a las tasas {cuando}:{' '}
+      <span className="font-semibold text-on-surface">{formatVes(prevision.amountVes)}</span>
+      {partes.length > 0 && ` (${partes.join(' + ')})`}.
+    </p>
   )
 }
 
@@ -440,7 +512,7 @@ function ListaDeCuotas({
                 }
               />
             </div>
-            <span className="font-semibold tabular-nums text-on-surface">{formatUsd(c.amountUsd)}</span>
+            <span className="text-right font-semibold tabular-nums text-on-surface">{montoDeLaCuota(c)}</span>
           </div>
         )
       })}
@@ -459,7 +531,11 @@ function PagoHecho({ pago, nombre, onClose }: { pago: PagoRegistrado; nombre: st
     <div className="flex flex-col gap-4">
       <Callout tone="success" titulo={`Pago de ${formatUsd(pago.amountUsd)} registrado${nombre ? ` a ${nombre}` : ''}`}>
         {pago.amountVes !== null && pago.fxRate !== null
-          ? `${formatVes(pago.amountVes)} a ${formatBcvRate(pago.fxRate)}. `
+          ? `${formatVes(pago.amountVes)} a ${formatBcvRate(pago.fxRate)}${
+              pago.amountEur !== null && pago.amountEur > 0 && pago.fxRateEur !== null
+                ? ` (lo de euros, ${formatMoneda(pago.amountEur, 'EUR')}, a ${formatBcvRateDe(pago.fxRateEur, 'EUR')})`
+                : ''
+            }. `
           : ''}
         {pago.lateFeeUsd > 0 ? `Incluye ${formatUsd(pago.lateFeeUsd)} de cargos por atraso. ` : ''}
         Queda en Pagos reportados para aprobarlo.

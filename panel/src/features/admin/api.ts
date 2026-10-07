@@ -1,4 +1,6 @@
 import { supabase } from '@/lib/supabase'
+import { leerMoneda } from '@/components/ui'
+import type { Moneda } from '@/components/ui'
 import { resizeToThumbnail } from '@/features/admin/resizeImage'
 import { comoFila, comoLista, numeroONulo, textoONulo } from '@/lib/json'
 import { unoDe } from '@/lib/busqueda'
@@ -563,6 +565,18 @@ export type Settlement = {
   paidUsd: number
   /** Lo que queda por transferir de esta línea. Es lo que se suma y lo que se paga. */
   pendingUsd: number
+  /**
+   * La moneda de su orden (2026-10-07). A la clínica se le paga en bolívares
+   * a la tasa BCV de ESA moneda del día del pago; las cifras `Usd` siguen
+   * siendo dólares.
+   */
+  currency: Moneda
+  /** Lo devengado, lo pagado y lo que falta, en la moneda de su orden. */
+  amountCur: number
+  paidCur: number
+  pendingCur: number
+  /** Lo que falta, en bolívares de hoy a la tasa de su moneda. `null` sin tasa. */
+  pendingVesHoy: number | null
   /** El número de la orden del consumo, que es como lo llama el local. */
   orderNumber: number | null
   dueDate: string
@@ -606,6 +620,11 @@ export async function fetchMerchantSettlements(
     amountUsd: Number(row.amount_usd),
     paidUsd: Number(row.paid_usd ?? 0),
     pendingUsd: Number(row.pending_usd ?? 0),
+    currency: leerMoneda(row.currency),
+    amountCur: Number(row.amount_cur ?? row.amount_usd),
+    paidCur: Number(row.paid_cur ?? row.paid_usd ?? 0),
+    pendingCur: Number(row.pending_cur ?? row.pending_usd ?? 0),
+    pendingVesHoy: row.pending_ves_hoy == null ? null : Number(row.pending_ves_hoy),
     orderNumber: row.order_number == null ? null : Number(row.order_number),
     dueDate: String(row.due_date),
     isDue: Boolean(row.is_due),
@@ -704,6 +723,11 @@ export async function reportMerchantPayout(params: {
   method: PayoutMethod
   reference?: string
   amountVes?: number
+  /**
+   * La tasa escrita a mano: la de la moneda de lo marcado. Si lo marcado
+   * mezcla dólares y euros la base la rechaza; vacía, usa la BCV de cada
+   * moneda del día del pago.
+   */
   fxRate?: number
   note?: string
   /** Menos que lo marcado: se reparte de la liquidación más antigua a la más
@@ -775,7 +799,11 @@ export type Payout = {
   createdAt: string
   amountUsd: number
   amountVes: number | null
+  /** La tasa del dólar del pago (la de la parte en dólares, si la hubo). */
   fxRate: number | null
+  /** La parte que iba en euros, en euros, y su tasa. `null` si todo era en dólares. */
+  amountEur: number | null
+  fxRateEur: number | null
   method: PayoutMethod
   reference: string | null
   note: string | null
@@ -823,6 +851,8 @@ function mapPayout(row: Record<string, unknown>): Payout {
     amountUsd: Number(row.amount_usd ?? 0),
     amountVes: row.amount_ves == null ? null : Number(row.amount_ves),
     fxRate: row.fx_rate == null ? null : Number(row.fx_rate),
+    amountEur: row.amount_eur == null ? null : Number(row.amount_eur),
+    fxRateEur: row.fx_rate_eur == null ? null : Number(row.fx_rate_eur),
     method: row.method as PayoutMethod,
     reference: (row.reference as string | null) ?? null,
     note: (row.note as string | null) ?? null,
@@ -842,6 +872,9 @@ export type PayoutItem = {
   status: SettlementStatus
   /** Lo que ESTE pago le aplicó. Con un pago parcial no es su importe. */
   appliedUsd: number
+  /** La moneda de la liquidación y lo aplicado en ella. */
+  currency: Moneda
+  appliedCur: number
   settlementUsd: number
   paidUsd: number
   pendingUsd: number
@@ -860,6 +893,9 @@ export type PayoutDetail = {
   amountUsd: number
   amountVes: number | null
   fxRate: number | null
+  /** La parte que iba en euros, en euros, y su tasa. `null` si todo era en dólares. */
+  amountEur: number | null
+  fxRateEur: number | null
   method: PayoutMethod
   reference: string | null
   note: string | null
@@ -889,6 +925,8 @@ export async function fetchPayoutDetail(payoutId: string): Promise<PayoutDetail>
     reason: item.reason as SettlementReason,
     status: item.status as SettlementStatus,
     appliedUsd: Number(item.applied_usd ?? 0),
+    currency: leerMoneda(item.currency),
+    appliedCur: Number(item.applied_cur ?? item.applied_usd ?? 0),
     settlementUsd: Number(item.settlement_usd ?? 0),
     paidUsd: Number(item.paid_usd ?? 0),
     pendingUsd: Number(item.pending_usd ?? 0),
@@ -907,6 +945,8 @@ export async function fetchPayoutDetail(payoutId: string): Promise<PayoutDetail>
     amountUsd: Number(raw.amount_usd ?? 0),
     amountVes: raw.amount_ves == null ? null : Number(raw.amount_ves),
     fxRate: raw.fx_rate == null ? null : Number(raw.fx_rate),
+    amountEur: raw.amount_eur == null ? null : Number(raw.amount_eur),
+    fxRateEur: raw.fx_rate_eur == null ? null : Number(raw.fx_rate_eur),
     method: raw.method as PayoutMethod,
     reference: raw.reference ?? null,
     note: raw.note ?? null,

@@ -230,19 +230,36 @@ export async function saveLevelConfig(config: {
 
 // ── Cuenta de cobro ────────────────────────────────────────────────────────
 
-/** Cómo paga el paciente a esa cuenta: cada método exige sus datos (contrato §2.3). */
-export type MetodoDeCobro = 'pago_movil' | 'transferencia' | 'zelle'
+/**
+ * Cómo paga el paciente a esa cuenta: cada método exige sus datos (contrato
+ * §2.3). Desde el 2026-10-07 el paciente solo paga en bolívares: Pago Móvil o
+ * transferencia (`20261007000300_el_paciente_solo_paga_en_bolivares`).
+ */
+export type MetodoDeCobro = 'pago_movil' | 'transferencia'
+
+/**
+ * Lo que puede traer una cuenta guardada: las de Zelle de antes del
+ * 2026-10-07 siguen en la base, apagadas, porque los pagos viejos se cotejan
+ * contra ellas. Se enseñan como historia y no se editan.
+ */
+export type MetodoDeCuenta = MetodoDeCobro | 'zelle'
 
 export const METODOS_DE_COBRO: Array<{ value: MetodoDeCobro; label: string }> = [
   { value: 'pago_movil', label: 'Pago Móvil' },
   { value: 'transferencia', label: 'Transferencia' },
-  { value: 'zelle', label: 'Zelle' },
 ]
+
+/** El nombre de un método de cuenta, también el de una histórica. */
+export function nombreDelMetodoDeCobro(metodo: MetodoDeCuenta): string {
+  return metodo === 'zelle'
+    ? 'Zelle'
+    : (METODOS_DE_COBRO.find((m) => m.value === metodo)?.label ?? metodo)
+}
 
 export type PaymentDestination = {
   id: string
-  method: MetodoDeCobro
-  /** Vacío si el método no lo usa (Zelle). */
+  method: MetodoDeCuenta
+  /** Vacío si el método no lo usa (las de Zelle, históricas). */
   bankName: string
   rif: string
   phone: string
@@ -282,8 +299,20 @@ export async function fetchPaymentDestinations(): Promise<PaymentDestination[]> 
 }
 
 /** Un método que no se conoce se lee como Pago Móvil, el único que hubo en Ronda. */
-export function leerMetodo(valor: unknown): MetodoDeCobro {
+export function leerMetodo(valor: unknown): MetodoDeCuenta {
   return valor === 'transferencia' || valor === 'zelle' ? valor : 'pago_movil'
+}
+
+/** Una cuenta en bolívares: la única que se puede activar, ordenar o editar. */
+export type CuentaEnBolivares = PaymentDestination & { method: MetodoDeCobro }
+
+/**
+ * Si la cuenta es de las que el paciente puede usar hoy (Pago Móvil o
+ * transferencia). Una de Zelle es histórica: se lista, pero ni se activa ni
+ * se edita, y la base la rechazaría.
+ */
+export function esCuentaEnBolivares(cuenta: PaymentDestination): cuenta is CuentaEnBolivares {
+  return cuenta.method !== 'zelle'
 }
 
 /**
@@ -328,7 +357,7 @@ export async function setPaymentDestination(params: {
 }
 
 /** Los datos de una cuenta tal cual, para editar solo su orden o su estado. */
-export function datosDe(cuenta: PaymentDestination) {
+export function datosDe(cuenta: CuentaEnBolivares) {
   return {
     id: cuenta.id,
     method: cuenta.method,

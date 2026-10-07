@@ -1,12 +1,14 @@
+import type { Moneda } from '@/components/ui'
 import { supabase } from '@/lib/supabase'
 
 import {
   leerElegibilidad,
   leerFinanciamiento,
   leerReenvio,
+  leerTasasDeHoy,
   leerVistaPrevia,
 } from './registro'
-import type { Elegibilidad, Financiamiento, Reenvio, VistaPrevia } from './registro'
+import type { Elegibilidad, Financiamiento, Reenvio, TasasDeHoy, VistaPrevia } from './registro'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Las llamadas del alta. Cada una lanza el error de PostgREST tal cual: el
@@ -27,16 +29,31 @@ export async function consultarCedula(params: {
   return leerElegibilidad(data)
 }
 
-/** Paso 4: las dos cuotas con sus fechas, sin crear nada (contrato §1.2). */
+/**
+ * Paso 3: las tasas BCV de hoy, para el mínimo y el máximo en euros y para el
+ * equivalente en bolívares del monto (`helios_fx_today`).
+ */
+export async function fetchTasasDeHoy(): Promise<TasasDeHoy> {
+  const { data, error } = await supabase.rpc('helios_fx_today')
+  if (error) throw error
+  return leerTasasDeHoy(data)
+}
+
+/**
+ * Paso 4: las dos cuotas con sus fechas, sin crear nada (contrato §1.2).
+ * `amount` va en la moneda elegida; la base lo pasa a dólares.
+ */
 export async function fetchVistaPrevia(params: {
   merchantId: string
   document: string
-  amountUsd: number
+  amount: number
+  moneda: Moneda
 }): Promise<VistaPrevia> {
   const { data, error } = await supabase.rpc('preview_patient_charge', {
     p_merchant_id: params.merchantId,
     p_document: params.document,
-    p_amount_usd: params.amountUsd,
+    p_amount: params.amount,
+    p_currency: params.moneda,
   })
   if (error) throw error
   return leerVistaPrevia(data)
@@ -64,7 +81,9 @@ export async function registrarFinanciamiento(params: {
   merchantId: string
   branchId: string | null
   patient: Record<string, string | null>
-  amountUsd: number
+  /** En la moneda de la consulta (`moneda`). */
+  amount: number
+  moneda: Moneda
   concept: string | null
   beneficiaryName: string | null
   idempotencyKey: string
@@ -73,10 +92,11 @@ export async function registrarFinanciamiento(params: {
     p_merchant_id: params.merchantId,
     p_branch_id: params.branchId,
     p_patient: params.patient,
-    p_amount_usd: params.amountUsd,
+    p_amount: params.amount,
     p_concept: params.concept,
     p_beneficiary_name: params.beneficiaryName,
     p_idempotency_key: params.idempotencyKey,
+    p_currency: params.moneda,
   })
   if (error) throw error
   return leerFinanciamiento(data)

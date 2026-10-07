@@ -33,6 +33,13 @@ insert into public.business_parameters (key, value, effective_from, note)
 values ('patient_confirmation_required', 0, public.helios_business_date(now()), 'pruebas (rollback)')
 on conflict (key, effective_from) do update set value = 0;
 
+-- Desde el 2026-10-07 no se cobran cargos por mora (`late_fee_usd` = 0), pero
+-- el motor sigue en el código para retomarlo: las suites lo siguen probando
+-- con el cargo de siempre, $2. `sin_mora_smoke` prueba el modo apagado.
+insert into public.business_parameters (key, value, effective_from, note)
+values ('late_fee_usd', 2, public.helios_business_date(now()), 'pruebas (rollback)')
+on conflict (key, effective_from) do update set value = 2;
+
 /**
  * Un consumo confirmado de `p_base` (sin fee) para `p_user` en `p_merchant`,
  * registrado por `p_staff`. Devuelve lo mismo que devolvía `confirm_charge`.

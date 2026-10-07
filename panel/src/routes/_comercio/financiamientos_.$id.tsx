@@ -21,6 +21,7 @@ import {
   Tr,
   formatDateTime,
   formatDay,
+  formatMoneda,
   formatTime,
   formatUsd,
 } from '@/components/ui'
@@ -28,7 +29,12 @@ import { useStaff } from '@/features/auth/session'
 import { ESTADO_DEL_FINANCIAMIENTO, ESTADO_DEL_PAGO } from '@/features/merchant/financiamientos'
 import type { DetalleDeFinanciamiento } from '@/features/merchant/financiamientos'
 import { fetchDetalle } from '@/features/merchant/financiamientosApi'
-import { COMPROBANTE, diaDeLaSemana, esperaAlPaciente } from '@/features/merchant/registro'
+import {
+  COMPROBANTE,
+  DE_LA_MONEDA,
+  diaDeLaSemana,
+  esperaAlPaciente,
+} from '@/features/merchant/registro'
 import type { EstadoDelComprobante } from '@/features/merchant/registro'
 import { fetchFinanciamiento, reenviarComprobante } from '@/features/merchant/registroApi'
 import { describeError } from '@/lib/supabase'
@@ -41,6 +47,8 @@ import { describeError } from '@/lib/supabase'
  *
  *   1. Qué se registró: la consulta, a quién, quién lo registró y su
  *      comisión, con la comisión de servicio en su propia línea (nunca sumada).
+ *      La consulta, en la moneda en que se cobró (dólares o euros); la
+ *      comisión del personal, siempre en dólares.
  *   2. El comprobante: si le llegó al paciente, y «Reenviar» si dice que no.
  *   3. Cuándo te pagamos: el día de pago de cada mitad (el siguiente al
  *      vencimiento de su cuota).
@@ -159,7 +167,7 @@ function Resumen({ f }: { f: DetalleDeFinanciamiento }) {
         <div className="min-w-0">
           <DataLabel>{f.concept ?? 'Consulta'} · lo que cobra la clínica</DataLabel>
           <p className="mt-1 type-panel-hero tabular-nums text-on-surface">
-            {formatUsd(f.merchantSaleUsd)}
+            {formatMoneda(f.merchantSaleCur, f.moneda)}
           </p>
           <p className="mt-1 type-panel-body text-on-surface">
             {f.patientName ?? <span className="text-on-surface-variant">Sin nombre</span>}
@@ -183,10 +191,11 @@ function Resumen({ f }: { f: DetalleDeFinanciamiento }) {
       </div>
 
       <DesgloseDelServicio
-        baseUsd={f.merchantSaleUsd}
+        base={f.merchantSaleCur}
         feePct={f.feePct}
-        feeUsd={f.feeUsd}
-        feeVatUsd={f.feeVatUsd}
+        fee={f.feeCur}
+        feeVat={f.feeVatCur}
+        moneda={f.moneda}
         concepto={f.concept}
       />
 
@@ -333,14 +342,14 @@ function CuandoTePagamos({ f }: { f: DetalleDeFinanciamiento }) {
               {conImportes && (
                 <>
                   <Td className="whitespace-nowrap tabular-nums">
-                    {p.amountUsd === null ? (
+                    {p.amountCur === null ? (
                       <span className="text-on-surface-variant">Se calcula al vencer</span>
                     ) : (
                       <>
-                        {formatUsd(p.amountUsd)}
-                        {p.status === 'partial' && p.paidUsd !== null && (
+                        {formatMoneda(p.amountCur, p.moneda)}
+                        {p.status === 'partial' && p.paidCur !== null && (
                           <span className="block type-panel-caption text-panel-muted">
-                            {formatUsd(p.paidUsd)} transferidos
+                            {formatMoneda(p.paidCur, p.moneda)} transferidos
                           </span>
                         )}
                       </>
@@ -362,7 +371,7 @@ function CuandoTePagamos({ f }: { f: DetalleDeFinanciamiento }) {
       <p className="mt-4 type-panel-caption leading-5 text-panel-muted">
         Helios te paga cada mitad el día siguiente al vencimiento de su cuota (a los 8 y a los
         15 días de la consulta), <strong>haya pagado o no tu paciente</strong>: cobrarle es cosa
-        de Helios.
+        de Helios. Te lo pagamos en bolívares a la tasa BCV {DE_LA_MONEDA[f.moneda]}.
       </p>
     </section>
   )

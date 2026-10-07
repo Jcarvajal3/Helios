@@ -27,6 +27,7 @@ import { canSee } from '@/features/auth/permissions'
 import { useStaff } from '@/features/auth/session'
 import type { StaffContext } from '@/features/auth/session'
 import { sumarDias } from '@/components/kit/rango'
+import { EQUIVALENTE_EN_DOLARES } from '@/features/merchant/financiamientos'
 import { CONCEPTO, MEDIO_DE_PAGO, agruparLineas, repartir } from '@/features/merchant/pagos'
 import type { Reparto, Transferencia } from '@/features/merchant/pagos'
 import { diaDeLaSemana } from '@/features/merchant/registro'
@@ -125,6 +126,7 @@ function Pagos({ staff }: { staff: StaffContext }) {
         <Stat
           label="Total por cobrar"
           value={formatUsd(p?.totalPendingUsd ?? 0)}
+          info={EQUIVALENTE_EN_DOLARES}
           hint={
             p && p.upcomingUsd > 0
               ? `${formatUsd(p.upcomingUsd)} en cuotas que aún no vencen`
@@ -183,7 +185,9 @@ function Pagos({ staff }: { staff: StaffContext }) {
         <strong>a los 15 días</strong> (el día siguiente al vencimiento de cada cuota del
         paciente), <strong>haya pagado o no tu paciente</strong>: cobrarle es cosa de Helios.
         En la misma transferencia van las <strong>comisiones de tu personal</strong>, cada una
-        el día siguiente a que el paciente confirma, para que se las entregues.
+        el día siguiente a que el paciente confirma, para que se las entregues. Las cifras de
+        esta pantalla van en dólares: las consultas que cobraste en euros se suman pasadas a
+        dólares.
       </p>
 
       {/* ── Historial ─────────────────────────────────────────────────── */}

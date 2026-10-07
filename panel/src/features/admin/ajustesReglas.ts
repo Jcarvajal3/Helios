@@ -3,18 +3,20 @@
 // tasa, la cuenta de cobro de relleno y el efecto de una versión mínima.
 // ═══════════════════════════════════════════════════════════════════════════
 
+import type { Moneda } from '@/components/ui'
+
 /**
  * La tasa con cuatro decimales y su unidad completa: '36,5244 Bs./$'.
  *
- * El BCV publica varias tasas el mismo día y la del dólar es la que el
- * operador se sabe de memoria: sin el «/€» al lado no se ve de un vistazo si
- * la que entró es la que tenía que entrar.
+ * El BCV publica varias tasas el mismo día, y Helios usa dos: la del dólar y
+ * la del euro. Sin el «/$» o el «/€» al lado no se ve de un vistazo si la que
+ * entró es la que tenía que entrar.
  */
-export function formatTasa(tasa: number): string {
+export function formatTasa(tasa: number, moneda: Moneda = 'USD'): string {
   return `${tasa.toLocaleString('es-VE', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 4,
-  })} Bs./$`
+  })} Bs./${moneda === 'EUR' ? '€' : '$'}`
 }
 
 /**

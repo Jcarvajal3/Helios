@@ -19,6 +19,7 @@ import {
 } from '@/components/ui'
 import { canSee } from '@/features/auth/permissions'
 import { useStaff } from '@/features/auth/session'
+import { EQUIVALENTE_EN_DOLARES } from '@/features/merchant/financiamientos'
 import {
   fetchMerchantDailySeries,
   fetchMerchantOverview,
@@ -129,6 +130,7 @@ function MetricasPage() {
             <Stat
               label="Registrado"
               value={formatUsd(overview.data.soldUsd)}
+              info={EQUIVALENTE_EN_DOLARES}
               tone="success"
               hint={
                 <Delta
@@ -305,6 +307,7 @@ function Recurrence({ data }: { data: MerchantRecurrence }) {
         <Stat
           label="Te dejaron"
           value={formatUsd(bucket.saleUsd)}
+          info={EQUIVALENTE_EN_DOLARES}
           hint="Sus consultas, sin la comisión de servicio"
         />
       </StatGrid>

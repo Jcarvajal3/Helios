@@ -8,6 +8,7 @@ import type { Almacen } from './claveDelAlta'
 import {
   coincideConLoPedido,
   diaDeLaSemana,
+  enBolivares,
   esRechazoDeLaBase,
   esperaAlPaciente,
   fraseDeLaEspera,
@@ -18,8 +19,11 @@ import {
   leerFinanciamiento,
   leerMontoDeConsulta,
   leerReenvio,
+  leerTasasDeHoy,
   leerVistaPrevia,
+  limitesEnMoneda,
   maximoParaFinanciar,
+  tasaBcvDe,
   minutosRestantes,
   pasoDelError,
   porcentajeDelServicio,
@@ -110,10 +114,10 @@ igual(
 
 console.log('\n── monto ─────────────────────────────────────────────────────')
 const lim = { minimo: 10, maximo: 212.4 }
-igual(leerMontoDeConsulta('100', lim, usd), { ok: true, usd: 100 }, 'un entero')
-igual(leerMontoDeConsulta('45,50', lim, usd), { ok: true, usd: 45.5 }, 'con coma decimal')
-igual(leerMontoDeConsulta('$ 45.50', lim, usd), { ok: true, usd: 45.5 }, 'con símbolo y punto')
-igual(leerMontoDeConsulta('212,40', lim, usd), { ok: true, usd: 212.4 }, 'justo lo disponible')
+igual(leerMontoDeConsulta('100', lim, usd), { ok: true, monto: 100 }, 'un entero')
+igual(leerMontoDeConsulta('45,50', lim, usd), { ok: true, monto: 45.5 }, 'con coma decimal')
+igual(leerMontoDeConsulta('$ 45.50', lim, usd), { ok: true, monto: 45.5 }, 'con símbolo y punto')
+igual(leerMontoDeConsulta('212,40', lim, usd), { ok: true, monto: 212.4 }, 'justo lo disponible')
 igual(
   leerMontoDeConsulta('212,41', lim, usd),
   { ok: false, problema: 'El monto supera lo disponible ($212,40).' },
@@ -128,7 +132,52 @@ igual(
 comprueba(!leerMontoDeConsulta('', lim, usd).ok, 'vacío no vale')
 comprueba(!leerMontoDeConsulta('cien', lim, usd).ok, 'texto no vale')
 comprueba(!leerMontoDeConsulta('-20', lim, usd).ok, 'negativo no vale')
-igual(leerMontoDeConsulta('0,1', { minimo: 0, maximo: null }, usd), { ok: true, usd: 0.1 }, '0,1 no se come por redondeo')
+igual(leerMontoDeConsulta('0,1', { minimo: 0, maximo: null }, usd), { ok: true, monto: 0.1 }, '0,1 no se come por redondeo')
+
+console.log('\n── la moneda de la consulta ──────────────────────────────────')
+const eur = (n: number) => `€${n.toFixed(2).replace('.', ',')}`
+const tasas = leerTasasDeHoy({
+  business_date: '2026-10-07',
+  usd: { rate: '190.123456', effective_date: '2026-10-07' },
+  eur: { rate: 214.1, effective_date: '2026-10-07' },
+  usd_per_eur: '1.126',
+})
+igual(tasas, { businessDate: '2026-10-07', usd: 190.123456, eur: 214.1, usdPorEuro: 1.126 }, 'las tasas de hoy')
+igual(
+  leerTasasDeHoy({ business_date: '2026-10-07', usd: { rate: 190 }, eur: null, usd_per_eur: null }),
+  { businessDate: '2026-10-07', usd: 190, eur: null, usdPorEuro: null },
+  'sin tasa del euro: null, no cero',
+)
+igual(tasaBcvDe(tasas, 'EUR'), 214.1, 'la tasa del euro para una consulta en euros')
+igual(tasaBcvDe(tasas, 'USD'), 190.123456, 'la del dólar para una en dólares')
+igual(tasaBcvDe(undefined, 'USD'), null, 'sin tasas todavía')
+
+igual(limitesEnMoneda({ minimo: 10, maximo: 150 }, 'USD', null), { minimo: 10, maximo: 150 }, 'en dólares, los de siempre (sin tasa no hace falta)')
+// Como `helios_assert_charge_amount_in`: ceil(min / tasa, 2) y trunc(máx / tasa, 2).
+igual(
+  limitesEnMoneda({ minimo: 10, maximo: 150 }, 'EUR', 1.126),
+  { minimo: 8.89, maximo: 133.21 },
+  'en euros: el mínimo hacia arriba (8,8809 → 8,89) y el máximo truncado (133,214 → 133,21)',
+)
+igual(limitesEnMoneda({ minimo: 10, maximo: null }, 'EUR', 1.25), { minimo: 8, maximo: null }, 'exacto: 10 / 1,25 es €8,00, no €8,01')
+igual(limitesEnMoneda({ minimo: 10, maximo: 149.97 }, 'EUR', 1.17), { minimo: 8.55, maximo: 128.17 }, 'otra tasa: 8,547 → 8,55 y 128,179 → 128,17')
+igual(limitesEnMoneda({ minimo: 10, maximo: 150 }, 'EUR', null), null, 'euros sin tasa: no se puede seguir')
+igual(limitesEnMoneda({ minimo: 10, maximo: 150 }, 'EUR', 0), null, 'una tasa en cero tampoco vale')
+
+const limEur = limitesEnMoneda({ minimo: 10, maximo: 150 }, 'EUR', 1.126)
+if (limEur) {
+  igual(leerMontoDeConsulta('8,88', limEur, eur), { ok: false, problema: 'El monto mínimo es €8,89.' }, 'euros: bajo el mínimo, en euros')
+  igual(leerMontoDeConsulta('8,89', limEur, eur), { ok: true, monto: 8.89 }, 'euros: justo el mínimo')
+  igual(leerMontoDeConsulta('133,21', limEur, eur), { ok: true, monto: 133.21 }, 'euros: justo el máximo')
+  igual(
+    leerMontoDeConsulta('133,22', limEur, eur),
+    { ok: false, problema: 'El monto supera lo disponible (€133,21).' },
+    'euros: un céntimo de más, en euros',
+  )
+}
+igual(enBolivares(100, 214.1), 21410, 'el equivalente en bolívares')
+igual(enBolivares(56.96, 190.123456), 10829.43, 'redondeado al céntimo')
+igual(enBolivares(100, null), null, 'sin tasa no se inventa')
 
 console.log('\n── vista previa ──────────────────────────────────────────────')
 const vp = leerVistaPrevia({
@@ -161,6 +210,46 @@ igual(
   'la regla del atraso',
 )
 igual(reglaDelAtraso({ lateFeeUsd: null, lateFeeGraceDays: 3 }, usd), null, 'sin cifras no se inventa')
+igual(reglaDelAtraso({ lateFeeUsd: 0, lateFeeGraceDays: 3 }, usd), null, 'sin cargo por mora (en 0) no se promete ninguno')
+igual(vp.moneda, 'USD', 'sin currency: dólares')
+igual(vp.baseCur, 100, 'sin base_cur: la de dólares')
+igual(vp.cuotas[0].amountCur, 56.96, 'sin amount_cur: el de dólares')
+igual(vp.cuotas[0].amountVes, null, 'sin amount_ves: null')
+
+const vpEur = leerVistaPrevia({
+  currency: 'EUR',
+  fx_usd_per_unit: 1.126,
+  tasa_bcv: 214.1,
+  base_usd: 112.6,
+  base_cur: 100,
+  consumer_fee_pct: 12,
+  consumer_fee_usd: 13.51,
+  consumer_fee_vat_usd: 2.16,
+  consumer_fee_cur: 12,
+  consumer_fee_vat_cur: 1.92,
+  installments: [
+    { sequence: 1, due_date: '2026-10-14', amount_usd: 64.14, amount_cur: 56.96, amount_ves: 12195.14 },
+    { sequence: 2, due_date: '2026-10-21', amount_usd: 64.13, amount_cur: 56.96, amount_ves: 12195.14 },
+  ],
+  cabe: false,
+  disponible_usd: 50,
+  disponible_cur: 44.4,
+})
+igual(
+  [vpEur.moneda, vpEur.tasaBcv, vpEur.baseCur, vpEur.feeCur, vpEur.feeVatCur, vpEur.disponibleCur],
+  ['EUR', 214.1, 100, 12, 1.92, 44.4],
+  'en euros: lo que se enseña, en euros',
+)
+igual(vpEur.baseUsd, 112.6, 'y lo del libro sigue en dólares')
+igual(
+  vpEur.cuotas.map((c) => [c.amountCur, c.amountVes]),
+  [
+    [56.96, 12195.14],
+    [56.96, 12195.14],
+  ],
+  'cada cuota en euros y en bolívares de hoy',
+)
+
 igual(diaDeLaSemana('2026-10-08'), 'jueves', 'el 8 de octubre de 2026 es jueves')
 igual(diaDeLaSemana('2026-10-05'), 'lunes', 'el 5 de octubre de 2026 es lunes')
 
@@ -195,17 +284,60 @@ lanza(() => leerFinanciamiento({ order_number: 1 }), 'sin id no hay orden que en
 igual(leerEstadoDelComprobante('rebotado'), 'rebotado', 'estado conocido')
 igual(leerEstadoDelComprobante('perdido'), null, 'estado desconocido es null')
 
+igual([creado.moneda, creado.merchantSaleCur], ['USD', 100], 'sin currency: dólares, la misma cifra')
+
 comprueba(
-  coincideConLoPedido(creado, { amountUsd: 100, document: 'V12345678' }),
+  coincideConLoPedido(creado, { amount: 100, moneda: 'USD', document: 'V12345678' }),
   'coincide con lo pedido',
 )
 comprueba(
-  !coincideConLoPedido(creado, { amountUsd: 90, document: 'V12345678' }),
+  !coincideConLoPedido(creado, { amount: 90, moneda: 'USD', document: 'V12345678' }),
   'otro monto: devolvió un alta anterior',
 )
 comprueba(
-  !coincideConLoPedido(creado, { amountUsd: 100, document: 'V87654321' }),
+  !coincideConLoPedido(creado, { amount: 100, moneda: 'USD', document: 'V87654321' }),
   'otra cédula: devolvió un alta anterior',
+)
+comprueba(
+  !coincideConLoPedido(creado, { amount: 100, moneda: 'EUR', document: 'V12345678' }),
+  'otra moneda: €100 no son los $100 de antes',
+)
+
+const enEuros = leerFinanciamiento({
+  id: 'c9',
+  order_number: 1050,
+  status: 'confirmed',
+  currency: 'EUR',
+  merchant_sale_usd: 112.6,
+  merchant_sale_cur: 100,
+  tasa_bcv: 214.1,
+  patient: { documento_enmascarado: 'V-****5678' },
+  installments: [
+    { sequence: 1, due_date: '2026-10-14', amount_usd: 64.14, amount_cur: 56.96, amount_ves: 12195.14 },
+    { sequence: 2, due_date: '2026-10-21', amount_usd: 64.13, amount_cur: 56.96, amount_ves: 12195.14 },
+  ],
+  breakdown: {
+    base_usd: 112.6,
+    consumer_fee_usd: 13.51,
+    consumer_fee_vat_usd: 2.16,
+    base_cur: 100,
+    consumer_fee_cur: 12,
+    consumer_fee_vat_cur: 1.92,
+  },
+})
+igual(
+  [enEuros.moneda, enEuros.merchantSaleCur, enEuros.feeCur, enEuros.feeVatCur],
+  ['EUR', 100, 12, 1.92],
+  'una orden en euros se lee en euros',
+)
+igual(enEuros.feePct, 12, 'el porcentaje sale de las cifras en dólares (13,51 / 112,6)')
+comprueba(
+  coincideConLoPedido(enEuros, { amount: 100, moneda: 'EUR', document: 'V12345678' }),
+  'en euros: coincide con los €100 pedidos (no con los $112,60 del libro)',
+)
+comprueba(
+  !coincideConLoPedido(enEuros, { amount: 112.6, moneda: 'EUR', document: 'V12345678' }),
+  'en euros: el monto del libro no es el pedido',
 )
 
 igual(fraseDelComprobante('enviado', 'j***@gmail.com'), 'Comprobante enviado a j***@gmail.com.', 'enviado')

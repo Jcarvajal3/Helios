@@ -61,14 +61,17 @@ begin
     raise exception 'BCV del 30/09 debía ser el dólar (menor que el euro)';
   end if;
 
+  -- Desde el 2026-10-07 la consulta también se cobra en euros: los espejos
+  -- del euro vuelven, cada uno con su serie (BCV_EUR).
   select count(*) into v_n from public.fx_rate_sources
   where is_active
-    and ((key = 'dolarapi' and url like '%/v1/dolares/oficial')
-      or (key = 'er-api'   and url like '%/latest/USD'));
-  if v_n <> 2 or exists (select 1 from public.fx_rate_sources where is_active and key like '%eur%') then
-    raise exception 'Los espejos activos debían ser los dos del dólar y ninguno del euro';
+    and ((key = 'dolarapi' and url like '%/v1/dolares/oficial' and series = 'BCV')
+      or (key = 'er-api'   and url like '%/latest/USD' and series = 'BCV'));
+  if v_n <> 2 or exists (select 1 from public.fx_rate_sources
+                         where is_active and key like '%eur%' and series <> 'BCV_EUR') then
+    raise exception 'Los espejos activos debían ser los dos del dólar (BCV) y los del euro en BCV_EUR';
   end if;
-  raise notice 'TEST H1.1 OK — BCV es el dólar, el euro archivado, espejos del dólar';
+  raise notice 'TEST H1.1 OK — BCV es el dólar, el euro en BCV_EUR, cada espejo con su serie';
 
   if (select monthly_limit_usd from public.levels where level = 1) <> 150
      or not (select is_active from public.levels where level = 1)
@@ -139,6 +142,11 @@ begin
     where n.nspname in ('public', 'ledger', 'audit', 'metricas', 'asistente')
       -- («euro» en singular queda en un comentario: la serie archivada BCV_EUR.)
       and (p.prosrc like '%€%' or p.prosrc ~* '\meuros\M')
+      -- Las que hablan de euros porque la consulta se cobra en dólares o en
+      -- euros (20261007000100–000400): ahí el euro es a propósito.
+      and p.proname not in ('admin_payment_preview', 'admin_report_merchant_payout', 'admin_set_fx_rate',
+                            'bot_patient_eligibility', 'helios_charge_currency', 'helios_currency_symbol',
+                            'helios_enqueue_reminders', 'helios_quote_installments', 'helios_usd_per_unit')
   ) or exists (
     select 1 from public.notification_templates
     where concat(default_title, default_body, title, body, draft_title, draft_body) like '%€%'
@@ -398,15 +406,16 @@ begin
 
   perform public.admin_set_payment_destination('Banesco', 'J-000000001', '04141112233', 'Helios CA',
                                                null, 2, true);
-  perform public.admin_set_payment_destination(null, null, null, 'Helios LLC', null, 1, true, null,
-                                               'zelle', null, 'pagos@helios.test');
+  -- El paciente solo paga en bolívares (2026-10-07): la segunda es una transferencia.
+  perform public.admin_set_payment_destination('Mercantil', 'J-000000001', null, 'Helios CA', null, 1, true, null,
+                                               'transferencia', '0105-0000-11-0000000001', null);
   v_j := public.helios_config_status();
   if not (v_j->>'whatsapp')::boolean or not (v_j->>'remitente')::boolean
      or (v_j->>'cuentas_de_cobro')::int < 2 then
     raise exception 'Configurado, el estado debía estar completo: %', v_j;
   end if;
-  if public.helios_payment_accounts_text() not like '• Zelle: pagos@helios.test%' then
-    raise exception 'Las cuentas debían listarse por sort_order (Zelle primero): %', public.helios_payment_accounts_text();
+  if public.helios_payment_accounts_text() not like '• Transferencia: Mercantil · Cuenta 01050000110000000001%' then
+    raise exception 'Las cuentas debían listarse por sort_order (la transferencia primero): %', public.helios_payment_accounts_text();
   end if;
   reset role;
   if (select count(*) from audit.admin_actions where action = 'platform.contact_set') < 2 then
@@ -460,7 +469,7 @@ begin
      or position('Registró: Ana' in v_row.rendered_text) = 0
      or position('V-****5678' in v_row.rendered_text) = 0
      or position('0414-0001122' in v_row.rendered_text) = 0
-     or position('Zelle: pagos@helios.test' in v_row.rendered_text) = 0 then
+     or position('Transferencia: Mercantil' in v_row.rendered_text) = 0 then
     raise exception 'Al comprobante le falta algo:%', v_row.rendered_text;
   end if;
   -- Al paciente sí se le enseña el total (Javier, 2026-10-06): en el HTML también.

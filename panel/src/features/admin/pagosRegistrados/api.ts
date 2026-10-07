@@ -1,8 +1,13 @@
 import { llamarRpc } from '@/features/admin/metricas/consulta'
-import type { PayoutMethod } from '@/features/admin/liquidaciones'
 import { supabase } from '@/lib/supabase'
-import { BUCKET_COMPROBANTES, extensionDelComprobante, leerPagoRegistrado, rutaDelComprobante } from './registrarPago'
-import type { PagoRegistrado } from './registrarPago'
+import {
+  BUCKET_COMPROBANTES,
+  extensionDelComprobante,
+  leerPagoRegistrado,
+  leerPrevisionDelPago,
+  rutaDelComprobante,
+} from './registrarPago'
+import type { MetodoDelPaciente, PagoRegistrado, PrevisionDelPago } from './registrarPago'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Registrar un pago recibido por WhatsApp: subir la captura y llamar a
@@ -33,15 +38,34 @@ export async function enlaceDelComprobanteDePago(ruta: string): Promise<string> 
   return data.signedUrl
 }
 
+/**
+ * Lo que debería decir el comprobante en bolívares para esas cuotas, pagadas
+ * ese día (`admin_payment_preview`): cada parte a la tasa BCV de su moneda de
+ * ese día. No crea nada.
+ */
+export async function preverPago(params: {
+  userId: string
+  installmentIds: string[]
+  paidOn: string
+}): Promise<PrevisionDelPago> {
+  return llamarRpc(
+    'admin_payment_preview',
+    { p_user: params.userId, p_installment_ids: params.installmentIds, p_paid_on: params.paidOn },
+    { leer: leerPrevisionDelPago },
+  )
+}
+
 export async function registrarPago(params: {
   userId: string
   installmentIds: string[]
-  method: PayoutMethod
-  bank: string | null
+  /** Solo bolívares: Pago Móvil o transferencia. */
+  method: MetodoDelPaciente
+  /** Obligatorio, como la referencia y los bolívares: la base lo exige. */
+  bank: string
   reference: string
   paidOn: string
-  /** Lo que dice el comprobante; `null` si fue en dólares. */
-  amountVes: number | null
+  /** Lo que dice el comprobante, en bolívares. */
+  amountVes: number
   receiptPath: string | null
   note: string | null
 }): Promise<PagoRegistrado> {

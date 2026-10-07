@@ -95,6 +95,15 @@ export type DatosDeCobro = {
     overdueUsd: number
     /** PAYABLE: lo que vence en los próximos días. */
     upcomingUsd: number
+    /**
+     * Lo mismo dicho en la moneda de cada orden («€56,96 + $2») y en bolívares
+     * de hoy, cada parte a la tasa BCV de su moneda, como lo manda la cartera
+     * (2026-10-07). Sin ellos, en dólares a la tasa del dólar, como antes.
+     */
+    overdueText?: string | null
+    overdueVesHoy?: number | null
+    upcomingText?: string | null
+    upcomingVesHoy?: number | null
     nextDueDate: string
     daysOverdue: number
   }
@@ -116,11 +125,21 @@ export function usaLaCuenta(texto: string): boolean {
  * una cuenta en blanco no se manda.
  */
 export function mensajeDeCobro(plantilla: string, d: DatosDeCobro): string {
-  const deuda = d.persona.overdueUsd > 0 ? d.persona.overdueUsd : d.persona.upcomingUsd
+  const vencida = d.persona.overdueUsd > 0
+  const deuda = vencida ? d.persona.overdueUsd : d.persona.upcomingUsd
+  // Una orden puede ir en euros: lo que dice la cartera en su moneda y en
+  // bolívares de hoy manda sobre la cuenta en dólares.
+  const enSuMoneda = vencida ? d.persona.overdueText : d.persona.upcomingText
+  const bs = vencida ? d.persona.overdueVesHoy : d.persona.upcomingVesHoy
   return rellenar(plantilla, {
     nombre: (d.persona.fullName ?? '').trim().split(/\s+/)[0] || 'hola',
-    monto_usd: formatUsd(deuda),
-    monto_bs: d.tasa ? formatVes(deuda * d.tasa) : 'el equivalente en bolívares',
+    monto_usd: enSuMoneda ?? formatUsd(deuda),
+    monto_bs:
+      bs !== undefined && bs !== null
+        ? formatVes(bs)
+        : d.tasa
+          ? formatVes(deuda * d.tasa)
+          : 'el equivalente en bolívares',
     fecha_vencimiento: formatDay(d.persona.nextDueDate),
     banco: d.cuenta?.bankName ?? '',
     telefono_pago: d.cuenta ? formatPhone(d.cuenta.phone) : '',

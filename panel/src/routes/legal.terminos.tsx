@@ -79,9 +79,11 @@ function Terminos() {
             </li>
             <li>
               Si una cuota vence sin pagarse, no puedes registrar otro pago en
-              cuotas hasta ponerte al día. Tras 3 días de gracia se suma un cargo
-              de $2 por cada cuota vencida. Con 30 días de atraso la cuenta se
+              cuotas hasta ponerte al día. Con 30 días de atraso la cuenta se
               suspende, y con 60 se cierra.
+              {/* Sin cargos por mora desde el 2026-10-07 (`late_fee_usd` = 0).
+                  Si se retoman, aquí iba: «Tras 3 días de gracia se suma un
+                  cargo de $2 por cada cuota vencida.» */}
             </li>
             <li>
               El servicio es solo para mayores de 18 años con cédula. Si quien se

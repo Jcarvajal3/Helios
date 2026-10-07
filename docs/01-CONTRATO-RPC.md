@@ -84,7 +84,7 @@ Si la plataforma está en **mantenimiento** o la clínica **no está activa**,
 lanza `55000` con el texto de `helios_spend_block` ("La clínica está pausada"
 / "La clínica ya no opera con Helios" si está terminada).
 
-### 1.2 `preview_patient_charge(p_merchant_id uuid, p_document text, p_amount_usd numeric) → jsonb`
+### 1.2 `preview_patient_charge(p_merchant_id uuid, p_document text, p_amount numeric, p_currency text default 'USD') → jsonb` (desde el 2026-10-07, ver §7)
 
 Vista previa sin efectos. Valida el monto (≥ `min_charge_usd`, ≤ 2 decimales)
 y, si el paciente existe, que quepa en su disponible.
@@ -898,3 +898,94 @@ y `patient_state`.
 - `bienvenida`: texto nuevo («🩺 ¡Listo, {nombre}! Tu financiamiento #{orden}
   ya está activo…»); `{cuotas}` llega como «* $56,96 — 12/10/2026», una línea
   por cuota.
+
+## 7. La consulta se cobra en dólares o en euros (2026-10-07)
+
+Migraciones `20261007000100`–`000600`. Decisión de Javier: el médico elige la
+moneda en el paso del monto; **una orden en euros queda en euros** (el
+paciente paga cada cuota en Bs a la tasa BCV del euro del día en que paga; a
+la clínica se le paga en Bs a la tasa del euro). El libro, el límite, el
+mínimo, la mora, las métricas y el superadmin siguen en **dólares**: las
+columnas `_usd` son dólares, literalmente; los montos en la moneda de la orden
+van en columnas `_cur`.
+
+### 7.1 Tasas
+
+- `exchange_rates`: serie `BCV` (dólar) y `BCV_EUR` (euro). `fx_rate_sources.series`
+  y `fx_rate_syncs.series` dicen de cuál es cada espejo e intento.
+- `sync_fx_rate(p_effective_date, p_force)` trae las dos; devuelve la del dólar
+  con la del euro en `eur`. El cuerpo vive en `helios_sync_fx_series(serie, …)`.
+- `fx_rate_status(p_source)` acepta `BCV` o `BCV_EUR`.
+- `admin_set_fx_rate(p_rate, p_effective_date, p_note, p_currency default 'USD')`.
+- `admin_fx_rate_history(p_limit, p_currency default 'USD')`.
+- `helios_fx_today() → { business_date, usd: {rate, effective_date}, eur: {…}, usd_per_eur }`
+  (cualquiera con sesión).
+- Internas: `helios_fx_series`, `helios_fx_rate(moneda, día)` (Bs por unidad),
+  `helios_usd_per_unit(moneda, día)` (tasa cruzada, 6 decimales).
+
+### 7.2 Registrar
+
+- `preview_patient_charge(p_merchant_id, p_document, p_amount, p_currency)` y
+  `create_patient_charge(p_merchant_id, p_branch_id, p_patient, p_amount, p_concept,
+  p_beneficiary_name, p_idempotency_key, p_currency)`: `p_amount` en la moneda
+  elegida (antes `p_amount_usd`). El mínimo (`min_charge_usd`) y el cupo se
+  miden en dólares con la tasa cruzada de hoy y se dicen en la moneda
+  («El monto mínimo es €8,89», «El monto supera lo disponible (€133,33).»).
+- La vista previa añade `currency`, `fx_usd_per_unit`, `tasa_bcv` (Bs por unidad),
+  `base_cur`, `consumer_fee_cur`, `consumer_fee_vat_cur`, `disponible_cur`,
+  `limite_cur` e `installments[].{amount_cur, financed_cur, amount_ves}`. Sigue
+  sin ningún total con la comisión.
+- `helios_charge_for_staff` añade `currency`, `merchant_sale_cur`, `tasa_bcv`,
+  `breakdown.{base_cur, consumer_fee_cur, consumer_fee_vat_cur}` e
+  `installments[].{amount_cur, amount_ves}`.
+- `bot_preview_charge(p_phone, p_document, p_amount, p_currency)` y
+  `bot_create_charge(…, p_amount, …, p_currency)`; `bot_patient_eligibility`
+  añade `usd_per_eur`.
+- `staff_resend_confirmation` al reabrir una orden vencida la vuelve a pasar a
+  dólares con la tasa de ese día (los euros no cambian).
+
+### 7.3 Columnas
+
+- `charges`: `currency` ('USD'|'EUR'), `fx_usd_per_unit` (1 en dólares),
+  `base_cur`, `consumer_fee_cur`, `consumer_fee_vat_cur`, `amount_cur`,
+  `merchant_net_cur`. En una orden en dólares un trigger copia `_usd` → `_cur`.
+- `installments`: `amount_cur`, `financed_cur` (trigger al insertar: la mitad de
+  `amount_cur` en la primera, el resto en la segunda).
+- `settlements`: `currency`, `amount_cur`, `paid_cur` (trigger al insertar: la
+  consulta en la moneda de la orden; la comisión del personal en dólares).
+- `merchant_payout_items`: `currency`, `amount_cur`. `merchant_payouts`:
+  `amount_eur`, `fx_rate_eur`.
+- `payment_quotes`: `amount_eur`, `fx_rate_eur`. `payment_quote_items`:
+  `currency`, `amount_cur`.
+
+### 7.4 Pagos
+
+- El paciente **solo paga en bolívares**: `admin_register_payment` y
+  `report_payment` aceptan `pago_movil` | `transferencia` (banco, referencia y
+  Bs obligatorios); `admin_set_payment_destination` ya no acepta Zelle (las de
+  Zelle se apagaron); `helios_payment_accounts_text` solo lista las de bolívares.
+- `helios_quote_installments`: lo de dólares (cuotas en dólares + cargos por
+  atraso) a la tasa del dólar y lo de euros a la del euro. `admin_register_payment`
+  recotiza con las tasas del día del pago (`helios_reprice_quote`).
+- `admin_payment_preview(p_user, p_installment_ids, p_paid_on) → { paid_on,
+  installments_usd, late_fee_usd, amount_usd, amount_eur, amount_usd_part,
+  fx_rate, fx_rate_eur, amount_ves }` (solo el equipo).
+- `admin_report_merchant_payout`: sin Bs ni tasa, los calcula por moneda con la
+  tasa BCV de cada una del día del pago; una tasa escrita vale solo si lo
+  marcado es de una sola moneda. Devuelve `amount_eur`, `fx_rate_eur`.
+- Lecturas con moneda: `admin_merchant_settlements` (`currency`, `amount_cur`,
+  `paid_cur`, `pending_cur`, `pending_ves_hoy`), `admin_merchant_payouts` y
+  `admin_payout_detail` (`amount_eur`, `fx_rate_eur`, items `currency`,
+  `applied_cur`), `admin_charge_detail` (`currency`, `fx_usd_per_unit`, `*_cur`),
+  `admin_user_detail` (cuotas y órdenes con `currency` y `*_cur`),
+  `merchant_transactions` (+ `currency`, `merchant_sale_cur`),
+  `merchant_charge_detail` (`currency`, `*_cur`, payouts por moneda).
+
+### 7.5 Mensajes
+
+- Las variables de dinero traen su símbolo («€56,96», «$2»); las plantillas
+  ya no llevan «$» delante. `monto_cuota` de los avisos y `monto` de
+  `pago_recibido` llevan además los Bs: «€56,96 (Bs 51.264,00)». Variables
+  nuevas: `total_bs`, `moneda` («dólar» | «euro», por defecto «dólar»).
+- `bot_paciente_resumen`: cada orden con `moneda`, la consulta y las cuotas en
+  ella (el cargo por atraso en dólares), y `tasa_bcv` + `tasa_bcv_eur`.

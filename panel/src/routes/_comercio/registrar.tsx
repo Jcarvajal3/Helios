@@ -10,7 +10,8 @@ import { PasoConfirmar } from '@/components/registrar/PasoConfirmar'
 import { PasoDatos } from '@/components/registrar/PasoDatos'
 import { PasoListo } from '@/components/registrar/PasoListo'
 import { PasoMonto } from '@/components/registrar/PasoMonto'
-import { Button, ConfirmDialog, formatUsd, hoyCaracas } from '@/components/ui'
+import { Button, ConfirmDialog, formatMoneda, hoyCaracas } from '@/components/ui'
+import type { Moneda } from '@/components/ui'
 import { useStaff } from '@/features/auth/session'
 import type { StaffContext } from '@/features/auth/session'
 import { claveDelAlta, estrenarClaveDelAlta } from '@/features/merchant/claveDelAlta'
@@ -29,12 +30,15 @@ import {
   CONCEPTO_SUGERIDO,
   coincideConLoPedido,
   leerMontoDeConsulta,
+  limitesEnMoneda,
   maximoParaFinanciar,
+  tasaBcvDe,
 } from '@/features/merchant/registro'
 import type { Elegibilidad, Financiamiento, PasoDelAlta } from '@/features/merchant/registro'
 import {
   consultarCedula,
   fetchConfirmacionRequerida,
+  fetchTasasDeHoy,
   registrarFinanciamiento,
 } from '@/features/merchant/registroApi'
 
@@ -62,7 +66,9 @@ type Resultado = { financiamiento: Financiamiento; coincide: boolean }
  *
  *   1. Cédula     → `helios_patient_eligibility`: nuevo, disponible o no.
  *   2. Datos      → solo si es nuevo. Uno conocido no se vuelve a pedir.
- *   3. Monto      → libre, del mínimo a lo disponible, con su concepto.
+ *   3. Monto      → en dólares o en euros, libre, del mínimo a lo
+ *                   disponible (pasados a la moneda con `helios_fx_today`),
+ *                   con su concepto.
  *   4. Confirmar  → `preview_patient_charge` y el sí del paciente.
  *   5. Listo      → `create_patient_charge`: número, cuotas y comprobante.
  *
@@ -89,6 +95,7 @@ function Registrar({ staff }: { staff: StaffContext }) {
   const [intentado, setIntentado] = useState(false)
   const [noCoincide, setNoCoincide] = useState(false)
   const [paciente, setPaciente] = useState<BorradorPaciente>(PACIENTE_VACIO)
+  const [moneda, setMoneda] = useState<Moneda>('USD')
   const [monto, setMonto] = useState('')
   const [concepto, setConcepto] = useState(CONCEPTO_SUGERIDO)
   const [beneficiario, setBeneficiario] = useState('')
@@ -99,6 +106,15 @@ function Registrar({ staff }: { staff: StaffContext }) {
   const confirmacion = useQuery({
     queryKey: ['confirmacion-requerida'],
     queryFn: fetchConfirmacionRequerida,
+    staleTime: 5 * 60_000,
+  })
+
+  // Las tasas BCV de hoy: el mínimo y el máximo en euros salen de la cruzada,
+  // y el equivalente en bolívares del monto, de la de cada moneda. Cambian una
+  // vez al día; con unos minutos de caché sobra.
+  const tasas = useQuery({
+    queryKey: ['tasas-de-hoy'],
+    queryFn: fetchTasasDeHoy,
     staleTime: 5 * 60_000,
   })
 
@@ -117,10 +133,18 @@ function Registrar({ staff }: { staff: StaffContext }) {
   const elegibilidad =
     consulta && consulta.documento === documento ? consulta.elegibilidad : null
   const esNuevo = elegibilidad?.estado === 'nuevo'
-  const minimo =
+  const minimoUsd =
     elegibilidad && elegibilidad.estado !== 'no_disponible' ? elegibilidad.minChargeUsd : 0
-  const maximo = elegibilidad ? maximoParaFinanciar(elegibilidad) : null
-  const lecturaMonto = leerMontoDeConsulta(monto, { minimo, maximo }, formatUsd)
+  const maximoUsd = elegibilidad ? maximoParaFinanciar(elegibilidad) : null
+  // En la moneda elegida. Null si es euros y no hay tasa: no se puede seguir.
+  const limites = limitesEnMoneda(
+    { minimo: minimoUsd, maximo: maximoUsd },
+    moneda,
+    tasas.data?.usdPorEuro ?? null,
+  )
+  const lecturaMonto = limites
+    ? leerMontoDeConsulta(monto, limites, (n) => formatMoneda(n, moneda))
+    : null
 
   // Un paso que se quedó sin lo que necesita —se cambió la cédula y ya no hay
   // respuesta para ella— vuelve al principio en vez de dejar la pantalla vacía.
@@ -128,6 +152,14 @@ function Registrar({ staff }: { staff: StaffContext }) {
   useEffect(() => {
     if (sinConsulta) setPaso('cedula')
   }, [sinConsulta])
+
+  // Lo mismo con el monto: en euros, una tasa nueva a media pantalla puede
+  // mover el mínimo o el máximo y dejar fuera lo que valía. Se vuelve al
+  // monto, que dice por qué, en vez de dejar la confirmación en blanco.
+  const sinMonto = paso === 'confirmar' && !!elegibilidad && !lecturaMonto?.ok
+  useEffect(() => {
+    if (sinMonto) setPaso('monto')
+  }, [sinMonto])
 
   const elegir = useMutation({
     mutationFn: consultarCedula,
@@ -142,7 +174,8 @@ function Registrar({ staff }: { staff: StaffContext }) {
     onSuccess: (f, variables) => {
       const documentoPedido = variables.patient.document ?? ''
       const coincide = coincideConLoPedido(f, {
-        amountUsd: variables.amountUsd,
+        amount: variables.amount,
+        moneda: variables.moneda,
         document: documentoPedido,
       })
       setResultado({ financiamiento: f, coincide })
@@ -187,6 +220,7 @@ function Registrar({ staff }: { staff: StaffContext }) {
     setIntentado(false)
     setNoCoincide(false)
     setPaciente(PACIENTE_VACIO)
+    setMoneda('USD')
     setMonto('')
     setConcepto(CONCEPTO_SUGERIDO)
     setBeneficiario('')
@@ -231,7 +265,7 @@ function Registrar({ staff }: { staff: StaffContext }) {
   }
 
   function confirmar() {
-    if (!elegibilidad || !lecturaMonto.ok || alta.isPending) return
+    if (!elegibilidad || !lecturaMonto?.ok || alta.isPending) return
     const concept = limpio(concepto)
     const beneficiary = limpio(beneficiario)
     alta.mutate({
@@ -239,7 +273,8 @@ function Registrar({ staff }: { staff: StaffContext }) {
       branchId: staff.branchId,
       // Un paciente conocido va solo con su cédula: la base no le cambia nada.
       patient: esNuevo ? pacienteParaEnviar(documento, paciente, hoy) : { document: documento },
-      amountUsd: lecturaMonto.usd,
+      amount: lecturaMonto.monto,
+      moneda,
       concept: concept === '' ? null : concept,
       beneficiaryName: beneficiary === '' ? null : beneficiary,
       idempotencyKey: claveDelAlta(),
@@ -305,11 +340,15 @@ function Registrar({ staff }: { staff: StaffContext }) {
       {paso === 'monto' && elegibilidad && elegibilidad.estado !== 'no_disponible' && (
         <PasoMonto
           titular={titular}
+          moneda={moneda}
           monto={monto}
           concepto={concepto}
           beneficiario={beneficiario}
-          minimo={minimo}
-          maximo={maximo}
+          limites={limites}
+          tasaBs={tasaBcvDe(tasas.data, moneda)}
+          buscandoTasas={tasas.isPending}
+          onReintentarTasas={tasas.isError ? () => void tasas.refetch() : undefined}
+          onMoneda={setMoneda}
           onMonto={setMonto}
           onConcepto={setConcepto}
           onBeneficiario={setBeneficiario}
@@ -319,11 +358,12 @@ function Registrar({ staff }: { staff: StaffContext }) {
         />
       )}
 
-      {paso === 'confirmar' && elegibilidad && lecturaMonto.ok && (
+      {paso === 'confirmar' && elegibilidad && lecturaMonto?.ok && (
         <PasoConfirmar
           merchantId={staff.merchantId}
           documento={documento}
-          amountUsd={lecturaMonto.usd}
+          amount={lecturaMonto.monto}
+          moneda={moneda}
           concepto={limpio(concepto) === '' ? null : limpio(concepto)}
           beneficiario={limpio(beneficiario) === '' ? null : limpio(beneficiario)}
           titular={titular}

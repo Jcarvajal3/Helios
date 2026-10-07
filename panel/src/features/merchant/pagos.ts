@@ -17,6 +17,10 @@ import { comoFila, filaONula, filas, numero, numeroONulo, texto, textoONulo } fr
 // una de sus líneas se enseñan partidas: si no, la secretaria que pregunta
 // por sus comisiones no las encuentra en ninguna parte.
 //
+// Todo en dólares (`*_usd`), también lo que se cobró en euros: aquí se suman
+// órdenes de las dos monedas, y la suma solo cuadra en la del libro. La
+// pantalla lo dice (`EQUIVALENTE_EN_DOLARES`).
+//
 // Puro, para probarlo con `npx tsx`. Las llamadas, en `settlements.ts`.
 // ═══════════════════════════════════════════════════════════════════════════
 

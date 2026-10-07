@@ -109,6 +109,13 @@ for (const nada of ['si claro pero tengo una duda', 'hola', '1234', '', 'nop', '
   comprueba(decisionDelTexto(nada) === null, `«${nada}» no decide nada`)
 }
 comprueba(normalizar('  ¡Sí,   ACEPTO! ') === 'si acepto', 'normalizar')
+// La moneda (bot.ts / datos.ts): el título del botón se normaliza a palabras;
+// los símbolos se pierden, por eso `leerMoneda` mira «$» y «€» en crudo.
+comprueba(normalizar('Dólares (USD)') === 'dolares usd' && normalizar('Euros (EUR)') === 'euros eur', 'normalizar los botones de moneda')
+comprueba(normalizar('€80') === '80' && normalizar('$') === '', 'normalizar quita $ y €')
+for (const moneda of ['euros', 'dólares', '€', 'USD']) {
+  comprueba(decisionDelTexto(moneda) === null, `«${moneda}» no decide nada`)
+}
 
 console.log('\nEl secreto')
 comprueba(igualSeguro('abc', 'abc') && !igualSeguro('abc', 'abd') && !igualSeguro('abc', 'abcd'), 'compara bien')

@@ -178,4 +178,4 @@ export const COLUMNAS_VENTAS: Array<CsvColumn<FilaDeVentas>> = [
 
 /** Lo que lleva el archivo, en una línea para quien lo descarga. */
 export const QUE_LLEVA =
-  'El libro de pagos en cuotas: la consulta, lo que Helios te factura (hoy nada), el neto, cuándo te lo pagamos y la comisión de quien lo registró. En dólares y en bolívares. Sin la comisión de servicio que paga el paciente.'
+  'El libro de pagos en cuotas: la consulta, lo que Helios te factura (hoy nada), el neto, cuándo te lo pagamos y la comisión de quien lo registró. En dólares (las consultas en euros, pasadas a dólares) y en bolívares. Sin la comisión de servicio que paga el paciente.'

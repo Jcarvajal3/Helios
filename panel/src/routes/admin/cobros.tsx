@@ -498,7 +498,7 @@ const COLUMNAS: Array<Column<QueueItem>> = [
   {
     key: 'monto',
     header: 'Monto reportado (con fee)',
-    info: 'Lo que el paciente dice haber transferido: las cuotas que salda (financiado + service fee + IVA) más los cargos por atraso, si hay. Debajo, en bolívares a la tasa BCV del dólar del día de su cotización.',
+    info: 'Lo que el paciente dice haber transferido: las cuotas que salda (financiado + service fee + IVA) más los cargos por atraso, si hay. Debajo, en bolívares del día de su cotización: lo de órdenes en dólares (y los cargos) a la tasa BCV del dólar y lo de órdenes en euros a la del euro.',
     type: 'number',
     sort: (p) => p.amountUsd,
     sortDir: 'desc',
@@ -515,7 +515,7 @@ const COLUMNAS: Array<Column<QueueItem>> = [
   {
     key: 'monto-ves',
     header: 'Monto reportado en bolívares',
-    info: 'A la tasa BCV del dólar del día de la cotización.',
+    info: 'Del día de la cotización: lo de órdenes en dólares a la tasa BCV del dólar y lo de órdenes en euros a la del euro.',
     type: 'number',
     hidden: true,
     csv: (p) => csvDinero(p.amountVes),

@@ -1,3 +1,5 @@
+import { leerMoneda } from '@/components/ui'
+import type { Moneda } from '@/components/ui'
 import { booleano, comoFila, filaONula, filas, numero, numeroONulo, texto, textoONulo } from '@/lib/json'
 
 import { leerEstadoDelComprobante, porcentajeDelServicio } from './registro'
@@ -23,7 +25,19 @@ import type { EstadoDelComprobante } from './registro'
 // Lo que NO hay aquí, a propósito: el estado de pago de las cuotas del
 // paciente. Cómo va esa deuda es asunto entre el paciente y Helios; a la
 // clínica se le paga por fecha, haya pagado su paciente o no (plan §8.2).
+//
+// La moneda (2026-10-07): cada orden se cobra en dólares o en euros, y la
+// fila y la ficha se enseñan en esa moneda (`merchant_sale_cur`, `*_cur`).
+// Las cifras del rango y el reparto por persona siguen en dólares: suman
+// órdenes de las dos monedas, y la suma solo cuadra en la del libro.
 // ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Lo que se dice junto a una suma de consultas: que va en dólares aunque
+ * alguna se cobrara en euros.
+ */
+export const EQUIVALENTE_EN_DOLARES =
+  'Equivalente en dólares: las consultas en euros se suman pasadas a dólares.'
 
 /**
  * Cuándo cobra la clínica una de las dos mitades de un pago en cuotas.
@@ -49,8 +63,12 @@ export type FilaDeFinanciamiento = {
   /** Día operativo: de medianoche a medianoche en Caracas. */
   businessDate: string
   confirmedAt: string | null
-  /** La consulta: lo que se le paga a la clínica. Nunca lleva el fee. */
+  /** La moneda en la que se cobró. */
+  moneda: Moneda
+  /** La consulta: lo que se le paga a la clínica. Nunca lleva el fee. En dólares. */
   merchantSaleUsd: number
+  /** La misma consulta en la moneda de la orden: lo que se enseña. */
+  merchantSaleCur: number
   /** El titular: solo su nombre, sin cédula ni teléfono. */
   patientName: string | null
   /** Quien se atendió, si no es el titular. */
@@ -77,12 +95,16 @@ export type FilaDeFinanciamiento = {
 
 export function leerFilaDeFinanciamiento(v: unknown): FilaDeFinanciamiento {
   const r = comoFila(v)
+  const venta = numero(r.merchant_sale_usd)
   return {
     id: texto(r.charge_id ?? r.id),
     orderNumber: numero(r.order_number),
     businessDate: texto(r.business_date),
     confirmedAt: textoONulo(r.confirmed_at),
-    merchantSaleUsd: numero(r.merchant_sale_usd),
+    moneda: leerMoneda(r.currency),
+    merchantSaleUsd: venta,
+    // Una base sin la moneda: la orden es en dólares, la misma cifra.
+    merchantSaleCur: numeroONulo(r.merchant_sale_cur) ?? venta,
     patientName: textoONulo(r.customer_name) ?? textoONulo(r.patient_name),
     beneficiaryName: textoONulo(r.beneficiary_name),
     concept: textoONulo(r.concept),
@@ -175,16 +197,20 @@ export type EstadoDelFinanciamiento =
  * clínica, con la fecha de vencimiento de la cuota del paciente que la
  * origina. Sin el estado de esa cuota: eso es del paciente con Helios.
  *
- * `amountUsd`, `paidUsd` y `status` son de la TRANSFERENCIA a la clínica, no
+ * `amount*`, `paid*` y `status` son de la TRANSFERENCIA a la clínica, no
  * del pago del paciente, y solo los ve el administrador (la base los manda
- * en null a una secretaria).
+ * en null a una secretaria). Los `Cur` van en `moneda`, la de la orden: lo
+ * que se enseña.
  */
 export type PagoALaClinica = {
   sequence: number | null
   dueDate: string
   paidToMerchantOn: string
+  moneda: Moneda
   amountUsd: number | null
   paidUsd: number | null
+  amountCur: number | null
+  paidCur: number | null
   status: 'pending' | 'paid' | 'partial' | 'cancelled' | null
 }
 
@@ -204,10 +230,15 @@ export type DetalleDeFinanciamiento = {
   confirmedAt: string | null
   voidReason: string | null
   isTest: boolean
+  /** La moneda en la que se cobró; los `Cur` van en ella. */
+  moneda: Moneda
   merchantSaleUsd: number
+  merchantSaleCur: number
   feePct: number
   feeUsd: number | null
   feeVatUsd: number | null
+  feeCur: number | null
+  feeVatCur: number | null
   isGerente: boolean
   branchName: string | null
   patientName: string | null
@@ -230,17 +261,31 @@ const ESTADOS: readonly EstadoDelFinanciamiento[] = [
 ]
 const ESTADOS_DEL_PAGO = ['pending', 'paid', 'partial', 'cancelled'] as const
 
-function leerPago(f: Record<string, unknown>): PagoALaClinica | null {
+/**
+ * Una mitad. Las fechas salen de `f`; el importe y el estado, de su
+ * transferencia (`t`, la línea de `payouts`), que con la forma de Ronda es
+ * la misma fila.
+ */
+function leerPago(
+  f: Record<string, unknown>,
+  t: Record<string, unknown> | undefined,
+  monedaDeLaOrden: Moneda,
+): PagoALaClinica | null {
   const dueDate = textoONulo(f.due_date)
   const paidToMerchantOn = textoONulo(f.paid_to_merchant_on) ?? textoONulo(f.run_date)
   if (dueDate === null || paidToMerchantOn === null) return null
+  const amountUsd = numeroONulo(t?.amount_usd)
+  const paidUsd = numeroONulo(t?.paid_usd)
   return {
     sequence: numeroONulo(f.sequence),
     dueDate,
     paidToMerchantOn,
-    amountUsd: numeroONulo(f.amount_usd),
-    paidUsd: numeroONulo(f.paid_usd),
-    status: ESTADOS_DEL_PAGO.find((e) => e === f.status) ?? null,
+    moneda: t?.currency ? leerMoneda(t.currency) : monedaDeLaOrden,
+    amountUsd,
+    paidUsd,
+    amountCur: numeroONulo(t?.amount_cur) ?? amountUsd,
+    paidCur: numeroONulo(t?.paid_cur) ?? paidUsd,
+    status: ESTADOS_DEL_PAGO.find((e) => e === t?.status) ?? null,
   }
 }
 
@@ -250,18 +295,35 @@ export function leerDetalle(v: unknown): DetalleDeFinanciamiento {
   const recibo = filaONula(r.receipt)
   const lineas = filas(r.items)
 
+  const moneda = leerMoneda(r.currency)
+
   // Las mitades: `installments` si la base ya las manda con la forma nueva
   // (con `paid_to_merchant_on`), o las `payouts` de Ronda. Un adelanto al
-  // vender no existe en Helios (0 % por adelantado) y no se enseña.
-  const origen = Array.isArray(r.installments) ? filas(r.installments) : filas(r.payouts)
+  // vender no existe en Helios (0 % por adelantado) y no se enseña. Con la
+  // forma nueva, el importe de cada mitad está en su línea de `payouts`, la
+  // de la misma cuota.
+  const transferencias = filas(r.payouts).filter((t) => t.kind === 'installment')
+  const nueva = Array.isArray(r.installments)
+  const origen = nueva ? filas(r.installments) : filas(r.payouts)
   const pagos = origen
     .filter((f) => f.kind === undefined || f.kind === 'installment')
-    .map(leerPago)
+    .map((f) =>
+      leerPago(
+        f,
+        nueva
+          ? transferencias.find(
+              (t) => numeroONulo(t.sequence) !== null && numeroONulo(t.sequence) === numeroONulo(f.sequence),
+            )
+          : f,
+        moneda,
+      ),
+    )
     .filter((p): p is PagoALaClinica => p !== null)
     .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
 
   const base = numero(r.merchant_sale_usd)
   const fee = numeroONulo(r.consumer_fee_usd)
+  const feeVat = numeroONulo(r.consumer_fee_vat_usd)
 
   return {
     id: texto(r.charge_id ?? r.id),
@@ -272,10 +334,14 @@ export function leerDetalle(v: unknown): DetalleDeFinanciamiento {
     confirmedAt: textoONulo(r.confirmed_at),
     voidReason: textoONulo(r.void_reason),
     isTest: booleano(r.is_test),
+    moneda,
     merchantSaleUsd: base,
+    merchantSaleCur: numeroONulo(r.merchant_sale_cur) ?? base,
     feePct: numeroONulo(r.consumer_fee_pct) ?? porcentajeDelServicio(base, fee),
     feeUsd: fee,
-    feeVatUsd: numeroONulo(r.consumer_fee_vat_usd),
+    feeVatUsd: feeVat,
+    feeCur: numeroONulo(r.consumer_fee_cur) ?? fee,
+    feeVatCur: numeroONulo(r.consumer_fee_vat_cur) ?? feeVat,
     isGerente: booleano(r.is_gerente),
     branchName: sucursal ? textoONulo(sucursal.name) : null,
     patientName: textoONulo(r.customer_name) ?? textoONulo(r.patient_name),

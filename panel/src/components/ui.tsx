@@ -1627,10 +1627,11 @@ export const TIME_ZONE = 'America/Caracas'
 /**
  * '$150,00' — un importe con sus céntimos, en dólares.
  *
- * **El dólar BCV es la moneda del sistema** (plan §1): la deuda del paciente,
- * los límites de nivel y la liquidación a la clínica viven en dólares. El
- * bolívar es la capa de presentación, a la tasa BCV del dólar del día en que
- * se paga. El formato es el de Ronda con el euro: símbolo pegado y coma
+ * **El dólar BCV es la moneda del libro** (plan §1): la deuda del paciente,
+ * los límites de nivel y la liquidación a la clínica se cuentan en dólares,
+ * también las de las órdenes cobradas en euros (para esas, `formatMoneda`).
+ * El bolívar es la capa de presentación, a la tasa BCV de la moneda de la
+ * orden del día en que se paga. El formato es el de Ronda con el euro: símbolo pegado y coma
  * decimal de aquí ('$1.234,50').
  *
  * Un negativo lleva el signo DELANTE del símbolo y es el signo menos de
@@ -1643,6 +1644,34 @@ export function formatUsd(amount: number): string {
     maximumFractionDigits: 2,
   })
   return `${signo(amount, cifra)}$${cifra}`
+}
+
+/** La moneda en la que el médico cobra una consulta (2026-10-07). */
+export type Moneda = 'USD' | 'EUR'
+
+/** Lo que manda la base en `currency`; cualquier otra cosa, dólares. */
+export function leerMoneda(value: unknown): Moneda {
+  return value === 'EUR' ? 'EUR' : 'USD'
+}
+
+export const SIMBOLO_DE_MONEDA: Record<Moneda, string> = { USD: '$', EUR: '€' }
+
+export const NOMBRE_DE_MONEDA: Record<Moneda, string> = { USD: 'dólares', EUR: 'euros' }
+
+/**
+ * '$150,00' o '€150,00' — un importe en la moneda de una orden.
+ *
+ * Una orden se cobra en dólares o en euros, y a la clínica y al paciente se
+ * les enseña en esa moneda. El libro y el superadmin siguen en dólares
+ * (`formatUsd`): esto es solo para lo que se cobró en otra.
+ */
+export function formatMoneda(amount: number, moneda: Moneda): string {
+  if (moneda === 'USD') return formatUsd(amount)
+  const cifra = Math.abs(amount).toLocaleString('es-VE', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
+  return `${signo(amount, cifra)}€${cifra}`
 }
 
 /**
@@ -1729,6 +1758,21 @@ export function formatBcvRate(rate: number): string {
     minimumFractionDigits: 2,
     maximumFractionDigits: 6,
   })} Bs/$`
+}
+
+/**
+ * 'Tasa BCV 41,52 Bs/€' — `formatBcvRate` de la moneda que toque.
+ *
+ * Una orden en euros se paga a la tasa BCV del euro (2026-10-07): la unidad
+ * dice de cuál es, que las dos cifras se parecen lo bastante como para
+ * confundirlas.
+ */
+export function formatBcvRateDe(rate: number, moneda: Moneda): string {
+  if (moneda === 'USD') return formatBcvRate(rate)
+  return `Tasa BCV ${rate.toLocaleString('es-VE', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 6,
+  })} Bs/€`
 }
 
 /**

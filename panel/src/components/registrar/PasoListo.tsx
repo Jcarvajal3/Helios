@@ -13,7 +13,7 @@ import {
   ErrorBox,
   Tecla,
   claseDeBoton,
-  formatUsd,
+  formatMoneda,
 } from '@/components/ui'
 import { COMPROBANTE, esperaAlPaciente, fraseDelComprobante } from '@/features/merchant/registro'
 import type { EstadoDelComprobante, Financiamiento } from '@/features/merchant/registro'
@@ -151,22 +151,23 @@ export function PasoListo({
         <div>
           <DataLabel>{f.concept ?? 'Consulta'} · lo que cobra la clínica</DataLabel>
           <p className="mt-1 type-panel-hero tabular-nums text-on-surface">
-            {formatUsd(f.merchantSaleUsd)}
+            {formatMoneda(f.merchantSaleCur, f.moneda)}
           </p>
         </div>
 
         {f.cuotas.length > 0 && (
           <div>
             <DataLabel className="mb-2">Las cuotas del paciente</DataLabel>
-            <PlanDePagos cuotas={f.cuotas} />
+            <PlanDePagos cuotas={f.cuotas} moneda={f.moneda} />
           </div>
         )}
 
         <DesgloseDelServicio
-          baseUsd={f.merchantSaleUsd}
+          base={f.merchantSaleCur}
           feePct={f.feePct}
-          feeUsd={f.feeUsd}
-          feeVatUsd={f.feeVatUsd}
+          fee={f.feeCur}
+          feeVat={f.feeVatCur}
+          moneda={f.moneda}
           concepto={f.concept}
         />
 

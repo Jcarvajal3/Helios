@@ -114,7 +114,7 @@ begin
 
   if public.helios_vault_secret('d360_api_key') is null then
     v_msg := public.helios_enqueue_message('bienvenida', v_profile, null, 'whatsapp',
-               jsonb_build_object('clinica', 'Sol', 'orden', '1', 'cuotas', '• Cuota 1'));
+               jsonb_build_object('clinica', 'Sol', 'orden', '1', 'moneda', 'dólar', 'cuotas', '• Cuota 1'));
     v_r := public.helios_dispatch_whatsapp_batch();
     select * into v_row from public.outbound_messages where id = v_msg;
     if v_r->>'skipped' <> 'sin_clave' or v_row.channel <> 'whatsapp_manual' or v_row.status <> 'pendiente'
@@ -158,9 +158,10 @@ begin
      or jsonb_array_length(v_row.wa_template->'params') <> 6
      or v_row.wa_template->'params'->>0 <> 'José'
      or v_row.wa_template->'params'->>1 <> 'Clínica Despacho'
-     or v_row.wa_template->'params'->>2 <> '100'
-     or v_row.wa_template->'params'->>3 <> '12'
-     or v_row.wa_template->'params'->>4 <> '1,92'
+     -- Desde el 2026-10-07 las variables de dinero traen su símbolo.
+     or v_row.wa_template->'params'->>2 <> '$100'
+     or v_row.wa_template->'params'->>3 <> '$12'
+     or v_row.wa_template->'params'->>4 <> '$1,92'
      or v_row.wa_template->'params'->>5 not like '$56,96 el % y $56,96 el %'
      or v_row.wa_template->'buttons'->0->>'id' <> 'confirmar:' || v_charge
      or v_row.wa_template->'buttons'->1->>'id' <> 'rechazar:' || v_charge
@@ -234,7 +235,7 @@ begin
   end if;
 
   v_msg := public.helios_enqueue_message('bienvenida', v_profile, v_charge, 'whatsapp',
-             jsonb_build_object('clinica', 'Sol', 'orden', '1', 'cuotas', E'• Cuota 1\n• Cuota 2'));
+             jsonb_build_object('clinica', 'Sol', 'orden', '1', 'moneda', 'dólar', 'cuotas', E'• Cuota 1\n• Cuota 2'));
   insert into pg_temp._respuestas (status, body) values (200, '{"messages":[{"id":"wamid.C"}]}');
   perform public.helios_dispatch_whatsapp_batch();
   select * into v_call from pg_temp._llamadas order by n desc limit 1;
@@ -245,7 +246,7 @@ begin
 
   delete from public.whatsapp_contacts where phone_e164 = '+584141234567';
   v_msg := public.helios_enqueue_message('bienvenida', v_profile, v_charge, 'whatsapp',
-             jsonb_build_object('clinica', 'Sol', 'orden', '1', 'cuotas', '• Cuota 1'));
+             jsonb_build_object('clinica', 'Sol', 'orden', '1', 'moneda', 'dólar', 'cuotas', '• Cuota 1'));
   perform public.helios_dispatch_whatsapp_batch();
   select * into v_row from public.outbound_messages where id = v_msg;
   if v_row.channel <> 'whatsapp_manual' or v_row.status <> 'pendiente'

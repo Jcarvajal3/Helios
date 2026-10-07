@@ -240,7 +240,7 @@ begin
   if not exists (select 1 from public.outbound_messages
                  where charge_id = v_charge and template_key = 'bienvenida' and channel = 'whatsapp_manual'
                    and recipient = '+584141234567' and dedupe_key = 'bienvenida:' || v_charge
-                   and rendered_text like '🩺 ¡Listo, José! Tu pago en cuotas #%' and rendered_text like '%* $56,96 — %') then
+                   and rendered_text like '🩺 ¡Listo, José! Tu pago en cuotas #%' and rendered_text like '%* $56,96 (hoy Bs %) — %') then
     raise exception 'La bienvenida debía encolarse por WhatsApp';
   end if;
   if not exists (select 1 from audit.admin_actions where action = 'charge.created' and target_id = v_charge

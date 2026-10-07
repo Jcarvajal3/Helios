@@ -9,6 +9,7 @@
  * se abra con un mensaje a medias y que un porcentaje sin denominador llegue
  * como `null` y no como cero.
  */
+import { formatVes } from '@/components/ui'
 import {
   CLAVES_PLANTILLA,
   EJEMPLO_DE_COBRO,
@@ -54,6 +55,9 @@ console.log('── La línea de tiempo ─────────────�
     sequence: 1,
     amountUsd: 2.39,
     financedUsd: 1.94,
+    currency: 'USD',
+    amountCur: 2.39,
+    financedCur: 1.94,
     dueDate: '2026-09-11',
     status: 'pending',
     paidAt: null,
@@ -166,6 +170,10 @@ console.log('\n── El mensaje de WhatsApp ───────────�
     upcomingUsd: 5,
     overdueDesglose: null,
     upcomingDesglose: null,
+    overdueText: null,
+    overdueVesHoy: null,
+    upcomingText: null,
+    upcomingVesHoy: null,
     daysOverdue: 4,
     nextDueDate: '2026-09-20',
     installmentCount: 2,
@@ -277,6 +285,14 @@ console.log('\n── El mensaje de WhatsApp ───────────�
   comprueba(
     mensajeDeCobro('{monto_bs}', { persona, tasa: null, cuenta: null }) === 'el equivalente en bolívares',
     'sin tasa, el monto en bolívares se dice con palabras',
+  )
+  // Una orden en euros (2026-10-07): lo que dice la cartera en su moneda y sus
+  // bolívares de hoy mandan sobre los dólares por la tasa del dólar.
+  const enEuros = { ...persona, overdueText: '€56,96 + $2', overdueVesHoy: 52864 }
+  comprueba(
+    mensajeDeCobro('{monto_usd} = {monto_bs}', { persona: enEuros, tasa: 800, cuenta: null }) ===
+      `€56,96 + $2 = ${formatVes(52864)}`,
+    'una deuda en euros se pide en euros y con los bolívares de cada tasa',
   )
   comprueba(rellenar('{nombre} {toString} {otra}', EJEMPLO_DE_COBRO) === 'Ana {toString} {otra}', 'lo que no es variable se queda tal cual')
 }

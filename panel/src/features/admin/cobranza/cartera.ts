@@ -89,6 +89,16 @@ export type CollectionRow = {
    */
   lostUsd: number
   lostFinancedUsd: number
+  /**
+   * Lo vencido y lo por vencer dichos en la moneda de cada orden («€56,96 +
+   * $2») y sus bolívares de hoy, cada parte a la tasa BCV de su moneda
+   * (2026-10-07). Es lo que se le pide al paciente. `null` si la base no lo
+   * manda o no hay tasa.
+   */
+  overdueText: string | null
+  overdueVesHoy: number | null
+  upcomingText: string | null
+  upcomingVesHoy: number | null
   daysOverdue: number
   nextDueDate: string
   installmentCount: number
@@ -161,6 +171,10 @@ export function leerFilaDeCartera(raw: unknown): CollectionRow {
     upcomingDesglose: leerPartes(r.upcoming_financed_usd, r.upcoming_fee_usd),
     lostUsd: numero(r.lost_usd),
     lostFinancedUsd: numero(r.lost_financed_usd),
+    overdueText: textoONulo(r.overdue_text),
+    overdueVesHoy: numeroONulo(r.overdue_ves_hoy),
+    upcomingText: textoONulo(r.upcoming_text),
+    upcomingVesHoy: numeroONulo(r.upcoming_ves_hoy),
     daysOverdue: dias,
     nextDueDate: texto(r.next_due_date),
     installmentCount: numero(r.installment_count),

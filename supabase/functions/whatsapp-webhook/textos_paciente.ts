@@ -4,9 +4,16 @@
 //
 // Al paciente SÍ se le enseña lo que paga con la comisión de servicio dentro
 // (es su deuda); a la clínica, nunca.
+//
+// La moneda (2026-10-07): cada orden está en dólares o en euros y sus cuotas
+// se enseñan en esa moneda; el cargo por atraso es siempre en dólares. El
+// paciente paga solo en bolívares (Pago Móvil o transferencia): cada monto
+// a la tasa BCV de su moneda del día en que paga. Las monedas no se suman
+// entre sí: el total que las junta es el de bolívares.
 // ═══════════════════════════════════════════════════════════════════════════
 
-import { dinero, montoEs } from './datos.ts'
+import { bolivares, dinero, dineroEn, monedaDe, montoEs, nombreDeLaMoneda } from './datos.ts'
+import type { Moneda } from './datos.ts'
 
 export type Boton = { id: string; title: string }
 
@@ -20,7 +27,9 @@ export const MENU_PACIENTE: Boton[] = [
 export type CuotaPendiente = {
   sequence: number
   due_date: string
+  /** En la moneda de la orden. */
   monto: number
+  /** En DÓLARES, sea cual sea la moneda de la orden. */
   cargo_atraso: number
   vencida: boolean
 }
@@ -28,6 +37,9 @@ export type CuotaPendiente = {
 export type FinanciamientoActivo = {
   orden: number
   clinica: string
+  /** 'USD' | 'EUR'; sin ella (una respuesta vieja), dólares. */
+  moneda?: Moneda
+  /** En la moneda de la orden. */
   consulta: number
   cuotas: CuotaPendiente[]
 }
@@ -35,13 +47,76 @@ export type FinanciamientoActivo = {
 export type ResumenDelPaciente = {
   nombre: string | null
   financiamientos: FinanciamientoActivo[]
+  /** Bs por dólar hoy. */
   tasa_bcv: number | null
+  /** Bs por euro hoy. */
+  tasa_bcv_eur?: number | null
   cuentas_de_cobro: string
   pago_en_revision: boolean
 }
 
 function hola(nombre: string | null): string {
   return nombre ? `, ${nombre}` : ''
+}
+
+/** Lo que se debe, por moneda, en el orden en que aparece cada una. */
+type PorMoneda = Map<Moneda, number>
+
+function sumar(s: PorMoneda, m: Moneda, x: number) {
+  if (x > 0) s.set(m, (s.get(m) ?? 0) + x)
+}
+
+/** Las cuotas por moneda: el monto en la de su orden, el cargo por atraso en dólares. */
+function porMoneda(cuotas: Array<{ f: FinanciamientoActivo; c: CuotaPendiente }>): PorMoneda {
+  const s: PorMoneda = new Map()
+  for (const { f, c } of cuotas) {
+    sumar(s, monedaDe(f.moneda), c.monto)
+    sumar(s, 'USD', c.cargo_atraso)
+  }
+  return s
+}
+
+/** «$58,96», «€113,92 + $2»: cada moneda con lo suyo, sin convertir. */
+export function enSusMonedas(s: PorMoneda): string {
+  if (s.size === 0) return dinero(0)
+  return [...s].map(([m, x]) => dineroEn(x, m)).join(' + ')
+}
+
+function tasaDe(r: ResumenDelPaciente, m: Moneda): number | null {
+  const t = m === 'EUR' ? r.tasa_bcv_eur : r.tasa_bcv
+  return t && t > 0 ? t : null
+}
+
+/**
+ * Los bolívares de hoy: cada monto a la tasa BCV de su moneda (Bs de una
+ * cuota = monto × tasa de su moneda + cargo por atraso × tasa del dólar).
+ * Null si falta alguna tasa que haga falta.
+ */
+export function bolivaresDeHoy(r: ResumenDelPaciente, s: PorMoneda): number | null {
+  let bs = 0
+  for (const [m, x] of s) {
+    const tasa = tasaDe(r, m)
+    if (tasa === null) return null
+    bs += x * tasa
+  }
+  return bs
+}
+
+/** «del dólar», «del euro», «del dólar y del euro». */
+function deLasMonedas(s: PorMoneda): string {
+  const ms = s.size > 0 ? [...s.keys()] : (['USD'] as Moneda[])
+  return ms.map((m) => `del ${nombreDeLaMoneda(m)}`).join(' y ')
+}
+
+/**
+ * «En bolívares hoy: Bs 10.510,26 (tasa BCV del dólar 184,52).» o, si falta
+ * una tasa, «En bolívares, a la tasa BCV del euro del día en que pagues.»
+ */
+function lineaDeBolivares(r: ResumenDelPaciente, s: PorMoneda): string {
+  const bs = bolivaresDeHoy(r, s)
+  if (bs === null) return `En bolívares, a la tasa BCV ${deLasMonedas(s)} del día en que pagues.`
+  const tasas = [...s.keys()].map((m) => `tasa BCV del ${nombreDeLaMoneda(m)} ${montoEs(tasaDe(r, m)!)}`)
+  return `En bolívares hoy: ${bolivares(bs)} (${tasas.join(' · ')}).`
 }
 
 /** «12/10/2026» para «2026-10-12». */
@@ -94,7 +169,7 @@ export function cuotasAPagar(r: ResumenDelPaciente): Array<{ f: FinanciamientoAc
   return todas.slice(0, 1)
 }
 
-/** «Pagar cuota»: cuánto, en dólares y en bolívares de hoy, y cómo. */
+/** «Pagar cuota»: cuánto, en la moneda de cada orden y en bolívares de hoy, y cómo (solo en bolívares). */
 export function mensajePagar(r: ResumenDelPaciente): string {
   const aPagar = cuotasAPagar(r)
   if (aPagar.length === 0) {
@@ -104,20 +179,15 @@ export function mensajePagar(r: ResumenDelPaciente): string {
   const vencidas = aPagar.some((x) => x.c.vencida)
   const lineas = aPagar.map(({ f, c }) => {
     const cargo = c.cargo_atraso > 0 ? ` + cargo por atraso ${dinero(c.cargo_atraso)}` : ''
-    return `* ${dinero(c.monto)}${cargo} — ${fechaLarga(c.due_date)} (#${f.orden}, ${f.clinica})${c.vencida ? ' ⚠️ vencida' : ''}`
+    return `* ${dineroEn(c.monto, monedaDe(f.moneda))}${cargo} — ${fechaLarga(c.due_date)} (#${f.orden}, ${f.clinica})${c.vencida ? ' ⚠️ vencida' : ''}`
   })
-  const total = aPagar.reduce((s, { c }) => s + c.monto + c.cargo_atraso, 0)
-
-  const bs =
-    r.tasa_bcv && r.tasa_bcv > 0
-      ? `En bolívares hoy: Bs. ${montoEs(total * r.tasa_bcv)} (tasa BCV ${montoEs(r.tasa_bcv)}).`
-      : 'En bolívares, a la tasa BCV del día en que pagues.'
+  const total = porMoneda(aPagar)
 
   return (
     `💳 ${vencidas ? 'Tienes cuotas vencidas' : 'Tu próxima cuota'}:\n${lineas.join('\n')}\n\n` +
-    `Total a pagar: ${dinero(total)}\n${bs}\n\n` +
+    `Total a pagar: ${enSusMonedas(total)}\n${lineaDeBolivares(r, total)}\n\n` +
     (r.pago_en_revision ? 'Tienes un pago en revisión: te avisaremos por aquí cuando lo confirmemos.\n\n' : '') +
-    `Cómo pagar:\n${r.cuentas_de_cobro}\n\n` +
+    `Cómo pagar (en bolívares, por Pago Móvil o transferencia):\n${r.cuentas_de_cobro}\n\n` +
     'Cuando pagues, envíanos el comprobante por este chat. 💙'
   )
 }
@@ -127,19 +197,21 @@ export function mensajeFinanciamientos(r: ResumenDelPaciente): string {
   if (r.financiamientos.length === 0) {
     return `No tienes pagos en cuotas activos${hola(r.nombre)}. 💙`
   }
-  let saldoTotal = 0
   const bloques = r.financiamientos.map((f) => {
-    const saldo = f.cuotas.reduce((s, c) => s + c.monto + c.cargo_atraso, 0)
-    saldoTotal += saldo
+    const m = monedaDe(f.moneda)
+    const saldo = porMoneda(f.cuotas.map((c) => ({ f, c })))
     const cuotas = f.cuotas.map((c) => {
       const cargo = c.cargo_atraso > 0 ? ` + cargo ${dinero(c.cargo_atraso)}` : ''
-      return `* ${dinero(c.monto)}${cargo} — ${fechaLarga(c.due_date)}${c.vencida ? ' ⚠️ vencida' : ''}`
+      return `* ${dineroEn(c.monto, m)}${cargo} — ${fechaLarga(c.due_date)}${c.vencida ? ' ⚠️ vencida' : ''}`
     })
-    return `🩺 #${f.orden} · ${f.clinica} (consulta ${dinero(f.consulta)})\n${cuotas.join('\n')}\nSaldo: ${dinero(saldo)}`
+    return `🩺 #${f.orden} · ${f.clinica} (consulta ${dineroEn(f.consulta, m)})\n${cuotas.join('\n')}\nSaldo: ${enSusMonedas(saldo)}`
   })
+  const saldoTotal = porMoneda(r.financiamientos.flatMap((f) => f.cuotas.map((c) => ({ f, c }))))
+  const bs = bolivaresDeHoy(r, saldoTotal)
   return (
     `📋 Tus pagos en cuotas activos:\n\n${bloques.join('\n\n')}` +
-    (r.financiamientos.length > 1 ? `\n\nSaldo total: ${dinero(saldoTotal)}` : '') +
+    (r.financiamientos.length > 1 ? `\n\nSaldo total: ${enSusMonedas(saldoTotal)}` : '') +
+    (bs !== null && bs > 0 ? `\nEn bolívares hoy: ${bolivares(bs)}.` : '') +
     (r.pago_en_revision ? '\n\nTienes un pago en revisión: aún no aparece descontado.' : '')
   )
 }

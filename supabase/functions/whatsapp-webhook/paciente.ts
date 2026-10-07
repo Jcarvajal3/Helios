@@ -7,9 +7,12 @@
 //   · un mensaje cualquiera → el mensaje genérico con tres botones
 //     (Pagar cuota · Mis pagos en cuotas · Ayuda), como mucho una vez cada
 //     2 horas; si ya lo vio, se calla y lo ve el equipo en la app;
-//   · Pagar cuota → la cuota que toca (las vencidas primero), en dólares y en
-//     bolívares de hoy, las cuentas de cobro y «envíanos el comprobante»;
-//   · Mis pagos en cuotas → los activos con lo pendiente y el saldo;
+//   · Pagar cuota → la cuota que toca (las vencidas primero), en la moneda de
+//     su orden (dólares o euros) y en bolívares de hoy, las cuentas de cobro
+//     (solo bolívares: Pago Móvil o transferencia) y «envíanos el
+//     comprobante»;
+//   · Mis pagos en cuotas → los activos, cada uno en su moneda, con lo
+//     pendiente y el saldo;
 //   · Ayuda → «una persona te atenderá» y se calla 24 h;
 //   · una foto o un documento (un comprobante) → acuse y se calla 24 h;
 //   · alguien sin pagos en cuotas → un acuse y se calla 24 h;

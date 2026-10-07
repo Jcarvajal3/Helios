@@ -65,7 +65,10 @@ El resto del documento conserva "financiamiento" como término interno del dise�
 
 | Tema | Decisión | Origen |
 |---|---|---|
-| Moneda | **Dólar BCV.** Precios, límites, deuda y cargos en USD, cobrados en Bs a la tasa BCV del dólar del día de pago | Javier, 2026-09-30 |
+| Moneda | ~~Solo dólar BCV~~ (2026-09-30). **El médico cobra en dólares o en euros**, a su elección en el paso del monto (panel y bot). Una orden en euros queda en euros: el paciente paga cada cuota en Bs a la tasa BCV del euro del día en que paga y a la clínica se le paga en Bs a la tasa del euro. El libro, los límites, la mora y el superadmin siguen en **dólares** (la orden en euros se convierte con la tasa cruzada del día del registro) | Javier, 2026-10-07 |
+| Medios de pago del paciente | **Solo bolívares**: Pago Móvil o transferencia. Fuera Zelle, USDT y efectivo | Javier, 2026-10-07 |
+| Cargos por mora | **Apagados por ahora** (`late_fee_usd` = 0). El motor se queda en el código; retomarlo es volver a poner el monto en el parámetro | Javier, 2026-10-07 |
+| Montos al paciente | **La moneda y los bolívares**: «€56,96 (Bs 56.063,47)»; el monto en la moneda es fijo y los Bs son los de la tasa del día | Javier, 2026-10-07 |
 | Aceptación del paciente | ~~Solo la registra la secretaria~~ (2026-09-30). **Sustituida:** el paciente acepta respondiendo **"Sí"** a un WhatsApp de Helios con el resumen de la orden. Sin "Sí" no hay deuda (§5.1) | Javier, 2026-10-05 |
 | Plazo para aceptar | La orden espera el "Sí" **2 horas**. Si vence, la clínica la **reenvía** (nuevo plazo de 2 h, mismas fechas recalculadas) | Javier, 2026-10-05 |
 | Cupo durante la espera | La orden pendiente **reserva el cupo** del paciente hasta que acepte, rechace o venza | Javier, 2026-10-05 |
@@ -940,28 +943,31 @@ La v1 y la v2 dicen "financiamiento", que desde el 2026-10-06 no se usa hacia fu
 
   > 👋 Hola, {{1}}. Bienvenido a Helios 💙
   >
-  > {{2}} registró tu consulta de ${{3}} para pagarla en 2 cuotas, sin inicial.
+  > {{2}} registró tu consulta de {{3}} para pagarla en 2 cuotas, sin inicial.
   >
-  > * Consulta: ${{4}}
-  > * Comisión de servicio ({{5}}%): ${{6}}
-  > * IVA de la comisión ({{7}}%): ${{8}}
-  > * Total: ${{9}}
+  > * Consulta: {{4}}
+  > * Comisión de servicio ({{5}}%): {{6}}
+  > * IVA de la comisión ({{7}}%): {{8}}
+  > * Total: {{9}} ({{10}} a la tasa BCV de hoy)
   >
-  > Tus cuotas serán de {{10}}:
-  > 📅 {{11}}
+  > Tus cuotas serán de {{11}}:
+  > 📅 {{12}}
+  > Las pagas en bolívares, a la tasa BCV del {{13}} del día en que pagues.
   >
   > ¿Confirmas tu pago en cuotas? Responde Sí o No.
   > Tienes 2 horas para confirmar.
 
-- Ejemplo: {{1}} `Javier`, {{2}} `Clínica Test`, {{3}} `100`, {{4}} `100`, {{5}} `12`, {{6}} `12`, {{7}} `16`, {{8}} `1,92`, {{9}} `113,92`, {{10}} `$56,96`, {{11}} `13/10 y 20/10`.
-- Cuando Meta la apruebe (y entonces `whatsapp_dispatch_smoke`, que simula la v1 de 6 parámetros, se ajusta a 11):
+- **Sin «$» en el texto** (2026-10-07): la consulta se cobra en dólares o en euros y las variables de dinero ya traen su símbolo.
+- Ejemplo: {{1}} `Javier`, {{2}} `Clínica Test`, {{3}} `€100`, {{4}} `€100`, {{5}} `12`, {{6}} `€12`, {{7}} `16`, {{8}} `€1,92`, {{9}} `€113,92`, {{10}} `Bs 112.126,94`, {{11}} `€56,96`, {{12}} `13/10 y 20/10`, {{13}} `euro`.
+- Cuando Meta la apruebe (y entonces `whatsapp_dispatch_smoke`, que simula la v1 de 6 parámetros, se ajusta a 13):
 
   ```sql
   update public.notification_templates
      set wa_template_name = 'helios_confirmar_pago_en_cuotas',
          wa_template_lang = 'es',
          wa_template_params = array['nombre','clinica','monto_consulta','monto_consulta','servicio_pct',
-                                    'cargo_servicio','iva_pct','iva_cargo_servicio','total','cuotas_monto','cuotas_fechas']
+                                    'cargo_servicio','iva_pct','iva_cargo_servicio','total','total_bs',
+                                    'cuotas_monto','cuotas_fechas','moneda']
    where key = 'confirmar_financiamiento';
   ```
 

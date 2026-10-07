@@ -9,11 +9,21 @@
 //   (sin PIN)  pin_nuevo → pin_repetir → menú
 //   menú       Nuevo pago en cuotas · Mis pagos en cuotas · Ayuda
 //              (o directamente una cédula, o «reenviar 1042»)
-//   cedula     → nuevo: datos      disponible: monto      no disponible: menú
+//   cedula     → nuevo: datos      disponible: moneda      no disponible: menú
 //   datos      el formulario o texto libre (Gemini); pide solo lo que falte
-//   monto      «80 consulta»
-//   resumen    Confirmar · Corregir · Cancelar
+//              → moneda (si no la dijo) → monto (si no lo dijo) → resumen
+//   moneda     Dólares (USD) · Euros (EUR)   (o el monto con su moneda de
+//              una vez: «€80 consulta»)
+//   monto      «80 consulta», «€80 consulta», «80 euros consulta»; un botón
+//              de moneda aquí la cambia y vuelve a pedir el monto
+//   resumen    Confirmar · Corregir (también la moneda) · Cancelar
 //   pin        el PIN → la orden sale al paciente → menú
+//
+// La moneda (decisión del 2026-10-07): el médico cobra la consulta en
+// dólares o en euros y la orden queda en esa moneda; el paciente la paga en
+// bolívares, a la tasa BCV de esa moneda del día en que paga. La base mide
+// lo disponible en dólares (`disponible_usd`); aquí se dice en la moneda
+// elegida con `usd_per_eur`. Sin tasa del euro hoy, solo se cobra en dólares.
 //
 // Las respuestas salen por la cola (`helios_whatsapp_text`); el webhook las
 // despacha en cuanto termina.
@@ -22,16 +32,23 @@
 import { extraerConGemini } from './gemini.ts'
 import {
   FORMULARIO,
+  bolivares,
   diaCorto,
   dinero,
+  dineroEn,
+  enEuros,
+  enPlural,
   faltantes,
   horaCaracas,
   juntar,
   leerCedula,
   leerFormulario,
+  leerMoneda,
   leerMontoYConcepto,
+  monedaDe,
+  nombreDeLaMoneda,
 } from './datos.ts'
-import type { DatosDelPaciente, Lectura } from './datos.ts'
+import type { DatosDelPaciente, Lectura, Moneda } from './datos.ts'
 import { normalizar } from './logica.ts'
 import type { EventoDeMensaje } from './logica.ts'
 
@@ -50,13 +67,18 @@ export type Personal = {
 
 export type Rpc = <T>(fn: string, args: Record<string, unknown>) => Promise<T>
 
-type Estado = 'menu' | 'pin_nuevo' | 'pin_repetir' | 'cedula' | 'datos' | 'monto' | 'resumen' | 'pin'
+type Estado = 'menu' | 'pin_nuevo' | 'pin_repetir' | 'cedula' | 'datos' | 'moneda' | 'monto' | 'resumen' | 'pin'
 
 type Datos = {
   pinHmac?: string
   cedula?: string
   nuevo?: boolean
+  /** Lo disponible en DÓLARES, como lo mide la base. */
   disponible?: number | null
+  /** Dólares por euro hoy (`usd_per_eur`), o null si hoy no hay tasa del euro. */
+  usdPorEur?: number | null
+  /** La moneda de la orden; null mientras no se elija. */
+  moneda?: Moneda | null
   nombreEnmascarado?: string | null
   telefonoEnmascarado?: string | null
   emailEnmascarado?: string | null
@@ -77,6 +99,17 @@ const MENU: Boton[] = [
 const RESUMEN: Boton[] = [
   { id: 'orden:confirmar', title: 'Confirmar' },
   { id: 'orden:corregir', title: 'Corregir' },
+  { id: 'orden:cancelar', title: 'Cancelar' },
+]
+
+const MONEDA: Boton[] = [
+  { id: 'moneda:USD', title: 'Dólares (USD)' },
+  { id: 'moneda:EUR', title: 'Euros (EUR)' },
+]
+
+/** Cuando hoy no hay tasa del euro: solo dólares. */
+const SOLO_DOLARES: Boton[] = [
+  { id: 'moneda:USD', title: 'Dólares (USD)' },
   { id: 'orden:cancelar', title: 'Cancelar' },
 ]
 
@@ -103,6 +136,19 @@ function pinAceptable(pin: string): boolean {
     !'0123456789'.includes(pin) &&
     !'9876543210'.includes(pin)
   )
+}
+
+/** Un número positivo de la base, o null. */
+function positivo(v: unknown): number | null {
+  const x = Number(v)
+  return v != null && Number.isFinite(x) && x > 0 ? x : null
+}
+
+/** Lo disponible en la moneda elegida, o null si no se sabe (sin tasa del euro). */
+function disponibleEn(d: Datos, m: Moneda): number | null {
+  if (d.disponible == null) return null
+  if (m === 'USD') return d.disponible
+  return d.usdPorEur ? enEuros(d.disponible, d.usdPorEur) : null
 }
 
 function nombreDePila(p: Personal): string {
@@ -154,6 +200,8 @@ export async function atenderAlPersonal({
   const texto = (mensaje.texto ?? '').trim()
   const boton = mensaje.boton ?? ''
   const n = normalizar(texto)
+  /** La moneda pedida con un botón («moneda:EUR») o escrita sola («euros», «$»). */
+  const monedaPedida: Moneda | null = boton.startsWith('moneda:') ? monedaDe(boton.slice('moneda:'.length)) : leerMoneda(texto)
 
   // ── El PIN, antes que nada ────────────────────────────────────────────
   if (personal.pin_locked) {
@@ -235,7 +283,12 @@ export async function atenderAlPersonal({
     const lineas = r.data.map((f) => {
       const estadoTexto = ESTADO_DE_LA_ORDEN[String(f.status)] ?? String(f.status)
       const vence = f.status === 'pending' && f.expires_at ? ` (vence ${horaCaracas(String(f.expires_at))})` : ''
-      return `#${f.order_number} · ${f.customer_name ?? 'Paciente'} · ${dinero(Number(f.merchant_sale_usd))} · ${estadoTexto}${vence}`
+      // Cada orden en su moneda (sin comisión: es lo que recibe la clínica).
+      const consulta =
+        f.merchant_sale_cur != null
+          ? dineroEn(Number(f.merchant_sale_cur), monedaDe(f.currency))
+          : dinero(Number(f.merchant_sale_usd))
+      return `#${f.order_number} · ${f.customer_name ?? 'Paciente'} · ${consulta} · ${estadoTexto}${vence}`
     })
     await guardar('menu')
     await enviar(
@@ -253,8 +306,10 @@ export async function atenderAlPersonal({
       'Así funciona:\n' +
         '1. Pulsa «Nuevo pago en cuotas» y escribe la cédula del paciente.\n' +
         '2. Si es nuevo, envíame sus datos en un solo mensaje.\n' +
-        '3. Revisa el resumen y confírmalo con tu PIN.\n' +
-        '4. Al paciente le llega un WhatsApp: cuando responda Sí, la orden queda confirmada y te aviso aquí.\n\n' +
+        '3. Elige si cobras la consulta en dólares o en euros y escribe el monto.\n' +
+        '4. Revisa el resumen y confírmalo con tu PIN.\n' +
+        '5. Al paciente le llega un WhatsApp: cuando responda Sí, la orden queda confirmada y te aviso aquí.\n\n' +
+        'El paciente paga siempre en bolívares, a la tasa BCV del día en que paga.\n\n' +
         'Escribe «menú» para volver al inicio en cualquier momento. El equipo de Helios ve este chat: si algo no funciona, escríbenos aquí.',
       MENU,
     )
@@ -285,29 +340,32 @@ export async function atenderAlPersonal({
     if (e.estado === 'no_disponible') {
       return menu(String(e.mensaje ?? 'Esta persona no puede pagar en cuotas con Helios.'))
     }
+    const usdPorEur = positivo(e.usd_per_eur)
     if (e.estado === 'nuevo') {
-      await guardar('datos', { cedula, nuevo: true, disponible: Number(e.limite_usd ?? 0) || null, paciente: {} })
+      const limite = Number(e.limite_usd ?? 0)
+      await guardar('datos', { cedula, nuevo: true, disponible: limite || null, usdPorEur, paciente: {} })
+      // Aún no eligió moneda: lo disponible, en las dos.
+      const enEur = usdPorEur && limite > 0 ? ` (${dineroEn(enEuros(limite, usdPorEur), 'EUR')} si la cobras en euros)` : ''
       await enviar(
-        `${cedula} es un paciente nuevo. Tiene disponible para pagar en cuotas hasta ${dinero(Number(e.limite_usd ?? 0))}.\n\n` +
+        `${cedula} es un paciente nuevo. Tiene disponible para pagar en cuotas hasta ${dinero(limite)}${enEur}.\n\n` +
           'Envíame sus datos en un solo mensaje. Puedes copiar este formulario, llenarlo y enviarlo:\n\n' +
           FORMULARIO,
       )
       return { paso: 'datos' }
     }
-    await guardar('monto', {
-      cedula,
-      nuevo: false,
-      disponible: Number(e.disponible_usd ?? 0),
-      nombreEnmascarado: (e.nombre_enmascarado as string) ?? null,
-      telefonoEnmascarado: (e.telefono_enmascarado as string) ?? null,
-      emailEnmascarado: (e.email_enmascarado as string) ?? null,
-    })
-    await enviar(
-      `Paciente: ${e.nombre_enmascarado ?? cedula} · ${e.telefono_enmascarado ?? ''}\n` +
-        `Tiene disponible para pagar en cuotas hasta ${dinero(Number(e.disponible_usd ?? 0))}.\n\n` +
-        'Escribe el monto de la consulta y el concepto (por ejemplo: 80 consulta):',
+    return seguir(
+      {
+        cedula,
+        nuevo: false,
+        disponible: Number(e.disponible_usd ?? 0),
+        usdPorEur,
+        moneda: null,
+        nombreEnmascarado: (e.nombre_enmascarado as string) ?? null,
+        telefonoEnmascarado: (e.telefono_enmascarado as string) ?? null,
+        emailEnmascarado: (e.email_enmascarado as string) ?? null,
+      },
+      `Paciente: ${e.nombre_enmascarado ?? cedula} · ${e.telefono_enmascarado ?? ''}\n\n`,
     )
-    return { paso: 'monto' }
   }
 
   // ── Los datos del paciente nuevo ──────────────────────────────────────
@@ -330,6 +388,7 @@ export async function atenderAlPersonal({
       ...datos,
       paciente,
       monto: lectura.monto ?? datos.monto ?? null,
+      moneda: lectura.moneda ?? datos.moneda ?? null,
       concepto: lectura.concepto ?? datos.concepto ?? null,
       atendido: lectura.atendido ?? datos.atendido ?? null,
     }
@@ -339,22 +398,34 @@ export async function atenderAlPersonal({
       await enviar(`Me falta:\n${falta.map((f) => `${f}:`).join('\n')}\n\nCópialo, llénalo y envíamelo.`)
       return { paso: 'datos', falta }
     }
-    if (!nuevo.monto) {
-      await guardar('monto', nuevo)
-      await enviar('Ya tengo los datos. Ahora escribe el monto de la consulta y el concepto (por ejemplo: 80 consulta):')
-      return { paso: 'monto' }
-    }
-    return resumen(nuevo)
+    return seguir(nuevo, 'Ya tengo los datos. ')
+  }
+
+  // ── La moneda ─────────────────────────────────────────────────────────
+  if (estado === 'moneda') {
+    if (monedaPedida) return seguir({ ...datos, moneda: monedaPedida })
+    // El monto con su moneda de una vez («€80 consulta»); sin moneda, se vuelve a preguntar.
+    const mc = leerMontoYConcepto(texto)
+    if (mc) return seguir({ ...datos, monto: mc.monto, moneda: mc.moneda, concepto: mc.concepto ?? datos.concepto ?? null })
+    await enviar('Elige la moneda en la que cobras la consulta:', MONEDA)
+    return { paso: 'moneda' }
   }
 
   // ── El monto ──────────────────────────────────────────────────────────
   if (estado === 'monto') {
+    // Un botón de moneda aquí (desde «Corregir») la cambia: el monto se vuelve a pedir.
+    if (monedaPedida) return seguir({ ...datos, moneda: monedaPedida, monto: null })
     const mc = leerMontoYConcepto(texto)
     if (!mc) {
       await enviar('No entendí el monto. Escríbelo así: 80 consulta')
       return { paso: 'monto' }
     }
-    return resumen({ ...datos, monto: mc.monto, concepto: mc.concepto ?? datos.concepto ?? null })
+    return seguir({
+      ...datos,
+      monto: mc.monto,
+      moneda: mc.moneda ?? datos.moneda ?? null,
+      concepto: mc.concepto ?? datos.concepto ?? null,
+    })
   }
 
   // ── El resumen ────────────────────────────────────────────────────────
@@ -367,11 +438,15 @@ export async function atenderAlPersonal({
     if (boton === 'orden:corregir' || n === 'corregir') {
       if (datos.nuevo) {
         await guardar('datos', datos)
-        await enviar('Envíame solo lo que quieras cambiar, por ejemplo:\nCorreo: nuevo@correo.com\nMonto ($): 90')
+        await enviar('Envíame solo lo que quieras cambiar, por ejemplo:\nCorreo: nuevo@correo.com\nMonto: 90\nMoneda: euros')
         return { paso: 'datos' }
       }
       await guardar('monto', datos)
-      await enviar('Escribe otra vez el monto y el concepto (por ejemplo: 80 consulta):')
+      await enviar(
+        `Escribe otra vez el monto en ${enPlural(datos.moneda ?? 'USD')} y el concepto (por ejemplo: 80 consulta), ` +
+          'o elige otra moneda:',
+        MONEDA,
+      )
       return { paso: 'monto' }
     }
     await enviar('Usa los botones: Confirmar, Corregir o Cancelar.', RESUMEN)
@@ -389,10 +464,11 @@ export async function atenderAlPersonal({
       p_phone: tel,
       p_pin: texto,
       p_patient: paciente,
-      p_amount_usd: datos.monto,
+      p_amount: datos.monto,
       p_concept: datos.concepto ?? null,
       p_beneficiary_name: datos.atendido ?? null,
       p_idempotency_key: `wa:${mensaje.id}`,
+      p_currency: datos.moneda ?? 'USD',
     })
     if (!r.ok) {
       await guardar('menu')
@@ -426,28 +502,76 @@ export async function atenderAlPersonal({
     return { paso: 'enviada', charge_id: f.id, status: f.status }
   }
 
+  // ── Con los datos del paciente listos: moneda, monto y resumen ────────
+  /**
+   * Pide lo que falte, en orden (la moneda, luego el monto) o, si está todo,
+   * enseña el resumen. `antes` va delante de la pregunta («Ya tengo los
+   * datos. »).
+   */
+  async function seguir(d: Datos, antes = '') {
+    if (!d.moneda) {
+      await guardar('moneda', d)
+      await enviar(`${antes}¿En qué moneda cobras esta consulta?`, MONEDA)
+      return { paso: 'moneda' }
+    }
+    if (d.moneda === 'EUR' && !d.usdPorEur) {
+      // Sin la tasa del euro de hoy no se puede cobrar en euros. El monto se
+      // descarta: 80 euros no son 80 dólares.
+      await guardar('moneda', { ...d, moneda: null, monto: null })
+      await enviar(
+        `${antes}Hoy todavía no tenemos la tasa BCV del euro, así que por ahora no se puede cobrar en euros. ¿La cobras en dólares?`,
+        SOLO_DOLARES,
+      )
+      return { paso: 'moneda', sin_tasa_del_euro: true }
+    }
+    if (!d.monto) {
+      await guardar('monto', d)
+      const disponible = disponibleEn(d, d.moneda)
+      await enviar(
+        antes +
+          (disponible != null ? `Tiene disponible para pagar en cuotas hasta ${dineroEn(disponible, d.moneda)}.\n\n` : '') +
+          `Escribe el monto de la consulta en ${enPlural(d.moneda)} y el concepto (por ejemplo: 80 consulta):`,
+      )
+      return { paso: 'monto' }
+    }
+    return resumen(d)
+  }
+
   // ── El resumen antes de confirmar ─────────────────────────────────────
   async function resumen(d: Datos) {
+    const moneda = d.moneda ?? 'USD'
     const p = await probar<Record<string, unknown>>('bot_preview_charge', {
       p_phone: tel,
       p_document: d.nuevo ? null : d.cedula,
-      p_amount_usd: d.monto,
+      p_amount: d.monto,
+      p_currency: moneda,
     })
     if (!p.ok) {
       await guardar('monto', d)
-      await enviar(`${p.mensaje}\n\nEscribe otro monto (por ejemplo: 80 consulta):`)
+      await enviar(`${p.mensaje}\n\nEscribe otro monto en ${enPlural(moneda)} (por ejemplo: 80 consulta):`)
       return { paso: 'monto', error: p.mensaje }
     }
     const v = p.data
+    const m = monedaDe(v.currency ?? moneda)
+    /** Un monto en la moneda de la orden (`*_cur`); si la base no lo trae, en dólares. */
+    const en = (cur: unknown, usd: unknown) => (cur != null ? dineroEn(Number(cur), m) : dinero(Number(usd ?? 0)))
+
     if (v.cabe === false) {
       await guardar('monto', d)
-      await enviar(`Ese monto supera lo disponible (${dinero(Number(v.disponible_usd ?? v.limite_usd ?? 0))}). Escribe otro monto:`)
+      await enviar(
+        `Ese monto supera lo disponible (${en(v.disponible_cur ?? v.limite_cur, v.disponible_usd ?? v.limite_usd)}). ` +
+          `Escribe otro monto en ${enPlural(m)}:`,
+      )
       return { paso: 'monto', cabe: false }
     }
 
+    // Cada cuota en la moneda de la orden y, de referencia, en bolívares de hoy.
     const cuotas = (v.installments as Array<Record<string, unknown>>)
-      .map((c) => `${dinero(Number(c.amount_usd))} el ${diaCorto(String(c.due_date))}`)
-      .join(' y ')
+      .map((c, i) => {
+        const bs = c.amount_ves != null ? ` (${bolivares(Number(c.amount_ves))} a la tasa de hoy)` : ''
+        return `${i + 1}. ${en(c.amount_cur, c.amount_usd)} el ${diaCorto(String(c.due_date))}${bs}`
+      })
+      .join('\n')
     const pac = d.paciente ?? {}
     const quien = d.nuevo
       ? [
@@ -463,10 +587,11 @@ export async function atenderAlPersonal({
     await guardar('resumen', d)
     await enviar(
       `Revisa antes de enviar:\n\n${quien}\n\n` +
-        `Consulta: ${dinero(Number(v.base_usd))}${d.concepto ? ` (${d.concepto})` : ''}\n` +
-        `Comisión de servicio (${v.consumer_fee_pct}%): ${dinero(Number(v.consumer_fee_usd))}\n` +
-        `IVA de la comisión: ${dinero(Number(v.consumer_fee_vat_usd))}\n` +
-        `Cuotas: ${cuotas}\n\n` +
+        `Consulta: ${en(v.base_cur, v.base_usd)}${d.concepto ? ` (${d.concepto})` : ''}\n` +
+        `Comisión de servicio (${v.consumer_fee_pct}%): ${en(v.consumer_fee_cur, v.consumer_fee_usd)}\n` +
+        `IVA de la comisión: ${en(v.consumer_fee_vat_cur, v.consumer_fee_vat_usd)}\n` +
+        `Cuotas:\n${cuotas}\n\n` +
+        `El paciente paga en bolívares a la tasa BCV del ${nombreDeLaMoneda(m)} del día en que pague.\n` +
         'Al confirmar, le llega un WhatsApp al paciente y tiene 2 horas para responder Sí.',
       RESUMEN,
     )

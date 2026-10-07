@@ -7,12 +7,15 @@ import {
   texto,
   textoONulo,
 } from '@/lib/json'
+import { leerMoneda } from '@/components/ui'
+import type { Moneda } from '@/components/ui'
 import { leerMonto } from '@/lib/montos'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Nuevo pago en cuotas: lo que va y viene de las tres RPC del alta.
 //
 //   helios_patient_eligibility  → leerElegibilidad
+//   helios_fx_today             → leerTasasDeHoy
 //   preview_patient_charge      → leerVistaPrevia
 //   create_patient_charge       → leerFinanciamiento  (helios_charge_for_staff)
 //   staff_resend_receipt        → leerReenvio
@@ -99,6 +102,86 @@ export function maximoParaFinanciar(e: Elegibilidad): number | null {
   return null
 }
 
+// ── 1b. La moneda de la consulta (2026-10-07) ─────────────────────────────
+
+/**
+ * Las tasas BCV de hoy (`helios_fx_today`): bolívares por dólar, bolívares
+ * por euro y la cruzada, dólares por euro. Cualquiera puede faltar: el BCV
+ * no publica en feriados y la tasa del euro se carga aparte.
+ */
+export type TasasDeHoy = {
+  businessDate: string | null
+  /** Bs por dólar. */
+  usd: number | null
+  /** Bs por euro. */
+  eur: number | null
+  /** Dólares por euro: con lo que la base pasa una consulta en euros a su libro en dólares. */
+  usdPorEuro: number | null
+}
+
+function tasaPositiva(v: unknown): number | null {
+  const n = numeroONulo(v)
+  return n !== null && n > 0 ? n : null
+}
+
+export function leerTasasDeHoy(v: unknown): TasasDeHoy {
+  const r = comoFila(v)
+  return {
+    businessDate: textoONulo(r.business_date),
+    usd: tasaPositiva(filaONula(r.usd)?.rate),
+    eur: tasaPositiva(filaONula(r.eur)?.rate),
+    usdPorEuro: tasaPositiva(r.usd_per_eur),
+  }
+}
+
+/** Bolívares por unidad de la moneda, hoy. `null` si el BCV no la tiene. */
+export function tasaBcvDe(t: TasasDeHoy | undefined, moneda: Moneda): number | null {
+  if (!t) return null
+  return moneda === 'EUR' ? t.eur : t.usd
+}
+
+/** «del dólar», «del euro»: para «a la tasa BCV del euro de hoy». */
+export const DE_LA_MONEDA: Record<Moneda, string> = { USD: 'del dólar', EUR: 'del euro' }
+
+/**
+ * El mínimo y el máximo del monto en la moneda de la consulta, con la tasa
+ * cruzada de hoy. El libro, el límite de $150 y el mínimo de $10 siguen en
+ * dólares; esto los pasa a euros IGUAL que la base
+ * (`helios_assert_charge_amount_in`): el mínimo redondeado hacia arriba al
+ * céntimo y el máximo truncado. Así lo que el panel deja pasar lo deja pasar
+ * la base, y lo que rechaza lo rechaza con la misma cifra.
+ *
+ * `null` si se eligió euros y no hay tasa del euro: sin ella no se sabe
+ * cuánto es nada, y el paso del monto no deja seguir.
+ *
+ * El épsilon es por la coma flotante: 10 / 1,25 × 100 puede dar 800,0000001,
+ * y redondear eso hacia arriba diría €8,01 donde la base dice €8,00.
+ */
+export function limitesEnMoneda(
+  limitesUsd: { minimo: number; maximo: number | null },
+  moneda: Moneda,
+  usdPorEuro: number | null,
+): { minimo: number; maximo: number | null } | null {
+  if (moneda === 'USD') return limitesUsd
+  if (usdPorEuro === null || usdPorEuro <= 0) return null
+  return {
+    minimo: Math.ceil((limitesUsd.minimo / usdPorEuro) * 100 - 1e-6) / 100,
+    maximo:
+      limitesUsd.maximo === null
+        ? null
+        : Math.floor((limitesUsd.maximo / usdPorEuro) * 100 + 1e-6) / 100,
+  }
+}
+
+/**
+ * Los bolívares de un monto a la tasa de hoy, al céntimo. Solo informativo:
+ * el paciente paga a la tasa del día en que paga.
+ */
+export function enBolivares(monto: number, tasa: number | null): number | null {
+  if (tasa === null) return null
+  return Math.round(monto * tasa * 100) / 100
+}
+
 // ── 2. Monto ──────────────────────────────────────────────────────────────
 
 /**
@@ -108,30 +191,33 @@ export function maximoParaFinanciar(e: Elegibilidad): number | null {
  * mínimo y dentro de lo disponible. El texto del tope repite el de la base
  * («El monto supera lo disponible ($X)») para que la secretaria no lea dos
  * frases distintas para lo mismo.
+ *
+ * Los límites y el `formato` van en la moneda de la consulta
+ * (`limitesEnMoneda`): en euros, «El monto mínimo es €8,88», como la base.
  */
 export function leerMontoDeConsulta(
   escrito: string,
   limites: { minimo: number; maximo: number | null },
-  formato: (usd: number) => string,
-): { ok: true; usd: number } | { ok: false; problema: string } {
+  formato: (monto: number) => string,
+): { ok: true; monto: number } | { ok: false; problema: string } {
   if (escrito.trim() === '') return { ok: false, problema: 'Escribe el monto de la consulta.' }
 
-  const usd = leerMonto(escrito)
-  if (usd === null) return { ok: false, problema: 'No entendemos ese monto. Escríbelo como 45 o 45,50.' }
-  if (usd <= 0) return { ok: false, problema: 'El monto tiene que ser mayor que cero.' }
-  if (Math.abs(usd * 100 - Math.round(usd * 100)) > 1e-6) {
+  const monto = leerMonto(escrito)
+  if (monto === null) return { ok: false, problema: 'No entendemos ese monto. Escríbelo como 45 o 45,50.' }
+  if (monto <= 0) return { ok: false, problema: 'El monto tiene que ser mayor que cero.' }
+  if (Math.abs(monto * 100 - Math.round(monto * 100)) > 1e-6) {
     return { ok: false, problema: 'El monto lleva como mucho dos decimales.' }
   }
-  if (usd < limites.minimo) {
+  if (monto < limites.minimo) {
     return { ok: false, problema: `El monto mínimo es ${formato(limites.minimo)}.` }
   }
-  if (limites.maximo !== null && usd > limites.maximo) {
+  if (limites.maximo !== null && monto > limites.maximo) {
     return {
       ok: false,
       problema: `El monto supera lo disponible (${formato(limites.maximo)}).`,
     }
   }
-  return { ok: true, usd: Math.round(usd * 100) / 100 }
+  return { ok: true, monto: Math.round(monto * 100) / 100 }
 }
 
 /** El concepto que se propone. Genérico a propósito: viaja en un correo. */
@@ -144,17 +230,32 @@ export type CuotaDelPlan = {
   sequence: number
   dueDate: string
   /** Lo que paga el paciente en esa cuota: su mitad de la consulta más su
-   *  mitad de la comisión de servicio. */
+   *  mitad de la comisión de servicio. En dólares: lo del libro. */
   amountUsd: number
+  /** Lo mismo en la moneda de la orden: lo que se enseña. */
+  amountCur: number
+  /** Esa cuota en bolívares a la tasa de HOY, o null sin tasa. Informativo:
+   *  el paciente paga a la tasa del día en que paga. */
+  amountVes: number | null
 }
 
+/**
+ * Las cifras `Usd` son dólares de verdad (el libro); las `Cur`, las mismas en
+ * la moneda de la orden, que es lo que se enseña. En dólares son iguales.
+ */
 export type VistaPrevia = {
+  moneda: Moneda
+  /** Bs por unidad de la moneda de la orden, hoy. Null sin tasa. */
+  tasaBcv: number | null
   /** Lo que vale la consulta y lo que se le paga a la clínica. */
   baseUsd: number
+  baseCur: number
   feePct: number
-  /** La comisión de servicio y su IVA, por separado. NUNCA se suman a `baseUsd`. */
+  /** La comisión de servicio y su IVA, por separado. NUNCA se suman a la base. */
   feeUsd: number
   feeVatUsd: number
+  feeCur: number
+  feeVatCur: number
   businessDate: string | null
   cuotas: CuotaDelPlan[]
   lateFeeUsd: number | null
@@ -162,25 +263,42 @@ export type VistaPrevia = {
   /** `false` si no cabe en el disponible del paciente conocido. */
   cabe: boolean
   disponibleUsd: number | null
+  /** Lo disponible en la moneda de la orden, truncado como en la base. */
+  disponibleCur: number | null
 }
 
 function leerCuotas(v: unknown): CuotaDelPlan[] {
   return filas(v)
-    .map((c) => ({
-      sequence: numero(c.sequence),
-      dueDate: texto(c.due_date),
-      amountUsd: numero(c.amount_usd),
-    }))
+    .map((c) => {
+      const usd = numero(c.amount_usd)
+      return {
+        sequence: numero(c.sequence),
+        dueDate: texto(c.due_date),
+        amountUsd: usd,
+        // Una base sin la moneda nueva: la orden es en dólares, misma cifra.
+        amountCur: numeroONulo(c.amount_cur) ?? usd,
+        amountVes: numeroONulo(c.amount_ves),
+      }
+    })
     .sort((a, b) => a.sequence - b.sequence)
 }
 
 export function leerVistaPrevia(v: unknown): VistaPrevia {
   const r = comoFila(v)
+  const baseUsd = numero(r.base_usd)
+  const feeUsd = numero(r.consumer_fee_usd)
+  const feeVatUsd = numero(r.consumer_fee_vat_usd)
+  const disponibleUsd = numeroONulo(r.disponible_usd)
   return {
-    baseUsd: numero(r.base_usd),
+    moneda: leerMoneda(r.currency),
+    tasaBcv: numeroONulo(r.tasa_bcv),
+    baseUsd,
+    baseCur: numeroONulo(r.base_cur) ?? baseUsd,
     feePct: numeroONulo(r.consumer_fee_pct) ?? COMISION_DE_SERVICIO_POR_DEFECTO,
-    feeUsd: numero(r.consumer_fee_usd),
-    feeVatUsd: numero(r.consumer_fee_vat_usd),
+    feeUsd,
+    feeVatUsd,
+    feeCur: numeroONulo(r.consumer_fee_cur) ?? feeUsd,
+    feeVatCur: numeroONulo(r.consumer_fee_vat_cur) ?? feeVatUsd,
     businessDate: textoONulo(r.business_date),
     cuotas: leerCuotas(r.installments),
     lateFeeUsd: numeroONulo(r.late_fee_usd),
@@ -189,7 +307,8 @@ export function leerVistaPrevia(v: unknown): VistaPrevia {
     // monto contra el disponible y, si no cupiera, `create_patient_charge`
     // lo rechaza con su propio texto.
     cabe: r.cabe === false ? false : true,
-    disponibleUsd: numeroONulo(r.disponible_usd),
+    disponibleUsd,
+    disponibleCur: numeroONulo(r.disponible_cur) ?? disponibleUsd,
   }
 }
 
@@ -206,13 +325,15 @@ export function rotuloDelServicio(feePct: number): string {
 /**
  * La regla del cargo por atraso, en una frase para leérsela al paciente.
  * `null` si la base no mandó las cifras: mejor no decir nada que una regla
- * inventada.
+ * inventada. `null` también con el cargo en 0: desde el 2026-10-07 no se
+ * cobran cargos por mora (`late_fee_usd` = 0) y no se promete lo que no se
+ * cobra. Si vuelve a valer algo, la frase vuelve sola.
  */
 export function reglaDelAtraso(
   p: Pick<VistaPrevia, 'lateFeeUsd' | 'lateFeeGraceDays'>,
   formato: (usd: number) => string,
 ): string | null {
-  if (p.lateFeeUsd === null || p.lateFeeGraceDays === null) return null
+  if (p.lateFeeUsd === null || p.lateFeeGraceDays === null || p.lateFeeUsd <= 0) return null
   const dias = p.lateFeeGraceDays === 1 ? '1 día' : `${p.lateFeeGraceDays} días`
   return `Si una cuota se paga con más de ${dias} de atraso, se suma un cargo de ${formato(
     p.lateFeeUsd,
@@ -428,8 +549,12 @@ export type Financiamiento = {
   declineMessage: string | null
   createdAt: string | null
   businessDate: string | null
+  /** La moneda en la que cobró la clínica. */
+  moneda: Moneda
   /** La consulta: lo que se le paga a la clínica. Sin la comisión de servicio. */
   merchantSaleUsd: number
+  /** La misma consulta en la moneda de la orden: lo que se enseña. */
+  merchantSaleCur: number
   concept: string | null
   beneficiaryName: string | null
   patientName: string | null
@@ -440,6 +565,8 @@ export type Financiamiento = {
   feePct: number
   feeUsd: number | null
   feeVatUsd: number | null
+  feeCur: number | null
+  feeVatCur: number | null
   receipt: EstadoDelComprobante | null
   registeredBy: string | null
   staffCommissionUsd: number | null
@@ -456,6 +583,7 @@ export function leerFinanciamiento(v: unknown): Financiamiento {
 
   const base = numeroONulo(r.merchant_sale_usd) ?? numero(desglose.base_usd)
   const fee = numeroONulo(desglose.consumer_fee_usd)
+  const feeVat = numeroONulo(desglose.consumer_fee_vat_usd)
 
   return {
     id,
@@ -471,7 +599,9 @@ export function leerFinanciamiento(v: unknown): Financiamiento {
     declineMessage: textoONulo(r.decline_message),
     createdAt: textoONulo(r.created_at),
     businessDate: textoONulo(r.business_date),
+    moneda: leerMoneda(r.currency),
     merchantSaleUsd: base,
+    merchantSaleCur: numeroONulo(r.merchant_sale_cur) ?? numeroONulo(desglose.base_cur) ?? base,
     concept: textoONulo(r.concept),
     beneficiaryName: textoONulo(r.beneficiary_name),
     patientName: textoONulo(paciente.nombre),
@@ -480,7 +610,9 @@ export function leerFinanciamiento(v: unknown): Financiamiento {
     cuotas: leerCuotas(r.installments),
     feePct: numeroONulo(desglose.consumer_fee_pct) ?? porcentajeDelServicio(base, fee),
     feeUsd: fee,
-    feeVatUsd: numeroONulo(desglose.consumer_fee_vat_usd),
+    feeVatUsd: feeVat,
+    feeCur: numeroONulo(desglose.consumer_fee_cur) ?? fee,
+    feeVatCur: numeroONulo(desglose.consumer_fee_vat_cur) ?? feeVat,
     receipt: leerEstadoDelComprobante(recibo.status),
     registeredBy: textoONulo(r.registered_by),
     staffCommissionUsd: numeroONulo(r.staff_commission_usd),
@@ -508,14 +640,16 @@ export function porcentajeDelServicio(baseUsd: number, feeUsd: number | null): n
  * pantalla tiene que decirlo en vez de celebrar un alta que no es la que se
  * pidió.
  *
- * Se compara lo que la respuesta deja ver: el monto y los últimos cuatro
- * dígitos de la cédula enmascarada.
+ * Se compara lo que la respuesta deja ver: el monto en su moneda (€100 no
+ * son los $100 que se pidieron) y los últimos cuatro dígitos de la cédula
+ * enmascarada.
  */
 export function coincideConLoPedido(
-  f: Pick<Financiamiento, 'merchantSaleUsd' | 'documentoEnmascarado'>,
-  pedido: { amountUsd: number; document: string },
+  f: Pick<Financiamiento, 'merchantSaleCur' | 'moneda' | 'documentoEnmascarado'>,
+  pedido: { amount: number; moneda: Moneda; document: string },
 ): boolean {
-  if (Math.abs(f.merchantSaleUsd - pedido.amountUsd) >= 0.005) return false
+  if (f.moneda !== pedido.moneda) return false
+  if (Math.abs(f.merchantSaleCur - pedido.amount) >= 0.005) return false
 
   const visibles = (f.documentoEnmascarado ?? '').replace(/\D/g, '')
   if (visibles === '') return true

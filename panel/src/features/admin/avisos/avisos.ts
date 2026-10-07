@@ -58,18 +58,30 @@ export const PLANTILLAS: ReadonlyArray<{
   { clave: 'cuenta_congelada', rotulo: 'Cuenta congelada', canal: 'WhatsApp', cuando: 'Al congelarse la cuenta por una cuota vencida' },
 ]
 
-/** Las variables que puede usar una plantilla (contrato §4). */
+/**
+ * Las variables que puede usar una plantilla (contrato §4).
+ *
+ * Desde el 2026-10-07 (`20261007000400_los_mensajes_dicen_la_moneda_y_los_bolivares`)
+ * las de dinero traen su símbolo —la orden puede ir en dólares o en euros— y
+ * las de cuotas y totales, los bolívares de hoy: el texto ya no lleva «$»
+ * delante. Los ejemplos son los de una consulta de €100.
+ */
 export const VARIABLES_DE_PLANTILLA: ReadonlyArray<{ variable: string; que: string }> = [
   { variable: '{nombre}', que: 'El nombre del paciente' },
   { variable: '{clinica}', que: 'La clínica del financiamiento' },
   { variable: '{orden}', que: 'El número del financiamiento' },
-  { variable: '{monto_cuota}', que: 'El monto de la cuota, en dólares' },
+  { variable: '{moneda}', que: 'La moneda de la orden: «dólar» o «euro» (para «la tasa BCV del {moneda}»)' },
+  { variable: '{monto_consulta}', que: 'La consulta, con su símbolo: «€100»' },
+  { variable: '{monto_cuota}', que: 'La cuota con su símbolo y sus bolívares de hoy: «€56,96 (Bs 56.063,47)»' },
+  { variable: '{total}', que: 'El total con la comisión, con su símbolo: «€113,92»' },
+  { variable: '{total_bs}', que: 'El total en bolívares a la tasa de hoy: «Bs 112.126,94»' },
+  { variable: '{cargo_atraso}', que: 'El cargo por atraso, siempre en dólares: «$2»' },
   { variable: '{fecha}', que: 'El vencimiento de la cuota' },
   { variable: '{cuotas}', que: 'Las cuotas del financiamiento, con sus fechas' },
   { variable: '{whatsapp_helios}', que: 'El WhatsApp de Helios (Ajustes › Contacto)' },
-  { variable: '{cuentas_de_cobro}', que: 'Las cuentas de cobro activas (Ajustes › Cuentas de cobro)' },
-  { variable: '{tasa_bcv}', que: 'La tasa BCV del día' },
-  { variable: '{monto_bs}', que: 'El monto en bolívares a la tasa del día' },
+  { variable: '{cuentas_de_cobro}', que: 'Las cuentas de cobro activas, Pago Móvil y transferencia (Ajustes › Cuentas de cobro)' },
+  { variable: '{tasa_bcv}', que: 'La tasa BCV del dólar del día' },
+  { variable: '{tasa_bcv_euro}', que: 'La tasa BCV del euro del día' },
 ]
 
 /** El nombre de una plantilla: el de la base si lo manda, si no el de la lista, si no la clave. */

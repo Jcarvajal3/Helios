@@ -10,8 +10,10 @@ import {
   ErrorBox,
   SkeletonList,
   Tecla,
+  formatMoneda,
   formatUsd,
 } from '@/components/ui'
+import type { Moneda } from '@/components/ui'
 import {
   esRechazoDeLaBase,
   pasoDelError,
@@ -44,11 +46,16 @@ const IR_A: Record<PasoDelAlta, string> = {
  * Con la confirmación del paciente (`conConfirmacion`, contrato §1.3.1) el
  * botón ya no confirma: le envía al paciente un WhatsApp con este resumen, y
  * el pago en cuotas existe cuando responde Sí.
+ *
+ * Todo en la moneda en la que cobra la clínica (`_cur`), con cada cuota en
+ * bolívares a la tasa de hoy. El cargo por atraso es la excepción: la base lo
+ * fija en dólares y así se dice.
  */
 export function PasoConfirmar({
   merchantId,
   documento,
-  amountUsd,
+  amount,
+  moneda,
   concepto,
   beneficiario,
   titular,
@@ -62,7 +69,9 @@ export function PasoConfirmar({
 }: {
   merchantId: string
   documento: string
-  amountUsd: number
+  /** En `moneda`. */
+  amount: number
+  moneda: Moneda
   concepto: string | null
   beneficiario: string | null
   titular: string
@@ -79,8 +88,8 @@ export function PasoConfirmar({
   const confirmarRef = useRef<HTMLButtonElement>(null)
 
   const vista = useQuery({
-    queryKey: ['vista-previa-financiamiento', merchantId, documento, amountUsd],
-    queryFn: () => fetchVistaPrevia({ merchantId, document: documento, amountUsd }),
+    queryKey: ['vista-previa-financiamiento', merchantId, documento, amount, moneda],
+    queryFn: () => fetchVistaPrevia({ merchantId, document: documento, amount, moneda }),
     // Sin efectos, pero cada vuelta es una consulta a la base: con la
     // pestaña quieta no hay nada nuevo que pedir.
     refetchOnWindowFocus: false,
@@ -138,21 +147,22 @@ export function PasoConfirmar({
               <div className="sm:text-right">
                 <DataLabel>{concepto ?? 'Consulta'} · lo que cobra la clínica</DataLabel>
                 <p className="mt-1 type-panel-hero tabular-nums text-on-surface">
-                  {formatUsd(vista.data.baseUsd)}
+                  {formatMoneda(vista.data.baseCur, vista.data.moneda)}
                 </p>
               </div>
             </div>
 
             <div>
               <DataLabel className="mb-2">El paciente paga en 2 cuotas</DataLabel>
-              <PlanDePagos cuotas={vista.data.cuotas} />
+              <PlanDePagos cuotas={vista.data.cuotas} moneda={vista.data.moneda} />
             </div>
 
             <DesgloseDelServicio
-              baseUsd={vista.data.baseUsd}
+              base={vista.data.baseCur}
               feePct={vista.data.feePct}
-              feeUsd={vista.data.feeUsd}
-              feeVatUsd={vista.data.feeVatUsd}
+              fee={vista.data.feeCur}
+              feeVat={vista.data.feeVatCur}
+              moneda={vista.data.moneda}
               concepto={concepto}
             />
 
@@ -160,7 +170,6 @@ export function PasoConfirmar({
               {reglaDelAtraso(vista.data, formatUsd) && (
                 <li>{reglaDelAtraso(vista.data, formatUsd)}</li>
               )}
-              <li>Se paga en bolívares a la tasa BCV del día del pago.</li>
               <li>
                 El comprobante con las cuotas le llega a{' '}
                 <strong className="text-on-surface">{correoDestino ?? 'su correo registrado'}</strong>.
@@ -170,8 +179,8 @@ export function PasoConfirmar({
 
           {!vista.data.cabe && (
             <Callout tone="warning" titulo="Este monto no cabe en lo disponible del paciente">
-              {vista.data.disponibleUsd !== null
-                ? `Tiene disponible hasta ${formatUsd(vista.data.disponibleUsd)}. Baja el monto para seguir.`
+              {vista.data.disponibleCur !== null
+                ? `Tiene disponible hasta ${formatMoneda(vista.data.disponibleCur, vista.data.moneda)}. Baja el monto para seguir.`
                 : 'Baja el monto para seguir.'}
             </Callout>
           )}

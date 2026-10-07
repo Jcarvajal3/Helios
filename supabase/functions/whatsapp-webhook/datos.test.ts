@@ -5,9 +5,16 @@
  */
 import {
   FORMULARIO,
+  bolivares,
   diaCorto,
   dinero,
+  dineroEn,
+  enEuros,
+  enPlural,
   faltantes,
+  leerMoneda,
+  monedaDe,
+  nombreDeLaMoneda,
   horaCaracas,
   juntar,
   leerCedula,
@@ -57,6 +64,7 @@ comprueba(l.paciente.phone === '0414-123.45.67', 'el teléfono tal cual (lo norm
 comprueba(l.paciente.email === 'jose@gmail.com', 'el correo en minúsculas')
 comprueba(l.paciente.reference_phone === '0212-555.12.34', 'el teléfono de la referencia')
 comprueba(l.monto === 80.5 && l.concepto === 'Consulta + eco', 'monto y concepto', `${l.monto} ${l.concepto}`)
+comprueba(l.moneda === 'USD', 'un formulario viejo («Monto ($)») es en dólares', String(l.moneda))
 comprueba(faltantes(l.paciente).length === 0, 'no falta nada', faltantes(l.paciente).join(', '))
 
 const vacio = leerFormulario(FORMULARIO)
@@ -70,6 +78,19 @@ comprueba(
 )
 
 comprueba(!leerFormulario('José Pérez, 12/04/1990, masculino, 04141234567').etiquetado, 'texto libre: no es el formulario')
+
+comprueba(FORMULARIO.includes('Monto:\nMoneda (dólares o euros):'), 'el formulario pregunta la moneda')
+comprueba(vacio.moneda === null && vacio.monto === null, 'el formulario sin llenar: sin moneda ni monto')
+comprueba(leerFormulario('Nombres: Ana\nApellidos: Ruiz\nMonto: 80\nMoneda (dólares o euros): euros').moneda === 'EUR', 'Moneda: euros')
+comprueba(leerFormulario('Nombres: Ana\nApellidos: Ruiz\nMonto: 80\nMoneda: USD').moneda === 'USD', 'Moneda: USD')
+comprueba(leerFormulario('Nombres: Ana\nApellidos: Ruiz\nMonto: €80').moneda === 'EUR', 'la moneda en el valor del monto')
+comprueba(leerFormulario('Nombres: Ana\nApellidos: Ruiz\nMonto: 80 euros').monto === 80, 'el monto con la moneda escrita')
+comprueba(leerFormulario('Nombres: Ana\nApellidos: Ruiz\nMonto: 80').moneda === null, 'sin moneda: queda sin decidir')
+comprueba(
+  leerFormulario('Nombres: Ana\nApellidos: Ruiz\nMonto: $80\nMoneda: euros').moneda === 'EUR',
+  'la línea «Moneda» manda sobre el símbolo',
+)
+comprueba(leerFormulario('Moneda: euros').moneda === 'EUR', 'una corrección de solo la moneda')
 
 const juntos = juntar({ first_name: 'Ana', email: 'viejo@x.com' }, { email: 'nuevo@x.com', city: '  ' })
 comprueba(juntos.email === 'nuevo@x.com' && juntos.first_name === 'Ana' && juntos.city === undefined, 'juntar')
@@ -88,6 +109,56 @@ const mc2 = leerMontoYConcepto('Consulta + eco $120,50')
 comprueba(mc2?.monto === 120.5 && mc2.concepto === 'Consulta + eco', '«Consulta + eco $120,50»', JSON.stringify(mc2))
 comprueba(leerMontoYConcepto('100')?.concepto === null, 'solo el monto')
 comprueba(leerMontoYConcepto('consulta') === null, 'sin monto: null')
+
+console.log('\nLa moneda')
+const conMoneda: Array<[string, number, 'USD' | 'EUR' | null, string | null]> = [
+  ['80 consulta', 80, null, 'consulta'],
+  ['€80 consulta', 80, 'EUR', 'consulta'],
+  ['80€ consulta', 80, 'EUR', 'consulta'],
+  ['80 € consulta', 80, 'EUR', 'consulta'],
+  ['80 euros consulta', 80, 'EUR', 'consulta'],
+  ['80 EUR consulta', 80, 'EUR', 'consulta'],
+  ['consulta 80 eur', 80, 'EUR', 'consulta'],
+  ['80 euro', 80, 'EUR', null],
+  ['$80 consulta', 80, 'USD', 'consulta'],
+  ['80$ consulta', 80, 'USD', 'consulta'],
+  ['80 dólares consulta', 80, 'USD', 'consulta'],
+  ['80 dolares', 80, 'USD', null],
+  ['80 USD consulta', 80, 'USD', 'consulta'],
+  ['Consulta + eco €120,50', 120.5, 'EUR', 'Consulta + eco'],
+  ['80 consulta en euros', 80, 'EUR', 'consulta'],
+  ['consulta 80, en dólares', 80, 'USD', 'consulta'],
+  ['80 eurocolor', 80, null, 'eurocolor'],
+]
+for (const [texto, monto, moneda, concepto] of conMoneda) {
+  const r = leerMontoYConcepto(texto)
+  comprueba(
+    r?.monto === monto && r.moneda === moneda && r.concepto === concepto,
+    `«${texto}»`,
+    JSON.stringify(r),
+  )
+}
+
+for (const [texto, moneda] of [
+  ['dólares', 'USD'], ['Dolares', 'USD'], ['usd', 'USD'], ['$', 'USD'], ['en dólares', 'USD'], ['Dólares (USD)', 'USD'],
+  ['euros', 'EUR'], ['EUR', 'EUR'], ['€', 'EUR'], ['en euros', 'EUR'], ['Euros (EUR)', 'EUR'], ['euro', 'EUR'],
+] as const) {
+  comprueba(leerMoneda(texto) === moneda, `leerMoneda «${texto}»`, String(leerMoneda(texto)))
+}
+comprueba(
+  leerMoneda('80 consulta') === null && leerMoneda('hola') === null && leerMoneda('') === null && leerMoneda('dólares y euros') === null,
+  'leerMoneda: lo que no es solo una moneda, null',
+)
+
+comprueba(dineroEn(56.96, 'EUR') === '€56,96' && dineroEn(1250.5, 'EUR') === '€1.250,50' && dineroEn(100, 'EUR') === '€100', 'euros al estilo venezolano')
+comprueba(dineroEn(61.6, 'USD') === '$61,60', 'dólares con dineroEn')
+comprueba(bolivares(55432.1) === 'Bs 55.432,10' && bolivares(100) === 'Bs 100,00' && bolivares(0.5) === 'Bs 0,50', 'bolívares con sus dos decimales')
+comprueba(nombreDeLaMoneda('EUR') === 'euro' && nombreDeLaMoneda('USD') === 'dólar', 'el nombre de la moneda')
+comprueba(enPlural('EUR') === 'euros' && enPlural('USD') === 'dólares', 'en plural')
+comprueba(monedaDe('EUR') === 'EUR' && monedaDe('USD') === 'USD' && monedaDe(null) === 'USD' && monedaDe('x') === 'USD', 'monedaDe')
+comprueba(enEuros(150, 1.17) === 128.2, 'disponible en euros: truncado al céntimo', String(enEuros(150, 1.17)))
+comprueba(enEuros(117, 1.17) === 100, 'una división exacta no pierde un céntimo', String(enEuros(117, 1.17)))
+comprueba(enEuros(100, 1.0857) === 92.1, 'nunca se redondea hacia arriba (92,1063… → 92,10)', String(enEuros(100, 1.0857)))
 
 comprueba(leerCedula('V-12.345.678') === 'V12345678', 'cédula con guiones y puntos')
 comprueba(leerCedula('e 1234567') === 'E1234567', 'cédula E')
@@ -127,6 +198,13 @@ comprueba(
   lecturaDeLaIA({ first_name: 'Ana', clave_rara: 'x', monto: -5 })?.monto === null &&
     !('clave_rara' in (lecturaDeLaIA({ clave_rara: 'x' })?.paciente ?? {})),
   'ignora claves desconocidas y montos raros',
+)
+comprueba(ia?.moneda === null, 'la IA sin moneda: sin decidir')
+comprueba(
+  lecturaDeLaIA({ monto: 80, moneda: 'EUR' })?.moneda === 'EUR' &&
+    lecturaDeLaIA({ monto: 80, moneda: 'usd' })?.moneda === 'USD' &&
+    lecturaDeLaIA({ monto: 80, moneda: 'bolívares' })?.moneda === null,
+  'la moneda de la IA: solo USD o EUR',
 )
 comprueba(lecturaDeLaIA([1, 2]) === null && lecturaDeLaIA('x') === null, 'algo que no es un objeto: null')
 

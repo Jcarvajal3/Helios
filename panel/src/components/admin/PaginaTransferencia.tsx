@@ -19,8 +19,10 @@ import {
   SkeletonList,
   claseDeBoton,
   formatBcvRate,
+  formatBcvRateDe,
   formatDateTime,
   formatDay,
+  formatMoneda,
   formatUsd,
   formatVes,
 } from '@/components/ui'
@@ -122,7 +124,16 @@ export function PaginaTransferencia({
                         : null,
                       payout.amountVes != null
                         ? `${formatVes(payout.amountVes)}${
-                            payout.fxRate != null ? ` a ${formatBcvRate(payout.fxRate)}` : ''
+                            payout.fxRate != null && tieneDolares(payout.items)
+                              ? ` a ${formatBcvRate(payout.fxRate)}`
+                              : ''
+                          }`
+                        : null,
+                      // La parte de órdenes cobradas en euros se paga a la
+                      // tasa del euro de ese día: su monto y su tasa, aparte.
+                      payout.amountEur != null && payout.amountEur > 0
+                        ? `${formatMoneda(payout.amountEur, 'EUR')} en euros${
+                            payout.fxRateEur != null ? ` a ${formatBcvRateDe(payout.fxRateEur, 'EUR')}` : ''
                           }`
                         : null,
                     ]
@@ -244,6 +255,15 @@ function LoQueCubrio({ items, payoutId }: { items: PayoutItem[]; payoutId: strin
   )
 }
 
+/**
+ * Si alguna liquidación del pago iba en dólares. Sin ninguna, la tasa del
+ * dólar que guarda la fila no se usó para nada y no se enseña. Sin líneas
+ * (no debería), se enseña: es lo de siempre.
+ */
+function tieneDolares(items: PayoutItem[]): boolean {
+  return items.length === 0 || items.some((i) => i.currency === 'USD')
+}
+
 const COLUMNAS_CUBRIO: Array<Column<PayoutItem>> = [
   {
     key: 'consumo',
@@ -290,7 +310,16 @@ const COLUMNAS_CUBRIO: Array<Column<PayoutItem>> = [
     type: 'number',
     sort: (i) => i.appliedUsd,
     csv: (i) => csvDinero(i.appliedUsd),
-    cell: (i) => <span className="font-semibold">{formatUsd(i.appliedUsd)}</span>,
+    cell: (i) => (
+      <span className="font-semibold">
+        {formatUsd(i.appliedUsd)}
+        {i.currency === 'EUR' && (
+          <span className="block type-panel-caption font-normal text-on-surface-variant">
+            {formatMoneda(i.appliedCur, 'EUR')} en euros
+          </span>
+        )}
+      </span>
+    ),
   },
   {
     key: 'liquidacion',

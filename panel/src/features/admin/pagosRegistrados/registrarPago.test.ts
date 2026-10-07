@@ -5,18 +5,21 @@
  *
  * Lo que se vigila: la regla de «lo vencido va primero» (marcar una cuota por
  * vencer arrastra las vencidas; quitar una vencida suelta las adelantadas), el
- * total con los cargos por atraso, los bolívares esperados a la tasa del día
- * y su diferencia, la ruta de la captura y el aviso del doble control.
+ * total con los cargos por atraso, la moneda de cada cuota, lo que dice la
+ * base que debería decir el comprobante y su diferencia, la ruta de la
+ * captura y el aviso del doble control.
  */
 import {
   alternarCuota,
+  METODOS_DEL_PACIENTE,
   armarCuotas,
-  bolivaresEsperados,
   diferenciaEnBs,
   explicarErrorDeAprobacion,
   extensionDelComprobante,
   fraseDelExtracto,
   leerPagoRegistrado,
+  leerPrevisionDelPago,
+  montoDeLaCuota,
   motivoDeArchivo,
   motivoDeSeleccion,
   rutaDelComprobante,
@@ -43,6 +46,8 @@ function cuota(p: Partial<CuotaParaPagar> & Pick<CuotaParaPagar, 'id' | 'dueDate
     orderNumber: 1042,
     sequence: 1,
     amountUsd: 61.6,
+    moneda: 'USD',
+    amountCur: 61.6,
     merchantName: 'Consultorio Demo',
     lateFeesUsd: 0,
     enRevision: false,
@@ -135,11 +140,42 @@ igual('solo las pendientes vivas, de la más vieja a la más nueva', armadas.cuo
 igual('el cargo condonado no viaja', armadas.cuotas[0]?.lateFeesUsd, 2)
 igual('en revisión se marca', armadas.cuotas[1]?.enRevision, true)
 igual('los sueltos: de una cuota pagada y sin cuota', armadas.cargosSueltosUsd, 4)
+igual('sin moneda, dólares', [armadas.cuotas[0]?.moneda, armadas.cuotas[0]?.amountCur], ['USD', 10])
+
+const enEuros = armarCuotas(
+  [
+    { id: 'e1', chargeId: 'c', orderNumber: 7, sequence: 1, amountUsd: 63.39, currency: 'EUR', amountCur: 56.96, dueDate: '2026-10-15', merchantName: 'M', status: 'pending', writtenOffAt: null },
+  ],
+  [],
+  new Set(),
+)
+igual('una cuota de una orden en euros lleva sus euros', [enEuros.cuotas[0]?.moneda, enEuros.cuotas[0]?.amountCur], ['EUR', 56.96])
+igual('se elige en dólares, con sus euros al lado', enEuros.cuotas[0] ? montoDeLaCuota(enEuros.cuotas[0]) : null, '$63,39 · cobrada en €56,96')
+igual('una en dólares, solo dólares', montoDeLaCuota(cuota({ id: 'z', dueDate: HOY })), '$61,60')
+
+// ── Cómo paga ──────────────────────────────────────────────────────────────
+
+igual('el paciente solo paga en bolívares', METODOS_DEL_PACIENTE.map((m) => m.value), ['pago_movil', 'transferencia'])
 
 // ── Bolívares ──────────────────────────────────────────────────────────────
 
-igual('esperado a la tasa del día', bolivaresEsperados(63.6, 184.52), 11735.47)
-igual('sin tasa, nada', bolivaresEsperados(63.6, null), null)
+const prevision = leerPrevisionDelPago({
+  paid_on: '2026-10-15',
+  installments_usd: '63.39',
+  late_fee_usd: 2,
+  amount_usd: 65.39,
+  amount_eur: '56.96',
+  amount_usd_part: 2,
+  fx_rate: 184.52,
+  fx_rate_eur: 210.1,
+  amount_ves: 12336.3,
+})
+igual(
+  'la previsión de la base, leída',
+  [prevision.amountEur, prevision.amountUsdPart, prevision.fxRateEur, prevision.amountVes],
+  [56.96, 2, 210.1, 12336.3],
+)
+igual('sin la tasa que falta, sin bolívares', leerPrevisionDelPago({ amount_ves: null, fx_rate_eur: null }).amountVes, null)
 igual('diferencia que cuadra (±1 Bs)', diferenciaEnBs(11735, 11735.47, 184.52), { bs: -0.47, usd: -0, cuadra: true })
 igual('pagó de menos', diferenciaEnBs(11000, 11735.47, 184.52), { bs: -735.47, usd: -3.99, cuadra: false })
 igual('sin monto escrito, sin diferencia', diferenciaEnBs(null, 11735.47, 184.52), null)
@@ -162,11 +198,14 @@ const respuesta = leerPagoRegistrado({
   amount_usd: '63.60',
   late_fee_usd: 2,
   fx_rate: 184.52,
+  fx_rate_eur: 210.1,
+  amount_eur: 56.96,
   amount_ves: 11735.47,
   status: 'reported',
   candidatos_extracto: 1,
 })
 igual('respuesta leída', [respuesta.reportId, respuesta.amountUsd, respuesta.candidatosExtracto], ['r1', 63.6, 1])
+igual('con su parte en euros', [respuesta.amountEur, respuesta.fxRateEur], [56.96, 210.1])
 igual('un candidato: se puede aprobar', fraseDelExtracto(1).tono, 'success')
 igual('varios: elegir', fraseDelExtracto(3).tono, 'warning')
 igual('ninguno: esperar al extracto', fraseDelExtracto(0).tono, 'info')

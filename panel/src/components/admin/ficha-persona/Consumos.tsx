@@ -10,6 +10,7 @@ import {
   Tr,
   formatDateTime,
   formatDay,
+  formatMoneda,
   formatUsd,
 } from '@/components/ui'
 import type { ConsumoDePersona } from '@/features/admin/directorio/consumosDePersona'
@@ -191,6 +192,16 @@ function SusCuotas({
                 <span className="block type-panel-caption text-on-surface-variant">
                   {textoDeDesgloseCorto({ financedUsd: i.financedUsd, feeUsd: i.amountUsd - i.financedUsd })}
                 </span>
+                {/* La cifra sigue en dólares; si la orden se cobró en euros, lo
+                    que paga el paciente es esto, a la tasa del euro. */}
+                {i.currency === 'EUR' && (
+                  <span
+                    className="block type-panel-caption text-on-surface-variant"
+                    title="Orden cobrada en euros: el paciente paga esta cuota en bolívares a la tasa BCV del euro del día en que paga."
+                  >
+                    cobrada en {formatMoneda(i.amountCur, 'EUR')}
+                  </span>
+                )}
               </Td>
               <Td>
                 {/* Una cuota pagada dice CUÁNDO: es el dato que se coteja

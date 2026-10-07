@@ -33,12 +33,27 @@ docs/       plan, contrato, reglas
   lunes), **pague o no el paciente**. No le cuesta nada y no hay permanencia
   (cancela con aviso previo).
 - Especialidades: medicina, odontología y cosmetología.
+- **Moneda de la consulta** (2026-10-07): el médico elige **dólares o euros**
+  en el paso del monto (panel y bot). Una orden en euros **queda en euros**:
+  el paciente paga cada cuota en bolívares a la tasa BCV del euro del día en
+  que paga, y a la clínica se le paga en Bs a la tasa del euro. El paciente
+  **solo paga en bolívares** (Pago Móvil o transferencia; nada de Zelle,
+  USDT ni efectivo).
+- **Sin cargos por mora** (2026-10-07): `late_fee_usd` = 0. El motor sigue en
+  el código; para retomarlo basta poner el monto en el parámetro (los textos
+  del cargo dependen de él) y reescribir el párrafo de `/legal/terminos`.
 
 ## Reglas no negociables (heredadas de Ronda)
 
 - **Dinero**: `numeric(18,4)` en USD (los sufijos `_usd` son literales). VES
   `numeric(18,2)`, tasa `numeric(18,6)`. Jamás `float`.
-- **Moneda**: dólar BCV. El VES es solo presentación y liquidación.
+- **Moneda del libro**: dólar BCV. El libro, el límite, el mínimo, la mora,
+  las métricas y el superadmin van en dólares. Una orden en euros se pasa a
+  dólares con la tasa cruzada del día del registro (`charges.fx_usd_per_unit`)
+  y guarda sus montos en euros en las columnas `_cur` (`amount_cur`,
+  `base_cur`, `installments.amount_cur`, `settlements.amount_cur`…). Tasas:
+  `exchange_rates` serie `BCV` (dólar) y `BCV_EUR` (euro). El VES es solo
+  presentación y liquidación.
 - **Zona horaria**: `America/Caracas` siempre. El día operativo empieza a
   **medianoche** (`helios_business_date`), no a las 10 AM como en Ronda.
 - **Libro contable**: partida doble, append-only, `idempotency_key` en toda
@@ -49,7 +64,9 @@ docs/       plan, contrato, reglas
   sin comisión. **Al paciente sí** se le enseña el total con la comisión
   (decisión de Javier, 2026-10-06: es lo que paga).
 - Los montos en los mensajes (WhatsApp, correo) van al estilo venezolano:
-  `helios_money_text` → «$100», «$1,92», «$1.250,50».
+  `helios_money_text` → «$100», «$1,92», «$1.250,50». Con moneda:
+  `helios_money_cur_text` («€56,96») y `helios_ves_text` («Bs 55.432,10»);
+  las variables de dinero de las plantillas ya traen su símbolo.
 - **Seguridad en la base, no en el router**: RLS + RPC `security definer` con
   `set search_path`. El personal de la clínica **no lee** `profiles`,
   `installments` ni `payment_reports` directamente.
@@ -69,8 +86,8 @@ docs/       plan, contrato, reglas
   servicio**, secretaria (rol `cajero`), administrador (rol `gerente`).
 - **Prohibido en todo lo externo** (portada, panel de la clínica, bot,
   WhatsApp, correos, errores que ve una clínica): «préstamo»,
-  «financiamiento», «financiar», «crédito», «fee». Tampoco se publica la tasa
-  del euro, que no se verifica la identidad del paciente, quién firma los
+  «financiamiento», «financiar», «crédito», «fee». Tampoco se publica que
+  no se verifica la identidad del paciente, quién firma los
   contratos ni detalles internos del equipo. El superadmin (interno) y los
   identificadores de la base (`charges`, `comprobante_financiamiento`, rutas
   como `/financiamientos`) conservan sus nombres.

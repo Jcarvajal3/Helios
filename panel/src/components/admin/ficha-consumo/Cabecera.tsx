@@ -13,6 +13,7 @@ import {
   Seccion,
   formatDateTime,
   formatDay,
+  formatMoneda,
   formatUsd,
   formatPhone,
 } from '@/components/ui'
@@ -24,6 +25,31 @@ export function nombreDelConsumo(detail: ChargeDetail): string {
   return detail.orderNumber === null
     ? `${formatUsd(detail.financedUsd)} (sin fee) en ${detail.merchant.name}`
     : `Orden #${detail.orderNumber}`
+}
+
+/**
+ * «Cobrado en euros: €100,00 · tasa cruzada del registro 1,1263 $/€». `null`
+ * en una orden en dólares, que es lo de siempre y no hace falta decirlo.
+ *
+ * Las cifras de la ficha siguen en dólares (el libro va en dólares); esto
+ * dice lo que cobró de verdad el médico y con qué tasa se pasó a dólares el
+ * día en que se registró.
+ */
+export function lineaDeLaMoneda(
+  detail: Pick<ChargeDetail, 'currency' | 'baseCur' | 'amountCur' | 'fxUsdPerUnit'>,
+): string | null {
+  if (detail.currency !== 'EUR') return null
+  const monto = detail.baseCur ?? detail.amountCur
+  const partes = [
+    `Cobrado en euros${monto === null ? '' : `: ${formatMoneda(monto, 'EUR')}`}`,
+    detail.fxUsdPerUnit === null
+      ? null
+      : `tasa cruzada del registro ${detail.fxUsdPerUnit.toLocaleString('es-VE', {
+          minimumFractionDigits: 4,
+          maximumFractionDigits: 6,
+        })} $/€`,
+  ]
+  return partes.filter(Boolean).join(' · ')
 }
 
 /**
@@ -50,6 +76,7 @@ export function Cabecera({ detail, menu }: { detail: ChargeDetail; menu: Readonl
       }
       datos={[
         detail.businessDate ? `Día del ${formatDay(detail.businessDate)}` : null,
+        lineaDeLaMoneda(detail),
         detail.branch?.name,
         `Generado el ${formatDateTime(detail.createdAt)}`,
         detail.confirmedAt ? `confirmado el ${formatDateTime(detail.confirmedAt)}` : null,

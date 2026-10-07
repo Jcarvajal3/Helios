@@ -3,7 +3,7 @@ import { Paperclip } from 'lucide-react'
 
 import { ENLACE_EN_CELDA } from '@/components/DataTable'
 import type { Column } from '@/components/DataTable'
-import { Badge, formatDay, formatUsd, formatVes } from '@/components/ui'
+import { Badge, formatDay, formatMoneda, formatUsd, formatVes } from '@/components/ui'
 import type { Payout } from '@/features/admin/api'
 import { nombreDelMedio } from '@/features/admin/liquidaciones'
 import { csvDinero } from '@/lib/csv'
@@ -61,7 +61,7 @@ export function columnasDeTransferencias({ conLocal }: { conLocal: boolean }): A
       key: 'monto',
       header: 'Monto',
       type: 'number',
-      info: 'Lo transferido a la clínica: sus consultas (financiado sin fee, menos la comisión de la clínica) más las comisiones de su personal. Debajo, partido y en bolívares.',
+      info: 'Lo transferido a la clínica: sus consultas (financiado sin fee, menos la comisión de la clínica) más las comisiones de su personal. Debajo, partido y en bolívares; si llevaba liquidaciones de órdenes cobradas en euros, cuánto era en euros (pagado a la tasa del euro).',
       sort: (p) => p.amountUsd,
       sortDir: 'desc',
       csv: (p) => csvDinero(p.amountUsd),
@@ -78,6 +78,11 @@ export function columnasDeTransferencias({ conLocal }: { conLocal: boolean }): A
               {formatVes(p.amountVes)}
             </span>
           )}
+          {p.amountEur !== null && p.amountEur > 0 && (
+            <span className="block whitespace-nowrap type-panel-caption font-normal text-on-surface-variant">
+              con {formatMoneda(p.amountEur, 'EUR')} en euros
+            </span>
+          )}
         </>
       ),
     },
@@ -90,8 +95,24 @@ export function columnasDeTransferencias({ conLocal }: { conLocal: boolean }): A
       cell: (p) => (p.amountVes === null ? '—' : formatVes(p.amountVes)),
     },
     {
+      key: 'monto-eur',
+      header: 'Parte en euros',
+      type: 'number',
+      hidden: true,
+      csv: (p) => (p.amountEur === null ? null : csvDinero(p.amountEur)),
+      cell: (p) => (p.amountEur === null ? '—' : formatMoneda(p.amountEur, 'EUR')),
+    },
+    {
+      key: 'tasa-eur',
+      header: 'Tasa del euro',
+      type: 'number',
+      hidden: true,
+      csv: (p) => (p.fxRateEur === null ? null : csvDinero(p.fxRateEur, 6)),
+      cell: (p) => (p.fxRateEur === null ? '—' : p.fxRateEur.toLocaleString('es-VE')),
+    },
+    {
       key: 'tasa',
-      header: 'Tasa',
+      header: 'Tasa del dólar',
       type: 'number',
       hidden: true,
       csv: (p) => (p.fxRate === null ? null : csvDinero(p.fxRate, 6)),

@@ -47,6 +47,16 @@ const deRonda = leerFilaDeFinanciamiento({ charge_id: 'c2', order_number: 7, sta
 igual(deRonda.registeredBy, 'Luis', 'forma de Ronda: staff_name')
 igual(deRonda.receipt, null, 'forma de Ronda: sin comprobante')
 igual(deRonda.staffCommissionUsd, null, 'forma de Ronda: sin comisión (null, no 0)')
+igual([fila.moneda, fila.merchantSaleCur], ['USD', 100], 'sin currency: dólares, la misma cifra')
+
+const filaEnEuros = leerFilaDeFinanciamiento({
+  charge_id: 'c5',
+  order_number: 1050,
+  merchant_sale_usd: '112.6000',
+  currency: 'EUR',
+  merchant_sale_cur: '100.0000',
+})
+igual([filaEnEuros.moneda, filaEnEuros.merchantSaleCur], ['EUR', 100], 'una fila en euros: la consulta en euros')
 
 console.log('\n── resumen y por persona ─────────────────────────────────────')
 igual(leerResumen({ scope: 'self', order_count: 3, sale_usd: '150', avg_ticket_usd: 50, active_days: 2 }).scope, 'self', 'scope self')
@@ -106,6 +116,45 @@ igual(nueva.pagos.length, 2, 'forma nueva: installments con paid_to_merchant_on'
 igual(nueva.pagos[1].amountUsd, null, 'secretaria: sin importe de la transferencia')
 igual(nueva.receipt?.status, 'pendiente', 'receipt_status suelto')
 igual(nueva.status, 'confirmed', 'sin status: confirmado')
+igual(detalle.pagos[0].amountCur, 50, 'forma de Ronda: el importe en la moneda, el de dólares')
+
+// La forma de hoy: las fechas en `installments` y los importes en `payouts`,
+// cada uno en la moneda de la orden; la comisión del personal en dólares.
+const enEuros = leerDetalle({
+  charge_id: 'c4',
+  order_number: 1050,
+  created_at: 'x',
+  is_gerente: true,
+  currency: 'EUR',
+  merchant_sale_usd: 112.6,
+  merchant_sale_cur: 100,
+  consumer_fee_usd: 13.51,
+  consumer_fee_vat_usd: 2.16,
+  consumer_fee_cur: 12,
+  consumer_fee_vat_cur: 1.92,
+  installments: [
+    { sequence: 1, due_date: '2026-10-14', run_date: '2026-10-15', paid_to_merchant_on: null },
+    { sequence: 2, due_date: '2026-10-21', run_date: '2026-10-22', paid_to_merchant_on: null },
+  ],
+  payouts: [
+    { kind: 'staff_commission', sequence: null, due_date: '2026-10-08', amount_usd: 0.5, currency: 'USD', amount_cur: 0.5 },
+    { kind: 'installment', sequence: 2, due_date: '2026-10-21', amount_usd: 56.3, paid_usd: 0, status: 'pending', currency: 'EUR', amount_cur: 50, paid_cur: 0 },
+    { kind: 'installment', sequence: 1, due_date: '2026-10-14', amount_usd: 56.3, paid_usd: 28, status: 'partial', currency: 'EUR', amount_cur: 50, paid_cur: 25 },
+  ],
+})
+igual(
+  [enEuros.moneda, enEuros.merchantSaleCur, enEuros.feeCur, enEuros.feeVatCur],
+  ['EUR', 100, 12, 1.92],
+  'la ficha en euros',
+)
+igual(
+  enEuros.pagos.map((p) => [p.sequence, p.paidToMerchantOn, p.moneda, p.amountCur, p.paidCur, p.status]),
+  [
+    [1, '2026-10-15', 'EUR', 50, 25, 'partial'],
+    [2, '2026-10-22', 'EUR', 50, 0, 'pending'],
+  ],
+  'cada mitad con el importe de su transferencia, en euros, y sin la comisión del personal',
+)
 
 console.log('\n── el libro para contabilidad ────────────────────────────────')
 igual(usdOEur({ sale_usd: 10, sale_eur: 99 }, 'sale'), 10, 'prefiere _usd')

@@ -1,5 +1,5 @@
-import { aBolivares } from '@/features/admin/liquidaciones'
-import type { PayoutMethod } from '@/features/admin/liquidaciones'
+import { formatMoneda, formatUsd, leerMoneda } from '@/components/ui'
+import type { Moneda } from '@/components/ui'
 import { comoFila, numero, numeroONulo, texto, textoONulo } from '@/lib/json'
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -9,10 +9,27 @@ import { comoFila, numero, numeroONulo, texto, textoONulo } from '@/lib/json'
 // registra aquí y el pago cae en la cola de «Pagos reportados», donde se
 // aprueba contra el extracto como cualquier otro.
 //
-// Módulo puro: qué cuotas se pueden marcar (lo vencido primero), cuánto
-// debería decir el comprobante en bolívares, la ruta de la captura y cómo se
-// explica el doble control. Lo prueba `registrarPago.test.ts`.
+// Desde el 2026-10-07 el paciente solo paga en bolívares (Pago Móvil o
+// transferencia), y cada cuota a la tasa BCV de la moneda de su orden del día
+// en que pagó. Lo que debería decir el comprobante lo calcula la base
+// (`admin_payment_preview`): aquí solo se lee y se compara.
+//
+// Módulo puro: qué cuotas se pueden marcar (lo vencido primero), cómo se
+// compara lo escrito con lo esperado en bolívares, la ruta de la captura y
+// cómo se explica el doble control. Lo prueba `registrarPago.test.ts`.
 // ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Cómo paga el paciente: solo en bolívares. Es una lista propia, separada de
+ * los medios con que Helios le paga a una clínica (`METODOS_DE_PAGO` de
+ * `liquidaciones.ts`), que siguen siendo los de siempre.
+ */
+export type MetodoDelPaciente = 'pago_movil' | 'transferencia'
+
+export const METODOS_DEL_PACIENTE: Array<{ value: MetodoDelPaciente; label: string }> = [
+  { value: 'pago_movil', label: 'Pago Móvil' },
+  { value: 'transferencia', label: 'Transferencia' },
+]
 
 /** Una cuota pendiente del paciente, como se elige al registrar. */
 export type CuotaParaPagar = {
@@ -20,8 +37,12 @@ export type CuotaParaPagar = {
   chargeId: string
   orderNumber: number | null
   sequence: number
-  /** PAYABLE: la cuota con su parte del service fee dentro. */
+  /** PAYABLE: la cuota con su parte del service fee dentro, en dólares. */
   amountUsd: number
+  /** La moneda en que se cobró la orden: la de la tasa con que se paga. */
+  moneda: Moneda
+  /** La cuota en la moneda de su orden (en una de dólares, `amountUsd`). */
+  amountCur: number
   dueDate: string
   merchantName: string
   /** Los cargos por atraso pendientes de esta cuota: viajan con ella. */
@@ -138,6 +159,9 @@ export function armarCuotas(
     orderNumber: number | null
     sequence: number
     amountUsd: number
+    /** Sin ella, dólares (una base anterior a 20261007000200). */
+    currency?: Moneda
+    amountCur?: number
     dueDate: string
     merchantName: string
     status: 'pending' | 'paid'
@@ -162,6 +186,8 @@ export function armarCuotas(
       orderNumber: c.orderNumber,
       sequence: c.sequence,
       amountUsd: c.amountUsd,
+      moneda: leerMoneda(c.currency),
+      amountCur: c.currency === 'EUR' ? (c.amountCur ?? c.amountUsd) : c.amountUsd,
       dueDate: c.dueDate,
       merchantName: c.merchantName,
       lateFeesUsd: redondear(vivos.filter((f) => f.installmentId === c.id).reduce((s, f) => s + f.amountUsd, 0)),
@@ -177,14 +203,53 @@ function redondear(n: number): number {
   return Math.round(n * 100) / 100
 }
 
+/**
+ * El monto de una cuota para elegirla: en dólares, y si su orden se cobró en
+ * euros, también lo que es en euros, que es lo que el paciente paga a la tasa
+ * del euro: «$63,39 · cobrada en €56,96».
+ */
+export function montoDeLaCuota(c: Pick<CuotaParaPagar, 'amountUsd' | 'moneda' | 'amountCur'>): string {
+  return c.moneda === 'EUR'
+    ? `${formatUsd(c.amountUsd)} · cobrada en ${formatMoneda(c.amountCur, 'EUR')}`
+    : formatUsd(c.amountUsd)
+}
+
 // ── Bolívares ──────────────────────────────────────────────────────────────
 
 /**
- * Lo que debería decir el comprobante en bolívares, a la tasa BCV de hoy.
- * `null` sin tasa: no se inventa.
+ * Lo que debería decir el comprobante para unas cuotas y un día, según la
+ * base (`admin_payment_preview`): la parte en euros a la tasa BCV del euro de
+ * ese día y el resto —cuotas en dólares y cargos por atraso— a la del dólar.
  */
-export function bolivaresEsperados(totalUsd: number, tasa: number | null): number | null {
-  return tasa === null || tasa <= 0 ? null : aBolivares(totalUsd, tasa)
+export type PrevisionDelPago = {
+  paidOn: string
+  installmentsUsd: number
+  lateFeeUsd: number
+  /** Todo, en dólares: lo que entra al libro. */
+  amountUsd: number
+  /** Lo que va en euros, en euros (0 si ninguna cuota es de una orden en euros). */
+  amountEur: number
+  /** Lo que va en dólares, en dólares: cuotas en dólares y cargos por atraso. */
+  amountUsdPart: number
+  fxRate: number | null
+  fxRateEur: number | null
+  /** `null` si falta la tasa de alguna de las monedas de ese día. */
+  amountVes: number | null
+}
+
+export function leerPrevisionDelPago(raw: unknown): PrevisionDelPago {
+  const r = comoFila(raw)
+  return {
+    paidOn: texto(r.paid_on),
+    installmentsUsd: numero(r.installments_usd),
+    lateFeeUsd: numero(r.late_fee_usd),
+    amountUsd: numero(r.amount_usd),
+    amountEur: numero(r.amount_eur),
+    amountUsdPart: numero(r.amount_usd_part),
+    fxRate: numeroONulo(r.fx_rate),
+    fxRateEur: numeroONulo(r.fx_rate_eur),
+    amountVes: numeroONulo(r.amount_ves),
+  }
 }
 
 /** La tolerancia del cruce con el extracto (plan §7.1): ±1 Bs. */
@@ -193,7 +258,7 @@ export const TOLERANCIA_BS = 1
 export type DiferenciaEnBs = {
   /** Escrito − esperado. Positivo: pagó de más. */
   bs: number
-  /** Lo mismo en dólares a la tasa del día. */
+  /** Lo mismo en dólares a la tasa del dólar del día: una idea del tamaño, no un monto. */
   usd: number
   /** Dentro de la tolerancia: se da por cuadrado. */
   cuadra: boolean
@@ -208,16 +273,6 @@ export function diferenciaEnBs(
   if (escritoBs === null || esperadoBs === null || tasa === null || tasa <= 0) return null
   const bs = redondear(escritoBs - esperadoBs)
   return { bs, usd: redondear(bs / tasa), cuadra: Math.abs(bs) <= TOLERANCIA_BS }
-}
-
-/** Si el medio se paga en bolívares: el monto del comprobante es en Bs. */
-export function medioEnBolivares(metodo: PayoutMethod): boolean {
-  return metodo === 'pago_movil' || metodo === 'transferencia'
-}
-
-/** Si el medio lleva banco. */
-export function medioConBanco(metodo: PayoutMethod): boolean {
-  return metodo === 'pago_movil' || metodo === 'transferencia'
 }
 
 // ── La captura ─────────────────────────────────────────────────────────────
@@ -270,6 +325,10 @@ export type PagoRegistrado = {
   amountUsd: number
   lateFeeUsd: number
   fxRate: number | null
+  /** La tasa del euro con que se cotizó la parte en euros; `null` si no la hubo. */
+  fxRateEur: number | null
+  /** La parte en euros, en euros; `null` o 0 si todo iba en dólares. */
+  amountEur: number | null
   amountVes: number | null
   status: string
   /** Cuántas líneas del extracto casan (referencia + monto + fecha). */
@@ -284,6 +343,8 @@ export function leerPagoRegistrado(raw: unknown): PagoRegistrado {
     amountUsd: numero(r.amount_usd),
     lateFeeUsd: numero(r.late_fee_usd),
     fxRate: numeroONulo(r.fx_rate),
+    fxRateEur: numeroONulo(r.fx_rate_eur),
+    amountEur: numeroONulo(r.amount_eur),
     amountVes: numeroONulo(r.amount_ves),
     status: texto(r.status, 'reported'),
     candidatosExtracto: numero(r.candidatos_extracto),

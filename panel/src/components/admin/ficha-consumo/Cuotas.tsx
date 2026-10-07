@@ -8,6 +8,7 @@ import {
   Tr,
   formatDateTime,
   formatDay,
+  formatMoneda,
   formatUsd,
 } from '@/components/ui'
 import type { ChargeDetail, ChargeInstallment } from '@/features/admin/consumos'
@@ -67,6 +68,13 @@ export function Cuotas({ detail }: { detail: ChargeDetail }) {
               <span className="block type-panel-caption text-on-surface-variant">
                 {textoDeDesgloseCorto({ financedUsd: i.financedUsd, feeUsd: i.amountUsd - i.financedUsd })}
               </span>
+              {/* En una orden en euros, lo que paga el paciente es esto, a la
+                  tasa BCV del euro del día en que paga. */}
+              {detail.currency === 'EUR' && (
+                <span className="block type-panel-caption text-on-surface-variant">
+                  {formatMoneda(i.amountCur, 'EUR')} en euros
+                </span>
+              )}
             </Td>
             <Td>
               <EstadoCuota cuota={i} />

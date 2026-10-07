@@ -20,6 +20,7 @@ import {
   estadoDeConsulta,
   formatDateTime,
   formatDay,
+  formatMoneda,
   formatTime,
   formatUsd,
   sumarDias,
@@ -27,7 +28,11 @@ import {
 import { canSee } from '@/features/auth/permissions'
 import { useStaff } from '@/features/auth/session'
 import type { StaffContext } from '@/features/auth/session'
-import { ESTADO_DEL_FINANCIAMIENTO, LIMITE_DE_FILAS } from '@/features/merchant/financiamientos'
+import {
+  EQUIVALENTE_EN_DOLARES,
+  ESTADO_DEL_FINANCIAMIENTO,
+  LIMITE_DE_FILAS,
+} from '@/features/merchant/financiamientos'
 import type {
   CuotaDeLaClinica,
   FilaDeFinanciamiento,
@@ -192,7 +197,7 @@ function Financiamientos({ staff }: { staff: StaffContext }) {
             <Stat
               label={propios ? 'Lo que registraste' : 'Registrado en el rango'}
               value={formatUsd(resumen.data?.saleUsd ?? 0)}
-              info="La suma de las consultas, lo que cobra la clínica. Sin la comisión de servicio, que paga el paciente."
+              info={`La suma de las consultas, lo que cobra la clínica. Sin la comisión de servicio, que paga el paciente. ${EQUIVALENTE_EN_DOLARES}`}
               estado={estadoCifras}
               onReintentar={() => void resumen.refetch()}
             />
@@ -207,6 +212,7 @@ function Financiamientos({ staff }: { staff: StaffContext }) {
                 label="Consulta promedio"
                 value={formatUsd(resumen.data?.avgTicketUsd ?? 0)}
                 hint="Registrado ÷ órdenes"
+                info={EQUIVALENTE_EN_DOLARES}
                 estado={estadoCifras}
                 onReintentar={() => void resumen.refetch()}
               />
@@ -286,7 +292,10 @@ function Financiamientos({ staff }: { staff: StaffContext }) {
                       } as const,
                     ]
                   : []),
-                'Consulta',
+                {
+                  label: 'Consulta',
+                  info: 'Lo que cobra la clínica, en la moneda en que se cobró: dólares o euros. Sin la comisión de servicio.',
+                },
                 ...(conComision
                   ? [
                       {
@@ -335,7 +344,7 @@ function Financiamientos({ staff }: { staff: StaffContext }) {
                   {deTodos && (
                     <Td>{f.registeredBy ?? <span className="text-on-surface-variant">—</span>}</Td>
                   )}
-                  <Td className="font-semibold tabular-nums">{formatUsd(f.merchantSaleUsd)}</Td>
+                  <Td className="font-semibold tabular-nums">{formatMoneda(f.merchantSaleCur, f.moneda)}</Td>
                   {conComision && (
                     <Td className="tabular-nums text-on-surface-variant">
                       {f.staffCommissionUsd === null ? '—' : formatUsd(f.staffCommissionUsd)}
@@ -410,7 +419,7 @@ function TarjetasDeFinanciamientos({
                 {f.patientName ?? 'Sin nombre'}
               </span>
               <span className="shrink-0 type-panel-section tabular-nums text-on-surface">
-                {formatUsd(f.merchantSaleUsd)}
+                {formatMoneda(f.merchantSaleCur, f.moneda)}
               </span>
             </span>
 
@@ -544,8 +553,8 @@ function QuienRegistro({
         ))}
       </Table>
       <p className="mt-3 type-panel-caption leading-5 text-panel-muted">
-        Lo registrado en el rango, repartido por quien registró cada pago en cuotas. El detalle
-        de las comisiones, pagado y por pagar, está en Comisiones.
+        Lo registrado en el rango, repartido por quien registró cada pago en cuotas. {EQUIVALENTE_EN_DOLARES}{' '}
+        El detalle de las comisiones, pagado y por pagar, está en Comisiones.
       </p>
     </section>
   )

@@ -123,7 +123,26 @@ begin
     raise exception 'Una transferencia sin monto en bolívares debía fallar';
   exception when sqlstate '22023' then null;
   end;
-  raise notice 'TEST REGISTRO 1 OK — validaciones';
+  -- El paciente solo paga en bolívares (2026-10-07): Zelle, USDT y efectivo, no.
+  begin
+    perform public.admin_register_payment(v_pac, array[v_a1], 'zelle', null, 'ZL-1', v_today, null, null, null);
+    raise exception 'Un Zelle debía fallar: el paciente solo paga en bolívares';
+  exception when sqlstate '22023' then
+    if sqlerrm not like 'El paciente solo paga en bolívares%' then
+      raise exception 'Texto inesperado para un Zelle: %', sqlerrm;
+    end if;
+  end;
+  begin
+    perform public.admin_register_payment(v_pac, array[v_a1], 'efectivo', null, null, v_today, null, null, null);
+    raise exception 'Un pago en efectivo debía fallar';
+  exception when sqlstate '22023' then null;
+  end;
+  begin
+    perform public.admin_register_payment(v_pac, array[v_a1], 'usdt', null, 'TX-1', v_today, null, null, null);
+    raise exception 'Un pago en USDT debía fallar';
+  exception when sqlstate '22023' then null;
+  end;
+  raise notice 'TEST REGISTRO 1 OK — validaciones (solo bolívares)';
 
   -- --- 2. Lo vencido va primero ---------------------------------------------
   begin
@@ -249,10 +268,8 @@ begin
   -- Un super admin sí aprueba lo que él mismo registró.
   perform set_config('request.jwt.claims',
     json_build_object('sub', v_super::text, 'role', 'authenticated', 'aal', 'aal2')::text, true);
-  v_res3 := public.admin_register_payment(v_pac, array[v_b1], 'zelle', null, 'ZL-778899', v_today, null, null, null);
-  if (v_res3->>'declared_amount_ves') is not null or (v_res3->>'diferencia_ves') is not null then
-    raise exception 'Un Zelle no lleva bolívares declarados: %', v_res3;
-  end if;
+  v_res3 := public.admin_register_payment(v_pac, array[v_b1], 'pago_movil', 'Venezuela', 'PM-778899',
+                                          v_today, 4000, null, null);
   perform public.admin_reconcile_payment((v_res3->>'report_id')::uuid, true, null);
   if (select status from public.payment_reports where id = (v_res3->>'report_id')::uuid) <> 'reconciled' then
     raise exception 'El super admin debía poder aprobar su propio registro';
@@ -263,7 +280,8 @@ begin
    where key = 'payment_four_eyes' and effective_from = v_today;
   perform set_config('request.jwt.claims',
     json_build_object('sub', v_op1::text, 'role', 'authenticated', 'aal', 'aal2')::text, true);
-  v_res3 := public.admin_register_payment(v_pac, array[v_a2], 'efectivo', null, null, v_today, null, null, 'En la oficina');
+  v_res3 := public.admin_register_payment(v_pac, array[v_a2], 'transferencia', 'Banesco', 'TR-990011',
+                                          v_today, 4000, null, 'Transferencia desde otra cuenta');
   perform public.admin_reconcile_payment((v_res3->>'report_id')::uuid, true, null);
   if (select status from public.payment_reports where id = (v_res3->>'report_id')::uuid) <> 'reconciled' then
     raise exception 'Sin doble control quien registra debía poder aprobar';

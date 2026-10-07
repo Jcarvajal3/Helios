@@ -23,29 +23,41 @@ import {
 import { enumerar, esCuentaDeRelleno } from '@/features/admin/ajustesReglas'
 import { CLAVE_ESTADO_CONFIGURACION } from '@/features/admin/contacto/api'
 import { moverCuenta, ordenarCuentas, siguienteOrden } from '@/features/admin/contacto/contacto'
-import { METODOS_DE_COBRO, datosDe, fetchPaymentDestinations, setPaymentDestination } from '@/features/admin/ops'
-import type { MetodoDeCobro, PaymentDestination } from '@/features/admin/ops'
+import {
+  METODOS_DE_COBRO,
+  datosDe,
+  esCuentaEnBolivares,
+  fetchPaymentDestinations,
+  nombreDelMetodoDeCobro,
+  setPaymentDestination,
+} from '@/features/admin/ops'
+import type { CuentaEnBolivares, MetodoDeCobro, MetodoDeCuenta } from '@/features/admin/ops'
 import { SOLO_SUPER_ADMIN, useIsSuperAdmin } from '@/features/admin/role'
 import { describeError } from '@/lib/supabase'
 
 /** Lo que se decide en el diálogo: dar de alta, activar o retirar una cuenta. */
 type Decision =
   | { tipo: 'alta' }
-  | { tipo: 'activar'; cuenta: PaymentDestination }
-  | { tipo: 'retirar'; cuenta: PaymentDestination }
+  | { tipo: 'activar'; cuenta: CuentaEnBolivares }
+  | { tipo: 'retirar'; cuenta: CuentaEnBolivares }
 
 /**
  * Las cuentas a las que transfieren los pacientes (plan H11).
  *
- * En Helios puede haber **varias activas** a la vez —Pago Móvil,
- * transferencia, Zelle…—, cada una con su orden: los mensajes y el
- * comprobante las listan todas, en ese orden. Dar de alta una nueva ya no
- * retira las demás. Todo lo exige el servidor a un super admin y pide motivo.
+ * En Helios puede haber **varias activas** a la vez —Pago Móvil y
+ * transferencia—, cada una con su orden: los mensajes y el comprobante las
+ * listan todas, en ese orden. Dar de alta una nueva ya no retira las demás.
+ * Todo lo exige el servidor a un super admin y pide motivo.
+ *
+ * Desde el 2026-10-07 el paciente solo paga en bolívares: Pago Móvil o
+ * transferencia. Las cuentas de Zelle de antes quedaron apagadas en la base y
+ * aquí se listan como históricas, sin botones: los pagos viejos se siguen
+ * cotejando contra ellas, pero ninguna vuelve a salir en un mensaje.
  *
  * Cada cuenta se edita por su id (`admin_set_payment_destination` con `p_id`,
  * contrato §2.3), mandándola completa: la base reescribe todos sus datos.
  * Cada método pide lo suyo: Pago Móvil banco + RIF + teléfono; transferencia
- * banco + RIF + cuenta de 20 dígitos + titular; Zelle correo + titular.
+ * banco + RIF + cuenta de 20 dígitos + titular.
  */
 export function CuentaDeCobro() {
   const avisar = useToast()
@@ -58,12 +70,15 @@ export function CuentaDeCobro() {
   const [rif, setRif] = useState('')
   const [phone, setPhone] = useState('')
   const [account, setAccount] = useState('')
-  const [email, setEmail] = useState('')
   const [holder, setHolder] = useState('')
   const [decision, setDecision] = useState<Decision | null>(null)
 
   const cuentas = ordenarCuentas(query.data ?? [])
-  const activas = cuentas.filter((c) => c.isActive && !esCuentaDeRelleno(c.rif))
+  // Las que se pueden ordenar, activar o retirar: las de bolívares. Una de
+  // Zelle que siguiera activa por error tampoco cuenta: la base ya no la
+  // enseña en los mensajes.
+  const enBolivares = (query.data ?? []).filter(esCuentaEnBolivares)
+  const activas = enBolivares.filter((c) => c.isActive && !esCuentaDeRelleno(c.rif))
 
   function refrescar() {
     void client.invalidateQueries({ queryKey: ['payment-destinations'] })
@@ -75,21 +90,21 @@ export function CuentaDeCobro() {
       if (d.tipo === 'alta') {
         return setPaymentDestination({
           method,
-          bankName: method === 'zelle' ? '' : bank.trim(),
-          rif: method === 'zelle' ? '' : rif.trim(),
+          bankName: bank.trim(),
+          rif: rif.trim(),
           phone: method === 'pago_movil' ? phone.trim() : '',
           accountNumber: method === 'transferencia' ? soloDigitos(account) : null,
-          email: method === 'zelle' ? email.trim() : null,
+          email: null,
           holderName: holder.trim() || undefined,
           note: nota,
-          sortOrder: siguienteOrden(query.data ?? []),
+          sortOrder: siguienteOrden(enBolivares),
           isActive: true,
         })
       }
       return setPaymentDestination({
         ...datosDe(d.cuenta),
         note: nota,
-        sortOrder: d.tipo === 'activar' ? siguienteOrden(query.data ?? []) : d.cuenta.sortOrder,
+        sortOrder: d.tipo === 'activar' ? siguienteOrden(enBolivares) : d.cuenta.sortOrder,
         isActive: d.tipo === 'activar',
       })
     },
@@ -100,7 +115,6 @@ export function CuentaDeCobro() {
         setRif('')
         setPhone('')
         setAccount('')
-        setEmail('')
         setHolder('')
       } else {
         avisar(d.tipo === 'activar' ? `Cuenta de ${nombreDeCuenta(d.cuenta)} activa` : `Cuenta de ${nombreDeCuenta(d.cuenta)} retirada`)
@@ -113,7 +127,7 @@ export function CuentaDeCobro() {
   // Subir o bajar: dos escrituras, una por cuenta. El orden no pide motivo.
   const mover = useMutation({
     mutationFn: async ({ id, sentido }: { id: string; sentido: -1 | 1 }) => {
-      const cambios = moverCuenta(query.data ?? [], id, sentido)
+      const cambios = moverCuenta(enBolivares, id, sentido)
       if (!cambios) return
       for (const { cuenta, sortOrder } of cambios) {
         await setPaymentDestination({
@@ -129,21 +143,20 @@ export function CuentaDeCobro() {
 
   const digitosCuenta = soloDigitos(account)
   const faltan = [
-    method !== 'zelle' && !bank.trim() && 'el banco',
-    method !== 'zelle' && !rif.trim() && 'la cédula o el RIF',
+    !bank.trim() && 'el banco',
+    !rif.trim() && 'la cédula o el RIF',
     method === 'pago_movil' && !phone.trim() && 'el teléfono',
     method === 'transferencia' && digitosCuenta.length !== 20 && 'el número de cuenta (20 dígitos)',
-    method === 'zelle' && !CORREO.test(email.trim()) && 'un correo válido',
-    method !== 'pago_movil' && !holder.trim() && 'el titular',
+    method === 'transferencia' && !holder.trim() && 'el titular',
   ].filter((f): f is string => typeof f === 'string')
-  const claveNueva = claveDeCuenta({ method, bankName: bank, rif, phone, accountNumber: digitosCuenta, email })
+  const claveNueva = claveDeCuenta({ method, bankName: bank, rif, phone, accountNumber: digitosCuenta })
   const repetida = cuentas.some((c) => claveDeCuenta(c) === claveNueva)
 
   const motivoApagado = !isSuperAdmin
     ? SOLO_SUPER_ADMIN
     : faltan.length > 0
       ? `${faltan.length === 1 ? 'Falta' : 'Faltan'} ${enumerar(faltan)}.`
-      : method !== 'zelle' && esCuentaDeRelleno(rif)
+      : esCuentaDeRelleno(rif)
         ? 'Un RIF de ceros no es una cuenta.'
         : repetida
           ? 'Esa cuenta ya existe: actívala desde la lista.'
@@ -165,16 +178,16 @@ export function CuentaDeCobro() {
       {cuentas.length > 0 && (
         <Seccion
           titulo="Cuentas de cobro"
-          info="Las activas salen en el comprobante y en los avisos, en este orden. Las retiradas se conservan: un pago se coteja contra la cuenta que estaba activa ese día."
+          info="Las activas salen en el comprobante y en los avisos, en este orden. Las retiradas se conservan: un pago se coteja contra la cuenta que estaba activa ese día. Las de Zelle son de antes del 2026-10-07, cuando el paciente aún podía pagar en divisas: quedan como historia y no se pueden volver a activar."
         >
           <Table headers={['Orden', 'Método', 'Banco', 'RIF', 'Teléfono, cuenta o correo', 'Titular', 'Pagos', 'Estado', '']}>
             {cuentas.map((d) => {
-              const activasOrdenadas = cuentas.filter((c) => c.isActive)
+              const activasOrdenadas = cuentas.filter((c) => c.isActive && esCuentaEnBolivares(c))
               const puesto = activasOrdenadas.findIndex((c) => c.id === d.id)
               return (
                 <Tr key={d.id}>
                   <Td className="whitespace-nowrap">
-                    {d.isActive ? (
+                    {d.isActive && esCuentaEnBolivares(d) ? (
                       <span className="inline-flex items-center gap-1">
                         <span className="w-4 tabular-nums">{puesto + 1}</span>
                         <IconButton
@@ -196,14 +209,16 @@ export function CuentaDeCobro() {
                       '—'
                     )}
                   </Td>
-                  <Td>{etiquetaDeMetodo(d.method)}</Td>
+                  <Td>{nombreDelMetodoDeCobro(d.method)}</Td>
                   <Td className="font-medium">{d.bankName || '—'}</Td>
                   <Td className="font-mono type-panel-caption">{d.rif || '—'}</Td>
                   <Td className="font-mono type-panel-caption">{dondeSePaga(d)}</Td>
                   <Td className="text-on-surface-variant">{d.holderName ?? '—'}</Td>
                   <Td className="tabular-nums text-on-surface-variant">{d.reportCount}</Td>
                   <Td>
-                    {d.isActive ? (
+                    {!esCuentaEnBolivares(d) ? (
+                      <Badge>Histórica</Badge>
+                    ) : d.isActive ? (
                       <Badge tone="success" icono>
                         Activa
                       </Badge>
@@ -215,15 +230,19 @@ export function CuentaDeCobro() {
                     </span>
                   </Td>
                   <Td>
-                    <Button
-                      size="sm"
-                      variant="tonal"
-                      disabled={!isSuperAdmin || (!d.isActive && esCuentaDeRelleno(d.rif))}
-                      title={!isSuperAdmin ? SOLO_SUPER_ADMIN : undefined}
-                      onClick={() => setDecision({ tipo: d.isActive ? 'retirar' : 'activar', cuenta: d })}
-                    >
-                      {d.isActive ? 'Retirar' : 'Activar'}
-                    </Button>
+                    {esCuentaEnBolivares(d) ? (
+                      <Button
+                        size="sm"
+                        variant="tonal"
+                        disabled={!isSuperAdmin || (!d.isActive && esCuentaDeRelleno(d.rif))}
+                        title={!isSuperAdmin ? SOLO_SUPER_ADMIN : undefined}
+                        onClick={() => setDecision({ tipo: d.isActive ? 'retirar' : 'activar', cuenta: d })}
+                      >
+                        {d.isActive ? 'Retirar' : 'Activar'}
+                      </Button>
+                    ) : (
+                      <span className="type-panel-caption text-on-surface-variant">Solo se paga en bolívares</span>
+                    )}
                   </Td>
                 </Tr>
               )
@@ -235,17 +254,13 @@ export function CuentaDeCobro() {
 
       <Seccion
         titulo="Nueva cuenta de cobro"
-        info="Un Pago Móvil, una cuenta para transferencias, un Zelle… Se activa al darla de alta y se suma a las activas, al final de la lista; no retira ninguna."
+        info="Un Pago Móvil o una cuenta para transferencias: el paciente solo paga en bolívares. Se activa al darla de alta y se suma a las activas, al final de la lista; no retira ninguna."
       >
         <Card>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <Select id="dest-method" label="Método" value={method} options={METODOS_DE_COBRO} onChange={setMethod} />
-            {method !== 'zelle' && (
-              <Input id="dest-bank" label="Banco" value={bank} onChange={setBank} placeholder="Banesco" />
-            )}
-            {method !== 'zelle' && (
-              <Input id="dest-rif" label="Cédula o RIF" value={rif} onChange={setRif} placeholder="J-123456789" />
-            )}
+            <Input id="dest-bank" label="Banco" value={bank} onChange={setBank} placeholder="Banesco" />
+            <Input id="dest-rif" label="Cédula o RIF" value={rif} onChange={setRif} placeholder="J-123456789" />
             {method === 'pago_movil' && (
               <Input
                 id="dest-phone"
@@ -264,15 +279,6 @@ export function CuentaDeCobro() {
                 onChange={setAccount}
                 inputMode="numeric"
                 placeholder="0134 0000 00 0000000000"
-              />
-            )}
-            {method === 'zelle' && (
-              <Input
-                id="dest-email"
-                label="Correo del Zelle"
-                value={email}
-                onChange={setEmail}
-                placeholder="pagos@helios.com"
               />
             )}
             <Input
@@ -307,7 +313,7 @@ export function CuentaDeCobro() {
           }
           summary={
             decision.tipo === 'alta'
-              ? `${etiquetaDeMetodo(method)} ${nombreDeCuenta({ method, bankName: bank.trim() })} (${dondeSePaga({ method, phone: phone.trim(), accountNumber: digitosCuenta, email: email.trim() })}) se suma a las cuentas activas: los mensajes y comprobantes nuevos la enseñan desde que confirmes.`
+              ? `${nombreDelMetodoDeCobro(method)} ${nombreDeCuenta({ method, bankName: bank.trim() })} (${dondeSePaga({ method, phone: phone.trim(), accountNumber: digitosCuenta })}) se suma a las cuentas activas: los mensajes y comprobantes nuevos la enseñan desde que confirmes.`
               : decision.tipo === 'activar'
                 ? `${nombreDeCuenta(decision.cuenta)} (${decision.cuenta.rif}) vuelve a salir en los mensajes, al final de la lista.`
                 : activas.length <= 1
@@ -329,24 +335,18 @@ export function CuentaDeCobro() {
   )
 }
 
-const CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
-
 function soloDigitos(valor: string): string {
   return valor.replace(/\D/g, '')
 }
 
-function etiquetaDeMetodo(m: MetodoDeCobro): string {
-  return METODOS_DE_COBRO.find((x) => x.value === m)?.label ?? m
-}
-
-/** Cómo se nombra una cuenta en un aviso: el banco, o «Zelle» si no tiene. */
-function nombreDeCuenta(c: { method: MetodoDeCobro; bankName: string }): string {
+/** Cómo se nombra una cuenta en un aviso: el banco, o «Zelle» si es una de las históricas. */
+function nombreDeCuenta(c: { method: MetodoDeCuenta; bankName: string }): string {
   return c.method === 'zelle' ? 'Zelle' : c.bankName
 }
 
-/** El dato al que se paga: teléfono, número de cuenta o correo, según el método. */
+/** El dato al que se paga: teléfono, número de cuenta o, en una de Zelle histórica, el correo. */
 function dondeSePaga(c: {
-  method: MetodoDeCobro
+  method: MetodoDeCuenta
   phone?: string
   accountNumber?: string | null
   email?: string | null
@@ -358,7 +358,7 @@ function dondeSePaga(c: {
 
 /** Dos cuentas son la misma si coinciden método y destino. */
 function claveDeCuenta(c: {
-  method: MetodoDeCobro
+  method: MetodoDeCuenta
   bankName: string
   rif: string
   phone: string

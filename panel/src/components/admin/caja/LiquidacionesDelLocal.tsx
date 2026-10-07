@@ -10,6 +10,7 @@ import {
   Seccion,
   SkeletonList,
   formatDay,
+  formatMoneda,
   formatUsd,
 } from '@/components/ui'
 import { RegistrarTransferencia } from '@/components/admin/caja/RegistrarTransferencia'
@@ -291,6 +292,7 @@ export function LiquidacionesDelLocal({
           merchantId={merchantId}
           merchantName={merchantName}
           settlementIds={[...marcadas]}
+          lineas={abiertas.filter((s) => marcadas.has(s.id))}
           totalUsd={totalMarcado}
           desglose={desgloseMarcado}
           onRegistrado={() => setTocado(null)}
@@ -352,8 +354,9 @@ function EstadoDelGrupo({ grupo }: { grupo: Grupo }) {
 
 /**
  * Una liquidación dentro de su día de pago: qué se devengó, de qué orden y cuánto
- * falta. En una pagada a medias, el monto original va al lado en pequeño. Una
- * ya pagada no se puede marcar.
+ * falta. En una pagada a medias, el monto original va al lado en pequeño; en
+ * una de una orden en euros, lo que es en euros. Una ya pagada no se puede
+ * marcar.
  */
 function LineaLiquidacion({
   settlement,
@@ -404,6 +407,13 @@ function LineaLiquidacion({
         {aMedias && (
           <span className="block type-panel-caption tabular-nums text-on-surface-variant">
             de {formatUsd(settlement.amountUsd)}
+          </span>
+        )}
+        {/* Una de una orden en euros se paga a la tasa del euro: lo que es en
+            euros, al lado, que es lo que se pasa a bolívares. */}
+        {settlement.currency === 'EUR' && (
+          <span className="block type-panel-caption tabular-nums text-on-surface-variant">
+            cobrada en {formatMoneda(pagada ? settlement.amountCur : settlement.pendingCur, 'EUR')}
           </span>
         )}
       </span>

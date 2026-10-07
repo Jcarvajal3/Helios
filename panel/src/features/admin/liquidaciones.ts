@@ -1,3 +1,4 @@
+import type { Moneda } from '@/components/ui'
 import type { SettlementReason } from '@/features/admin/api'
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -19,8 +20,9 @@ export const MOTIVO_DE_LIQUIDACION: Record<SettlementReason, string> = {
 export type PayoutMethod = 'pago_movil' | 'transferencia' | 'zelle' | 'usdt' | 'efectivo'
 
 /**
- * Los medios por los que se le paga a una clínica, con su nombre. Son también
- * los de los pacientes al registrar un pago.
+ * Los medios por los que se le paga a una clínica, con su nombre. NO son los
+ * del paciente: desde el 2026-10-07 el paciente solo paga en bolívares
+ * (`METODOS_DEL_PACIENTE`, en `pagosRegistrados/registrarPago.ts`).
  */
 export const METODOS_DE_PAGO: Array<{ value: PayoutMethod; label: string }> = [
   { value: 'pago_movil', label: 'Pago Móvil' },
@@ -61,7 +63,80 @@ export function tasaDelDia(
   return mejor?.rate ?? null
 }
 
-/** Dólares a bolívares, al céntimo. */
-export function aBolivares(eur: number, tasa: number): number {
-  return Math.round(eur * tasa * 100) / 100
+/** Un monto (en dólares o en euros) a bolívares con su tasa, al céntimo. */
+export function aBolivares(monto: number, tasa: number): number {
+  return Math.round(monto * tasa * 100) / 100
+}
+
+// ── Lo que va en cada moneda ──────────────────────────────────────────────
+
+/**
+ * Una liquidación marcada, con lo que hace falta para saber en qué moneda va
+ * (2026-10-07: una orden se cobra en dólares o en euros, y a la clínica se le
+ * paga en bolívares a la tasa BCV de esa moneda del día del pago).
+ */
+export type LineaAPagar = {
+  id: string
+  dueDate: string
+  currency: Moneda
+  amountUsd: number
+  amountCur: number
+  pendingUsd: number
+  pendingCur: number
+  /** Lo que falta, en bolívares de hoy a la tasa de su moneda (lo manda la base). */
+  pendingVesHoy?: number | null
+}
+
+/** Lo que un pago lleva en cada moneda, cada parte en la suya. */
+export type PartesPorMoneda = Record<Moneda, number>
+
+/** Las monedas de lo marcado, sin repetir: dólares primero. */
+export function monedasDe(lineas: ReadonlyArray<Pick<LineaAPagar, 'currency'>>): Moneda[] {
+  const hay = new Set(lineas.map((l) => l.currency))
+  return (['USD', 'EUR'] as const).filter((m) => hay.has(m))
+}
+
+/**
+ * Cuánto de un pago de `importeUsd` dólares va en cada moneda, con el mismo
+ * reparto que la base (`admin_report_merchant_payout`): de la liquidación más
+ * antigua a la más nueva; la que se salda entera aporta lo que le faltaba en
+ * su moneda, y la última, si queda a medias, la parte proporcional.
+ */
+export function partesPorMoneda(lineas: ReadonlyArray<LineaAPagar>, importeUsd: number): PartesPorMoneda {
+  const partes: PartesPorMoneda = { USD: 0, EUR: 0 }
+  let restante = importeUsd
+  const ordenadas = [...lineas].sort((a, b) => a.dueDate.localeCompare(b.dueDate) || a.id.localeCompare(b.id))
+
+  for (const l of ordenadas) {
+    if (restante <= 0) break
+    const aplicado = Math.min(restante, l.pendingUsd)
+    if (aplicado <= 0) continue
+    const saldaEntera = aplicado >= l.pendingUsd - 0.005
+    const enSuMoneda =
+      saldaEntera || l.amountUsd <= 0
+        ? l.pendingCur
+        : Math.round(((aplicado * l.amountCur) / l.amountUsd) * 100) / 100
+    partes[l.currency] = Math.round((partes[l.currency] + enSuMoneda) * 100) / 100
+    restante -= aplicado
+  }
+  return partes
+}
+
+/**
+ * Los bolívares de unas partes, cada una a la tasa de su moneda, como los
+ * calcula la base (cada parte redondeada al céntimo y luego sumadas). `null`
+ * si falta la tasa de una parte que no es cero: no se inventa.
+ */
+export function bolivaresPorMoneda(
+  partes: PartesPorMoneda,
+  tasas: Record<Moneda, number | null>,
+): number | null {
+  let total = 0
+  for (const moneda of ['USD', 'EUR'] as const) {
+    if (partes[moneda] <= 0) continue
+    const tasa = tasas[moneda]
+    if (tasa === null || tasa <= 0) return null
+    total += aBolivares(partes[moneda], tasa)
+  }
+  return Math.round(total * 100) / 100
 }

@@ -29,10 +29,22 @@ export type DatosDelPaciente = {
   reference_relationship?: string
 }
 
-/** Lo que trae un mensaje: datos del paciente y, si vienen, monto, concepto y paciente atendido. */
+/**
+ * La moneda en la que el médico cobra la consulta (decisión del 2026-10-07).
+ * El paciente paga siempre en bolívares, a la tasa BCV de esa moneda del día
+ * en que paga.
+ */
+export type Moneda = 'USD' | 'EUR'
+
+/**
+ * Lo que trae un mensaje: datos del paciente y, si vienen, monto, moneda,
+ * concepto y paciente atendido. La moneda queda en null si no se dijo: el
+ * bot la pregunta.
+ */
 export type Lectura = {
   paciente: DatosDelPaciente
   monto: number | null
+  moneda: Moneda | null
   concepto: string | null
   atendido: string | null
 }
@@ -51,11 +63,12 @@ export const FORMULARIO = [
   'Referencia (nombre):',
   'Teléfono de la referencia:',
   'Parentesco:',
-  'Monto ($):',
+  'Monto:',
+  'Moneda (dólares o euros):',
   'Concepto:',
 ].join('\n')
 
-type Clave = keyof DatosDelPaciente | 'monto' | 'concepto' | 'atendido'
+type Clave = keyof DatosDelPaciente | 'monto' | 'moneda' | 'concepto' | 'atendido'
 
 /** Cada etiqueta (normalizada, sin lo que va entre paréntesis) → su campo. */
 const ETIQUETAS: Record<string, Clave> = {
@@ -83,6 +96,7 @@ const ETIQUETAS: Record<string, Clave> = {
   'telefono de referencia': 'reference_phone',
   parentesco: 'reference_relationship',
   monto: 'monto',
+  moneda: 'moneda',
   concepto: 'concepto',
   'paciente atendido': 'atendido',
   atendido: 'atendido',
@@ -115,19 +129,63 @@ export function leerMonto(v: string): number | null {
   return Number.isFinite(n) && n > 0 ? n : null
 }
 
+/** «$», «usd», «dólares» → USD; «€», «eur», «euros» → EUR. */
+function monedaDeLaPalabra(p: string): Moneda {
+  return /^(€|eur)/i.test(p) ? 'EUR' : 'USD'
+}
+
+const PALABRAS_DEL_DOLAR = new Set(['dolar', 'dolares', 'usd', 'us', 'americanos'])
+const PALABRAS_DEL_EURO = new Set(['euro', 'euros', 'eur'])
+
 /**
- * «80 consulta», «$80,50 consulta + eco», «consulta 80» → monto y concepto.
- * Null si no hay un monto.
+ * Una moneda escrita sola: «dólares», «en euros», «USD», «€», o el título
+ * del botón («Dólares (USD)»). Null si el texto dice otra cosa.
  */
-export function leerMontoYConcepto(t: string): { monto: number; concepto: string | null } | null {
-  const m = /\$?\s*(\d{1,6}(?:[.,]\d{1,2})?)\s*(?:\$|usd|dolares|dólares)?/i.exec(t)
+export function leerMoneda(t: string): Moneda | null {
+  const crudo = t.trim()
+  if (crudo === '$' || crudo.toUpperCase() === 'US$') return 'USD'
+  if (crudo === '€') return 'EUR'
+  const palabras = normalizar(crudo).split(' ').filter((p) => p !== '' && p !== 'en')
+  if (palabras.length === 0) return null
+  if (palabras.every((p) => PALABRAS_DEL_DOLAR.has(p))) return 'USD'
+  if (palabras.every((p) => PALABRAS_DEL_EURO.has(p))) return 'EUR'
+  return null
+}
+
+/**
+ * El monto con su moneda pegada, si la tiene: delante («$80», «€80», «USD
+ * 80») o detrás («80$», «80€», «80 euros», «80 eur», «80 dólares»). La
+ * palabra no puede seguir: «80 eurocolor» no es en euros.
+ */
+const MONTO_CON_MONEDA =
+  /(?:(?<![a-záéíóúñ])(\$|€|us\$|usd|eur|euros?|d[oó]lares)\s*)?(\d{1,6}(?:[.,]\d{1,2})?)(?:\s*(\$|€|usd|eur|euros?|d[oó]lar(?:es)?)(?![a-záéíóúñ]))?/iu
+
+/** «… en euros», «… dólares» al final del concepto: la moneda dicha aparte. */
+const MONEDA_AL_FINAL = /(?:^|\s)(?:en\s+)?(euros?|eur|d[oó]lares|usd)$/iu
+
+/**
+ * «80 consulta», «$80,50 consulta + eco», «consulta 80», «€80 consulta»,
+ * «80€», «80 euros», «consulta 80 en euros» → monto, moneda y concepto. La
+ * moneda va en null si no se escribió (el bot la pregunta). Null si no hay
+ * un monto.
+ */
+export function leerMontoYConcepto(t: string): { monto: number; moneda: Moneda | null; concepto: string | null } | null {
+  const m = MONTO_CON_MONEDA.exec(t)
   if (!m) return null
-  const monto = Number(m[1].replace(',', '.'))
+  const monto = Number(m[2].replace(',', '.'))
   if (!Number.isFinite(monto) || monto <= 0) return null
-  const concepto = (t.slice(0, m.index) + ' ' + t.slice(m.index + m[0].length))
-    .replace(/\s+/g, ' ')
-    .replace(/^[\s,.;:-]+|[\s,.;:-]+$/g, '')
-  return { monto, concepto: concepto === '' ? null : concepto.slice(0, 80) }
+  const escrita = m[1] ?? m[3]
+  let moneda: Moneda | null = escrita ? monedaDeLaPalabra(escrita) : null
+  let resto = (t.slice(0, m.index) + ' ' + t.slice(m.index + m[0].length)).replace(/\s+/g, ' ').trim()
+  if (!moneda) {
+    const aparte = MONEDA_AL_FINAL.exec(resto)
+    if (aparte) {
+      moneda = monedaDeLaPalabra(aparte[1])
+      resto = resto.slice(0, aparte.index)
+    }
+  }
+  const concepto = resto.replace(/^[\s,.;:-]+|[\s,.;:-]+$/g, '')
+  return { monto, moneda, concepto: concepto === '' ? null : concepto.slice(0, 80) }
 }
 
 /** «V-12.345.678», «e12345678», «12345678» (→ V) → «V12345678». Null si no es una cédula. */
@@ -146,6 +204,8 @@ export function leerCedula(t: string): string | null {
 export function leerFormulario(t: string): Lectura & { etiquetado: boolean } {
   const paciente: DatosDelPaciente = {}
   let monto: number | null = null
+  let monedaDelMonto: Moneda | null = null
+  let moneda: Moneda | null = null
   let concepto: string | null = null
   let atendido: string | null = null
   let reconocidas = 0
@@ -153,14 +213,20 @@ export function leerFormulario(t: string): Lectura & { etiquetado: boolean } {
   for (const linea of t.split(/\r?\n/)) {
     const i = linea.indexOf(':')
     if (i <= 0) continue
-    const etiqueta = normalizar(linea.slice(0, i).replace(/\(.*?\)/g, ''))
+    const crudo = linea.slice(0, i)
+    const etiqueta = normalizar(crudo.replace(/\(.*?\)/g, ''))
     const valor = linea.slice(i + 1).trim()
     const clave = ETIQUETAS[etiqueta]
     if (!clave) continue
     reconocidas++
     if (valor === '') continue
 
-    if (clave === 'monto') monto = leerMonto(valor)
+    if (clave === 'monto') {
+      // La moneda puede venir en el valor («€80», «80 euros») o en la
+      // etiqueta de un formulario viejo («Monto ($): 80»).
+      monto = leerMonto(valor)
+      monedaDelMonto = leerMontoYConcepto(valor)?.moneda ?? leerMoneda(/\((.*?)\)/.exec(crudo)?.[1] ?? '')
+    } else if (clave === 'moneda') moneda = leerMoneda(valor)
     else if (clave === 'concepto') concepto = valor.slice(0, 80)
     else if (clave === 'atendido') atendido = valor.slice(0, 120)
     else if (clave === 'birth_date') paciente.birth_date = normalizarFecha(valor)
@@ -169,7 +235,8 @@ export function leerFormulario(t: string): Lectura & { etiquetado: boolean } {
     else paciente[clave] = valor
   }
 
-  return { paciente, monto, concepto, atendido, etiquetado: reconocidas >= 3 }
+  // La línea «Moneda:» manda sobre lo que acompañe al monto.
+  return { paciente, monto, moneda: moneda ?? monedaDelMonto, concepto, atendido, etiquetado: reconocidas >= 3 }
 }
 
 /** Los obligatorios de un paciente nuevo (docs/00 §2.1), con su nombre para el médico. */
@@ -202,21 +269,61 @@ export function juntar(antes: DatosDelPaciente, nuevo: DatosDelPaciente): DatosD
   return out
 }
 
+/** Los miles con punto y los céntimos con coma; con `siempre`, también el «,00». */
+function conCentimos(n: number, siempre: boolean): string {
+  const centimos = Math.round(n * 100)
+  const entero = Math.trunc(centimos / 100)
+  const dec = Math.abs(centimos % 100)
+  const miles = String(entero).replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  return dec === 0 && !siempre ? miles : `${miles},${String(dec).padStart(2, '0')}`
+}
+
 /**
  * Un monto al estilo venezolano (como `helios_money_text` en la base):
  * «100», «1,92», «1.250,50». Sin «,00» si es entero.
  */
 export function montoEs(n: number): string {
-  const centimos = Math.round(n * 100)
-  const entero = Math.trunc(centimos / 100)
-  const dec = Math.abs(centimos % 100)
-  const miles = String(entero).replace(/\B(?=(\d{3})+(?!\d))/g, '.')
-  return dec === 0 ? miles : `${miles},${String(dec).padStart(2, '0')}`
+  return conCentimos(n, false)
 }
 
 /** «$61,60», «$100». */
 export function dinero(n: number): string {
-  return `$${montoEs(n)}`
+  return dineroEn(n, 'USD')
+}
+
+/** «$100», «€56,96», «€1.250,50» (como `helios_money_cur_text` en la base). */
+export function dineroEn(n: number, moneda: Moneda): string {
+  return `${moneda === 'EUR' ? '€' : '$'}${montoEs(n)}`
+}
+
+/** «Bs 55.432,10»: los bolívares siempre con sus dos decimales (como `helios_ves_text`). */
+export function bolivares(n: number): string {
+  return `Bs ${conCentimos(n, true)}`
+}
+
+/** 'USD' → «dólar», 'EUR' → «euro»: «la tasa BCV del euro». */
+export function nombreDeLaMoneda(m: Moneda): string {
+  return m === 'EUR' ? 'euro' : 'dólar'
+}
+
+/** 'USD' → «dólares», 'EUR' → «euros». */
+export function enPlural(m: Moneda): string {
+  return m === 'EUR' ? 'euros' : 'dólares'
+}
+
+/** Lo que manda la base ('USD' | 'EUR', o nada en una fila vieja) → una moneda. */
+export function monedaDe(v: unknown): Moneda {
+  return v === 'EUR' ? 'EUR' : 'USD'
+}
+
+/**
+ * Unos dólares en euros con `usd_per_eur` (dólares por euro), truncado al
+ * céntimo: lo disponible nunca se promete un céntimo por encima. Antes de
+ * truncar se redondea a 6 decimales, para que la coma flotante no reste un
+ * céntimo a una división exacta.
+ */
+export function enEuros(usd: number, usdPorEur: number): number {
+  return Math.trunc(Math.round((usd / usdPorEur) * 1e6) / 1e4) / 100
 }
 
 const DIAS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb']
@@ -293,9 +400,12 @@ export function lecturaDeLaIA(v: unknown): Lectura | null {
   if (paciente.sex) paciente.sex = normalizarSexo(paciente.sex)
   if (paciente.email) paciente.email = paciente.email.toLowerCase()
   const monto = typeof d.monto === 'number' && Number.isFinite(d.monto) && d.monto > 0 ? d.monto : null
+  const mon = typeof d.moneda === 'string' ? d.moneda.trim().toUpperCase() : ''
+  const moneda = mon === 'USD' || mon === 'EUR' ? mon : null
   return {
     paciente,
     monto,
+    moneda,
     concepto: textoONulo(d.concepto, 80) ?? null,
     atendido: textoONulo(d.atendido, 120) ?? null,
   }

@@ -381,12 +381,12 @@ export const glosario = [
     tipo: 'termino',
     id: 'tasa-bcv',
     titulo: 'Tasa BCV',
-    descripcion: 'La tasa oficial del dólar con la que se cotiza cada pago en bolívares.',
+    descripcion: 'Las tasas oficiales del dólar y del euro con las que se cotiza cada pago en bolívares.',
     espacio: 'ajustes',
-    sinonimos: ['tasa', 'tipo de cambio', 'bcv', 'dólar'],
+    sinonimos: ['tasa', 'tipo de cambio', 'bcv', 'dólar', 'euro'],
     destino: { to: '/admin/ajustes', search: { tab: 'tasa' } },
     definicion:
-      'La tasa oficial del dólar que publica el Banco Central de Venezuela. Con ella se convierte a bolívares lo que el paciente paga, así que sin la tasa del día no se puede cotizar un pago. Se busca sola y, si falla, se carga a mano.',
+      'Las tasas oficiales que publica el Banco Central de Venezuela: la del dólar y la del euro. El paciente solo paga en bolívares, y cada cuota se convierte con la tasa de la moneda de su orden del día en que paga (los cargos por atraso, con la del dólar); a la clínica se le paga igual. Sin la tasa del día no se puede cotizar un pago. Se buscan solas y, si fallan, se cargan a mano.',
   },
 
   // ── Riesgo y directorio ────────────────────────────────────────────────

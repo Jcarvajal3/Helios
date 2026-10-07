@@ -7,6 +7,8 @@ import {
   textoONulo,
 } from '@/lib/json'
 import { supabase } from '@/lib/supabase'
+import { leerMoneda } from '@/components/ui'
+import type { Moneda } from '@/components/ui'
 import { ESTADOS_PERSONA } from '@/features/admin/estados'
 import { leerConsumosDePersona } from '@/features/admin/directorio/consumosDePersona'
 import type { ConsumoDePersona } from '@/features/admin/directorio/consumosDePersona'
@@ -269,6 +271,16 @@ export type UserDetail = {
     amountUsd: number
     /** FINANCED: el consumo que lleva dentro esta cuota. */
     financedUsd: number
+    /**
+     * La moneda en que se cobró su orden (2026-10-07). Las cifras de arriba
+     * siguen en dólares; en una de euros, el paciente paga `amountCur` euros
+     * a la tasa BCV del euro del día en que paga.
+     */
+    currency: Moneda
+    /** La cuota en la moneda de su orden (en una de dólares, igual a `amountUsd`). */
+    amountCur: number
+    /** El consumo de la cuota en la moneda de su orden. */
+    financedCur: number
     dueDate: string
     status: 'pending' | 'paid'
     paidAt: string | null
@@ -298,6 +310,12 @@ export type UserDetail = {
     amountUsd: number
     /** FINANCED: el consumo en el local, sin el fee. */
     financedUsd: number
+    /** La moneda en que la cobró el médico. Las cifras de arriba siguen en dólares. */
+    currency: Moneda
+    /** El total, con la comisión dentro, en la moneda de la orden. */
+    amountCur: number | null
+    /** La consulta, sin comisión, en la moneda de la orden. */
+    baseCur: number | null
     status: string
     businessDate: string | null
     confirmedAt: string | null
@@ -392,6 +410,9 @@ export async function fetchUserDetail(userId: string): Promise<UserDetail> {
       sequence: numero(i.sequence),
       amountUsd: numero(i.amount_usd),
       financedUsd: numero(i.financed_usd),
+      currency: leerMoneda(i.currency),
+      amountCur: numeroONulo(i.amount_cur) ?? numero(i.amount_usd),
+      financedCur: numeroONulo(i.financed_cur) ?? numero(i.financed_usd),
       dueDate: texto(i.due_date),
       status: i.status === 'paid' ? 'paid' : 'pending',
       paidAt: textoONulo(i.paid_at),
@@ -406,6 +427,9 @@ export async function fetchUserDetail(userId: string): Promise<UserDetail> {
       orderNumber: numeroONulo(c.order_number),
       amountUsd: numero(c.amount_usd),
       financedUsd: numero(c.financed_usd),
+      currency: leerMoneda(c.currency),
+      amountCur: numeroONulo(c.amount_cur),
+      baseCur: numeroONulo(c.base_cur),
       status: texto(c.status),
       businessDate: textoONulo(c.business_date),
       confirmedAt: textoONulo(c.confirmed_at),

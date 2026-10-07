@@ -1,6 +1,18 @@
 # Estado del trabajo
 
-Actualizado el 2026-10-06.
+Actualizado el 2026-10-07.
+
+## 2026-10-07 · La consulta se cobra en dólares o en euros
+
+Plan §1 y contrato §7. El médico elige la moneda en el paso del monto (panel y bot). Una orden en euros queda en euros: el paciente paga en Bs a la tasa BCV del euro del día en que paga y a la clínica se le paga a la del euro. El libro, el límite, la mora y el superadmin siguen en dólares. El paciente solo paga en bolívares (Pago Móvil o transferencia).
+
+- **Base:** migraciones `20261007000100`–`000700` aplicadas: la tasa del euro vuelve a entrar a diario (`BCV_EUR`), columnas `_cur`, cotización y pagos a la clínica por moneda, mensajes con moneda y bolívares, cobranza por moneda, fuera Zelle/USDT/efectivo del paciente. 33/33 suites en verde (nueva: `moneda_smoke`). `plpgsql_check` sin errores nuevos.
+- **Panel:** `tsc`, lint, build y 116/116 tests en verde; `verificar-contrato.mjs`: 172 llamadas a 157 RPC, todo cuadra. Sin probar en el navegador (hace falta una sesión de la clínica y del superadmin).
+- **Sin cargos por mora** (migración `000800`): `late_fee_usd` = 0 desde el 2026-10-07; el motor sigue en el código y los textos del cargo vuelven solos si el parámetro vuelve a valer algo (los Términos públicos, a mano). Suite nueva `sin_mora_smoke`: 34/34 en verde.
+- **Bot:** `whatsapp-webhook` desplegado (v7) el 2026-10-07. Paso nuevo de moneda en el bot del médico y montos por moneda en el del paciente; sus tests en verde con `npx tsx`.
+- **Pendiente:**
+  - La plantilla v3 de Meta (§15.5.2) cambia: sin «$» delante de las variables y con 13 variables.
+  - Los agregados de la clínica (métricas, pagos) siguen en dólares con la nota «equivalente en dólares».
 
 ## 2026-10-06 · Las reglas del negocio publicadas
 
