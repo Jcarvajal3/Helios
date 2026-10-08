@@ -29,7 +29,34 @@ const config = defineConfig({
     devtools(),
     tailwindcss(),
     tanstackStart(),
-    nitro(),
+    nitro({
+      // Cabeceras de seguridad en todas las respuestas (producción desde el
+      // 2026-10-08). Nadie puede meter el panel en un iframe (clickjacking);
+      // la CSP completa queda fuera a propósito: la portada carga fuentes de
+      // Google y shaders, y una política mal hecha la rompe sin avisar.
+      // Van como ruta de Vercel y no como `routeRules`: el preset de Nitro
+      // escribe esas reglas sin `continue: true`, y una ruta solo de
+      // cabeceras sin `continue` corta el enrutado antes de llegar al
+      // servidor.
+      vercel: {
+        config: {
+          version: 3,
+          routes: [
+            {
+              src: '/(.*)',
+              headers: {
+                'X-Frame-Options': 'DENY',
+                'Content-Security-Policy': "frame-ancestors 'none'",
+                'X-Content-Type-Options': 'nosniff',
+                'Referrer-Policy': 'strict-origin-when-cross-origin',
+                'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+              },
+              continue: true,
+            },
+          ],
+        },
+      },
+    }),
     viteReact(),
     subirMapas &&
       sentryVitePlugin({
