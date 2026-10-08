@@ -139,9 +139,9 @@ export function Heroe() {
             <h1 className="portada-display mt-6 text-portada-tinta">
               <span className="portada-linea">
                 <span style={{ '--retraso': '120ms' } as CSSProperties}>
-                  Tu consulta hoy.
+                  Tu salud hoy…
                 </span>
-              </span>
+              </span>{' '}
               <span className="portada-linea">
                 <span style={{ '--retraso': '220ms' } as CSSProperties}>
                   Págala en{' '}

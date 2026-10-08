@@ -6,6 +6,7 @@ import { PREGUNTAS } from './datos'
 import { Boton, BotonAfiliarme, Lienzo, Revelar, Rotulo } from './piezas'
 import { HeliosLogo } from '@/components/HeliosLogo'
 import { operador } from '@/config/legal'
+import { REDES } from '@/config/sitio'
 
 /**
  * PREGUNTAS, EL CIERRE Y EL PIE.
@@ -94,7 +95,7 @@ export function Cierre() {
         </Revelar>
         <Revelar retraso={100}>
           <h2 className="portada-display mt-7 max-w-[14ch] text-portada-tinta">
-            Tu consulta hoy,{' '}
+            Tu salud hoy,{' '}
             <em className="portada-serif portada-degradado pr-[0.06em]">
               en dos cuotas.
             </em>
@@ -124,7 +125,7 @@ export function Pie() {
           <div>
             <HeliosLogo height={30} color="#002770" />
             <p className="mt-4 max-w-[30ch] text-[0.95rem] text-portada-tinta-3">
-              Tu consulta hoy, en dos cuotas.
+              Tu salud hoy, en dos cuotas.
             </p>
           </div>
 
@@ -145,6 +146,18 @@ export function Pie() {
                     Entrar
                   </Link>
                 </li>
+                {REDES.map((r) => (
+                  <li key={r.url}>
+                    <a
+                      href={r.url}
+                      target="_blank"
+                      rel="me noopener"
+                      className={`${enlace} inline-flex items-center gap-0.5`}
+                    >
+                      {r.nombre} <ArrowUpRight className="size-3.5" />
+                    </a>
+                  </li>
+                ))}
               </ul>
             </div>
             <div>

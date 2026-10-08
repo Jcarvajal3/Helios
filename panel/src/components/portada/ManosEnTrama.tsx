@@ -6,7 +6,7 @@ import { useEffect, useRef } from 'react'
  *
  * Adaptado de «Dither Reveal», de la sección Hero 40 de Originkit
  * (`npx originkit add hero-40`), con su imagen `white-hands.png`, aquí
- * `public/portada/manos.png`.
+ * `public/portada/manos.jpg`.
  *
  * Una foto de dos manos que casi se tocan, pasada por una trama Bayer de 8×8
  * en tres tonos de azul de Helios. El fondo blanco de la foto se vuelve
@@ -136,7 +136,7 @@ function rgb(hex: string): [number, number, number] {
 }
 
 export function ManosEnTrama({
-  src = '/portada/manos.png',
+  src = '/portada/manos.jpg',
   tintas = ['#0A2F86', '#8CC4FF'],
   punto = 3.5,
   radioRevelado = 98,
