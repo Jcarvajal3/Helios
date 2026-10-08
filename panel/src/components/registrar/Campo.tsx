@@ -1,4 +1,5 @@
-import type { ClipboardEvent, ReactNode, Ref } from 'react'
+import { useRef } from 'react'
+import type { ChangeEvent, ClipboardEvent, KeyboardEvent, ReactNode, Ref } from 'react'
 
 import { CLASE_CAMPO, DataLabel, bordeDeCampo, claseDeBoton } from '@/components/ui'
 import type { ButtonVariant } from '@/components/ui'
@@ -13,7 +14,9 @@ import type { ButtonVariant } from '@/components/ui'
 //     problema al pulsar Enter, y al primer campo de cada paso;
 //   · el error ESCRITO debajo, enlazado con `aria-describedby`: con el
 //     paciente delante no hay tiempo de adivinar qué le pasa a un borde rojo;
-//   · el tamaño grande para la cédula y el monto, que se leen de lejos.
+//   · el tamaño grande para la cédula y el monto, que se leen de lejos;
+//   · el formato mientras se teclea (`formato`): la fecha con sus barras y
+//     el teléfono con su guion y sus puntos, sin que el cursor salte al final.
 // ═══════════════════════════════════════════════════════════════════════════
 
 /** La caja de un campo, a la letra de las cifras en vez de la de lectura. */
@@ -36,6 +39,8 @@ export function Campo({
   placeholder,
   list,
   prefijo,
+  formato,
+  sufijo,
   grande = false,
   opcional = false,
   className = '',
@@ -60,6 +65,14 @@ export function Campo({
   list?: string
   /** Lo que va pegado delante dentro de la caja: el «$» del monto. */
   prefijo?: string
+  /**
+   * Da forma a lo tecleado en cada pulsación («04141234567» →
+   * «0414-123.45.67»). Tiene que ser idempotente y separar solo con lo que no
+   * es cifra: el cursor se recoloca contando cifras.
+   */
+  formato?: (texto: string) => string
+  /** Un botón dentro de la caja, a la derecha: el calendario de la fecha. */
+  sufijo?: ReactNode
   grande?: boolean
   /** Lo dice en el rótulo: el resto se da por obligatorio. */
   opcional?: boolean
@@ -68,6 +81,51 @@ export function Campo({
   const idError = `${id}-error`
   const idAyuda = `${id}-ayuda`
   const describe = error ? idError : hint ? idAyuda : undefined
+  const propio = useRef<HTMLInputElement | null>(null)
+
+  function referencia(el: HTMLInputElement | null) {
+    propio.current = el
+    if (typeof inputRef === 'function') inputRef(el)
+    else if (inputRef) inputRef.current = el
+  }
+
+  /**
+   * Pone `crudo` con su formato y deja el cursor detrás de la misma cifra
+   * que tenía delante. Se escribe en el `<input>` antes de avisar: así el
+   * valor controlado ya coincide y React no mueve el cursor al final.
+   */
+  function aplicar(el: HTMLInputElement, crudo: string, cursor: number) {
+    if (!formato) return onChange(crudo)
+    const nuevo = formato(crudo)
+    const posicion =
+      cursor >= crudo.length ? nuevo.length : trasCifras(nuevo, cifrasEn(crudo.slice(0, cursor)))
+    el.value = nuevo
+    if (document.activeElement === el) el.setSelectionRange(posicion, posicion)
+    onChange(nuevo)
+  }
+
+  function alCambiar(e: ChangeEvent<HTMLInputElement>) {
+    const el = e.target
+    aplicar(el, el.value, el.selectionStart ?? el.value.length)
+  }
+
+  /**
+   * Retroceso justo detrás de un separador que el formato volvería a poner
+   * («0414-|1»): sin esto la tecla no haría nada. Se borra la cifra de antes.
+   */
+  function alTeclear(e: KeyboardEvent<HTMLInputElement>) {
+    if (!formato || e.key !== 'Backspace') return
+    const el = e.currentTarget
+    const inicio = el.selectionStart ?? 0
+    if (inicio !== el.selectionEnd || inicio === 0) return
+    const sinSeparador = value.slice(0, inicio - 1) + value.slice(inicio)
+    if (/\d/.test(value[inicio - 1]) || formato(sinSeparador) !== value) return
+    let i = inicio - 1
+    while (i >= 0 && !/\d/.test(value[i])) i--
+    if (i < 0) return
+    e.preventDefault()
+    aplicar(el, value.slice(0, i) + value.slice(inicio), i)
+  }
 
   return (
     <div className={className}>
@@ -90,7 +148,7 @@ export function Campo({
           </span>
         )}
         <input
-          ref={inputRef}
+          ref={referencia}
           id={id}
           type={type}
           inputMode={inputMode}
@@ -99,15 +157,17 @@ export function Campo({
           placeholder={placeholder}
           list={list}
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={alCambiar}
+          onKeyDown={alTeclear}
           onBlur={onBlur}
           onPaste={onPaste}
           aria-invalid={!!error}
           aria-describedby={describe}
           className={`${grande ? `h-14 ${CAJA_GRANDE}` : `h-panel-control-md ${CLASE_CAMPO}`} ${bordeDeCampo(!!error)} ${
             prefijo ? (grande ? 'pl-9' : 'pl-7') : ''
-          }`}
+          } ${sufijo ? 'pr-12' : ''}`}
         />
+        {sufijo && <div className="absolute inset-y-0 right-1.5 flex items-center">{sufijo}</div>}
       </div>
 
       {error ? (
@@ -123,6 +183,21 @@ export function Campo({
       )}
     </div>
   )
+}
+
+/** Cuántas cifras hay en un texto. */
+function cifrasEn(texto: string): number {
+  return texto.replace(/\D/g, '').length
+}
+
+/** La posición justo detrás de la cifra número `n` (0: el principio). */
+function trasCifras(texto: string, n: number): number {
+  if (n === 0) return 0
+  let vistas = 0
+  for (let i = 0; i < texto.length; i++) {
+    if (/\d/.test(texto[i]) && ++vistas === n) return i + 1
+  }
+  return texto.length
 }
 
 /**

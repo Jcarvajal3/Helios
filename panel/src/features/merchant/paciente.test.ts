@@ -8,14 +8,18 @@ import {
   PACIENTE_VACIO,
   cedulaLegible,
   cedulaParaEnviar,
+  diasDelMes,
   correosCoinciden,
   edadEn,
   esCorreo,
   esFijo,
   esMovil,
+  formatearFecha,
+  formatearTelefono,
   hayDatosDePaciente,
   leerFechaDeNacimiento,
   pacienteParaEnviar,
+  partesDeFecha,
   problemaDeCedula,
   problemaDeMovil,
   problemaDeNacimiento,
@@ -169,6 +173,47 @@ igual(
 
 comprueba(!hayDatosDePaciente(PACIENTE_VACIO), 'vacío no tiene datos')
 comprueba(hayDatosDePaciente({ ...PACIENTE_VACIO, city: 'x' }), 'un campo basta para tener datos')
+
+console.log('── lo que se teclea, con formato ───────────────────────────────')
+igual(formatearFecha('12'), '12', 'el día sin barra hasta que hay mes')
+igual(formatearFecha('120'), '12/0', 'la barra aparece con la primera cifra del mes')
+igual(formatearFecha('12041990'), '12/04/1990', 'ocho cifras seguidas')
+igual(formatearFecha('120419901'), '12/04/1990', 'el año no pasa de cuatro cifras')
+igual(formatearFecha('1/4/90'), '01/04/90', 'la barra tecleada completa el cero')
+igual(formatearFecha('12/'), '12/', 'la barra tecleada se queda')
+igual(formatearFecha('4'), '04/', 'un día de 4 a 9 se cierra solo')
+igual(formatearFecha('123'), '12/03/', 'un mes de 2 a 9 se cierra solo')
+igual(formatearFecha('12/1'), '12/1', 'un mes que empieza por 1 espera la segunda cifra')
+igual(formatearFecha('1990-04-12'), '12/04/1990', 'la forma ISO pegada se da la vuelta')
+igual(formatearFecha('ab12-04.1990'), '12/04/1990', 'letras fuera, separadores valen')
+igual(formatearFecha(''), '', 'vacío')
+for (const t of ['12/04/1990', '04/', '12/03/', '01/04/90', '12/0']) {
+  igual(formatearFecha(t), t, `dar formato dos veces no cambia «${t}»`)
+}
+igual(leerFechaDeNacimiento(formatearFecha('12041990'), HOY), '1990-04-12', 'lo formateado se lee')
+
+igual(formatearTelefono('04141234567'), '0414-123.45.67', 'once cifras')
+igual(formatearTelefono('0414'), '0414', 'sin guion hasta que hay más')
+igual(formatearTelefono('04141'), '0414-1', 'el guion con la quinta cifra')
+igual(formatearTelefono('04141234'), '0414-123.4', 'el primer punto')
+igual(formatearTelefono('414'), '0414', 'pone el 0 que falta')
+igual(formatearTelefono('212'), '0212', 'también a un fijo')
+igual(formatearTelefono('+58 414 123 4567'), '0414-123.45.67', 'quita el +58')
+igual(formatearTelefono('+58'), '58', 'el +58 a medio teclear espera')
+igual(formatearTelefono('041412345678'), '0414-123.45.67', 'más de once no caben')
+igual(formatearTelefono('0414-123.45.67'), '0414-123.45.67', 'dar formato dos veces no cambia')
+comprueba(esMovil(formatearTelefono('4141234567')), 'lo formateado es un móvil')
+
+igual(partesDeFecha('12/04', HOY), { dia: 12, mes: 4, anio: null }, 'a medio teclear: día y mes')
+igual(partesDeFecha('12/04/90', HOY), { dia: 12, mes: 4, anio: 1990 }, 'año de dos cifras entero')
+igual(partesDeFecha('31/02/1990', HOY), { dia: 31, mes: 2, anio: 1990 }, 'un día que no existe trae sus partes')
+igual(partesDeFecha('00/00', HOY), { dia: null, mes: null, anio: null }, 'el día 0 y el mes 0 no cuentan')
+igual(partesDeFecha('', HOY), { dia: null, mes: null, anio: null }, 'vacío')
+igual(diasDelMes(2, null), 29, 'febrero sin año aún puede tener 29')
+igual(diasDelMes(2, 1990), 28, '1990 no es bisiesto')
+igual(diasDelMes(2, 2000), 29, '2000 sí')
+igual(diasDelMes(2, 1900), 28, '1900 no')
+igual(diasDelMes(4, 1990), 30, 'abril, 30')
 
 console.log(fallos === 0 ? '\nTODO BIEN' : `\n${fallos} FALLOS`)
 process.exit(fallos === 0 ? 0 : 1)

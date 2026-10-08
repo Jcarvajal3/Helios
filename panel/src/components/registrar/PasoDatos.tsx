@@ -11,14 +11,16 @@ import {
   edadEn,
   esCorreo,
   esMovil,
+  formatearFecha,
+  formatearTelefono,
   leerFechaDeNacimiento,
   problemasDelPaciente,
   sugerenciaDeCorreo,
-  telefonoLegible,
 } from '@/features/merchant/paciente'
 import type { BorradorPaciente, CampoDePaciente } from '@/features/merchant/paciente'
 
 import { BotonConFoco, Campo, CampoLista, Opciones } from './Campo'
+import { SelectorDeNacimiento } from './SelectorDeNacimiento'
 
 const SEXOS: Array<{ value: 'F' | 'M'; label: string }> = [
   { value: 'F', label: 'Femenino' },
@@ -137,15 +139,31 @@ export function PasoDatos({
             inputRef={guardar('birthDate')}
             inputMode="numeric"
             autoComplete="off"
-            maxLength={10}
             placeholder="dd/mm/aaaa"
+            // Solo se teclean cifras: las barras las pone el campo.
+            formato={formatearFecha}
+            sufijo={
+              <SelectorDeNacimiento
+                valor={paciente.birthDate}
+                hoy={hoy}
+                inputId="alta-nacimiento"
+                onElegir={(v) => {
+                  onCambio('birthDate', v)
+                  tocar('birthDate')()
+                }}
+              />
+            }
             // La edad sale en cuanto la fecha se puede leer, aunque todavía no
             // se haya salido del campo: un menor se detecta aquí y no al final.
             error={
               visible('birthDate') ??
               (edad !== null && problemas.birthDate ? problemas.birthDate : null)
             }
-            hint={edad !== null ? `${edad} ${edad === 1 ? 'año' : 'años'}` : 'Día, mes y año: 12/04/1990'}
+            hint={
+              edad !== null
+                ? `${edad} ${edad === 1 ? 'año' : 'años'}`
+                : 'Escribe 12041990 o elígela en el calendario'
+            }
           />
           <Opciones
             id="alta-sexo"
@@ -175,10 +193,10 @@ export function PasoDatos({
             onBlur={tocar('phone')}
             inputRef={guardar('phone')}
             autoComplete="off"
-            maxLength={20}
             placeholder="0414-123.45.67"
+            formato={formatearTelefono}
             error={visible('phone')}
-            hint={esMovil(paciente.phone) ? `✓ ${telefonoLegible(paciente.phone)}` : '0412, 0414, 0416, 0422, 0424 o 0426'}
+            hint={esMovil(paciente.phone) ? '✓ Móvil válido' : '0412, 0414, 0416, 0422, 0424 o 0426'}
             className="sm:col-span-2"
           />
           <Campo
@@ -314,8 +332,8 @@ export function PasoDatos({
             onBlur={tocar('referencePhone')}
             inputRef={guardar('referencePhone')}
             autoComplete="off"
-            maxLength={20}
             placeholder="0424-123.45.67"
+            formato={formatearTelefono}
             error={visible('referencePhone')}
           />
           <Campo

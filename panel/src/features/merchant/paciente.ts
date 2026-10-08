@@ -116,6 +116,95 @@ export function leerFechaDeNacimiento(texto: string, hoy: string): string | null
 }
 
 /**
+ * La fecha mientras se teclea, con sus barras: «12041990» → «12/04/1990».
+ *
+ * Las barras las pone el campo, no la secretaria: solo teclea cifras. Aun
+ * así, una barra (o un punto, un guion, un espacio) que sí teclee cierra el
+ * tramo en el que está, y un día o un mes de una cifra se completa con su
+ * cero: «1/4/90» queda «01/04/90». Un día que empieza por 4-9 o un mes que
+ * empieza por 2-9 no pueden llevar segunda cifra, así que se cierran solos.
+ *
+ * La barra solo aparece cuando hay algo detrás (o cuando se tecleó): así
+ * borrar con la tecla de retroceso nunca se atasca en una barra que vuelve.
+ * La forma ISO que trae un pegado («1990-04-12») se da la vuelta. El año
+ * admite dos cifras, igual que `leerFechaDeNacimiento`.
+ */
+export function formatearFecha(texto: string): string {
+  const iso = /^\s*(\d{4})-(\d{1,2})-(\d{1,2})\s*$/.exec(texto)
+  if (iso) return `${iso[3].padStart(2, '0')}/${iso[2].padStart(2, '0')}/${iso[1]}`
+
+  const topes = [2, 2, 4]
+  // Lo que no puede llevar segunda cifra: día de 4 a 9, mes de 2 a 9.
+  const cierraSolo = [(c: string) => c > '3', (c: string) => c > '1', () => false]
+  const partes = ['']
+  let barraAlFinal = false
+
+  for (const c of texto) {
+    const i = partes.length - 1
+    if (/\d/.test(c)) {
+      if (partes[i].length === topes[i]) {
+        if (i === 2) continue
+        partes.push('')
+      }
+      const j = partes.length - 1
+      if (partes[j] === '' && cierraSolo[j](c)) {
+        partes[j] = `0${c}`
+        if (j < 2) {
+          partes.push('')
+          barraAlFinal = true
+          continue
+        }
+      } else {
+        partes[j] += c
+      }
+      barraAlFinal = false
+    } else if (/[/.\-\s]/.test(c)) {
+      if (partes[i] === '' || i === 2) continue
+      if (partes[i].length === 1) partes[i] = `0${partes[i]}`
+      partes.push('')
+      barraAlFinal = true
+    }
+  }
+
+  const llenas = partes.filter((p) => p !== '')
+  return llenas.join('/') + (barraAlFinal ? '/' : '')
+}
+
+/**
+ * Lo que ya se sabe de una fecha a medio teclear, para abrir el selector en
+ * el paso que falta: «12/04» → día 12 y mes 4, sin año. Una fecha entera la
+ * lee `leerFechaDeNacimiento`, así que «12/04/90» trae el año de 1990.
+ */
+export function partesDeFecha(
+  texto: string,
+  hoy: string,
+): { dia: number | null; mes: number | null; anio: number | null } {
+  const entera = leerFechaDeNacimiento(texto, hoy)
+  if (entera) {
+    const [y, m, d] = entera.split('-').map(Number)
+    return { dia: d, mes: m, anio: y }
+  }
+  const [d = '', m = '', y = ''] = formatearFecha(texto).split('/')
+  const dia = Number(d)
+  const mes = Number(m)
+  return {
+    dia: d !== '' && dia >= 1 && dia <= 31 ? dia : null,
+    mes: m !== '' && mes >= 1 && mes <= 12 ? mes : null,
+    anio: y.length === 4 ? Number(y) : null,
+  }
+}
+
+/** Los días de un mes (1-12). Sin año, febrero cuenta 29: aún puede serlo. */
+export function diasDelMes(mes: number, anio: number | null): number {
+  if (mes === 2) {
+    if (anio === null) return 29
+    const bisiesto = (anio % 4 === 0 && anio % 100 !== 0) || anio % 400 === 0
+    return bisiesto ? 29 : 28
+  }
+  return [4, 6, 9, 11].includes(mes) ? 30 : 31
+}
+
+/**
  * Años cumplidos el día `hoy` (los dos 'YYYY-MM-DD').
  *
  * Sin `Date` ni zona horaria: es aritmética de calendario sobre dos días, y
@@ -200,6 +289,28 @@ export function telefonoLegible(texto: string): string {
   const n = telefonoNacional(texto)
   if (n === null) return texto.trim()
   return `${n.slice(0, 4)}-${n.slice(4, 7)}.${n.slice(7, 9)}.${n.slice(9)}`
+}
+
+/**
+ * El teléfono mientras se teclea, con la forma en que se dicta:
+ * «04141234567» → «0414-123.45.67». Solo cuentan las cifras.
+ *
+ * Se pone el 0 que se olvida («414…» → «0414…») y se quita el código de país
+ * de un número pegado («+58 414 123 4567»). Más de 11 cifras no caben. Como
+ * en la fecha, un separador solo aparece con algo detrás, para que borrar no
+ * se atasque en él.
+ */
+export function formatearTelefono(texto: string): string {
+  let d = soloDigitos(texto)
+  if (d.startsWith('58') && d.length > 2) d = `0${d.slice(2)}`
+  else if (d.startsWith('4') || d.startsWith('2')) d = `0${d}`
+  d = d.slice(0, 11)
+
+  let salida = d.slice(0, 4)
+  if (d.length > 4) salida += `-${d.slice(4, 7)}`
+  if (d.length > 7) salida += `.${d.slice(7, 9)}`
+  if (d.length > 9) salida += `.${d.slice(9, 11)}`
+  return salida
 }
 
 /** Qué le pasa al móvil del titular, o `null` si vale. */

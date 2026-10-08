@@ -171,8 +171,10 @@ export function PasoConfirmar({
                 <li>{reglaDelAtraso(vista.data, formatUsd)}</li>
               )}
               <li>
-                El comprobante con las cuotas le llega a{' '}
-                <strong className="text-on-surface">{correoDestino ?? 'su correo registrado'}</strong>.
+                {/* Con la confirmación, nada sale hasta el Sí: ni el comprobante ni la bienvenida. */}
+                {conConfirmacion ? 'Cuando responda Sí, le llega el comprobante a ' : 'El comprobante con las cuotas le llega a '}
+                <strong className="text-on-surface">{correoDestino ?? 'su correo registrado'}</strong>
+                {conConfirmacion ? ' y un WhatsApp con sus cuotas.' : '.'}
               </li>
             </ul>
           </Card>
