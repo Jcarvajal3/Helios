@@ -120,9 +120,20 @@ const ESTADO_DE_LA_ORDEN: Record<string, string> = {
   expired: 'Vencido',
 }
 
+/**
+ * Los códigos con los que la base lanza sus errores de negocio, escritos para
+ * quien los lee: `raise exception` a secas (P0001) y los `errcode` que usan
+ * las RPC del bot. Cualquier otro es un fallo interno.
+ */
+const ERRORES_DE_NEGOCIO = new Set(['P0001', '22023', 'P0002', '42501', '28000', '55000'])
+
 /** HMAC del PIN nuevo con el secreto del webhook: así no queda en claro en la sesión. */
 async function huellaDelPin(pin: string, telefono: string): Promise<string> {
-  const clave = new TextEncoder().encode(Deno.env.get('WHATSAPP_WEBHOOK_TOKEN') ?? 'helios')
+  // Sin secreto el webhook ya responde 401 (index.ts) y no llega aquí; sin
+  // clave de respaldo, por si algún día se llama desde otro sitio.
+  const secreto = Deno.env.get('WHATSAPP_WEBHOOK_TOKEN')
+  if (!secreto) throw new Error('Falta WHATSAPP_WEBHOOK_TOKEN')
+  const clave = new TextEncoder().encode(secreto)
   const k = await crypto.subtle.importKey('raw', clave, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
   const firma = await crypto.subtle.sign('HMAC', k, new TextEncoder().encode(`${telefono}:${pin}`))
   return Array.from(new Uint8Array(firma), (b) => b.toString(16).padStart(2, '0')).join('')
@@ -178,13 +189,22 @@ export async function atenderAlPersonal({
   const guardar = (state: Estado, data: Datos = {}) =>
     rpc('bot_session_save', { p_phone: tel, p_state: state, p_data: data })
 
-  /** Una RPC cuyo error de negocio se le enseña al médico tal cual (lo escribe la base). */
+  /**
+   * Una RPC cuyo error de negocio se le enseña al médico tal cual (lo escribe
+   * la base). Un error interno (una restricción, un fallo de Postgres) no: el
+   * médico lee un aviso genérico y el detalle queda en el log.
+   */
   async function probar<T>(fn: string, args: Record<string, unknown>): Promise<{ ok: true; data: T } | { ok: false; mensaje: string }> {
     try {
       return { ok: true, data: await rpc<T>(fn, args) }
     } catch (err) {
       const m = err instanceof Error ? err.message : String(err)
-      return { ok: false, mensaje: m.replace(/^[a-z_]+: /, '') }
+      const code = (err as { code?: unknown } | null)?.code
+      if (typeof code === 'string' && ERRORES_DE_NEGOCIO.has(code)) {
+        return { ok: false, mensaje: m.replace(/^[a-z_]+: /, '') }
+      }
+      console.error('bot', fn, code, m)
+      return { ok: false, mensaje: 'No pudimos completarlo. Inténtalo de nuevo en un momento.' }
     }
   }
 

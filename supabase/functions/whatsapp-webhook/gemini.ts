@@ -90,7 +90,9 @@ export async function extraerConGemini(texto: string, apiKey: string): Promise<L
     const cuerpo: unknown = await res.json()
     const json = textoDeLaInteraccion(cuerpo)
     if (json === null) {
-      console.error('gemini sin texto', JSON.stringify(cuerpo).slice(0, 300))
+      // Solo la forma de la respuesta: su contenido puede repetir los datos
+      // del paciente que escribió el médico.
+      console.error('gemini sin texto', Object.keys((cuerpo ?? {}) as object))
       return null
     }
     return lecturaDeLaIA(JSON.parse(json))

@@ -49,7 +49,11 @@ const db = createClient(
 /** Una RPC; lanza si la base falla (el webhook responde 500 y 360dialog reintenta). */
 async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<T> {
   const { data, error } = await db.rpc(fn, args)
-  if (error) throw new Error(`${fn}: ${error.message}`)
+  if (error) {
+    // El código viaja con el error: el bot solo le enseña al médico los
+    // errores de negocio (`ERRORES_DE_NEGOCIO` en bot.ts), no los internos.
+    throw Object.assign(new Error(`${fn}: ${error.message}`), { code: error.code })
+  }
   return data as T
 }
 

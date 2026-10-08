@@ -417,3 +417,9 @@ enabled = true
 # declarative_schema_path = "./schemas"
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
+
+# El webhook de WhatsApp lo llama 360dialog, sin JWT de Supabase: se protege
+# con su propio secreto (?token=, WHATSAPP_WEBHOOK_TOKEN). Escrito aquí para
+# que un `functions deploy` sin `--no-verify-jwt` no lo deje respondiendo 401.
+[functions.whatsapp-webhook]
+verify_jwt = false
