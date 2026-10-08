@@ -55,6 +55,8 @@ declare
   v_s1       uuid;
   v_s2       uuid;
   v_sc       uuid;
+  v_k        uuid;
+  v_d        date;
 begin
   -- =========================================================================
   -- Preparación
@@ -433,7 +435,33 @@ begin
   if v_txt not like '%Hoy vence tu cuota de €56,96 (Bs 51.264,00) de la orden #%' then
     raise exception 'El aviso de la cuota en euros no dice lo esperado: %', v_txt;
   end if;
-  raise notice 'TEST MONEDA 7 OK — el aviso dice euros y bolívares';
+
+  -- La víspera dice la tasa de su moneda (20261008000300), en el texto y en
+  -- el correo.
+  perform public.helios_enqueue_reminders('cuota_manana', v_today - 1);
+  if exists (select 1 from public.outbound_messages
+              where profile_id = v_profile and template_key = 'cuota_manana' and installment_due_date = v_today
+                and (rendered_text not like '%a la tasa BCV del euro del día en que pagues%'
+                     or (channel = 'email' and html not like '%a la tasa BCV del euro <strong%')))
+     or not exists (select 1 from public.outbound_messages
+                     where profile_id = v_profile and template_key = 'cuota_manana' and installment_due_date = v_today) then
+    raise exception 'La víspera de una cuota en euros debía decir «a la tasa BCV del euro»';
+  end if;
+
+  -- El mismo día, también una cuota en dólares: las dos tasas.
+  delete from public.outbound_messages
+   where profile_id = v_profile and template_key = 'cuota_manana' and installment_due_date = v_today;
+  select id, due_date into v_k, v_d from public.installments where charge_id = v_usd_ch and sequence = 1;
+  update public.installments set due_date = v_today where id = v_k;
+  perform public.helios_enqueue_reminders('cuota_manana', v_today - 1);
+  select rendered_text into v_txt from public.outbound_messages
+  where profile_id = v_profile and template_key = 'cuota_manana' and installment_due_date = v_today
+    and channel = 'whatsapp_manual';
+  if v_txt not like '%a la tasa BCV del dólar o del euro, según la moneda de cada cuota, del día en que pagues%' then
+    raise exception 'Con cuotas en las dos monedas, la víspera debía nombrar las dos tasas: %', v_txt;
+  end if;
+  update public.installments set due_date = v_d where id = v_k;
+  raise notice 'TEST MONEDA 7 OK — el aviso dice euros y bolívares, y la víspera, la tasa de su moneda';
 
   -- =========================================================================
   -- 8. A la clínica: cada mitad en euros
