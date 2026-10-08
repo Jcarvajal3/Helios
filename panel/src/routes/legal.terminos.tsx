@@ -4,9 +4,15 @@ import { HeliosLogo } from '@/components/HeliosLogo'
 import { Lista, P } from '@/components/prose'
 import { Card } from '@/components/ui'
 import { operador } from '@/config/legal'
+import { cabeceraPublica } from '@/config/sitio'
 
 export const Route = createFileRoute('/legal/terminos')({
-  head: () => ({ meta: [{ title: 'Términos y condiciones · Helios' }] }),
+  head: () =>
+    cabeceraPublica({
+      titulo: 'Términos y condiciones · Helios',
+      descripcion: 'Las condiciones del pago en cuotas de Helios para pacientes y para médicos y centros de salud: cuotas, comisión de servicio, límite y pagos.',
+      ruta: '/legal/terminos',
+    }),
   component: Terminos,
 })
 

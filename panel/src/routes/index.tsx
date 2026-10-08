@@ -12,6 +12,9 @@ import {
   Pie,
   Preguntas,
 } from '@/components/portada'
+import { ESPECIALIDADES, PREGUNTAS } from '@/components/portada/datos'
+import { RESPONSABLE } from '@/config/legal'
+import { NOMBRE, REDES, SITIO_URL, cabeceraPublica, jsonLd, urlAbsoluta } from '@/config/sitio'
 
 /**
  * LA PORTADA — `/`.
@@ -26,27 +29,71 @@ import {
  * `styles/portada.css`. Trae además su tipografía (Geist, Geist Mono e
  * Instrument Serif), que solo se descarga aquí.
  */
-const TITULO = 'Helios — Tu consulta hoy, págala en dos cuotas'
+// Google corta el título hacia los 60 caracteres y la descripción hacia los
+// 155: lo que importa va delante.
+const TITULO = 'Tu salud hoy, en dos cuotas | Helios Venezuela'
 
 const DESCRIPCION =
-  'Helios es una forma de pagar consultas y tratamientos de salud privada en cuotas: medicina, odontología y cosmetología. Dos cuotas, a los 7 y a los 14 días, con una comisión de servicio del 12% + IVA.'
+  'Paga tu consulta de medicina, odontología o cosmetología en dos cuotas, a los 7 y 14 días, sin inicial. En bolívares, por Pago Móvil o transferencia.'
 
 const FUENTES =
   'https://fonts.googleapis.com/css2?family=Geist:wght@300..700&family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap'
 
+/**
+ * Lo que el buscador entiende de la página sin leerla: quién opera Helios,
+ * el servicio y las preguntas frecuentes (las mismas de la sección).
+ */
+const DATOS_ESTRUCTURADOS = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Organization',
+      '@id': `${SITIO_URL}/#organizacion`,
+      name: NOMBRE,
+      legalName: RESPONSABLE.razonSocial,
+      url: urlAbsoluta('/'),
+      logo: urlAbsoluta('/icon-512.png'),
+      areaServed: { '@type': 'Country', name: 'Venezuela' },
+      sameAs: REDES.map((r) => r.url),
+    },
+    {
+      '@type': 'WebSite',
+      '@id': `${SITIO_URL}/#sitio`,
+      name: NOMBRE,
+      url: urlAbsoluta('/'),
+      inLanguage: 'es-VE',
+      publisher: { '@id': `${SITIO_URL}/#organizacion` },
+    },
+    {
+      '@type': 'Service',
+      name: 'Pago en cuotas de consultas y tratamientos de salud privada',
+      serviceType: 'Pago en cuotas',
+      description: DESCRIPCION,
+      provider: { '@id': `${SITIO_URL}/#organizacion` },
+      areaServed: { '@type': 'Country', name: 'Venezuela' },
+      audience: ESPECIALIDADES.map((e) => ({ '@type': 'Audience', audienceType: e })),
+    },
+    {
+      '@type': 'FAQPage',
+      mainEntity: PREGUNTAS.map((p) => ({
+        '@type': 'Question',
+        name: p.pregunta,
+        acceptedAnswer: { '@type': 'Answer', text: p.respuesta },
+      })),
+    },
+  ],
+}
+
 export const Route = createFileRoute('/')({
   component: Portada,
-  head: () => ({
-    meta: [
-      { title: TITULO },
-      { name: 'description', content: DESCRIPCION },
-      { name: 'color-scheme', content: 'light' },
-      { property: 'og:type', content: 'website' },
-      { property: 'og:title', content: TITULO },
-      { property: 'og:description', content: DESCRIPCION },
-    ],
-    links: [{ rel: 'stylesheet', href: FUENTES }],
-  }),
+  head: () => {
+    const base = cabeceraPublica({ titulo: TITULO, descripcion: DESCRIPCION, ruta: '/' })
+    return {
+      meta: [...base.meta, { name: 'color-scheme', content: 'light' }],
+      links: [...base.links, { rel: 'stylesheet', href: FUENTES }],
+      scripts: [jsonLd(DATOS_ESTRUCTURADOS)],
+    }
+  },
 })
 
 function Portada() {

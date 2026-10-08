@@ -28,6 +28,7 @@ import {
 import { consultaColaDeAvisos, consultaCorreosRecientes } from '@/features/admin/avisos/api'
 import { consultaCambiosPropuestos } from '@/features/admin/pacientes/api'
 import { hoyOperativo } from '@/components/admin/inicio/reloj'
+import { NO_INDEXAR } from '@/config/sitio'
 import { BuscadorDeLaBarra, PaletaDelPanel } from '@/components/admin/paleta'
 import { PlatformGate } from '@/components/PlatformGate'
 import { HeliosIsotipo, HeliosLogo } from '@/components/HeliosLogo'
@@ -43,6 +44,7 @@ import { asistenteActivo } from '@/lib/asistente'
 import { entorno } from '@/lib/entorno'
 
 export const Route = createFileRoute('/admin')({
+  head: () => NO_INDEXAR,
   component: SuperAdminLayoutRoute,
 })
 

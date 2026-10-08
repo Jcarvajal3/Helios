@@ -7,6 +7,9 @@ import { SCRIPT_DEL_TEMA } from '@/lib/tema'
 
 import appCss from '../styles.css?url'
 
+const FUENTES_DEL_PANEL =
+  'https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;900&family=Source+Sans+3:wght@400;500;600;700&display=swap'
+
 // Antes de pintar nada, para que un fallo del primer render también llegue.
 initSentry()
 
@@ -23,8 +26,13 @@ export const Route = createRootRoute({
       // En la pestaña el icono mide 16 px, y ahí el logotipo entero es una
       // mancha: va el isotipo, que se lee a ese tamaño.
       { rel: 'icon', type: 'image/svg+xml', href: '/icon.svg' },
+      { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' },
       { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
       { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossOrigin: 'anonymous' },
+      // Las fuentes del panel. Antes eran un `@import` dentro de styles.css, y
+      // el navegador no las pedía hasta tener esa hoja: una ida y vuelta más
+      // antes de pintar, también en la portada, que ni las usa.
+      { rel: 'stylesheet', href: FUENTES_DEL_PANEL },
       { rel: 'stylesheet', href: appCss },
     ],
     // El tema guardado, antes de pintar: sin esto el oscuro parpadea en claro.

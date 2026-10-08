@@ -4,9 +4,15 @@ import { HeliosLogo } from '@/components/HeliosLogo'
 import { P } from '@/components/prose'
 import { Callout, Card } from '@/components/ui'
 import { operador } from '@/config/legal'
+import { cabeceraPublica } from '@/config/sitio'
 
 export const Route = createFileRoute('/legal/privacidad')({
-  head: () => ({ meta: [{ title: 'Política de privacidad · Helios' }] }),
+  head: () =>
+    cabeceraPublica({
+      titulo: 'Política de privacidad · Helios',
+      descripcion: 'Cómo trata Helios los datos de pacientes, médicos y centros de salud.',
+      ruta: '/legal/privacidad',
+    }),
   component: Privacidad,
 })
 

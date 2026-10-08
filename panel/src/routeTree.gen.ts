@@ -13,6 +13,8 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ComercioRouteImport } from './routes/_comercio'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SoporteRouteImport } from './routes/soporte'
 import { Route as ComercioComisionesRouteImport } from './routes/_comercio/comisiones'
 import { Route as ComercioCuentaRouteImport } from './routes/_comercio/cuenta'
@@ -60,6 +62,16 @@ const AdminRoute = AdminRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
+  id: '/robots.txt',
+  path: '/robots.txt',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SoporteRoute = SoporteRouteImport.update({
@@ -214,6 +226,8 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/login': typeof LoginRoute
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/soporte': typeof SoporteRoute
   '/comisiones': typeof ComercioComisionesRoute
   '/cuenta': typeof ComercioCuentaRoute
@@ -247,6 +261,8 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/soporte': typeof SoporteRoute
   '/comisiones': typeof ComercioComisionesRoute
   '/cuenta': typeof ComercioCuentaRoute
@@ -283,6 +299,8 @@ export interface FileRoutesById {
   '/_comercio': typeof ComercioRouteWithChildren
   '/admin': typeof AdminRouteWithChildren
   '/login': typeof LoginRoute
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/soporte': typeof SoporteRoute
   '/_comercio/comisiones': typeof ComercioComisionesRoute
   '/_comercio/cuenta': typeof ComercioCuentaRoute
@@ -319,6 +337,8 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/login'
+    | '/robots.txt'
+    | '/sitemap.xml'
     | '/soporte'
     | '/comisiones'
     | '/cuenta'
@@ -352,6 +372,8 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/robots.txt'
+    | '/sitemap.xml'
     | '/soporte'
     | '/comisiones'
     | '/cuenta'
@@ -387,6 +409,8 @@ export interface FileRouteTypes {
     | '/_comercio'
     | '/admin'
     | '/login'
+    | '/robots.txt'
+    | '/sitemap.xml'
     | '/soporte'
     | '/_comercio/comisiones'
     | '/_comercio/cuenta'
@@ -423,6 +447,8 @@ export interface RootRouteChildren {
   ComercioRoute: typeof ComercioRouteWithChildren
   AdminRoute: typeof AdminRouteWithChildren
   LoginRoute: typeof LoginRoute
+  RobotsDottxtRoute: typeof RobotsDottxtRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   SoporteRoute: typeof SoporteRoute
   LegalPrivacidadRoute: typeof LegalPrivacidadRoute
   LegalTerminosRoute: typeof LegalTerminosRoute
@@ -456,6 +482,20 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/robots.txt': {
+      id: '/robots.txt'
+      path: '/robots.txt'
+      fullPath: '/robots.txt'
+      preLoaderRoute: typeof RobotsDottxtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/soporte': {
@@ -739,6 +779,8 @@ const rootRouteChildren: RootRouteChildren = {
   ComercioRoute: ComercioRouteWithChildren,
   AdminRoute: AdminRouteWithChildren,
   LoginRoute: LoginRoute,
+  RobotsDottxtRoute: RobotsDottxtRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   SoporteRoute: SoporteRoute,
   LegalPrivacidadRoute: LegalPrivacidadRoute,
   LegalTerminosRoute: LegalTerminosRoute,

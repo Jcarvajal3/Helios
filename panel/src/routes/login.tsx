@@ -6,8 +6,12 @@ import { Button, Card, ErrorBox, Input } from '@/components/ui'
 import { HeliosLogo } from '@/components/HeliosLogo'
 import { fetchPlatformAdmin } from '@/features/admin/api'
 import { describeError, supabase } from '@/lib/supabase'
+import { NO_INDEXAR } from '@/config/sitio'
 
-export const Route = createFileRoute('/login')({ component: Login })
+export const Route = createFileRoute('/login')({
+  head: () => NO_INDEXAR,
+  component: Login,
+})
 
 /**
  * Login del panel: correo y contraseña, sin verificación de correo.

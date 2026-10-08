@@ -4,9 +4,15 @@ import { HeliosLogo } from '@/components/HeliosLogo'
 import { P } from '@/components/prose'
 import { Card } from '@/components/ui'
 import { enlaceAfiliacion, RESPONSABLE } from '@/config/legal'
+import { cabeceraPublica } from '@/config/sitio'
 
 export const Route = createFileRoute('/soporte')({
-  head: () => ({ meta: [{ title: 'Soporte · Helios' }] }),
+  head: () =>
+    cabeceraPublica({
+      titulo: 'Soporte · Helios',
+      descripcion: 'Cómo contactar a Helios si tienes dudas sobre tus cuotas, tu comprobante o la afiliación de tu consultorio o centro de salud.',
+      ruta: '/soporte',
+    }),
   component: Soporte,
 })
 
