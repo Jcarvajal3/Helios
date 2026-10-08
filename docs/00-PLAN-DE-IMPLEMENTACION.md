@@ -56,7 +56,7 @@ El resto del documento conserva "financiamiento" como término interno del dise�
 
 **Qué cambió en el sistema por estas reglas:**
 - Las cuotas de una consulta de $100 bajan de $61,60 a $56,96. Los pagos en cuotas ya confirmados conservan su desglose.
-- La plantilla de Meta aprobada (`helios_confirmar_financiamiento`, §15.5) dice "20 %" y "financiamiento": deja de usarse hasta que Meta apruebe la v3 (§15.5.2). Mientras tanto, fuera de la ventana de 24 h la pregunta al paciente cae a la cola manual de "Avisos de hoy".
+- La plantilla de Meta aprobada (`helios_confirmar_financiamiento`, §15.5) dice "20 %" y "financiamiento": deja de usarse hasta que Meta apruebe la v3 (§15.5.2). Mientras tanto, fuera de la ventana de 24 h la pregunta al paciente cae a la cola manual de "Avisos de hoy". **La v3 está aprobada y conectada desde el 2026-10-08.**
 - El cierre semanal desaparece: el equipo de Helios transfiere a las clínicas **cada día** lo que vence (más trabajo operativo; ver §6 y §8.3).
 
 ---
@@ -935,6 +935,8 @@ La v1 (arriba) está **aprobada** desde el 2026-10-06 y es la que se usa fuera d
   ```
 
 #### 15.5.2 La v3 (2026-10-06): sin "financiamiento"
+
+**Aprobada por Meta y conectada el 2026-10-08** (20261008000100): leída de 360dialog, `es`, 13 variables y botones «Sí, acepto» · «No». Fuera de la ventana de 24 h la pregunta vuelve a salir sola.
 
 La v1 y la v2 dicen "financiamiento", que desde el 2026-10-06 no se usa hacia fuera, y la v1 además lleva "20 %" escrito, que ya no es la comisión. Por eso `confirmar_financiamiento` deja de tener `wa_template_name` (20261006002000): fuera de la ventana de 24 h la pregunta cae a la cola manual hasta que Meta apruebe la v3. Dentro de la ventana sale el texto libre nuevo.
 

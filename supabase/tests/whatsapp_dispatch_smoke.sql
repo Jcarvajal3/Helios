@@ -134,15 +134,11 @@ begin
   -- =========================================================================
   update public.business_parameters set value = 1
    where key = 'patient_confirmation_required' and effective_from = v_bdate;
-  -- Desde 20261006002000 la pregunta no tiene plantilla de Meta (la v1 decía
-  -- «20 %» y «financiamiento»): fuera de la ventana va a la cola manual. Para
-  -- probar el camino de la plantilla se simula una aprobada, con las 6
-  -- variables de la v1.
-  if (select wa_template_name from public.notification_templates where key = 'confirmar_financiamiento') is not null then
-    raise exception 'La pregunta al paciente no debía tener plantilla de Meta hasta que se apruebe la v3';
+  -- La plantilla aprobada (20261008000100): 13 variables en el orden del texto.
+  if (select wa_template_name from public.notification_templates where key = 'confirmar_financiamiento')
+     is distinct from 'helios_confirmar_pago_en_cuotas' then
+    raise exception 'La pregunta al paciente debía usar la plantilla aprobada helios_confirmar_pago_en_cuotas';
   end if;
-  update public.notification_templates set wa_template_name = 'helios_confirmar_financiamiento'
-   where key = 'confirmar_financiamiento';
   set local role authenticated;
   perform set_config('request.jwt.claims', json_build_object('sub', v_cajero::text, 'role', 'authenticated')::text, true);
   perform public.helios_patient_eligibility(v_m, 'V30000001');
@@ -153,16 +149,23 @@ begin
 
   select * into v_row from public.outbound_messages
   where charge_id = v_charge and template_key = 'confirmar_financiamiento';
-  if v_row.wa_template->>'name' <> 'helios_confirmar_financiamiento'
+  if v_row.wa_template->>'name' <> 'helios_confirmar_pago_en_cuotas'
      or v_row.wa_template->>'language' <> 'es'
-     or jsonb_array_length(v_row.wa_template->'params') <> 6
+     or jsonb_array_length(v_row.wa_template->'params') <> 13
      or v_row.wa_template->'params'->>0 <> 'José'
      or v_row.wa_template->'params'->>1 <> 'Clínica Despacho'
-     -- Desde el 2026-10-07 las variables de dinero traen su símbolo.
+     -- Las variables de dinero traen su símbolo (2026-10-07).
      or v_row.wa_template->'params'->>2 <> '$100'
-     or v_row.wa_template->'params'->>3 <> '$12'
-     or v_row.wa_template->'params'->>4 <> '$1,92'
-     or v_row.wa_template->'params'->>5 not like '$56,96 el % y $56,96 el %'
+     or v_row.wa_template->'params'->>3 <> '$100'
+     or v_row.wa_template->'params'->>4 <> '12'
+     or v_row.wa_template->'params'->>5 <> '$12'
+     or v_row.wa_template->'params'->>6 <> '16'
+     or v_row.wa_template->'params'->>7 <> '$1,92'
+     or v_row.wa_template->'params'->>8 <> '$113,92'
+     or coalesce(v_row.wa_template->'params'->>9, '') = ''
+     or v_row.wa_template->'params'->>10 <> '$56,96'
+     or v_row.wa_template->'params'->>11 not like '__/__ y __/__'
+     or v_row.wa_template->'params'->>12 <> 'dólar'
      or v_row.wa_template->'buttons'->0->>'id' <> 'confirmar:' || v_charge
      or v_row.wa_template->'buttons'->1->>'id' <> 'rechazar:' || v_charge
      or v_row.wa_template->'buttons'->0->>'title' <> 'Sí' then
@@ -180,9 +183,9 @@ begin
   if v_call.path <> '/messages' or v_call.body->>'type' <> 'template'
      or v_call.body->>'to' <> '584141234567'
      or v_call.body->>'messaging_product' <> 'whatsapp'
-     or v_call.body->'template'->>'name' <> 'helios_confirmar_financiamiento'
+     or v_call.body->'template'->>'name' <> 'helios_confirmar_pago_en_cuotas'
      or v_call.body->'template'->'language'->>'code' <> 'es'
-     or jsonb_array_length(v_call.body->'template'->'components'->0->'parameters') <> 6
+     or jsonb_array_length(v_call.body->'template'->'components'->0->'parameters') <> 13
      or v_call.body->'template'->'components'->1->>'sub_type' <> 'quick_reply'
      or v_call.body->'template'->'components'->1->'parameters'->0->>'payload' <> 'confirmar:' || v_charge
      or v_call.body->'template'->'components'->2->>'index' <> '1' then
@@ -254,8 +257,8 @@ begin
     raise exception 'Sin ventana ni plantilla, a la cola manual: %', to_jsonb(v_row);
   end if;
 
-  -- La pregunta sin plantilla de Meta (como quedó en 20261006002000): fuera
-  -- de la ventana no sale por la API, va a la cola manual.
+  -- Si la plantilla se quitara (como pasó entre 20261006002000 y
+  -- 20261008000100): fuera de la ventana no sale por la API, va a la cola manual.
   update public.notification_templates set wa_template_name = null where key = 'confirmar_financiamiento';
   v_msg := public.helios_enqueue_confirmation(v_charge);
   perform public.helios_dispatch_whatsapp_batch();
@@ -266,7 +269,7 @@ begin
     raise exception 'La pregunta sin plantilla, fuera de la ventana, va a la cola manual: %', to_jsonb(v_row);
   end if;
   update public.outbound_messages set status = 'cancelado' where id = v_msg;
-  update public.notification_templates set wa_template_name = 'helios_confirmar_financiamiento'
+  update public.notification_templates set wa_template_name = 'helios_confirmar_pago_en_cuotas'
    where key = 'confirmar_financiamiento';
 
   -- =========================================================================
