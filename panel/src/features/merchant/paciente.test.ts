@@ -9,7 +9,6 @@ import {
   cedulaLegible,
   cedulaParaEnviar,
   diasDelMes,
-  correosCoinciden,
   edadEn,
   esCorreo,
   esFijo,
@@ -98,8 +97,6 @@ comprueba(esCorreo(' Jose.Perez@Empresa.com.ve '), 'con subdominios y espacios')
 comprueba(!esCorreo('jose@gmail'), 'sin dominio de primer nivel')
 comprueba(!esCorreo('jose gmail.com'), 'sin arroba')
 comprueba(!esCorreo('jose@@gmail.com'), 'dos arrobas')
-comprueba(correosCoinciden('Jose@Gmail.com ', 'jose@gmail.com'), 'coinciden sin mayúsculas ni espacios')
-comprueba(!correosCoinciden('jose@gmail.com', 'jose@gmial.com'), 'una errata no coincide')
 igual(sugerenciaDeCorreo('jose@gmial.com'), 'jose@gmail.com', 'gmial → gmail')
 igual(sugerenciaDeCorreo('ana@hotmial.com'), 'ana@hotmail.com', 'hotmial → hotmail')
 igual(sugerenciaDeCorreo('ana@yahooo.es'), 'ana@yahoo.es', 'yahooo.es → yahoo.es')
@@ -115,9 +112,7 @@ const bueno: BorradorPaciente = {
   sex: 'M',
   phone: '0414-123.45.67',
   email: 'Jose@Gmail.com',
-  emailConfirm: 'jose@gmail.com',
   state: 'Miranda',
-  city: 'Caracas',
   address: 'Los Palos Grandes, calle 4',
   occupation: '',
   referenceName: 'María Pérez',
@@ -127,14 +122,14 @@ const bueno: BorradorPaciente = {
 igual(problemasDelPaciente(bueno, HOY), {}, 'un paciente completo no tiene problemas')
 
 const vacio = problemasDelPaciente(PACIENTE_VACIO, HOY)
-comprueba(Object.keys(vacio).length === 13, 'vacío: todo menos la ocupación', `dio ${Object.keys(vacio).join(',')}`)
-comprueba(vacio.occupation === undefined, 'la ocupación es opcional')
-
-igual(
-  problemasDelPaciente({ ...bueno, emailConfirm: 'jose@gmial.com' }, HOY).emailConfirm,
-  'Los dos correos no coinciden.',
-  'el correo repetido distinto',
+comprueba(
+  Object.keys(vacio).length === 10,
+  'vacío: todo menos la ocupación y el estado',
+  `dio ${Object.keys(vacio).join(',')}`,
 )
+comprueba(vacio.occupation === undefined, 'la ocupación es opcional')
+igual(PACIENTE_VACIO.state, 'Distrito Capital', 'el estado nace en Caracas')
+igual(problemasDelPaciente({ ...bueno, state: '' }, HOY).state, 'Elige el estado.', 'sin estado no se sigue')
 igual(
   problemasDelPaciente({ ...bueno, birthDate: '01/10/2008' }, HOY).birthDate,
   MENSAJE_MENOR,
@@ -161,7 +156,6 @@ igual(
     phone: '04141234567',
     email: 'jose@gmail.com',
     state: 'Miranda',
-    city: 'Caracas',
     address: 'Los Palos Grandes, calle 4',
     occupation: null,
     reference_name: 'María Pérez',
@@ -172,7 +166,11 @@ igual(
 )
 
 comprueba(!hayDatosDePaciente(PACIENTE_VACIO), 'vacío no tiene datos')
-comprueba(hayDatosDePaciente({ ...PACIENTE_VACIO, city: 'x' }), 'un campo basta para tener datos')
+comprueba(hayDatosDePaciente({ ...PACIENTE_VACIO, address: 'x' }), 'un campo basta para tener datos')
+comprueba(
+  hayDatosDePaciente({ ...PACIENTE_VACIO, state: 'Zulia' }),
+  'cambiar el estado de fábrica también es un dato',
+)
 
 console.log('── lo que se teclea, con formato ───────────────────────────────')
 igual(formatearFecha('12'), '12', 'el día sin barra hasta que hay mes')

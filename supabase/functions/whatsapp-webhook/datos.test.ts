@@ -68,7 +68,11 @@ comprueba(l.moneda === 'USD', 'un formulario viejo («Monto ($)») es en dólare
 comprueba(faltantes(l.paciente).length === 0, 'no falta nada', faltantes(l.paciente).join(', '))
 
 const vacio = leerFormulario(FORMULARIO)
-comprueba(vacio.etiquetado && faltantes(vacio.paciente).length === 12, 'el formulario sin llenar: falta todo')
+comprueba(vacio.etiquetado && faltantes(vacio.paciente).length === 11, 'el formulario sin llenar: falta todo')
+comprueba(!FORMULARIO.includes('Ciudad'), 'el formulario ya no pide la ciudad')
+const sinCiudad = leerFormulario(lleno.replace(/^Ciudad:.*\n/m, ''))
+comprueba(sinCiudad.etiquetado && faltantes(sinCiudad.paciente).length === 0, 'sin ciudad no falta nada')
+comprueba(l.paciente.city === 'Caracas', 'si el médico escribe la ciudad, se lee')
 
 const medio = leerFormulario('Nombres: Ana\nApellidos: Ruiz\nCorreo: ana@x.com\nCiudad:')
 comprueba(medio.etiquetado, 'tres etiquetas bastan')

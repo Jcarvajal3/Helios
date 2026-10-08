@@ -58,7 +58,6 @@ export const FORMULARIO = [
   'Teléfono:',
   'Correo:',
   'Estado:',
-  'Ciudad:',
   'Dirección:',
   'Referencia (nombre):',
   'Teléfono de la referencia:',
@@ -239,7 +238,11 @@ export function leerFormulario(t: string): Lectura & { etiquetado: boolean } {
   return { paciente, monto, moneda: moneda ?? monedaDelMonto, concepto, atendido, etiquetado: reconocidas >= 3 }
 }
 
-/** Los obligatorios de un paciente nuevo (docs/00 §2.1), con su nombre para el médico. */
+/**
+ * Los obligatorios de un paciente nuevo (docs/00 §2.1), con su nombre para el
+ * médico. La ciudad ya no se pide (2026-10-08), como en el panel: si el médico
+ * la escribe, se lee y se guarda igual.
+ */
 const OBLIGATORIOS: Array<[keyof DatosDelPaciente, string]> = [
   ['first_name', 'Nombres'],
   ['last_name', 'Apellidos'],
@@ -248,7 +251,6 @@ const OBLIGATORIOS: Array<[keyof DatosDelPaciente, string]> = [
   ['phone', 'Teléfono'],
   ['email', 'Correo'],
   ['state', 'Estado'],
-  ['city', 'Ciudad'],
   ['address', 'Dirección'],
   ['reference_name', 'Referencia (nombre)'],
   ['reference_phone', 'Teléfono de la referencia'],

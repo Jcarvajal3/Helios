@@ -599,7 +599,7 @@ export async function atenderAlPersonal({
           `Nacimiento: ${pac.birth_date} · Sexo: ${pac.sex}`,
           `Teléfono: ${pac.phone}  ← ahí le preguntamos si acepta`,
           `Correo: *${pac.email}*  ← ahí le llega el comprobante`,
-          `Dirección: ${pac.address}, ${pac.city}, ${pac.state}`,
+          `Dirección: ${[pac.address, pac.city, pac.state].filter(Boolean).join(', ')}`,
           `Referencia: ${pac.reference_name} (${pac.reference_relationship}) · ${pac.reference_phone}`,
         ].join('\n')
       : `*${d.nombreEnmascarado ?? d.cedula}* · ${d.cedula}\nTeléfono: ${d.telefonoEnmascarado ?? ''}  ← ahí le preguntamos si acepta`

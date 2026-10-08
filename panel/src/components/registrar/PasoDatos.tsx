@@ -6,14 +6,13 @@ import {
   ESTADOS_DE_VENEZUELA,
   ORDEN_DE_CAMPOS,
   PARENTESCOS,
-  correoLimpio,
-  correosCoinciden,
   edadEn,
   esCorreo,
   esMovil,
   formatearFecha,
   formatearTelefono,
   leerFechaDeNacimiento,
+  nombreDelEstado,
   problemasDelPaciente,
   sugerenciaDeCorreo,
 } from '@/features/merchant/paciente'
@@ -32,8 +31,8 @@ const SEXOS: Array<{ value: 'F' | 'M'; label: string }> = [
  *
  * Todo obligatorio salvo la ocupación. Cada dato tiene un trabajo en la
  * cobranza, que depende al 100 % de poder localizar al paciente: el móvil
- * con WhatsApp, el correo donde le llega el comprobante (escrito dos veces,
- * porque nadie lo verifica) y una referencia a quien llamar si él no contesta.
+ * con WhatsApp, el correo donde le llega el comprobante y una referencia a
+ * quien llamar si él no contesta. El estado nace en Distrito Capital.
  *
  * Los problemas de un campo se dicen al salir de él, no mientras se teclea:
  * un «correo inválido» en rojo desde la primera letra es ruido. Enter
@@ -88,8 +87,6 @@ export function PasoDatos({
   const nacimiento = leerFechaDeNacimiento(paciente.birthDate, hoy)
   const edad = nacimiento && nacimiento <= hoy ? edadEn(nacimiento, hoy) : null
   const sugerencia = esCorreo(paciente.email) ? sugerenciaDeCorreo(paciente.email) : null
-  const correosIguales =
-    correoLimpio(paciente.emailConfirm) !== '' && correosCoinciden(paciente.email, paciente.emailConfirm)
 
   return (
     <form
@@ -212,6 +209,7 @@ export function PasoDatos({
             maxLength={120}
             placeholder="nombre@gmail.com"
             error={visible('email')}
+            className="sm:col-span-2"
             hint={
               sugerencia ? (
                 <span>
@@ -230,23 +228,6 @@ export function PasoDatos({
               )
             }
           />
-          <Campo
-            id="alta-correo-2"
-            label="Repite el correo"
-            type="email"
-            inputMode="email"
-            value={paciente.emailConfirm}
-            onChange={(v) => onCambio('emailConfirm', v)}
-            onBlur={tocar('emailConfirm')}
-            // Se escribe otra vez, no se pega: copiar el primero copiaría
-            // también su errata, y esto existe para cazarla.
-            onPaste={(e) => e.preventDefault()}
-            inputRef={guardar('emailConfirm')}
-            autoComplete="off"
-            maxLength={120}
-            error={visible('emailConfirm')}
-            hint={correosIguales ? '✓ Coinciden' : 'Escríbelo otra vez, sin copiar y pegar'}
-          />
         </div>
       </Card>
 
@@ -258,21 +239,11 @@ export function PasoDatos({
             label="Estado"
             value={paciente.state}
             opciones={ESTADOS_DE_VENEZUELA}
+            etiqueta={nombreDelEstado}
             onChange={(v) => onCambio('state', v)}
             onBlur={tocar('state')}
             selectRef={guardar('state')}
             error={visible('state')}
-          />
-          <Campo
-            id="alta-ciudad"
-            label="Ciudad"
-            value={paciente.city}
-            onChange={(v) => onCambio('city', v)}
-            onBlur={tocar('city')}
-            inputRef={guardar('city')}
-            autoComplete="off"
-            maxLength={80}
-            error={visible('city')}
           />
           <Campo
             id="alta-direccion"
@@ -283,9 +254,8 @@ export function PasoDatos({
             inputRef={guardar('address')}
             autoComplete="off"
             maxLength={160}
-            placeholder="Urbanización, calle, casa o edificio"
+            placeholder="Ciudad o municipio, urbanización, calle, casa…"
             error={visible('address')}
-            className="sm:col-span-2"
           />
           <Campo
             id="alta-ocupacion"
@@ -336,24 +306,19 @@ export function PasoDatos({
             formato={formatearTelefono}
             error={visible('referencePhone')}
           />
-          <Campo
+          <CampoLista
             id="alta-ref-parentesco"
             label="Parentesco"
             value={paciente.referenceRelationship}
-            onChange={(v) => onCambio('referenceRelationship', v)}
+            opciones={PARENTESCOS}
+            onChange={(v) => {
+              onCambio('referenceRelationship', v)
+              tocar('referenceRelationship')()
+            }}
             onBlur={tocar('referenceRelationship')}
-            inputRef={guardar('referenceRelationship')}
-            autoComplete="off"
-            maxLength={40}
-            list="alta-parentescos"
-            placeholder="Madre, hermano/a, pareja…"
+            selectRef={guardar('referenceRelationship')}
             error={visible('referenceRelationship')}
           />
-          <datalist id="alta-parentescos">
-            {PARENTESCOS.map((p) => (
-              <option key={p} value={p} />
-            ))}
-          </datalist>
         </div>
       </Card>
 

@@ -338,11 +338,6 @@ export function esCorreo(texto: string): boolean {
   return /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)*\.[a-z]{2,}$/i.test(correoLimpio(texto))
 }
 
-/** Si el correo y su repetición son el mismo, sin contar mayúsculas ni espacios. */
-export function correosCoinciden(a: string, b: string): boolean {
-  return correoLimpio(a) === correoLimpio(b)
-}
-
 /**
  * Los dominios que de verdad usa la gente aquí. Contra ellos se buscan las
  * erratas: «gmial.com», «hotmial.com», «yahooo.es».
@@ -446,7 +441,15 @@ export const ESTADOS_DE_VENEZUELA = [
 
 export type EstadoDeVenezuela = (typeof ESTADOS_DE_VENEZUELA)[number]
 
-/** Los parentescos que se ofrecen en la referencia. Se puede escribir otro. */
+/** El estado con el que nace el formulario: casi todos los pacientes son de Caracas. */
+export const ESTADO_POR_DEFECTO: EstadoDeVenezuela = 'Distrito Capital'
+
+/** Cómo se lee cada estado en el desplegable: Caracas se busca por su nombre. */
+export function nombreDelEstado(estado: string): string {
+  return estado === 'Distrito Capital' ? 'Distrito Capital (Caracas)' : estado
+}
+
+/** Los parentescos que se ofrecen en la referencia, en un desplegable. */
 export const PARENTESCOS = [
   'Madre',
   'Padre',
@@ -459,6 +462,7 @@ export const PARENTESCOS = [
   'Primo/a',
   'Amigo/a',
   'Compañero/a de trabajo',
+  'Otro',
 ] as const
 
 // ── El formulario entero ──────────────────────────────────────────────────
@@ -472,9 +476,7 @@ export type BorradorPaciente = {
   sex: 'F' | 'M' | ''
   phone: string
   email: string
-  emailConfirm: string
   state: string
-  city: string
   address: string
   occupation: string
   referenceName: string
@@ -489,9 +491,7 @@ export const PACIENTE_VACIO: BorradorPaciente = {
   sex: '',
   phone: '',
   email: '',
-  emailConfirm: '',
-  state: '',
-  city: '',
+  state: ESTADO_POR_DEFECTO,
   address: '',
   occupation: '',
   referenceName: '',
@@ -509,9 +509,7 @@ export const ORDEN_DE_CAMPOS: CampoDePaciente[] = [
   'sex',
   'phone',
   'email',
-  'emailConfirm',
   'state',
-  'city',
   'address',
   'occupation',
   'referenceName',
@@ -530,9 +528,9 @@ const TOPE_TEXTO = 80
 /**
  * Los problemas de cada campo, por nombre. Vacío = se puede seguir.
  *
- * Las mismas reglas que la base, más dos que solo tienen sentido con alguien
- * tecleando: el correo escrito dos veces y el teléfono de referencia distinto
- * del propio (una referencia que es el mismo número no sirve para cobrar).
+ * Las mismas reglas que la base, más una que solo tiene sentido con alguien
+ * tecleando: el teléfono de referencia distinto del propio (una referencia
+ * que es el mismo número no sirve para cobrar).
  */
 export function problemasDelPaciente(
   p: BorradorPaciente,
@@ -561,11 +559,7 @@ export function problemasDelPaciente(
   if (correoLimpio(p.email) === '') e.email = 'Escribe el correo: ahí le llega el comprobante.'
   else if (!esCorreo(p.email)) e.email = 'El correo no tiene forma de correo (nombre@dominio.com).'
 
-  if (correoLimpio(p.emailConfirm) === '') e.emailConfirm = 'Escribe el correo otra vez.'
-  else if (!correosCoinciden(p.email, p.emailConfirm)) e.emailConfirm = 'Los dos correos no coinciden.'
-
   if (p.state === '') e.state = 'Elige el estado.'
-  if (limpio(p.city).length < 2) e.city = 'Escribe la ciudad.'
 
   if (limpio(p.address).length < 5) e.address = 'Escribe la dirección.'
   else if (limpio(p.address).length > TOPE_DIRECCION) {
@@ -585,7 +579,7 @@ export function problemasDelPaciente(
   }
 
   if (limpio(p.referenceRelationship).length < 2) {
-    e.referenceRelationship = 'Escribe el parentesco.'
+    e.referenceRelationship = 'Elige el parentesco.'
   }
 
   return e
@@ -610,7 +604,6 @@ export function pacienteParaEnviar(
     phone: telefonoNacional(p.phone),
     email: correoLimpio(p.email),
     state: p.state,
-    city: limpio(p.city),
     address: limpio(p.address),
     occupation: ocupacion === '' ? null : ocupacion,
     reference_name: limpio(p.referenceName),
@@ -619,7 +612,10 @@ export function pacienteParaEnviar(
   }
 }
 
-/** Si se ha tecleado algo en el formulario: para avisar antes de perderlo. */
+/**
+ * Si se ha tecleado algo en el formulario: para avisar antes de perderlo. Lo
+ * que viene puesto de fábrica (el estado) no cuenta.
+ */
 export function hayDatosDePaciente(p: BorradorPaciente): boolean {
-  return (Object.keys(p) as CampoDePaciente[]).some((k) => p[k] !== '')
+  return (Object.keys(p) as CampoDePaciente[]).some((k) => p[k] !== PACIENTE_VACIO[k])
 }

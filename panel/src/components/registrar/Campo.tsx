@@ -246,12 +246,15 @@ export function CampoLista({
   error,
   selectRef,
   placeholder = 'Elige…',
+  etiqueta = (o) => o,
   className = '',
 }: {
   id: string
   label: string
   value: string
   opciones: ReadonlyArray<string>
+  /** Cómo se lee una opción, si no es su valor tal cual. */
+  etiqueta?: (opcion: string) => string
   onChange: (value: string) => void
   onBlur?: () => void
   error?: string | null
@@ -284,7 +287,7 @@ export function CampoLista({
         <option value="">{placeholder}</option>
         {opciones.map((o) => (
           <option key={o} value={o}>
-            {o}
+            {etiqueta(o)}
           </option>
         ))}
       </select>
