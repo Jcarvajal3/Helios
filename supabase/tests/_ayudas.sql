@@ -40,6 +40,17 @@ insert into public.business_parameters (key, value, effective_from, note)
 values ('late_fee_usd', 2, public.helios_business_date(now()), 'pruebas (rollback)')
 on conflict (key, effective_from) do update set value = 2;
 
+-- La base de Helios es la de PRODUCCIÓN (2026-10-08): tiene el contacto, el
+-- remitente y las cuentas de cobro reales. Las suites arrancan como una base
+-- recién creada —sin contacto ni cuentas activas— y configuran lo suyo; si
+-- no, una prueba lee el banco real («Banco Nacional de Crédito») o cuenta
+-- una cuenta de más. Igual que lo de arriba, el `rollback` lo deshace.
+update public.platform_contact
+   set whatsapp_number = null, support_email = null, support_hours = null,
+       sender_name = null, sender_email = null
+ where id;
+update public.payment_destinations set is_active = false where is_active;
+
 /**
  * Un consumo confirmado de `p_base` (sin fee) para `p_user` en `p_merchant`,
  * registrado por `p_staff`. Devuelve lo mismo que devolvía `confirm_charge`.
