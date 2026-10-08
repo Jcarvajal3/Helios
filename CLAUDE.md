@@ -97,7 +97,8 @@ docs/       plan, contrato, reglas
 ## Comandos
 
 **Sin Docker** (decisión del usuario, 2026-09-30). Todo se aplica y se prueba
-directamente en el proyecto remoto `Helios`, vía Management API:
+directamente en el proyecto remoto `Helios`, que **es producción** (ver
+Remotos), vía Management API:
 
 ```bash
 # SQL suelto o un fichero contra Helios
@@ -120,8 +121,23 @@ npm run build && npm run lint && npx tsc --noEmit
 
 ## Remotos
 
-- Supabase: proyecto `Helios` (`ahyfbnfsbyzdoyjzjvfb`, org de Ronda). Hoy es
-  el **único** proyecto y hace de entorno de desarrollo: el usuario autorizó
-  migrar y probar ahí. Antes de tener pacientes reales habrá que separar
-  producción. Nunca escribir en los proyectos de Ronda.
+- Supabase: proyecto `Helios` (`ahyfbnfsbyzdoyjzjvfb`, org de Ronda). Desde
+  el 2026-10-08 es **PRODUCCIÓN** (decisión de Javier) y sigue siendo el
+  único proyecto: el de desarrollo llegará más adelante. Mientras tanto:
+  - Las migraciones y las suites se siguen corriendo aquí. Las suites hacen
+    `begin`/`rollback` y `_ayudas.sql` apaga dentro de su transacción la
+    configuración real (contacto, cuentas de cobro, confirmación, mora); los
+    envíos (Resend, 360dialog) solo se ejercen con dobles. Una suite nueva
+    que llame a `helios_dispatch_*` sin sustituir antes la función de HTTP
+    **manda mensajes reales**: la extensión `http` no se deshace con el
+    `rollback`.
+  - Nada de SQL suelto que escriba en tablas reales sin que lo pida Javier.
+  - `panel/.env` apunta a esta base: `npm run dev` en local trabaja con
+    datos reales.
+  - Nunca escribir en los proyectos de Ronda.
+- Vercel: proyecto `helios` (equipo `jcarvajal3s-projects`), raíz `panel/`.
+  Despliega solo al pushear a `main`; nunca `vercel deploy` a mano. Dominio
+  `conhelios.com`.
+- Edge Function `whatsapp-webhook`: no la despliega Vercel. Se despliega con
+  el comando de su `index.ts` (sin JWT: la protege `?token=`).
 - GitHub: `https://github.com/Jcarvajal3/Helios.git`.
