@@ -3,7 +3,6 @@ import { ArrowRight, ArrowUpRight } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import type { CSSProperties, ElementType, ReactNode } from 'react'
-import { enlaceAfiliacion } from '@/config/legal'
 
 /**
  * Las piezas pequeñas de la portada: botones, rótulos, la aparición al
@@ -283,7 +282,7 @@ export function Boton({
   )
 }
 
-/** «Quiero afiliarme»: al WhatsApp de Helios, o a soporte si aún no hay número. */
+/** «Quiero afiliarme»: al formulario de solicitud (`/afiliacion`). */
 export function BotonAfiliarme({
   tono = 'tinta',
   className = '',
@@ -291,13 +290,8 @@ export function BotonAfiliarme({
   tono?: Tono
   className?: string
 }) {
-  const { href, externo } = enlaceAfiliacion()
-  return externo ? (
-    <Boton href={href} externo tono={tono} flecha="fuera" className={className}>
-      Quiero afiliarme
-    </Boton>
-  ) : (
-    <Boton to={href} tono={tono} className={className}>
+  return (
+    <Boton to="/afiliacion" tono={tono} className={className}>
       Quiero afiliarme
     </Boton>
   )

@@ -168,7 +168,7 @@ function FichaLocal({
         )}
 
         {tab === 'perfil' && (
-          <Perfil merchantId={merchantId} initial={detalle.profile} datos={detalle.datos} onDone={refrescar} />
+          <Perfil merchantId={merchantId} initial={detalle.profile} datos={detalle.datos} titular={detalle.titular} onDone={refrescar} />
         )}
 
         {tab === 'condiciones' && (

@@ -10,7 +10,12 @@
  */
 import {
   cambioDeCuenta,
+  celularAE164,
   comisionEfectiva,
+  correccionesDeSolicitud,
+  datosDeAlta,
+  leerSolicitud,
+  telefonoLocal,
   formatoCuenta,
   leerConsultasYComisiones,
   leerCuentaDePago,
@@ -37,25 +42,66 @@ function igual(nombre: string, obtenido: unknown, esperado: unknown) {
 // ── El alta ────────────────────────────────────────────────────────────────
 
 const alta: AltaDeClinica = {
-  name: 'Consultorio Demo',
-  legalName: '',
-  taxId: 'J-12345678-9',
-  category: 'consultorio',
+  ownerName: 'Ana Pérez',
+  ownerDocument: 'V-12.345.678',
+  taxId: '',
   specialty: 'Pediatría',
+  collegeNumber: '',
   mppsNumber: '',
+  clinicName: 'Consultorio Demo',
+  address: 'Av. Principal, piso 3',
   phone: '0212 555 12 34',
   email: 'demo@consultorio.com',
-  address: 'Av. Principal',
-  city: 'Caracas',
+  pagoMovilBank: 'Banesco',
+  pagoMovilDocument: '12345678',
+  pagoMovilPhone: '0414-123 4567',
 }
-igual('un alta completa pasa', motivoDeAlta(alta), null)
-igual('sin nombre no', motivoDeAlta({ ...alta, name: ' ' }), 'Falta el nombre de la clínica.')
-igual('el RIF manda su motivo', motivoDeAlta({ ...alta, taxId: '' }), 'El RIF es obligatorio.')
-igual('sin categoría no', motivoDeAlta({ ...alta, category: '' }), 'Elige la categoría.')
-igual('un teléfono raro no', motivoDeAlta({ ...alta, phone: '555' }) !== null, true)
+igual('un alta completa pasa (sin RIF, Colegio ni MPPS)', motivoDeAlta(alta), null)
+igual('sin nombre no', motivoDeAlta({ ...alta, ownerName: ' ' }), 'Falta el nombre completo.')
+igual('sin cédula no', motivoDeAlta({ ...alta, ownerDocument: '' }), 'Falta la cédula o el pasaporte.')
+igual('un pasaporte vale', motivoDeAlta({ ...alta, ownerDocument: 'AB1234567' }), null)
+igual('un RIF mal escrito manda su motivo', motivoDeAlta({ ...alta, taxId: 'X1' }), 'RIF: Empieza por J, G, V, E o P.')
+igual('con RIF bueno pasa', motivoDeAlta({ ...alta, taxId: 'J-12345678-9' }), null)
+igual('sin especialidad no', motivoDeAlta({ ...alta, specialty: '' }), 'Falta la especialidad.')
+igual('sin consultorio no', motivoDeAlta({ ...alta, clinicName: '' }), 'Falta el nombre del consultorio o centro médico.')
+igual('sin dirección no', motivoDeAlta({ ...alta, address: '' }), 'Falta la dirección del consultorio.')
+igual('sin teléfono no', motivoDeAlta({ ...alta, phone: '' }) !== null, true)
 igual('un correo raro no', motivoDeAlta({ ...alta, email: 'demo@' }), 'El correo no parece un correo.')
-igual('el MPPS son dígitos', motivoDeAlta({ ...alta, mppsNumber: 'MP-12' }), 'El número del MPPS son solo dígitos.')
-igual('el MPPS con dígitos pasa', motivoDeAlta({ ...alta, mppsNumber: '45123' }), null)
+igual('sin banco no', motivoDeAlta({ ...alta, pagoMovilBank: '' }), 'Elige el banco del Pago Móvil.')
+igual('el Pago Móvil con RIF vale', motivoDeAlta({ ...alta, pagoMovilDocument: 'J-12345678-9' }), null)
+igual('el Pago Móvil a un fijo no', motivoDeAlta({ ...alta, pagoMovilPhone: '0212 5551234' }), 'El teléfono del Pago Móvil tiene que ser un celular: 0414 1234567.')
+igual('lo que se manda va limpio', datosDeAlta({ ...alta, email: ' Demo@Consultorio.com ' }).email, 'demo@consultorio.com')
+igual('un celular a E.164', celularAE164('0414 1234567'), '+584141234567')
+igual('un fijo no es celular', celularAE164('0212 5551234'), null)
+igual('E.164 a como se escribe', telefonoLocal('+584141234567'), '0414 1234567')
+
+// ── Las solicitudes ────────────────────────────────────────────────────────
+
+const solicitud = leerSolicitud({
+  id: 's1',
+  status: 'pending',
+  owner_name: 'Ana Pérez',
+  owner_document: 'V12345678',
+  tax_id: null,
+  specialty: 'Pediatría',
+  clinic_name: 'Consultorio Demo',
+  address: 'Av. Principal, piso 3',
+  phone: '+582125551234',
+  email: 'demo@consultorio.com',
+  pago_movil_bank: 'Banesco',
+  pago_movil_document: 'V12345678',
+  pago_movil_phone: '+584141234567',
+  created_at: '2026-10-09T12:00:00Z',
+})
+igual('la solicitud se lee pendiente', solicitud.status, 'pending')
+igual('los teléfonos vuelven como se escriben', solicitud.alta.pagoMovilPhone, '0414 1234567')
+igual('la solicitud leída es un alta válida', motivoDeAlta(solicitud.alta), null)
+igual('sin cambios no hay correcciones', correccionesDeSolicitud(solicitud.alta, solicitud.alta), null)
+igual(
+  'solo va lo que se cambió',
+  correccionesDeSolicitud(solicitud.alta, { ...solicitud.alta, clinicName: 'Consultorio Ana Pérez' }),
+  { clinic_name: 'Consultorio Ana Pérez' },
+)
 igual('un fijo a E.164', telefonoAE164('0212-5551234'), '+582125551234')
 
 // ── La cuenta de pago ──────────────────────────────────────────────────────

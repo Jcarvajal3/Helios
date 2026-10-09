@@ -3,7 +3,7 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { HeliosLogo } from '@/components/HeliosLogo'
 import { P } from '@/components/prose'
 import { Card } from '@/components/ui'
-import { enlaceAfiliacion, RESPONSABLE } from '@/config/legal'
+import { RESPONSABLE } from '@/config/legal'
 import { cabeceraPublica } from '@/config/sitio'
 
 export const Route = createFileRoute('/soporte')({
@@ -22,9 +22,8 @@ export const Route = createFileRoute('/soporte')({
  * Helios no tiene app ni cuentas de pacientes: el paciente habla con Helios
  * por WhatsApp, al número que se configura en Ajustes › Contacto (H11). Esta
  * página existirá para quien llegue desde el pie del comprobante por correo,
- * desde un centro o desde «Quiero afiliarme» de la portada mientras el
- * WhatsApp no esté publicado (`RESPONSABLE.whatsapp`). Mientras no haya
- * canal decidido, no promete ninguno.
+ * o desde un centro. Mientras no haya canal decidido, no promete ninguno; a
+ * los médicos los manda al formulario de `/afiliacion`.
  */
 function Soporte() {
   return (
@@ -44,22 +43,11 @@ function Soporte() {
               : 'Estamos preparando nuestros canales de atención. Si estás pagando una consulta en cuotas con Helios, escríbenos al WhatsApp que aparece en tu comprobante.'}
           </P>
           <P>
-            {enlaceAfiliacion().externo ? (
-              <>
-                ¿Eres médico o tienes un centro de salud?{' '}
-                <a
-                  href={enlaceAfiliacion().href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary underline-offset-4 hover:underline"
-                >
-                  Escríbenos por WhatsApp para afiliarte
-                </a>
-                .
-              </>
-            ) : (
-              '¿Eres médico o tienes un centro de salud y quieres afiliarte? Muy pronto publicaremos aquí nuestro WhatsApp de afiliaciones.'
-            )}
+            ¿Eres médico o tienes un centro de salud?{' '}
+            <Link to="/afiliacion" className="text-primary underline-offset-4 hover:underline">
+              Manda tu solicitud de afiliación
+            </Link>
+            .
           </P>
         </Card>
 

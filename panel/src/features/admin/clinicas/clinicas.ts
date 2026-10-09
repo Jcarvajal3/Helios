@@ -11,20 +11,50 @@ import { comoFila, filaONula, numeroONulo, textoONulo } from '@/lib/json'
 
 // ── El alta ────────────────────────────────────────────────────────────────
 
+/**
+ * Los datos del alta de una clínica: los del médico titular, los del
+ * consultorio y el Pago Móvil al que se le paga. Son los mismos en el alta
+ * del equipo y en la solicitud de la portada (`/afiliacion`), y la base los
+ * valida igual en los dos sitios (`helios_datos_de_alta`).
+ */
 export type AltaDeClinica = {
-  name: string
-  legalName: string
+  ownerName: string
+  ownerDocument: string
   taxId: string
-  category: string
   specialty: string
+  collegeNumber: string
   mppsNumber: string
+  clinicName: string
+  address: string
   phone: string
   email: string
-  address: string
-  city: string
+  pagoMovilBank: string
+  pagoMovilDocument: string
+  pagoMovilPhone: string
+}
+
+export const ALTA_VACIA: AltaDeClinica = {
+  ownerName: '',
+  ownerDocument: '',
+  taxId: '',
+  specialty: '',
+  collegeNumber: '',
+  mppsNumber: '',
+  clinicName: '',
+  address: '',
+  phone: '',
+  email: '',
+  pagoMovilBank: '',
+  pagoMovilDocument: '',
+  pagoMovilPhone: '',
 }
 
 const CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
+
+/** Si un texto parece un correo. */
+export function pareceCorreo(valor: string): boolean {
+  return CORREO.test(valor.trim())
+}
 
 /** Un teléfono venezolano (fijo o móvil) a E.164, o `null` si no lo parece. */
 export function telefonoAE164(valor: string): string | null {
@@ -33,18 +63,122 @@ export function telefonoAE164(valor: string): string | null {
   return /^\d{10}$/.test(nacional) ? `+58${nacional}` : null
 }
 
-/** Qué falta o está mal en el alta, o `null` si se puede crear. */
+/** Un celular venezolano (el Pago Móvil solo va a celulares) a E.164, o `null`. */
+export function celularAE164(valor: string): string | null {
+  const e164 = telefonoAE164(valor)
+  return e164 && /^\+58(412|414|416|422|424|426)\d{7}$/.test(e164) ? e164 : null
+}
+
+/** Un teléfono guardado en E.164, como se escribe en Venezuela: `0414 1234567`. */
+export function telefonoLocal(e164: string | null): string {
+  if (!e164) return ''
+  const d = e164.replace(/^\+58/, '')
+  return /^\d{10}$/.test(d) ? `0${d.slice(0, 3)} ${d.slice(3)}` : e164
+}
+
+/** Cédula (con o sin V/E) o pasaporte: de 5 a 20 letras y números. */
+export function pareceCedulaOPasaporte(valor: string): boolean {
+  return /^[A-Z0-9]{5,20}$/.test(valor.toUpperCase().replace(/[^A-Z0-9]/g, ''))
+}
+
+/** Qué falta o está mal en el alta, o `null` si se puede mandar. */
 export function motivoDeAlta(a: AltaDeClinica): string | null {
-  if (a.name.trim().length < 2) return 'Falta el nombre de la clínica.'
-  const rif = validateTaxId(a.taxId)
-  if (rif) return rif
-  if (!a.category) return 'Elige la categoría.'
-  if (a.phone.trim() !== '' && !telefonoAE164(a.phone)) return 'El teléfono no parece venezolano: 0212 5551234 o 0414 1234567.'
-  if (a.email.trim() !== '' && !CORREO.test(a.email.trim())) return 'El correo no parece un correo.'
-  if (a.mppsNumber.trim() !== '' && !/^\d{3,8}$/.test(a.mppsNumber.trim())) {
-    return 'El número del MPPS son solo dígitos.'
+  if (a.ownerName.trim().length < 3) return 'Falta el nombre completo.'
+  if (!pareceCedulaOPasaporte(a.ownerDocument)) return 'Falta la cédula o el pasaporte.'
+  if (a.taxId.trim() !== '') {
+    const rif = validateTaxId(a.taxId)
+    if (rif) return `RIF: ${rif}`
   }
+  if (!a.specialty.trim()) return 'Falta la especialidad.'
+  if (a.clinicName.trim().length < 2) return 'Falta el nombre del consultorio o centro médico.'
+  if (a.address.trim().length < 5) return 'Falta la dirección del consultorio.'
+  if (!telefonoAE164(a.phone)) return 'El teléfono no parece venezolano: 0212 5551234 o 0414 1234567.'
+  if (!pareceCorreo(a.email)) return 'El correo no parece un correo.'
+  if (!a.pagoMovilBank) return 'Elige el banco del Pago Móvil.'
+  const docPagoMovil = a.pagoMovilDocument.trim().toUpperCase().replace(/[\s.-]/g, '')
+  if (!/^([VE]?\d{6,9}|[JGP]\d{8,9})$/.test(docPagoMovil)) {
+    return 'La cédula o el RIF del Pago Móvil: V12345678 o J123456789.'
+  }
+  if (!celularAE164(a.pagoMovilPhone)) return 'El teléfono del Pago Móvil tiene que ser un celular: 0414 1234567.'
   return null
+}
+
+/** Lo que se manda a la base: el `p` de `admin_create_clinic` y de la solicitud. */
+export function datosDeAlta(a: AltaDeClinica): Record<string, string> {
+  return {
+    owner_name: a.ownerName.trim(),
+    owner_document: a.ownerDocument.trim(),
+    tax_id: a.taxId.trim(),
+    specialty: a.specialty.trim(),
+    college_number: a.collegeNumber.trim(),
+    mpps_number: a.mppsNumber.trim(),
+    clinic_name: a.clinicName.trim(),
+    address: a.address.trim(),
+    phone: a.phone.trim(),
+    email: a.email.trim().toLowerCase(),
+    pago_movil_bank: a.pagoMovilBank,
+    pago_movil_document: a.pagoMovilDocument.trim(),
+    pago_movil_phone: a.pagoMovilPhone.trim(),
+  }
+}
+
+// ── Las solicitudes de afiliación ──────────────────────────────────────────
+
+export type EstadoSolicitud = 'pending' | 'approved' | 'rejected'
+
+export type SolicitudDeAfiliacion = {
+  id: string
+  status: EstadoSolicitud
+  /** Los datos tal cual los mandó el médico (ya normalizados por la base). */
+  alta: AltaDeClinica
+  createdAt: string
+  merchantId: string | null
+  reviewedAt: string | null
+  reviewedByName: string | null
+  rejectReason: string | null
+}
+
+/** Una fila de `admin_merchant_applications`. */
+export function leerSolicitud(raw: unknown): SolicitudDeAfiliacion {
+  const r = comoFila(raw)
+  const t = (v: unknown) => textoONulo(v) ?? ''
+  const estado = textoONulo(r.status)
+  return {
+    id: t(r.id),
+    status: estado === 'approved' || estado === 'rejected' ? estado : 'pending',
+    alta: {
+      ownerName: t(r.owner_name),
+      ownerDocument: t(r.owner_document),
+      taxId: t(r.tax_id),
+      specialty: t(r.specialty),
+      collegeNumber: t(r.college_number),
+      mppsNumber: t(r.mpps_number),
+      clinicName: t(r.clinic_name),
+      address: t(r.address),
+      // La base los guarda en E.164; el formulario los enseña como se escriben.
+      phone: telefonoLocal(textoONulo(r.phone)),
+      email: t(r.email),
+      pagoMovilBank: t(r.pago_movil_bank),
+      pagoMovilDocument: t(r.pago_movil_document),
+      pagoMovilPhone: telefonoLocal(textoONulo(r.pago_movil_phone)),
+    },
+    createdAt: t(r.created_at),
+    merchantId: textoONulo(r.merchant_id),
+    reviewedAt: textoONulo(r.reviewed_at),
+    reviewedByName: textoONulo(r.reviewed_by_name),
+    rejectReason: textoONulo(r.reject_reason),
+  }
+}
+
+/**
+ * Lo que el equipo cambió de una solicitud antes de aprobarla: solo esas
+ * claves van a `admin_approve_merchant_application`. Sin cambios, `null`.
+ */
+export function correccionesDeSolicitud(antes: AltaDeClinica, despues: AltaDeClinica): Record<string, string> | null {
+  const a = datosDeAlta(antes)
+  const d = datosDeAlta(despues)
+  const cambios = Object.fromEntries(Object.entries(d).filter(([k, v]) => a[k] !== v))
+  return Object.keys(cambios).length > 0 ? cambios : null
 }
 
 // ── La cuenta de pago de la clínica ────────────────────────────────────────

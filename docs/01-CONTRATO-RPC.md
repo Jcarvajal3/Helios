@@ -504,6 +504,42 @@ Implementado en 20261003000700 y 000800. Precisiones:
 
 ### 2.5 Clínicas
 
+**El alta y la solicitud de afiliación (20261009000200).** El alta pide los
+datos del médico titular, del consultorio y su Pago Móvil; el médico manda los
+mismos desde la portada (`/afiliacion`) y quedan pendientes hasta que un super
+admin los aprueba. `p` (jsonb) lleva siempre las mismas claves, validadas por
+`helios_datos_de_alta` (errores `22023` legibles para el médico):
+`owner_name`, `owner_document` (cédula o pasaporte), `tax_id` (opcional),
+`specialty`, `college_number` (opcional), `mpps_number` (opcional),
+`clinic_name`, `address`, `phone` (VE, E.164), `email`, `pago_movil_bank`,
+`pago_movil_document` (cédula o RIF), `pago_movil_phone` (celular VE).
+
+- `admin_create_clinic(p jsonb) → {merchant_id}`: super admin. Crea la
+  clínica (categoría sacada de la especialidad: odontología, cosmetología o
+  consultorio), su cuenta de Pago Móvil (titular: el médico si va con cédula,
+  la clínica si va con RIF) y las dos líneas de bitácora (`merchant.created`,
+  `merchant.payout_account_set`). El RIF ya no es obligatorio; si viene, sigue
+  siendo único (`23505`).
+- `helios_solicitar_afiliacion(p jsonb) → {ok}`: **anon**. `p.sitio_web`
+  relleno (campo trampa) contesta ok sin guardar. Frenos: una pendiente por
+  cédula, correo o teléfono (`23505`); 5 al día por IP y 60 por hora en total
+  (`54000`). Guarda en `merchant_applications` (RLS sin lecturas directas).
+- `admin_merchant_applications(p_status text default 'pending') → jsonb[]`
+  (equipo; `null` = todas): las claves de `p` más `id`, `status`,
+  `created_at`, `merchant_id`, `reviewed_at`, `reviewed_by_name`,
+  `reject_reason`.
+- `admin_approve_merchant_application(p_id uuid, p jsonb default null) →
+  {merchant_id}`: super admin. `p` = lo que el equipo corrigió (se mezcla con
+  la solicitud). Bitácora `merchant_application.approved` (target: la clínica).
+- `admin_reject_merchant_application(p_id uuid, p_reason text)`: super admin,
+  motivo obligatorio. Bitácora `merchant_application.rejected` (target: la
+  solicitud). Una solicitud revisada no se vuelve a revisar (`22023`).
+- `admin_set_merchant_owner(p_merchant_id uuid, p jsonb)`: super admin;
+  `owner_name`, `owner_document`, `college_number` (null = no tocar, '' =
+  borrar; el nombre vacío no se toca). Bitácora `merchant.set_owner`.
+- `admin_merchant_detail.profile` añade `owner_name`, `owner_document`,
+  `college_number`.
+
 - `admin_create_merchant(...)` (heredada) añade `p_specialty`, `p_mpps_number`,
   `p_phone`, `p_email` y `p_address`. `p_category` usa los valores nuevos
   `clinica | consultorio | odontologia | laboratorio | imagenes | otros`

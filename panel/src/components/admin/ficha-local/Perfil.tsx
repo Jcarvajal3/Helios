@@ -5,7 +5,9 @@ import { LogoPicker } from '@/components/LogoPicker'
 import { useToast } from '@/components/Toast'
 import { Button, Card, Chip, ErrorBox, Input, Seccion } from '@/components/ui'
 import { CATEGORIAS_CLINICA, MERCHANT_CATEGORY_LABEL, cambiosDeDatos, setMerchantProfile } from '@/features/admin/api'
-import type { DatosDeLaClinica, MerchantCategory, MerchantProfile } from '@/features/admin/api'
+import type { DatosDeLaClinica, MerchantCategory, MerchantProfile, TitularDeLaClinica } from '@/features/admin/api'
+import { guardarTitular } from '@/features/admin/clinicas/api'
+import { pareceCedulaOPasaporte, pareceCorreo } from '@/features/admin/clinicas/clinicas'
 import { validateTaxId } from '@/features/admin/merchantProfile'
 import { SOLO_SUPER_ADMIN, useIsSuperAdmin } from '@/features/admin/role'
 import { describeError } from '@/lib/supabase'
@@ -23,11 +25,13 @@ export function Perfil({
   merchantId,
   initial,
   datos,
+  titular,
   onDone,
 }: {
   merchantId: string
   initial: MerchantProfile
   datos: DatosDeLaClinica
+  titular: TitularDeLaClinica
   onDone: () => void
 }) {
   const avisar = useToast()
@@ -61,7 +65,7 @@ export function Perfil({
     address,
   })
   const datosCambiados = Object.values(cambios).some((v) => v !== null)
-  const correoInvalido = email.trim() !== '' && !/^[^s@]+@[^s@]+.[^s@]{2,}$/.test(email.trim())
+  const correoInvalido = email.trim() !== '' && !pareceCorreo(email)
 
   const dirty =
     profile.category !== initial.category ||
@@ -86,6 +90,8 @@ export function Perfil({
 
   return (
     <div className="flex flex-col gap-shell-gap-block">
+      <Titular merchantId={merchantId} titular={titular} onDone={onDone} />
+
       <Seccion
         titulo="Datos de la clínica"
         info="Especialidad, registro del MPPS y cómo contactarla. Salen en el comprobante del paciente. Dejar un campo vacío lo borra."
@@ -93,7 +99,7 @@ export function Perfil({
         <Card>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Input id={`specialty-${merchantId}`} label="Especialidad" value={specialty} onChange={setSpecialty} placeholder="Medicina interna" />
-            <Input id={`mpps-${merchantId}`} label="Número del MPPS (opcional)" value={mpps} onChange={setMpps} placeholder="12345" />
+            <Input id={`mpps-${merchantId}`} label="Matrícula o MPPS (opcional)" value={mpps} onChange={setMpps} placeholder="12345" />
             <Input id={`phone-${merchantId}`} label="Teléfono" value={phone} onChange={setPhone} inputMode="tel" placeholder="0212 1234567" />
             <div>
               <Input id={`email-${merchantId}`} label="Correo" value={email} onChange={setEmail} placeholder="recepcion@clinica.com" />
@@ -151,3 +157,78 @@ export function Perfil({
   )
 }
 
+
+/**
+ * El médico titular: su nombre, su cédula o pasaporte y su número de Colegio.
+ * Se guardan aparte del perfil (`admin_set_merchant_owner`). El nombre no se
+ * puede dejar vacío; el Colegio sí.
+ */
+function Titular({
+  merchantId,
+  titular,
+  onDone,
+}: {
+  merchantId: string
+  titular: TitularDeLaClinica
+  onDone: () => void
+}) {
+  const avisar = useToast()
+  const isSuperAdmin = useIsSuperAdmin()
+
+  const [nombre, setNombre] = useState(titular.ownerName ?? '')
+  const [documento, setDocumento] = useState(titular.ownerDocument ?? '')
+  const [colegio, setColegio] = useState(titular.collegeNumber ?? '')
+
+  /** `null` = no tocar; `''` = borrar. */
+  const cambio = (antes: string | null, ahora: string) => (ahora.trim() === (antes ?? '').trim() ? null : ahora.trim())
+  const cambios = {
+    owner_name: cambio(titular.ownerName, nombre),
+    owner_document: cambio(titular.ownerDocument, documento),
+    college_number: cambio(titular.collegeNumber, colegio),
+  }
+  const dirty = Object.values(cambios).some((v) => v !== null)
+
+  const mutation = useMutation({
+    mutationFn: () => guardarTitular({ merchantId, cambios }),
+    onSuccess: () => {
+      avisar('Titular guardado')
+      onDone()
+    },
+  })
+
+  const bloqueo = !isSuperAdmin
+    ? SOLO_SUPER_ADMIN
+    : !dirty
+      ? 'No has cambiado nada.'
+      : nombre.trim().length < 3
+        ? 'Falta el nombre completo del titular.'
+        : documento.trim() !== '' && !pareceCedulaOPasaporte(documento)
+          ? 'La cédula o el pasaporte no parecen válidos.'
+          : undefined
+
+  return (
+    <Seccion titulo="Médico titular" info="Quién está detrás de la clínica: su nombre, su cédula o pasaporte y su número de Colegio o Federación.">
+      <Card className="flex flex-col gap-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Input id={`owner-name-${merchantId}`} label="Nombre completo" value={nombre} onChange={setNombre} placeholder="Ana María Pérez" />
+          <Input id={`owner-doc-${merchantId}`} label="Cédula o pasaporte" value={documento} onChange={setDocumento} placeholder="V12345678" />
+          <Input id={`college-${merchantId}`} label="N.º de Colegio o Federación (opcional)" value={colegio} onChange={setColegio} placeholder="12345" />
+        </div>
+
+        {mutation.isError && <ErrorBox title="No se pudo guardar el titular" detail={describeError(mutation.error)} />}
+
+        <div>
+          <Button
+            size="md"
+            variant="tonal"
+            disabled={!!bloqueo || mutation.isPending}
+            motivoApagado={mutation.isPending ? undefined : bloqueo}
+            onClick={() => mutation.mutate()}
+          >
+            {mutation.isPending ? 'Guardando…' : 'Guardar el titular'}
+          </Button>
+        </div>
+      </Card>
+    </Seccion>
+  )
+}

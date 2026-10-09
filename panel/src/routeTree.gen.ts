@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ComercioRouteImport } from './routes/_comercio'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as AfiliacionRouteImport } from './routes/afiliacion'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
@@ -57,6 +58,11 @@ const ComercioRoute = ComercioRouteImport.update({
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AfiliacionRoute = AfiliacionRouteImport.update({
+  id: '/afiliacion',
+  path: '/afiliacion',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -225,6 +231,7 @@ const AdminPagosClinicasPagoIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/afiliacion': typeof AfiliacionRoute
   '/login': typeof LoginRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -260,6 +267,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/afiliacion': typeof AfiliacionRoute
   '/login': typeof LoginRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -298,6 +306,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_comercio': typeof ComercioRouteWithChildren
   '/admin': typeof AdminRouteWithChildren
+  '/afiliacion': typeof AfiliacionRoute
   '/login': typeof LoginRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -336,6 +345,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/afiliacion'
     | '/login'
     | '/robots.txt'
     | '/sitemap.xml'
@@ -371,6 +381,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/afiliacion'
     | '/login'
     | '/robots.txt'
     | '/sitemap.xml'
@@ -408,6 +419,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_comercio'
     | '/admin'
+    | '/afiliacion'
     | '/login'
     | '/robots.txt'
     | '/sitemap.xml'
@@ -446,6 +458,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ComercioRoute: typeof ComercioRouteWithChildren
   AdminRoute: typeof AdminRouteWithChildren
+  AfiliacionRoute: typeof AfiliacionRoute
   LoginRoute: typeof LoginRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
@@ -475,6 +488,13 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/afiliacion': {
+      id: '/afiliacion'
+      path: '/afiliacion'
+      fullPath: '/afiliacion'
+      preLoaderRoute: typeof AfiliacionRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -778,6 +798,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ComercioRoute: ComercioRouteWithChildren,
   AdminRoute: AdminRouteWithChildren,
+  AfiliacionRoute: AfiliacionRoute,
   LoginRoute: LoginRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,

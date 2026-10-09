@@ -441,40 +441,6 @@ export async function fetchMerchants(): Promise<MerchantRow[]> {
   }))
 }
 
-export async function createMerchant(params: {
-  name: string
-  /** Obligatorio desde 2026-08-25. La base lo exige igual. */
-  taxId: string
-  legalName?: string
-  category?: MerchantCategory
-  city?: string
-  logoUrl?: string
-  /** Los de Helios (contrato §2.5). */
-  specialty?: string
-  mppsNumber?: string
-  phone?: string
-  email?: string
-  address?: string
-}): Promise<void> {
-  const { error } = await supabase.rpc('admin_create_merchant', {
-    p_name: params.name,
-    p_legal_name: params.legalName ?? null,
-    p_tax_id: params.taxId,
-    p_category: params.category ?? null,
-    p_city: params.city ?? null,
-    // Helios no tiene app: sin usuario en redes ni red social.
-    p_handle: null,
-    p_logo_url: params.logoUrl ?? null,
-    p_social_url: null,
-    p_specialty: params.specialty ?? null,
-    p_mpps_number: params.mppsNumber ?? null,
-    p_phone: params.phone ?? null,
-    p_email: params.email ?? null,
-    p_address: params.address ?? null,
-  })
-  if (error) throw error
-}
-
 // El alta y la baja de personal viven en `features/merchant/staff.ts`: las
 // hacen el equipo de Ronda Y el gerente del local, así que no son del cliente
 // de admin.
@@ -1184,9 +1150,17 @@ export type DatosDeLaClinica = {
   address: string | null
 }
 
+/** El médico titular de la clínica (`admin_set_merchant_owner`). */
+export type TitularDeLaClinica = {
+  ownerName: string | null
+  ownerDocument: string | null
+  collegeNumber: string | null
+}
+
 export type MerchantDetail = {
   profile: MerchantProfile
   datos: DatosDeLaClinica
+  titular: TitularDeLaClinica
   terms: MerchantTerms
   staff: MerchantStaff[]
   /** Lo devengado y todavía sin transferir. Cerrar un comercio con esto por
@@ -1216,6 +1190,11 @@ export async function fetchMerchantDetail(merchantId: string): Promise<MerchantD
       phone: textoONulo(raw.profile.phone),
       email: textoONulo(raw.profile.email),
       address: textoONulo(raw.profile.address),
+    },
+    titular: {
+      ownerName: textoONulo(raw.profile.owner_name),
+      ownerDocument: textoONulo(raw.profile.owner_document),
+      collegeNumber: textoONulo(raw.profile.college_number),
     },
     terms: {
       upfrontPct: Number(raw.terms.upfront_pct),

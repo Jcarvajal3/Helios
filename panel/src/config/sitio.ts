@@ -33,7 +33,7 @@ export const IMAGEN_COMPARTIR = {
 }
 
 /** Las páginas que se le ofrecen al buscador (`/sitemap.xml`). */
-export const PAGINAS_PUBLICAS = ['/', '/soporte', '/legal/terminos', '/legal/privacidad'] as const
+export const PAGINAS_PUBLICAS = ['/', '/afiliacion', '/soporte', '/legal/terminos', '/legal/privacidad'] as const
 
 export function urlAbsoluta(ruta: string): string {
   return `${SITIO_URL}${ruta === '/' ? '/' : ruta}`

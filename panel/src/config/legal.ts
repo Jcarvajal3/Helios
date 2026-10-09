@@ -21,10 +21,10 @@ type DatosResponsable = {
   soporte: string
   /**
    * El WhatsApp de Helios, solo dígitos con el código de país
-   * (p. ej. `584141234567`): el botón «Quiero afiliarme» abre una
-   * conversación con él. Es el mismo número del bot y de los pacientes
+   * (p. ej. `584141234567`). Es el mismo número del bot y de los pacientes
    * (360dialog con coexistencia, plan §15). Vacío mientras no esté
-   * publicado: el botón lleva a `/soporte`.
+   * publicado. «Quiero afiliarme» no lleva aquí: lleva al formulario de
+   * `/afiliacion` (2026-10-09).
    */
   whatsapp: string
 }
@@ -41,18 +41,4 @@ export function operador(): string {
   return RESPONSABLE.rif
     ? `${RESPONSABLE.razonSocial} (RIF ${RESPONSABLE.rif})`
     : RESPONSABLE.razonSocial
-}
-
-/**
- * A dónde lleva «Quiero afiliarme»: el WhatsApp de Helios con el mensaje ya
- * escrito, o la página de soporte mientras el número no esté publicado.
- */
-export function enlaceAfiliacion(): { href: string; externo: boolean } {
-  const numero = RESPONSABLE.whatsapp.replace(/\D/g, '')
-  if (!numero) return { href: '/soporte', externo: false }
-  const texto = 'Hola, quiero afiliarme a Helios para ofrecer pagos en cuotas a mis pacientes.'
-  return {
-    href: `https://wa.me/${numero}?text=${encodeURIComponent(texto)}`,
-    externo: true,
-  }
 }
