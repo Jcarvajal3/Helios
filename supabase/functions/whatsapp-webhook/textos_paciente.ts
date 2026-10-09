@@ -192,7 +192,7 @@ export function mensajePagar(r: ResumenDelPaciente): string {
   )
 }
 
-/** «Mis pagos en cuotas»: los activos, lo pendiente de cada uno y el saldo. */
+/** «Mis pagos en cuotas»: los activos, lo pendiente de cada uno y el total pendiente. */
 export function mensajeFinanciamientos(r: ResumenDelPaciente): string {
   if (r.financiamientos.length === 0) {
     return `No tienes pagos en cuotas activos${hola(r.nombre)}. 💙`
@@ -204,13 +204,13 @@ export function mensajeFinanciamientos(r: ResumenDelPaciente): string {
       const cargo = c.cargo_atraso > 0 ? ` + cargo ${dinero(c.cargo_atraso)}` : ''
       return `* ${dineroEn(c.monto, m)}${cargo} — ${fechaLarga(c.due_date)}${c.vencida ? ' ⚠️ vencida' : ''}`
     })
-    return `🩺 #${f.orden} · ${f.clinica} (consulta ${dineroEn(f.consulta, m)})\n${cuotas.join('\n')}\nSaldo: ${enSusMonedas(saldo)}`
+    return `🩺 #${f.orden} · ${f.clinica} (consulta ${dineroEn(f.consulta, m)})\n${cuotas.join('\n')}\nTotal pendiente: ${enSusMonedas(saldo)}`
   })
   const saldoTotal = porMoneda(r.financiamientos.flatMap((f) => f.cuotas.map((c) => ({ f, c }))))
   const bs = bolivaresDeHoy(r, saldoTotal)
   return (
     `📋 Tus pagos en cuotas activos:\n\n${bloques.join('\n\n')}` +
-    (r.financiamientos.length > 1 ? `\n\nSaldo total: ${enSusMonedas(saldoTotal)}` : '') +
+    (r.financiamientos.length > 1 ? `\n\nTotal pendiente de todos: ${enSusMonedas(saldoTotal)}` : '') +
     (bs !== null && bs > 0 ? `\nEn bolívares hoy: ${bolivares(bs)}.` : '') +
     (r.pago_en_revision ? '\n\nTienes un pago en revisión: aún no aparece descontado.' : '')
   )

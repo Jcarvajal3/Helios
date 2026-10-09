@@ -129,7 +129,7 @@ export async function atenderAlPaciente({
 
   const quierePagar = boton === 'paciente:pagar' || ['pagar', 'pagar cuota'].includes(n)
   const quiereVer =
-    boton === 'paciente:financiamientos' || ['mis pagos en cuotas', 'pagos en cuotas', 'mis pagos', 'ver financiamientos', 'financiamientos', 'saldo'].includes(n)
+    boton === 'paciente:financiamientos' || ['mis pagos en cuotas', 'pagos en cuotas', 'mis pagos', 'ver financiamientos', 'financiamientos', 'saldo', 'total pendiente'].includes(n)
   if (quierePagar || quiereVer) {
     const r = await rpc<ResumenDelPaciente>('bot_paciente_resumen', { p_profile_id: perfil.id })
     await guardar({ humano: 0 })

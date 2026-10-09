@@ -97,8 +97,8 @@ const ver = mensajeFinanciamientos(base)
 comprueba(
   ver.includes('🩺 #1718 · Clínica Test (consulta $100)') &&
     ver.includes('* $56,96 — 19/10/2026') &&
-    ver.includes('Saldo: $113,92') &&
-    !ver.includes('Saldo total'),
+    ver.includes('Total pendiente: $113,92') &&
+    !ver.includes('Total pendiente de todos') && !ver.includes('Saldo'),
   'un pago en cuotas con su saldo',
   ver,
 )
@@ -109,7 +109,7 @@ const dos = mensajeFinanciamientos({
     { orden: 1720, clinica: 'Otra', consulta: 50, cuotas: [{ sequence: 2, due_date: '2026-10-20', monto: 28.48, cargo_atraso: 0, vencida: false }] },
   ],
 })
-comprueba(dos.includes('Saldo total: $142,40'), 'con dos, el saldo total', dos)
+comprueba(dos.includes('Total pendiente de todos: $142,40'), 'con dos, el saldo total', dos)
 comprueba(mensajeFinanciamientos({ ...base, financiamientos: [] }).startsWith('No tienes pagos en cuotas activos'), 'sin activos')
 comprueba(ver.startsWith('📋 Tus pagos en cuotas activos:'), 'el título de la lista', ver)
 comprueba(fechaLarga('2026-10-12') === '12/10/2026', 'fecha larga')
@@ -168,16 +168,16 @@ comprueba(
 
 const verEur = mensajeFinanciamientos(enEuros)
 comprueba(
-  verEur.includes('🩺 #1801 · Clínica Euro (consulta €100)') && verEur.includes('* €56,96 — 21/10/2026') && verEur.includes('Saldo: €113,92'),
+  verEur.includes('🩺 #1801 · Clínica Euro (consulta €100)') && verEur.includes('* €56,96 — 21/10/2026') && verEur.includes('Total pendiente: €113,92'),
   'mis pagos en cuotas, en euros',
   verEur,
 )
 const mezcla = mensajeFinanciamientos({ ...enEuros, financiamientos: [...base.financiamientos, ...enEuros.financiamientos] })
 // 113,92 × 184,52 + 113,92 × 215,30 = 21.020,5184 + 24.526,976 = 45.547,4944
 comprueba(
-  mezcla.includes('Saldo: $113,92') &&
-    mezcla.includes('Saldo: €113,92') &&
-    mezcla.includes('Saldo total: $113,92 + €113,92') &&
+  mezcla.includes('Total pendiente: $113,92') &&
+    mezcla.includes('Total pendiente: €113,92') &&
+    mezcla.includes('Total pendiente de todos: $113,92 + €113,92') &&
     mezcla.includes('En bolívares hoy: Bs 45.547,49.'),
   'una en dólares y otra en euros: no se suman entre sí',
   mezcla,

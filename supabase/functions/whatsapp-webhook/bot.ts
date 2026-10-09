@@ -389,8 +389,9 @@ export async function atenderAlPersonal({
       const enEur = usdPorEur && limite > 0 ? ` (${dineroEn(enEuros(limite, usdPorEur), 'EUR')} si la cobras en euros)` : ''
       await enviar(
         `${cedula} es un paciente nuevo. Tiene disponible para pagar en cuotas hasta ${dinero(limite)}${enEur}.\n\n` +
-          'Envíame sus datos en un solo mensaje: copia el formulario del siguiente mensaje, llénalo y envíamelo. ' +
-          'También puedes mandarme solo las respuestas, una por línea y en el mismo orden.',
+          'Envíame sus datos en un solo mensaje. En el siguiente te dejo las preguntas. ' +
+          '*No hace falta copiarlas*: puedes responder solo con los datos, uno por línea y en el mismo orden. ' +
+          'Si prefieres, cópialas y llénalas.',
       )
       // Aparte, para que se copie de un toque.
       await enviar(FORMULARIO)
@@ -431,7 +432,7 @@ export async function atenderAlPersonal({
         const cuantas = completo ? `de ${MINIMO_DEL_FORMULARIO} a ${pidiendo.length}` : String(pidiendo.length)
         await enviar(
           `No pude leer los datos: espero ${cuantas} respuestas, una por línea y en el orden de las preguntas. ` +
-            'Copia el formulario del siguiente mensaje, llénalo y envíamelo.',
+            'No hace falta copiar las preguntas del siguiente mensaje: basta con los datos, uno por línea y en ese orden.',
         )
         await enviar(completo ? FORMULARIO : formularioDe(pidiendo))
         return { paso: 'datos', leido: false }
@@ -452,8 +453,8 @@ export async function atenderAlPersonal({
       const pidiendo = faltantesClaves(paciente)
       await guardar('datos', { ...nuevo, pidiendo })
       await enviar(
-        'Me falta lo del siguiente mensaje: cópialo, llénalo y envíamelo. ' +
-          'O mándame solo las respuestas, una por línea y en ese orden.',
+        'Me falta lo del siguiente mensaje. No hace falta copiar las preguntas: ' +
+          'envíame solo los datos, uno por línea y en ese orden.',
       )
       await enviar(formularioDe(pidiendo))
       return { paso: 'datos', falta }
