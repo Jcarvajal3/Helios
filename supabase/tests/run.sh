@@ -69,6 +69,7 @@ SUITES=(
   moneda_smoke
   sin_mora_smoke
   afiliacion_smoke
+  bienvenida_personal_smoke
 )
 if [ "$#" -gt 0 ]; then SUITES=("$@"); fi
 

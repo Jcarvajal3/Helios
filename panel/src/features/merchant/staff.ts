@@ -54,8 +54,8 @@ export async function addStaff(params: {
   password: string
   fullName: string
   role: MerchantRole
-}): Promise<void> {
-  const { error } = await supabase.rpc('merchant_staff_add', {
+}): Promise<string> {
+  const { data, error } = await supabase.rpc('merchant_staff_add', {
     p_merchant_id: params.merchantId,
     p_email: params.email.trim(),
     p_password: params.password,
@@ -64,6 +64,31 @@ export async function addStaff(params: {
     p_branch_id: null,
   })
   if (error) throw error
+  return String((data as { user_id: unknown }).user_id)
+}
+
+/** Cómo le fue al correo de bienvenida. */
+export type ResultadoBienvenida = { status: 'enviado' | 'sin_configurar' | 'fallido'; error: string | null }
+
+/**
+ * El correo de bienvenida con los datos de acceso (y cómo usar el bot), con
+ * copia oculta a Helios. La base comprueba que la contraseña sea la de la
+ * cuenta y no la guarda. No lanza si el correo no sale: lo dice el resultado.
+ */
+export async function enviarBienvenida(params: {
+  merchantId: string
+  userId: string
+  password: string
+}): Promise<ResultadoBienvenida> {
+  const { data, error } = await supabase.rpc('merchant_staff_send_welcome', {
+    p_merchant_id: params.merchantId,
+    p_user_id: params.userId,
+    p_password: params.password,
+  })
+  if (error) throw error
+  const r = data as { status?: string; error?: string | null }
+  const status = r.status === 'enviado' || r.status === 'sin_configurar' ? r.status : 'fallido'
+  return { status, error: r.error ?? null }
 }
 
 /** Nombre y rol. La sucursal la resuelve el servidor según el rol. */

@@ -18,7 +18,6 @@ import type { VentanaLocal } from './Cifras'
 import { Condiciones } from './Condiciones'
 import { useEstadoDelLocal } from './Estado'
 import { Perfil } from './Perfil'
-import { WhatsAppDelBot } from './WhatsAppDelBot'
 
 export { VENTANAS_LOCAL } from './Cifras'
 export type { VentanaLocal } from './Cifras'
@@ -182,15 +181,11 @@ function FichaLocal({
 
         {tab === 'cuenta' && <CuentaDePago merchantId={merchantId} />}
 
-        {/* La misma pantalla que ve el gerente en el panel de su local.
-            Quién puede hacer qué lo decide el servidor, no desde dónde se
-            abre. */}
-        {tab === 'personal' && (
-          <div className="flex flex-col gap-8">
-            <PersonalDelLocal merchantId={merchantId} />
-            <WhatsAppDelBot merchantId={merchantId} />
-          </div>
-        )}
+        {/* La misma pantalla que ve el gerente en el panel de su local, más
+            el acceso al bot dentro de cada tarjeta (`conBot`), que es cosa
+            del equipo de Helios. Quién puede hacer qué lo decide el servidor,
+            no desde dónde se abre. */}
+        {tab === 'personal' && <PersonalDelLocal merchantId={merchantId} conBot />}
 
         {tab === 'alertas' && <AlertasDeLaClinica merchantId={merchantId} />}
       </MarcoDeFicha>

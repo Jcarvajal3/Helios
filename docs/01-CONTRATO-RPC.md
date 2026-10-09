@@ -570,6 +570,17 @@ admin los aprueba. `p` (jsonb) lleva siempre las mismas claves, validadas por
   su fila directamente en `merchant_payout_accounts` (RLS).
 - `merchant_staff_add` / `merchant_staff_update`: el rol `inventario` se
   rechaza (`22023`).
+- `merchant_staff_send_welcome(p_merchant_id uuid, p_user_id uuid, p_password text) →
+  {status: 'enviado' | 'sin_configurar' | 'fallido', error}` (20261009000300):
+  quien gestiona el personal (equipo o gerente), justo después de
+  `merchant_staff_add` (y de `admin_set_staff_whatsapp` si lleva bot, para que
+  el correo diga su número). Manda al momento por Resend el correo de
+  bienvenida (enlace del panel, correo, contraseña y cómo usar el bot), con
+  copia oculta a `platform_contact.staff_welcome_copy`
+  (`javier@conhelios.com`). La contraseña tiene que ser la de la cuenta
+  (`22023` si no) y no se guarda: no pasa por `outbound_messages`. Bitácora
+  `merchant.staff_welcome_sent` sin la contraseña. No lanza si el correo no
+  sale.
 - `admin_set_settlement_terms(...)` (heredada) añade
   `p_staff_commission_usd numeric default null`. `null` significa que usa el
   parámetro global.
