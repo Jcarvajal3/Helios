@@ -4,7 +4,9 @@
  *   npx tsx supabase/functions/whatsapp-webhook/datos.test.ts
  */
 import {
+  CAMPOS_DEL_FORMULARIO,
   FORMULARIO,
+  MINIMO_DEL_FORMULARIO,
   bolivares,
   diaCorto,
   dinero,
@@ -12,6 +14,8 @@ import {
   enEuros,
   enPlural,
   faltantes,
+  faltantesClaves,
+  formularioDe,
   leerMoneda,
   monedaDe,
   nombreDeLaMoneda,
@@ -21,11 +25,10 @@ import {
   leerFormulario,
   leerMonto,
   leerMontoYConcepto,
+  leerPorPosicion,
   montoEs,
-  lecturaDeLaIA,
   normalizarFecha,
   normalizarSexo,
-  textoDeLaInteraccion,
 } from './datos.ts'
 
 let fallos = 0
@@ -174,43 +177,83 @@ comprueba(montoEs(1250.5) === '1.250,50' && montoEs(1234567) === '1.234.567' && 
 comprueba(diaCorto('2026-10-12') === 'lun 12/10', 'día corto', diaCorto('2026-10-12'))
 comprueba(horaCaracas('2026-10-05T20:40:00Z') === '16:40', 'hora de Caracas', horaCaracas('2026-10-05T20:40:00Z'))
 
-console.log('\nLo que devuelve la IA')
-const json = '{"first_name":"Ana","birth_date":"12/04/1990","sex":"mujer","email":"Ana@X.com","monto":80,"concepto":"Consulta","atendido":null,"phone":null}'
-comprueba(textoDeLaInteraccion({ status: 'completed', output_text: json }) === json, 'output_text')
+console.log('\nLa referencia personal')
+comprueba(FORMULARIO.includes('Referencia personal (nombre):'), 'el formulario dice «Referencia personal (nombre)»')
+comprueba(!FORMULARIO.includes('Referencia (nombre)'), 'ya no dice «Referencia (nombre)»')
 comprueba(
-  textoDeLaInteraccion({ status: 'completed', steps: [{ type: 'model_output', content: [{ type: 'text', text: json }] }] }) === json,
-  'el texto dentro de steps',
+  leerFormulario('Nombres: Ana\nApellidos: Ruiz\nReferencia personal (nombre): Luis Ruiz').paciente.reference_name === 'Luis Ruiz',
+  'lee la etiqueta nueva',
 )
-comprueba(textoDeLaInteraccion({ status: 'failed', output_text: json }) === null, 'una interacción que no terminó: null')
-comprueba(textoDeLaInteraccion(null) === null && textoDeLaInteraccion({ steps: [] }) === null, 'sin texto: null')
+comprueba(l.paciente.reference_name === 'María Pérez', 'y la vieja («Referencia (nombre)») sigue valiendo')
+comprueba(faltantes({}).includes('Referencia personal (nombre)'), 'lo que falta usa la etiqueta nueva')
 
-const ia = lecturaDeLaIA(JSON.parse(json))
+console.log('\nSolo las respuestas, en orden')
+const TODAS = CAMPOS_DEL_FORMULARIO.map(([k]) => k)
+const respuestas = `José Luis
+Pérez Gómez
+12/04/1990
+M
+0414-123.45.67
+Jose@Gmail.com
+Miranda
+Los Palos Grandes, calle 3
+María Pérez
+0212-555.12.34
+Madre
+80,50
+euros
+Consulta + eco`
+const r = leerPorPosicion(respuestas, TODAS, MINIMO_DEL_FORMULARIO)
 comprueba(
-  ia !== null &&
-    ia.paciente.first_name === 'Ana' &&
-    ia.paciente.birth_date === '1990-04-12' &&
-    ia.paciente.sex === 'F' &&
-    ia.paciente.email === 'ana@x.com' &&
-    ia.paciente.phone === undefined &&
-    ia.monto === 80 &&
-    ia.concepto === 'Consulta' &&
-    ia.atendido === null,
-  'convierte y normaliza como el formulario',
-  JSON.stringify(ia),
+  r !== null &&
+    r.paciente.first_name === 'José Luis' &&
+    r.paciente.birth_date === '1990-04-12' &&
+    r.paciente.sex === 'M' &&
+    r.paciente.email === 'jose@gmail.com' &&
+    r.paciente.reference_name === 'María Pérez' &&
+    r.paciente.reference_relationship === 'Madre' &&
+    r.monto === 80.5 &&
+    r.moneda === 'EUR' &&
+    r.concepto === 'Consulta + eco',
+  'las 14 respuestas, cada una en su campo',
+  JSON.stringify(r),
+)
+comprueba(r !== null && faltantes(r.paciente).length === 0, 'no falta nada')
+
+const sinMonto = leerPorPosicion(respuestas.split('\n').slice(0, 11).join('\n'), TODAS, MINIMO_DEL_FORMULARIO)
+comprueba(
+  sinMonto !== null && faltantes(sinMonto.paciente).length === 0 && sinMonto.monto === null && sinMonto.moneda === null,
+  'las 11 obligatorias sin monto: vale (el monto se pide después)',
 )
 comprueba(
-  lecturaDeLaIA({ first_name: 'Ana', clave_rara: 'x', monto: -5 })?.monto === null &&
-    !('clave_rara' in (lecturaDeLaIA({ clave_rara: 'x' })?.paciente ?? {})),
-  'ignora claves desconocidas y montos raros',
+  leerPorPosicion(respuestas.split('\n').slice(0, 10).join('\n'), TODAS, MINIMO_DEL_FORMULARIO) === null,
+  'menos de las obligatorias: null (no se adivina cuál falta)',
 )
-comprueba(ia?.moneda === null, 'la IA sin moneda: sin decidir')
+comprueba(leerPorPosicion(respuestas + '\notra', TODAS, MINIMO_DEL_FORMULARIO) === null, 'más líneas que preguntas: null')
+comprueba(leerPorPosicion('', TODAS, MINIMO_DEL_FORMULARIO) === null, 'vacío: null')
+
+const conVinetas = leerPorPosicion('- ana@x.com\n• Miranda\n\n* 12/04/1990', ['email', 'state', 'birth_date'])
 comprueba(
-  lecturaDeLaIA({ monto: 80, moneda: 'EUR' })?.moneda === 'EUR' &&
-    lecturaDeLaIA({ monto: 80, moneda: 'usd' })?.moneda === 'USD' &&
-    lecturaDeLaIA({ monto: 80, moneda: 'bolívares' })?.moneda === null,
-  'la moneda de la IA: solo USD o EUR',
+  conVinetas?.paciente.email === 'ana@x.com' && conVinetas.paciente.state === 'Miranda' && conVinetas.paciente.birth_date === '1990-04-12',
+  'quita viñetas y líneas vacías, pero no números',
+  JSON.stringify(conVinetas),
 )
-comprueba(lecturaDeLaIA([1, 2]) === null && lecturaDeLaIA('x') === null, 'algo que no es un objeto: null')
+comprueba(leerPorPosicion('ana@x.com', ['email', 'state']) === null, 'lo que falta: hacen falta todas las respuestas')
+
+console.log('\nLo que falta, para copiar')
+const pidiendo = faltantesClaves({ first_name: 'Ana', last_name: 'Ruiz', birth_date: '1990-04-12', sex: 'F', phone: '04141234567', state: 'Miranda', address: 'x', reference_name: 'Luis' })
+comprueba(
+  JSON.stringify(pidiendo) === JSON.stringify(['email', 'reference_phone', 'reference_relationship']),
+  'faltantesClaves en el orden del formulario',
+  JSON.stringify(pidiendo),
+)
+comprueba(
+  formularioDe(pidiendo) === 'Correo:\nTeléfono de la referencia:\nParentesco:',
+  'formularioDe: las líneas para copiar',
+  formularioDe(pidiendo),
+)
+comprueba(formularioDe(TODAS) === FORMULARIO, 'formularioDe de todo es el formulario')
+comprueba(MINIMO_DEL_FORMULARIO === 11, 'once obligatorias')
 
 console.log(fallos === 0 ? '\nTODO BIEN' : `\n${fallos} FALLOS`)
 process.exit(fallos === 0 ? 0 : 1)

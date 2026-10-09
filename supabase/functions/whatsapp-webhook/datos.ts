@@ -1,11 +1,11 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // Helios — Los datos del paciente en el chat del bot (docs/00 §2.2 y §15.4)
 //
-// El médico manda los datos de un paciente nuevo en un solo mensaje. Si usa
-// el formulario (una línea «Etiqueta: valor» por dato), se lee aquí sin IA y
-// sin margen de error. Si escribe libre, los extrae Gemini (gemini.ts) a la
-// misma forma. En los dos casos, QUÉ FALTA lo decide este código, no el
-// modelo, y la base revalida todo al registrar.
+// El médico manda los datos de un paciente nuevo en un solo mensaje, sin IA
+// (2026-10-09: Gemini se quitó, no servía): o con el formulario, una línea
+// «Etiqueta: valor» por dato, o solo con las respuestas, una por línea y en
+// el orden de las preguntas. QUÉ FALTA lo decide este código y la base
+// revalida todo al registrar.
 //
 // Módulo puro: lo prueba `datos.test.ts`.
 // ═══════════════════════════════════════════════════════════════════════════
@@ -49,25 +49,40 @@ export type Lectura = {
   atendido: string | null
 }
 
-/** El formulario que el bot ofrece para copiar, llenar y enviar. */
-export const FORMULARIO = [
-  'Nombres:',
-  'Apellidos:',
-  'Nacimiento (dd/mm/aaaa):',
-  'Sexo (F/M):',
-  'Teléfono:',
-  'Correo:',
-  'Estado:',
-  'Dirección:',
-  'Referencia (nombre):',
-  'Teléfono de la referencia:',
-  'Parentesco:',
-  'Monto:',
-  'Moneda (dólares o euros):',
-  'Concepto:',
-].join('\n')
+export type Clave = keyof DatosDelPaciente | 'monto' | 'moneda' | 'concepto' | 'atendido'
 
-type Clave = keyof DatosDelPaciente | 'monto' | 'moneda' | 'concepto' | 'atendido'
+/**
+ * Las preguntas del formulario, en orden: su campo y su etiqueta. El orden
+ * importa: las respuestas sin etiquetas se leen en este orden.
+ */
+export const CAMPOS_DEL_FORMULARIO: Array<[Clave, string]> = [
+  ['first_name', 'Nombres'],
+  ['last_name', 'Apellidos'],
+  ['birth_date', 'Nacimiento (dd/mm/aaaa)'],
+  ['sex', 'Sexo (F/M)'],
+  ['phone', 'Teléfono'],
+  ['email', 'Correo'],
+  ['state', 'Estado'],
+  ['address', 'Dirección'],
+  ['reference_name', 'Referencia personal (nombre)'],
+  ['reference_phone', 'Teléfono de la referencia'],
+  ['reference_relationship', 'Parentesco'],
+  ['monto', 'Monto'],
+  ['moneda', 'Moneda (dólares o euros)'],
+  ['concepto', 'Concepto'],
+]
+
+/** El formulario que el bot ofrece para copiar, llenar y enviar (en un mensaje aparte). */
+export const FORMULARIO = CAMPOS_DEL_FORMULARIO.map(([, e]) => `${e}:`).join('\n')
+
+/** Unas preguntas como líneas del formulario, para copiarlas: «Correo:\nEstado:». */
+export function formularioDe(claves: Clave[]): string {
+  return claves
+    .map((k) => CAMPOS_DEL_FORMULARIO.find(([c]) => c === k)?.[1])
+    .filter((e): e is string => e !== undefined)
+    .map((e) => `${e}:`)
+    .join('\n')
+}
 
 /** Cada etiqueta (normalizada, sin lo que va entre paréntesis) → su campo. */
 const ETIQUETAS: Record<string, Clave> = {
@@ -89,10 +104,14 @@ const ETIQUETAS: Record<string, Clave> = {
   direccion: 'address',
   ocupacion: 'occupation',
   referencia: 'reference_name',
+  'referencia personal': 'reference_name',
   'nombre de la referencia': 'reference_name',
+  'nombre de la referencia personal': 'reference_name',
   'contacto de referencia': 'reference_name',
   'telefono de la referencia': 'reference_phone',
   'telefono de referencia': 'reference_phone',
+  'telefono de la referencia personal': 'reference_phone',
+  'telefono de referencia personal': 'reference_phone',
   parentesco: 'reference_relationship',
   monto: 'monto',
   moneda: 'moneda',
@@ -200,13 +219,36 @@ export function leerCedula(t: string): string | null {
  * `etiquetado` es true si reconoció al menos tres etiquetas (entonces no hace
  * falta la IA). Las líneas sin valor se ignoran.
  */
+/** Lo que se va leyendo de un mensaje; `cerrar` lo deja como `Lectura`. */
+type Acumulado = Lectura & { monedaDelMonto: Moneda | null }
+
+function vacio(): Acumulado {
+  return { paciente: {}, monto: null, moneda: null, monedaDelMonto: null, concepto: null, atendido: null }
+}
+
+/** Pone un valor en su campo, normalizado como lo espera la base. */
+function asignar(a: Acumulado, clave: Clave, valor: string, etiquetaCruda = ''): void {
+  if (clave === 'monto') {
+    // La moneda puede venir en el valor («€80», «80 euros») o en la
+    // etiqueta de un formulario viejo («Monto ($): 80»).
+    a.monto = leerMonto(valor)
+    a.monedaDelMonto = leerMontoYConcepto(valor)?.moneda ?? leerMoneda(/\((.*?)\)/.exec(etiquetaCruda)?.[1] ?? '')
+  } else if (clave === 'moneda') a.moneda = leerMoneda(valor)
+  else if (clave === 'concepto') a.concepto = valor.slice(0, 80)
+  else if (clave === 'atendido') a.atendido = valor.slice(0, 120)
+  else if (clave === 'birth_date') a.paciente.birth_date = normalizarFecha(valor)
+  else if (clave === 'sex') a.paciente.sex = normalizarSexo(valor)
+  else if (clave === 'email') a.paciente.email = valor.toLowerCase()
+  else a.paciente[clave] = valor
+}
+
+function cerrar(a: Acumulado): Lectura {
+  // La línea «Moneda:» manda sobre lo que acompañe al monto.
+  return { paciente: a.paciente, monto: a.monto, moneda: a.moneda ?? a.monedaDelMonto, concepto: a.concepto, atendido: a.atendido }
+}
+
 export function leerFormulario(t: string): Lectura & { etiquetado: boolean } {
-  const paciente: DatosDelPaciente = {}
-  let monto: number | null = null
-  let monedaDelMonto: Moneda | null = null
-  let moneda: Moneda | null = null
-  let concepto: string | null = null
-  let atendido: string | null = null
+  const a = vacio()
   let reconocidas = 0
 
   for (const linea of t.split(/\r?\n/)) {
@@ -219,23 +261,28 @@ export function leerFormulario(t: string): Lectura & { etiquetado: boolean } {
     if (!clave) continue
     reconocidas++
     if (valor === '') continue
-
-    if (clave === 'monto') {
-      // La moneda puede venir en el valor («€80», «80 euros») o en la
-      // etiqueta de un formulario viejo («Monto ($): 80»).
-      monto = leerMonto(valor)
-      monedaDelMonto = leerMontoYConcepto(valor)?.moneda ?? leerMoneda(/\((.*?)\)/.exec(crudo)?.[1] ?? '')
-    } else if (clave === 'moneda') moneda = leerMoneda(valor)
-    else if (clave === 'concepto') concepto = valor.slice(0, 80)
-    else if (clave === 'atendido') atendido = valor.slice(0, 120)
-    else if (clave === 'birth_date') paciente.birth_date = normalizarFecha(valor)
-    else if (clave === 'sex') paciente.sex = normalizarSexo(valor)
-    else if (clave === 'email') paciente.email = valor.toLowerCase()
-    else paciente[clave] = valor
+    asignar(a, clave, valor, crudo)
   }
 
-  // La línea «Moneda:» manda sobre lo que acompañe al monto.
-  return { paciente, monto, moneda: moneda ?? monedaDelMonto, concepto, atendido, etiquetado: reconocidas >= 3 }
+  return { ...cerrar(a), etiquetado: reconocidas >= 3 }
+}
+
+/**
+ * Las respuestas sin etiquetas, una por línea y en el orden de las preguntas
+ * (`claves`): «José Luis\nPérez\n12/04/1990…». Se quitan las viñetas
+ * («- », «• »), nunca números (una fecha empieza por número). Las respuestas
+ * pueden ser de `minimo` a todas (lo opcional va al final); si no cuadran,
+ * null: no se adivina a qué pregunta va cada línea.
+ */
+export function leerPorPosicion(t: string, claves: Clave[], minimo = claves.length): Lectura | null {
+  const lineas = t
+    .split(/\r?\n/)
+    .map((l) => l.replace(/^\s*[-*•·]\s+/, '').trim())
+    .filter((l) => l !== '')
+  if (lineas.length === 0 || lineas.length < minimo || lineas.length > claves.length) return null
+  const a = vacio()
+  lineas.forEach((valor, i) => asignar(a, claves[i], valor))
+  return cerrar(a)
 }
 
 /**
@@ -252,14 +299,22 @@ const OBLIGATORIOS: Array<[keyof DatosDelPaciente, string]> = [
   ['email', 'Correo'],
   ['state', 'Estado'],
   ['address', 'Dirección'],
-  ['reference_name', 'Referencia (nombre)'],
+  ['reference_name', 'Referencia personal (nombre)'],
   ['reference_phone', 'Teléfono de la referencia'],
   ['reference_relationship', 'Parentesco'],
 ]
 
+/** Cuántas respuestas sin etiquetas valen como formulario completo: las obligatorias. */
+export const MINIMO_DEL_FORMULARIO = OBLIGATORIOS.length
+
 /** Lo que falta, como etiquetas del formulario para que el médico las copie. */
 export function faltantes(p: DatosDelPaciente): string[] {
   return OBLIGATORIOS.filter(([k]) => !p[k] || p[k]!.trim() === '').map(([, e]) => e)
+}
+
+/** Lo que falta, como campos: el orden en que se leen las respuestas sin etiquetas. */
+export function faltantesClaves(p: DatosDelPaciente): Clave[] {
+  return OBLIGATORIOS.filter(([k]) => !p[k] || p[k]!.trim() === '').map(([k]) => k)
 }
 
 /** Junta lo nuevo sobre lo que ya había: lo nuevo gana, lo vacío no borra. */
@@ -346,69 +401,4 @@ export function horaCaracas(iso: string | null): string {
     minute: '2-digit',
     hour12: false,
   }).format(new Date(iso))
-}
-
-// ── Lo que devuelve la IA ──────────────────────────────────────────────────
-
-/**
- * El texto generado de una respuesta de la API de Interactions de Gemini, o
- * null si la interacción no terminó o no trae texto. Tolerante a la forma:
- * `output_text` si viene; si no, el último texto dentro de `steps`.
- */
-export function textoDeLaInteraccion(cuerpo: unknown): string | null {
-  if (typeof cuerpo !== 'object' || cuerpo === null) return null
-  const r = cuerpo as Record<string, unknown>
-  if (typeof r.status === 'string' && r.status !== 'completed') return null
-  if (typeof r.output_text === 'string' && r.output_text.trim() !== '') return r.output_text
-
-  let ultimo: string | null = null
-  const recorrer = (v: unknown): void => {
-    if (Array.isArray(v)) {
-      v.forEach(recorrer)
-    } else if (typeof v === 'object' && v !== null) {
-      for (const [k, x] of Object.entries(v)) {
-        if (k === 'text' && typeof x === 'string' && x.trim() !== '') ultimo = x
-        else recorrer(x)
-      }
-    }
-  }
-  recorrer(r.steps ?? r.outputs ?? null)
-  return ultimo
-}
-
-function textoONulo(v: unknown, max = 200): string | undefined {
-  return typeof v === 'string' && v.trim() !== '' ? v.trim().slice(0, max) : undefined
-}
-
-const CLAVES: Array<keyof DatosDelPaciente> = [
-  'first_name', 'last_name', 'birth_date', 'sex', 'phone', 'email', 'state', 'city', 'address',
-  'occupation', 'reference_name', 'reference_phone', 'reference_relationship',
-]
-
-/**
- * El JSON de la IA → una `Lectura`. Se queda solo con las claves conocidas y
- * con texto; normaliza la fecha, el sexo y el correo como el formulario.
- * Null si no es un objeto.
- */
-export function lecturaDeLaIA(v: unknown): Lectura | null {
-  if (typeof v !== 'object' || v === null || Array.isArray(v)) return null
-  const d = v as Record<string, unknown>
-  const paciente: DatosDelPaciente = {}
-  for (const k of CLAVES) {
-    const x = textoONulo(d[k])
-    if (x !== undefined) paciente[k] = x
-  }
-  if (paciente.birth_date) paciente.birth_date = normalizarFecha(paciente.birth_date)
-  if (paciente.sex) paciente.sex = normalizarSexo(paciente.sex)
-  if (paciente.email) paciente.email = paciente.email.toLowerCase()
-  const monto = typeof d.monto === 'number' && Number.isFinite(d.monto) && d.monto > 0 ? d.monto : null
-  const mon = typeof d.moneda === 'string' ? d.moneda.trim().toUpperCase() : ''
-  const moneda = mon === 'USD' || mon === 'EUR' ? mon : null
-  return {
-    paciente,
-    monto,
-    moneda,
-    concepto: textoONulo(d.concepto, 80) ?? null,
-    atendido: textoONulo(d.atendido, 120) ?? null,
-  }
 }

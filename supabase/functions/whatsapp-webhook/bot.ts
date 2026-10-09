@@ -10,7 +10,8 @@
 //   menú       Nuevo pago en cuotas · Mis pagos en cuotas · Ayuda
 //              (o directamente una cédula, o «reenviar 1042»)
 //   cedula     → nuevo: datos      disponible: moneda      no disponible: menú
-//   datos      el formulario o texto libre (Gemini); pide solo lo que falte
+//   datos      el formulario (en un mensaje aparte, para copiarlo) o solo las
+//              respuestas en orden; pide solo lo que falte. Sin IA (2026-10-09)
 //              → moneda (si no la dijo) → monto (si no lo dijo) → resumen
 //   moneda     Dólares (USD) · Euros (EUR)   (o el monto con su moneda de
 //              una vez: «€80 consulta»)
@@ -29,9 +30,10 @@
 // despacha en cuanto termina.
 // ═══════════════════════════════════════════════════════════════════════════
 
-import { extraerConGemini } from './gemini.ts'
 import {
+  CAMPOS_DEL_FORMULARIO,
   FORMULARIO,
+  MINIMO_DEL_FORMULARIO,
   bolivares,
   diaCorto,
   dinero,
@@ -39,16 +41,19 @@ import {
   enEuros,
   enPlural,
   faltantes,
+  faltantesClaves,
+  formularioDe,
   horaCaracas,
   juntar,
   leerCedula,
   leerFormulario,
   leerMoneda,
   leerMontoYConcepto,
+  leerPorPosicion,
   monedaDe,
   nombreDeLaMoneda,
 } from './datos.ts'
-import type { DatosDelPaciente, Lectura, Moneda } from './datos.ts'
+import type { Clave, DatosDelPaciente, Lectura, Moneda } from './datos.ts'
 import { normalizar } from './logica.ts'
 import type { EventoDeMensaje } from './logica.ts'
 
@@ -86,9 +91,18 @@ type Datos = {
   monto?: number | null
   concepto?: string | null
   atendido?: string | null
+  /** Las preguntas del último formulario enviado: el orden de las respuestas sin etiquetas. */
+  pidiendo?: Clave[]
 }
 
 type Boton = { id: string; title: string }
+
+/** Al corregir un paciente nuevo, cada cambio lleva su etiqueta. */
+const CORREGIR =
+  'Envíame solo lo que quieras cambiar, con su etiqueta, por ejemplo:\nCorreo: nuevo@correo.com\nMonto: 90\nMoneda: euros'
+
+/** Todas las preguntas del formulario, en orden. */
+const TODO_EL_FORMULARIO: Clave[] = CAMPOS_DEL_FORMULARIO.map(([k]) => k)
 
 const MENU: Boton[] = [
   { id: 'menu:nuevo', title: 'Nuevo pago en cuotas' },
@@ -363,14 +377,23 @@ export async function atenderAlPersonal({
     const usdPorEur = positivo(e.usd_per_eur)
     if (e.estado === 'nuevo') {
       const limite = Number(e.limite_usd ?? 0)
-      await guardar('datos', { cedula, nuevo: true, disponible: limite || null, usdPorEur, paciente: {} })
+      await guardar('datos', {
+        cedula,
+        nuevo: true,
+        disponible: limite || null,
+        usdPorEur,
+        paciente: {},
+        pidiendo: TODO_EL_FORMULARIO,
+      })
       // Aún no eligió moneda: lo disponible, en las dos.
       const enEur = usdPorEur && limite > 0 ? ` (${dineroEn(enEuros(limite, usdPorEur), 'EUR')} si la cobras en euros)` : ''
       await enviar(
         `${cedula} es un paciente nuevo. Tiene disponible para pagar en cuotas hasta ${dinero(limite)}${enEur}.\n\n` +
-          'Envíame sus datos en un solo mensaje. Puedes copiar este formulario, llenarlo y enviarlo:\n\n' +
-          FORMULARIO,
+          'Envíame sus datos en un solo mensaje: copia el formulario del siguiente mensaje, llénalo y envíamelo. ' +
+          'También puedes mandarme solo las respuestas, una por línea y en el mismo orden.',
       )
+      // Aparte, para que se copie de un toque.
+      await enviar(FORMULARIO)
       return { paso: 'datos' }
     }
     return seguir(
@@ -395,10 +418,22 @@ export async function atenderAlPersonal({
     if (formulario.etiquetado || /^\s*[^:\n]{2,40}:\s*\S/.test(texto)) {
       lectura = formulario
     } else {
-      const clave = Deno.env.get('GEMINI_API_KEY')
-      if (clave) lectura = await extraerConGemini(texto, clave)
+      // Solo las respuestas, en el orden de lo último que se pidió.
+      const pidiendo = datos.pidiendo ?? TODO_EL_FORMULARIO
+      if (pidiendo.length === 0) {
+        // Corrigiendo: sin etiqueta no se sabe qué dato cambia.
+        await enviar(CORREGIR)
+        return { paso: 'datos', leido: false }
+      }
+      const completo = pidiendo.length === TODO_EL_FORMULARIO.length
+      lectura = leerPorPosicion(texto, pidiendo, completo ? MINIMO_DEL_FORMULARIO : pidiendo.length)
       if (!lectura) {
-        await enviar('No pude leer los datos. Por favor copia este formulario, llénalo y envíamelo:\n\n' + FORMULARIO)
+        const cuantas = completo ? `de ${MINIMO_DEL_FORMULARIO} a ${pidiendo.length}` : String(pidiendo.length)
+        await enviar(
+          `No pude leer los datos: espero ${cuantas} respuestas, una por línea y en el orden de las preguntas. ` +
+            'Copia el formulario del siguiente mensaje, llénalo y envíamelo.',
+        )
+        await enviar(completo ? FORMULARIO : formularioDe(pidiendo))
         return { paso: 'datos', leido: false }
       }
     }
@@ -414,8 +449,13 @@ export async function atenderAlPersonal({
     }
     const falta = faltantes(paciente)
     if (falta.length > 0) {
-      await guardar('datos', nuevo)
-      await enviar(`Me falta:\n${falta.map((f) => `${f}:`).join('\n')}\n\nCópialo, llénalo y envíamelo.`)
+      const pidiendo = faltantesClaves(paciente)
+      await guardar('datos', { ...nuevo, pidiendo })
+      await enviar(
+        'Me falta lo del siguiente mensaje: cópialo, llénalo y envíamelo. ' +
+          'O mándame solo las respuestas, una por línea y en ese orden.',
+      )
+      await enviar(formularioDe(pidiendo))
       return { paso: 'datos', falta }
     }
     return seguir(nuevo, 'Ya tengo los datos. ')
@@ -457,8 +497,8 @@ export async function atenderAlPersonal({
     }
     if (boton === 'orden:corregir' || n === 'corregir') {
       if (datos.nuevo) {
-        await guardar('datos', datos)
-        await enviar('Envíame solo lo que quieras cambiar, por ejemplo:\nCorreo: nuevo@correo.com\nMonto: 90\nMoneda: euros')
+        await guardar('datos', { ...datos, pidiendo: [] })
+        await enviar(CORREGIR)
         return { paso: 'datos' }
       }
       await guardar('monto', datos)
