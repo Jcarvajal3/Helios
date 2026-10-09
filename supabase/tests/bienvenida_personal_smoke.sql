@@ -87,9 +87,13 @@ begin
      or position('Clave-Segura-1' in v_body->>'html') = 0
      or position('https://conhelios.com/login' in v_body->>'html') = 0
      or position('Hola, María González' in v_body->>'text') = 0
-     or position('secretaria' in v_body->>'text') = 0
+     or position('Ya tienes acceso a Helios en Consultorio Bienvenida Prueba.' in v_body->>'text') = 0
      or position('registre tu número' in v_body->>'text') = 0 then
     raise exception 'El correo no salió como debía: %', v_body;
+  end if;
+  -- El rol es interno: el correo no dice si es administrador o secretaria.
+  if ((v_body->>'text') || (v_body->>'html')) ~*'administrador|secretaria|gerente|cajero' then
+    raise exception 'El correo no debe decir el rol: %', v_body->>'text';
   end if;
   if (v_body->>'text') ~* 'cr[eé]dito|financ|préstamo|\mfee\M' then
     raise exception 'El correo usa una palabra prohibida';
