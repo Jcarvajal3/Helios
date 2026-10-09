@@ -1,4 +1,13 @@
-import { validateTaxId } from '@/features/admin/merchantProfile'
+import { BANKS } from '@/features/admin/banks'
+import {
+  LETRAS_CEDULA,
+  LETRAS_RIF,
+  LETRAS_TITULAR,
+  documentoParaEnviar,
+  documentoValido,
+  rifValido,
+  tieneNumero,
+} from '@/lib/documento'
 import { comoFila, filaONula, numeroONulo, textoONulo } from '@/lib/json'
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -13,9 +22,16 @@ import { comoFila, filaONula, numeroONulo, textoONulo } from '@/lib/json'
 
 /**
  * Los datos del alta de una clínica: los del médico titular, los del
- * consultorio y el Pago Móvil al que se le paga. Son los mismos en el alta
- * del equipo y en la solicitud de la portada (`/afiliacion`), y la base los
- * valida igual en los dos sitios (`helios_datos_de_alta`).
+ * consultorio y a dónde se le paga. Son los mismos en el alta del equipo y en
+ * la solicitud de la portada (`/afiliacion`), y la base los valida igual en
+ * los dos sitios (`helios_datos_de_alta`).
+ *
+ * Los documentos van como los deja `CampoDocumento`: la letra pegada al
+ * número (`V12345678`, `J123456789`).
+ *
+ * El pago: el titular con su cédula o RIF, y la transferencia (banco y cuenta
+ * de 20 dígitos) y/o el Pago Móvil (banco y celular). La portada solo pide la
+ * transferencia; el equipo pone una, otra o las dos.
  */
 export type AltaDeClinica = {
   ownerName: string
@@ -28,10 +44,16 @@ export type AltaDeClinica = {
   address: string
   phone: string
   email: string
+  accountHolder: string
+  holderDocument: string
+  bank: string
+  accountNumber: string
   pagoMovilBank: string
-  pagoMovilDocument: string
   pagoMovilPhone: string
 }
+
+/** Quién llena el alta: el equipo (transferencia y/o Pago Móvil) o el médico en la portada (solo transferencia). */
+export type ModoDeAlta = 'equipo' | 'portada'
 
 export const ALTA_VACIA: AltaDeClinica = {
   ownerName: '',
@@ -44,8 +66,11 @@ export const ALTA_VACIA: AltaDeClinica = {
   address: '',
   phone: '',
   email: '',
+  accountHolder: '',
+  holderDocument: '',
+  bank: '',
+  accountNumber: '',
   pagoMovilBank: '',
-  pagoMovilDocument: '',
   pagoMovilPhone: '',
 }
 
@@ -76,39 +101,65 @@ export function telefonoLocal(e164: string | null): string {
   return /^\d{10}$/.test(d) ? `0${d.slice(0, 3)} ${d.slice(3)}` : e164
 }
 
-/** Cédula (con o sin V/E) o pasaporte: de 5 a 20 letras y números. */
-export function pareceCedulaOPasaporte(valor: string): boolean {
-  return /^[A-Z0-9]{5,20}$/.test(valor.toUpperCase().replace(/[^A-Z0-9]/g, ''))
+/** El número de cuenta, solo dígitos y como mucho 20. */
+export function digitosDeCuenta(valor: string): string {
+  return valor.replace(/\D/g, '').slice(0, 20)
+}
+
+/**
+ * Si la cuenta no es del banco elegido, por qué: los 4 primeros dígitos de
+ * una cuenta venezolana son el código de su banco.
+ */
+export function cuentaDeOtroBanco(banco: string, cuenta: string): string | null {
+  const b = BANKS.find((x) => x.name === banco)
+  const d = digitosDeCuenta(cuenta)
+  if (!b || d.length < 4 || d.startsWith(b.code)) return null
+  return `Esa cuenta no es de ${b.name}: las de ese banco empiezan por ${b.code}.`
 }
 
 /** Qué falta o está mal en el alta, o `null` si se puede mandar. */
-export function motivoDeAlta(a: AltaDeClinica): string | null {
+export function motivoDeAlta(a: AltaDeClinica, modo: ModoDeAlta = 'equipo'): string | null {
   if (a.ownerName.trim().length < 3) return 'Falta el nombre completo.'
-  if (!pareceCedulaOPasaporte(a.ownerDocument)) return 'Falta la cédula o el pasaporte.'
-  if (a.taxId.trim() !== '') {
-    const rif = validateTaxId(a.taxId)
-    if (rif) return `RIF: ${rif}`
+  if (!documentoValido(a.ownerDocument, LETRAS_CEDULA)) {
+    return 'Falta la cédula o el pasaporte: elige V, E o P y escribe solo los números.'
   }
+  if (tieneNumero(a.taxId, LETRAS_RIF) && !rifValido(a.taxId)) return 'El RIF lleva 8 o 9 números después de la letra.'
   if (!a.specialty.trim()) return 'Falta la especialidad.'
   if (a.clinicName.trim().length < 2) return 'Falta el nombre del consultorio o centro médico.'
   if (a.address.trim().length < 5) return 'Falta la dirección del consultorio.'
   if (!telefonoAE164(a.phone)) return 'El teléfono no parece venezolano: 0212 5551234 o 0414 1234567.'
   if (!pareceCorreo(a.email)) return 'El correo no parece un correo.'
-  if (!a.pagoMovilBank) return 'Elige el banco del Pago Móvil.'
-  const docPagoMovil = a.pagoMovilDocument.trim().toUpperCase().replace(/[\s.-]/g, '')
-  if (!/^([VE]?\d{6,9}|[JGP]\d{8,9})$/.test(docPagoMovil)) {
-    return 'La cédula o el RIF del Pago Móvil: V12345678 o J123456789.'
+
+  if (a.accountHolder.trim().length < 3) return 'Falta el titular de la cuenta.'
+  if (!documentoValido(a.holderDocument, LETRAS_TITULAR)) return 'Falta la cédula o el RIF del titular.'
+
+  const cuenta = digitosDeCuenta(a.accountNumber)
+  const conCuenta = cuenta !== ''
+  if (modo === 'portada' && !conCuenta) return 'Falta el número de cuenta.'
+  if (conCuenta) {
+    if (!a.bank) return 'Elige el banco de la cuenta.'
+    if (cuenta.length !== 20) return 'El número de cuenta tiene 20 dígitos.'
+    const otro = cuentaDeOtroBanco(a.bank, cuenta)
+    if (otro) return otro
   }
-  if (!celularAE164(a.pagoMovilPhone)) return 'El teléfono del Pago Móvil tiene que ser un celular: 0414 1234567.'
+
+  const conPagoMovil = modo === 'equipo' && a.pagoMovilPhone.trim() !== ''
+  if (conPagoMovil) {
+    if (!a.pagoMovilBank) return 'Elige el banco del Pago Móvil.'
+    if (!celularAE164(a.pagoMovilPhone)) return 'El teléfono del Pago Móvil tiene que ser un celular: 0414 1234567.'
+  }
+  if (!conCuenta && !conPagoMovil) return 'Pon la transferencia, el Pago Móvil o los dos.'
   return null
 }
 
 /** Lo que se manda a la base: el `p` de `admin_create_clinic` y de la solicitud. */
-export function datosDeAlta(a: AltaDeClinica): Record<string, string> {
+export function datosDeAlta(a: AltaDeClinica, modo: ModoDeAlta = 'equipo'): Record<string, string> {
+  const cuenta = digitosDeCuenta(a.accountNumber)
+  const pagoMovil = modo === 'equipo' && a.pagoMovilPhone.trim() !== ''
   return {
     owner_name: a.ownerName.trim(),
-    owner_document: a.ownerDocument.trim(),
-    tax_id: a.taxId.trim(),
+    owner_document: documentoParaEnviar(a.ownerDocument, LETRAS_CEDULA),
+    tax_id: documentoParaEnviar(a.taxId, LETRAS_RIF),
     specialty: a.specialty.trim(),
     college_number: a.collegeNumber.trim(),
     mpps_number: a.mppsNumber.trim(),
@@ -116,9 +167,14 @@ export function datosDeAlta(a: AltaDeClinica): Record<string, string> {
     address: a.address.trim(),
     phone: a.phone.trim(),
     email: a.email.trim().toLowerCase(),
-    pago_movil_bank: a.pagoMovilBank,
-    pago_movil_document: a.pagoMovilDocument.trim(),
-    pago_movil_phone: a.pagoMovilPhone.trim(),
+    account_holder: a.accountHolder.trim(),
+    holder_document: documentoParaEnviar(a.holderDocument, LETRAS_TITULAR),
+    bank: cuenta ? a.bank : '',
+    account_number: cuenta,
+    // La portada no manda Pago Móvil (la base lo ignoraría igual).
+    ...(modo === 'equipo'
+      ? { pago_movil_bank: pagoMovil ? a.pagoMovilBank : '', pago_movil_phone: a.pagoMovilPhone.trim() }
+      : {}),
   }
 }
 
@@ -149,7 +205,7 @@ export function leerSolicitud(raw: unknown): SolicitudDeAfiliacion {
     alta: {
       ownerName: t(r.owner_name),
       ownerDocument: t(r.owner_document),
-      taxId: t(r.tax_id),
+      taxId: documentoParaEnviar(t(r.tax_id), LETRAS_RIF),
       specialty: t(r.specialty),
       collegeNumber: t(r.college_number),
       mppsNumber: t(r.mpps_number),
@@ -158,8 +214,12 @@ export function leerSolicitud(raw: unknown): SolicitudDeAfiliacion {
       // La base los guarda en E.164; el formulario los enseña como se escriben.
       phone: telefonoLocal(textoONulo(r.phone)),
       email: t(r.email),
+      accountHolder: t(r.account_holder),
+      // La base guarda el RIF con guion (`J-123456789`); el campo, pegado.
+      holderDocument: documentoParaEnviar(t(r.holder_document), LETRAS_TITULAR),
+      bank: t(r.bank),
+      accountNumber: t(r.account_number),
       pagoMovilBank: t(r.pago_movil_bank),
-      pagoMovilDocument: t(r.pago_movil_document),
       pagoMovilPhone: telefonoLocal(textoONulo(r.pago_movil_phone)),
     },
     createdAt: t(r.created_at),

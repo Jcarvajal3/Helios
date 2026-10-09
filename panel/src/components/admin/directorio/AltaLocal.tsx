@@ -12,7 +12,7 @@ import { describeError } from '@/lib/supabase'
 
 /**
  * Dar de alta una clínica (contrato §2.5): el médico titular, el consultorio
- * y el Pago Móvil al que se le paga. Son los mismos datos que manda un médico
+ * y a dónde se le paga (transferencia y/o Pago Móvil). Son los datos que manda un médico
  * desde la portada. La categoría sale de la especialidad y el logo se pone
  * luego en la ficha. Lo exige el servidor a un super admin; el botón que abre
  * esta ventana ya se pinta apagado, con el motivo, para el operador.
@@ -58,7 +58,7 @@ export function AltaLocal({ onClose }: { onClose: () => void }) {
         </div>
 
         <p className="type-panel-caption text-on-surface-variant">
-          La clínica nace activa, con su Pago Móvil y sin personal. La categoría sale de la especialidad; el logo y
+          La clínica nace activa, con su cuenta de pago y sin personal. La categoría sale de la especialidad; el logo y
           las condiciones van en su ficha.
         </p>
       </div>

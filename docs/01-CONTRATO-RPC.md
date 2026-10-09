@@ -514,6 +514,16 @@ admin los aprueba. `p` (jsonb) lleva siempre las mismas claves, validadas por
 `clinic_name`, `address`, `phone` (VE, E.164), `email`, `pago_movil_bank`,
 `pago_movil_document` (cédula o RIF), `pago_movil_phone` (celular VE).
 
+**Desde 20261009000500** el pago del alta son las claves de
+`merchant_payout_accounts`: `account_holder` y `holder_document` (titular,
+obligatorios), `bank` + `account_number` (transferencia, 20 dígitos) y/o
+`pago_movil_bank` + `pago_movil_phone`; hace falta al menos uno. Ya no existe
+`pago_movil_document`. La solicitud de la portada exige la transferencia e
+ignora el Pago Móvil. Los documentos pasan por `helios_documento(valor,
+letras)`: el panel manda la letra pegada al número (`V12345678`,
+`J123456789`, `PAB1234567`) y se guardan como cédula `V12345678` o RIF
+`J-123456789`; sin letra válida, `22023`.
+
 - `admin_create_clinic(p jsonb) → {merchant_id}`: super admin. Crea la
   clínica (categoría sacada de la especialidad: odontología, cosmetología o
   consultorio), su cuenta de Pago Móvil (titular: el médico si va con cédula,

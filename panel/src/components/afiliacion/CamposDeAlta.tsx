@@ -1,30 +1,42 @@
 import type { ReactNode } from 'react'
 
+import { CampoDocumento } from '@/components/CampoDocumento'
 import { Input, Select } from '@/components/ui'
 import { BANKS } from '@/features/admin/banks'
-import type { AltaDeClinica } from '@/features/admin/clinicas/clinicas'
+import { cuentaDeOtroBanco, digitosDeCuenta, formatoCuenta } from '@/features/admin/clinicas/clinicas'
+import type { AltaDeClinica, ModoDeAlta } from '@/features/admin/clinicas/clinicas'
+import { LETRAS_CEDULA, LETRAS_RIF, LETRAS_TITULAR } from '@/lib/documento'
 
 const OPCIONES_BANCO = BANKS.map((b) => ({ value: b.name, label: b.name }))
 
 /**
- * Los campos del alta de una clínica, en tres bloques: el médico, el
- * consultorio y el Pago Móvil. Los mismos en la solicitud de la portada
- * (`/afiliacion`), en el alta del equipo y en la revisión de una solicitud,
- * para que lo que pide uno sea lo que ve el otro.
+ * Los campos del alta de una clínica: el médico, el consultorio y a dónde se
+ * le paga. Los mismos en la solicitud de la portada (`/afiliacion`), en el
+ * alta del equipo y en la revisión de una solicitud, para que lo que pide uno
+ * sea lo que ve el otro. La portada (`modo="portada"`) solo pide la
+ * transferencia; el equipo ve también el Pago Móvil.
+ *
+ * Las cédulas y el RIF van con `CampoDocumento` (la letra en un selector y
+ * solo números), y la cuenta se escribe en bloques de 4 y se guarda sin
+ * espacios: así todos los datos quedan en el mismo formato.
  */
 export function CamposDeAlta({
   id,
   valor,
   onChange,
+  modo = 'equipo',
   autoFocus = false,
 }: {
   /** Prefijo de los `id`: dos formularios en la misma página no chocan. */
   id: string
   valor: AltaDeClinica
   onChange: (siguiente: AltaDeClinica) => void
+  modo?: ModoDeAlta
   autoFocus?: boolean
 }) {
   const campo = (k: keyof AltaDeClinica) => (v: string) => onChange({ ...valor, [k]: v })
+  const portada = modo === 'portada'
+  const otroBanco = cuentaDeOtroBanco(valor.bank, valor.accountNumber)
 
   return (
     <div className="flex flex-col gap-6">
@@ -38,12 +50,12 @@ export function CamposDeAlta({
           placeholder="Ana María Pérez"
           autoFocus={autoFocus}
         />
-        <Input
+        <CampoDocumento
           id={`${id}-cedula`}
           label="Cédula de identidad o pasaporte"
           value={valor.ownerDocument}
           onChange={campo('ownerDocument')}
-          placeholder="V-12345678"
+          letras={LETRAS_CEDULA}
         />
         <Input
           id={`${id}-especialidad`}
@@ -77,12 +89,13 @@ export function CamposDeAlta({
           autoComplete="organization"
           placeholder="Consultorio Pediátrico Los Palos Grandes"
         />
-        <Input
+        <CampoDocumento
           id={`${id}-rif`}
           label="RIF (opcional)"
           value={valor.taxId}
           onChange={campo('taxId')}
-          placeholder="J-123456789"
+          letras={LETRAS_RIF}
+          placeholder="123456789"
         />
         <Input
           id={`${id}-direccion`}
@@ -113,32 +126,70 @@ export function CamposDeAlta({
         />
       </Bloque>
 
-      <Bloque titulo="Pago Móvil" nota="A esta cuenta te pagamos tus consultas.">
+      <Bloque
+        titulo={portada ? 'Datos para la transferencia' : 'Transferencia'}
+        nota={
+          portada
+            ? 'A esta cuenta te transferimos tus consultas.'
+            : 'A dónde se le paga. Pon la transferencia, el Pago Móvil o los dos.'
+        }
+      >
+        <Input
+          id={`${id}-titular`}
+          label="Titular de la cuenta"
+          value={valor.accountHolder}
+          onChange={campo('accountHolder')}
+          placeholder="Ana María Pérez o Consultorio Pérez C.A."
+        />
+        <CampoDocumento
+          id={`${id}-titular-documento`}
+          label="Cédula o RIF del titular"
+          value={valor.holderDocument}
+          onChange={campo('holderDocument')}
+          letras={LETRAS_TITULAR}
+        />
         <Select
-          id={`${id}-pm-banco`}
+          id={`${id}-banco`}
           label="Banco"
-          value={valor.pagoMovilBank}
+          value={valor.bank}
           placeholder="Elige el banco"
           options={OPCIONES_BANCO}
-          onChange={campo('pagoMovilBank')}
-          className="sm:col-span-2"
+          onChange={campo('bank')}
         />
-        <Input
-          id={`${id}-pm-documento`}
-          label="Cédula o RIF"
-          value={valor.pagoMovilDocument}
-          onChange={campo('pagoMovilDocument')}
-          placeholder="V-12345678"
-        />
-        <Input
-          id={`${id}-pm-telefono`}
-          label="Número de teléfono"
-          value={valor.pagoMovilPhone}
-          onChange={campo('pagoMovilPhone')}
-          inputMode="tel"
-          placeholder="0414 1234567"
-        />
+        <div>
+          <Input
+            id={`${id}-cuenta`}
+            label={portada ? 'Número de cuenta (20 dígitos)' : 'Número de cuenta (20 dígitos, opcional)'}
+            value={formatoCuenta(valor.accountNumber)}
+            onChange={(v) => onChange({ ...valor, accountNumber: digitosDeCuenta(v) })}
+            inputMode="numeric"
+            placeholder="0134 0000 0000 0000 0000"
+            error={!!otroBanco}
+          />
+          {otroBanco && <p className="mt-1 type-panel-caption text-error">{otroBanco}</p>}
+        </div>
       </Bloque>
+
+      {!portada && (
+        <Bloque titulo="Pago Móvil (opcional)" nota="Con el mismo titular de arriba.">
+          <Select
+            id={`${id}-pm-banco`}
+            label="Banco"
+            value={valor.pagoMovilBank}
+            placeholder="Sin Pago Móvil"
+            options={OPCIONES_BANCO}
+            onChange={campo('pagoMovilBank')}
+          />
+          <Input
+            id={`${id}-pm-telefono`}
+            label="Número de teléfono"
+            value={valor.pagoMovilPhone}
+            onChange={campo('pagoMovilPhone')}
+            inputMode="tel"
+            placeholder="0414 1234567"
+          />
+        </Bloque>
+      )}
     </div>
   )
 }

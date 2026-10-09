@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Check, Copy } from 'lucide-react'
 
+import { CampoDocumento } from '@/components/CampoDocumento'
 import { useToast } from '@/components/Toast'
 import {
   Button,
@@ -27,6 +28,7 @@ import {
 } from '@/features/admin/clinicas/clinicas'
 import type { BorradorDeCuenta, CuentaDePagoDeClinica } from '@/features/admin/clinicas/clinicas'
 import { SOLO_SUPER_ADMIN, useIsSuperAdmin } from '@/features/admin/role'
+import { LETRAS_TITULAR } from '@/lib/documento'
 import { describeError } from '@/lib/supabase'
 
 /**
@@ -177,7 +179,7 @@ function EditarCuenta({
     <Card className="flex flex-col gap-4">
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <Input id={`cuenta-titular-${merchantId}`} label="Titular" value={b.accountHolder} onChange={campo('accountHolder')} placeholder="Consultorio Demo C.A." />
-        <Input id={`cuenta-doc-${merchantId}`} label="Cédula o RIF del titular" value={b.holderDocument} onChange={campo('holderDocument')} placeholder="J-123456789" />
+        <CampoDocumento id={`cuenta-doc-${merchantId}`} label="Cédula o RIF del titular" value={b.holderDocument} onChange={campo('holderDocument')} letras={LETRAS_TITULAR} />
         <Select id={`cuenta-banco-${merchantId}`} label="Banco de la cuenta" value={b.bank} placeholder="Sin cuenta bancaria" options={OPCIONES_BANCO} onChange={campo('bank')} />
         <Input id={`cuenta-numero-${merchantId}`} label="Número de cuenta (20 dígitos)" value={b.accountNumber} onChange={campo('accountNumber')} inputMode="numeric" placeholder="0134 0000 0000 0000 0000" />
         <Input id={`cuenta-pm-${merchantId}`} label="Teléfono del Pago Móvil" value={b.pagoMovilPhone} onChange={campo('pagoMovilPhone')} inputMode="tel" placeholder="0414 1234567" />

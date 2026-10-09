@@ -7,8 +7,16 @@ import { Button, Card, Chip, ErrorBox, Input, Seccion } from '@/components/ui'
 import { CATEGORIAS_CLINICA, MERCHANT_CATEGORY_LABEL, cambiosDeDatos, setMerchantProfile } from '@/features/admin/api'
 import type { DatosDeLaClinica, MerchantCategory, MerchantProfile, TitularDeLaClinica } from '@/features/admin/api'
 import { guardarTitular } from '@/features/admin/clinicas/api'
-import { pareceCedulaOPasaporte, pareceCorreo } from '@/features/admin/clinicas/clinicas'
-import { validateTaxId } from '@/features/admin/merchantProfile'
+import { pareceCorreo } from '@/features/admin/clinicas/clinicas'
+import { CampoDocumento } from '@/components/CampoDocumento'
+import {
+  LETRAS_CEDULA,
+  LETRAS_RIF,
+  documentoParaEnviar,
+  documentoValido,
+  rifValido,
+  tieneNumero,
+} from '@/lib/documento'
 import { SOLO_SUPER_ADMIN, useIsSuperAdmin } from '@/features/admin/role'
 import { describeError } from '@/lib/supabase'
 
@@ -47,14 +55,15 @@ export function Perfil({
   const [email, setEmail] = useState(datos.email ?? '')
   const [address, setAddress] = useState(datos.address ?? '')
 
-  const taxIdError = taxId.trim() === '' ? null : validateTaxId(taxId)
+  const taxIdError =
+    tieneNumero(taxId, LETRAS_RIF) && !rifValido(taxId) ? 'El RIF lleva 8 o 9 números después de la letra.' : null
 
   const profile: MerchantProfile = {
     ...initial,
     category,
     city: city.trim() || null,
     logoUrl,
-    taxId: taxId.trim() || null,
+    taxId: documentoParaEnviar(taxId, LETRAS_RIF) || null,
   }
 
   const cambios = cambiosDeDatos(datos, {
@@ -71,7 +80,8 @@ export function Perfil({
     profile.category !== initial.category ||
     profile.city !== initial.city ||
     profile.logoUrl !== initial.logoUrl ||
-    profile.taxId !== initial.taxId ||
+    // La base lo guarda con guion (`J-123456789`); el campo, pegado.
+    profile.taxId !== (documentoParaEnviar(initial.taxId ?? '', LETRAS_RIF) || null) ||
     datosCambiados
 
   const mutation = useMutation({
@@ -131,7 +141,7 @@ export function Perfil({
             {/* El RIF se edita aquí, y no solo en el alta, por las clínicas
                 heredadas que lo tienen vacío. */}
             <div>
-              <Input id={`rif-${merchantId}`} label="RIF" value={taxId} onChange={setTaxId} placeholder="J-123456789" />
+              <CampoDocumento id={`rif-${merchantId}`} label="RIF" value={taxId} onChange={setTaxId} letras={LETRAS_RIF} placeholder="123456789" error={!!taxIdError} />
               {taxIdError && <p className="mt-1 type-panel-caption text-error">{taxIdError}</p>}
             </div>
           </div>
@@ -183,7 +193,7 @@ function Titular({
   const cambio = (antes: string | null, ahora: string) => (ahora.trim() === (antes ?? '').trim() ? null : ahora.trim())
   const cambios = {
     owner_name: cambio(titular.ownerName, nombre),
-    owner_document: cambio(titular.ownerDocument, documento),
+    owner_document: cambio(titular.ownerDocument, documentoParaEnviar(documento, LETRAS_CEDULA)),
     college_number: cambio(titular.collegeNumber, colegio),
   }
   const dirty = Object.values(cambios).some((v) => v !== null)
@@ -202,7 +212,7 @@ function Titular({
       ? 'No has cambiado nada.'
       : nombre.trim().length < 3
         ? 'Falta el nombre completo del titular.'
-        : documento.trim() !== '' && !pareceCedulaOPasaporte(documento)
+        : tieneNumero(documento, LETRAS_CEDULA) && !documentoValido(documento, LETRAS_CEDULA)
           ? 'La cédula o el pasaporte no parecen válidos.'
           : undefined
 
@@ -211,7 +221,7 @@ function Titular({
       <Card className="flex flex-col gap-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Input id={`owner-name-${merchantId}`} label="Nombre completo" value={nombre} onChange={setNombre} placeholder="Ana María Pérez" />
-          <Input id={`owner-doc-${merchantId}`} label="Cédula o pasaporte" value={documento} onChange={setDocumento} placeholder="V12345678" />
+          <CampoDocumento id={`owner-doc-${merchantId}`} label="Cédula o pasaporte" value={documento} onChange={setDocumento} letras={LETRAS_CEDULA} />
           <Input id={`college-${merchantId}`} label="N.º de Colegio o Federación (opcional)" value={colegio} onChange={setColegio} placeholder="12345" />
         </div>
 

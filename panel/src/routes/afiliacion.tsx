@@ -40,13 +40,13 @@ function Afiliacion() {
   const envio = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.rpc('helios_solicitar_afiliacion', {
-        p: { ...datosDeAlta(alta), sitio_web: sitioWeb },
+        p: { ...datosDeAlta(alta, 'portada'), sitio_web: sitioWeb },
       })
       if (error) throw error
     },
   })
 
-  const motivo = motivoDeAlta(alta)
+  const motivo = motivoDeAlta(alta, 'portada')
 
   function enviar(e: FormEvent) {
     e.preventDefault()
@@ -89,7 +89,7 @@ function Afiliacion() {
           <form onSubmit={enviar} noValidate>
             <Card className="mt-[var(--spacing-shell-gap-block)]">
               <div className="flex flex-col gap-6">
-                <CamposDeAlta id="afiliacion" valor={alta} onChange={setAlta} />
+                <CamposDeAlta id="afiliacion" modo="portada" valor={alta} onChange={setAlta} />
 
                 {/* Fuera de la vista y del tabulador: solo lo rellena un robot. */}
                 <div aria-hidden className="absolute -left-[9999px] h-px w-px overflow-hidden">

@@ -80,7 +80,7 @@ export const columnasSolicitudes: Array<Column<SolicitudDeAfiliacion>> = [
 /**
  * Revisar una solicitud: los datos del médico en el mismo formulario del
  * alta, por si hay que corregir algo antes de aprobar. Aprobar crea la
- * clínica (con su Pago Móvil) y lleva a su ficha; rechazar pide el motivo,
+ * clínica (con su cuenta de pago) y lleva a su ficha; rechazar pide el motivo,
  * que queda para el equipo (al médico no se le manda nada).
  */
 export function RevisarSolicitud({ solicitud, onClose }: { solicitud: SolicitudDeAfiliacion; onClose: () => void }) {
@@ -130,7 +130,7 @@ export function RevisarSolicitud({ solicitud, onClose }: { solicitud: SolicitudD
       <div className="flex flex-col gap-6">
         <p className="type-panel-caption text-on-surface-variant">
           Recibida el {formatDateTime(solicitud.createdAt)}. Revisa los datos y corrige lo que haga falta antes de
-          aprobar: al aprobar nace la clínica, activa y con este Pago Móvil.
+          aprobar: al aprobar nace la clínica, activa y con esta cuenta de pago. Si quieres, añade su Pago Móvil.
         </p>
 
         <CamposDeAlta id={`solicitud-${solicitud.id}`} valor={alta} onChange={setAlta} />

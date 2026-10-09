@@ -43,7 +43,7 @@ function igual(nombre: string, obtenido: unknown, esperado: unknown) {
 
 const alta: AltaDeClinica = {
   ownerName: 'Ana Pérez',
-  ownerDocument: 'V-12.345.678',
+  ownerDocument: 'V12345678',
   taxId: '',
   specialty: 'Pediatría',
   collegeNumber: '',
@@ -52,25 +52,55 @@ const alta: AltaDeClinica = {
   address: 'Av. Principal, piso 3',
   phone: '0212 555 12 34',
   email: 'demo@consultorio.com',
-  pagoMovilBank: 'Banesco',
-  pagoMovilDocument: '12345678',
-  pagoMovilPhone: '0414-123 4567',
+  accountHolder: 'Ana Pérez',
+  holderDocument: 'V12345678',
+  bank: 'Banesco',
+  accountNumber: '01340000000000000001',
+  pagoMovilBank: '',
+  pagoMovilPhone: '',
 }
-igual('un alta completa pasa (sin RIF, Colegio ni MPPS)', motivoDeAlta(alta), null)
+igual('un alta con transferencia pasa (sin RIF, Colegio ni MPPS)', motivoDeAlta(alta), null)
+igual('y en la portada también', motivoDeAlta(alta, 'portada'), null)
 igual('sin nombre no', motivoDeAlta({ ...alta, ownerName: ' ' }), 'Falta el nombre completo.')
-igual('sin cédula no', motivoDeAlta({ ...alta, ownerDocument: '' }), 'Falta la cédula o el pasaporte.')
-igual('un pasaporte vale', motivoDeAlta({ ...alta, ownerDocument: 'AB1234567' }), null)
-igual('un RIF mal escrito manda su motivo', motivoDeAlta({ ...alta, taxId: 'X1' }), 'RIF: Empieza por J, G, V, E o P.')
-igual('con RIF bueno pasa', motivoDeAlta({ ...alta, taxId: 'J-12345678-9' }), null)
+igual(
+  'sin número de cédula no',
+  motivoDeAlta({ ...alta, ownerDocument: 'V' }),
+  'Falta la cédula o el pasaporte: elige V, E o P y escribe solo los números.',
+)
+igual('un pasaporte vale', motivoDeAlta({ ...alta, ownerDocument: 'PAB1234567' }), null)
+igual('el RIF solo con la letra es «sin RIF»', motivoDeAlta({ ...alta, taxId: 'J' }), null)
+igual('un RIF corto no', motivoDeAlta({ ...alta, taxId: 'J1234' }), 'El RIF lleva 8 o 9 números después de la letra.')
+igual('con RIF bueno pasa', motivoDeAlta({ ...alta, taxId: 'J123456789' }), null)
 igual('sin especialidad no', motivoDeAlta({ ...alta, specialty: '' }), 'Falta la especialidad.')
 igual('sin consultorio no', motivoDeAlta({ ...alta, clinicName: '' }), 'Falta el nombre del consultorio o centro médico.')
 igual('sin dirección no', motivoDeAlta({ ...alta, address: '' }), 'Falta la dirección del consultorio.')
 igual('sin teléfono no', motivoDeAlta({ ...alta, phone: '' }) !== null, true)
 igual('un correo raro no', motivoDeAlta({ ...alta, email: 'demo@' }), 'El correo no parece un correo.')
-igual('sin banco no', motivoDeAlta({ ...alta, pagoMovilBank: '' }), 'Elige el banco del Pago Móvil.')
-igual('el Pago Móvil con RIF vale', motivoDeAlta({ ...alta, pagoMovilDocument: 'J-12345678-9' }), null)
-igual('el Pago Móvil a un fijo no', motivoDeAlta({ ...alta, pagoMovilPhone: '0212 5551234' }), 'El teléfono del Pago Móvil tiene que ser un celular: 0414 1234567.')
+igual('sin titular no', motivoDeAlta({ ...alta, accountHolder: '' }), 'Falta el titular de la cuenta.')
+igual('el titular con RIF vale', motivoDeAlta({ ...alta, holderDocument: 'J123456789' }), null)
+igual('sin banco de la cuenta no', motivoDeAlta({ ...alta, bank: '' }), 'Elige el banco de la cuenta.')
+igual('una cuenta corta no', motivoDeAlta({ ...alta, accountNumber: '0134' }), 'El número de cuenta tiene 20 dígitos.')
+igual(
+  'una cuenta de otro banco no',
+  motivoDeAlta({ ...alta, accountNumber: '01050000000000000001' }),
+  'Esa cuenta no es de Banesco: las de ese banco empiezan por 0134.',
+)
+const altaSoloPagoMovil = { ...alta, bank: '', accountNumber: '', pagoMovilBank: 'Mercantil', pagoMovilPhone: '0414-123 4567' }
+igual('el equipo puede dar solo Pago Móvil', motivoDeAlta(altaSoloPagoMovil), null)
+igual('la portada no: pide la cuenta', motivoDeAlta(altaSoloPagoMovil, 'portada'), 'Falta el número de cuenta.')
+igual(
+  'sin transferencia ni Pago Móvil no',
+  motivoDeAlta({ ...alta, accountNumber: '' }),
+  'Pon la transferencia, el Pago Móvil o los dos.',
+)
+igual(
+  'el Pago Móvil a un fijo no',
+  motivoDeAlta({ ...altaSoloPagoMovil, pagoMovilPhone: '0212 5551234' }),
+  'El teléfono del Pago Móvil tiene que ser un celular: 0414 1234567.',
+)
 igual('lo que se manda va limpio', datosDeAlta({ ...alta, email: ' Demo@Consultorio.com ' }).email, 'demo@consultorio.com')
+igual('el RIF vacío no se manda', datosDeAlta({ ...alta, taxId: 'J' }).tax_id, '')
+igual('la portada no manda Pago Móvil', 'pago_movil_phone' in datosDeAlta(altaSoloPagoMovil, 'portada'), false)
 igual('un celular a E.164', celularAE164('0414 1234567'), '+584141234567')
 igual('un fijo no es celular', celularAE164('0212 5551234'), null)
 igual('E.164 a como se escribe', telefonoLocal('+584141234567'), '0414 1234567')
@@ -82,19 +112,22 @@ const solicitud = leerSolicitud({
   status: 'pending',
   owner_name: 'Ana Pérez',
   owner_document: 'V12345678',
-  tax_id: null,
+  tax_id: 'J-123456789',
   specialty: 'Pediatría',
   clinic_name: 'Consultorio Demo',
   address: 'Av. Principal, piso 3',
   phone: '+582125551234',
   email: 'demo@consultorio.com',
-  pago_movil_bank: 'Banesco',
-  pago_movil_document: 'V12345678',
-  pago_movil_phone: '+584141234567',
+  account_holder: 'Ana Pérez',
+  holder_document: 'J-123456789',
+  bank: 'Banesco',
+  account_number: '01340000000000000001',
+  pago_movil_bank: null,
+  pago_movil_phone: null,
   created_at: '2026-10-09T12:00:00Z',
 })
 igual('la solicitud se lee pendiente', solicitud.status, 'pending')
-igual('los teléfonos vuelven como se escriben', solicitud.alta.pagoMovilPhone, '0414 1234567')
+igual('el RIF vuelve sin guion', solicitud.alta.holderDocument, 'J123456789')
 igual('la solicitud leída es un alta válida', motivoDeAlta(solicitud.alta), null)
 igual('sin cambios no hay correcciones', correccionesDeSolicitud(solicitud.alta, solicitud.alta), null)
 igual(

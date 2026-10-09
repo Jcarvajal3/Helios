@@ -29,7 +29,7 @@ declare
   v_cuenta   public.merchant_payout_accounts%rowtype;
   v_datos    jsonb := jsonb_build_object(
     'owner_name', '  Ana   María Pérez ',
-    'owner_document', 'v-12.345.678',
+    'owner_document', 'V12345678',
     'tax_id', '',
     'specialty', 'Odontología',
     'college_number', 'COV-1234',
@@ -38,8 +38,12 @@ declare
     'address', 'Av. Principal, Torre Médica, piso 3',
     'phone', '0212 555 1234',
     'email', 'Ana.Prueba.Afiliacion@Example.com',
-    'pago_movil_bank', 'Banesco',
-    'pago_movil_document', '12345678',
+    'account_holder', 'Ana María Pérez',
+    'holder_document', 'V12345678',
+    'bank', 'Banesco',
+    'account_number', '0134 0000 0000 0000 0001',
+    -- La portada no pide Pago Móvil: si llega, se ignora.
+    'pago_movil_bank', 'Mercantil',
     'pago_movil_phone', '0414-123-4567');
 begin
   insert into auth.users (id, instance_id, aud, role, phone, phone_confirmed_at, created_at, updated_at)
@@ -71,11 +75,26 @@ begin
   -- --- 4. Inválidos ------------------------------------------------------
   v_failed := false;
   begin
-    perform public.helios_solicitar_afiliacion(v_datos || '{"pago_movil_phone":"0212 5551234"}');
+    perform public.helios_solicitar_afiliacion(v_datos || '{"account_number":"0134 0000"}');
   exception when invalid_parameter_value then
-    v_failed := sqlerrm like '%celular%';
+    v_failed := sqlerrm like '%20 dígitos%';
   end;
-  if not v_failed then raise exception 'Un Pago Móvil con un fijo debía rechazarse'; end if;
+  if not v_failed then raise exception 'Una cuenta corta debía rechazarse'; end if;
+
+  v_failed := false;
+  begin
+    perform public.helios_solicitar_afiliacion(v_datos - 'account_number');
+  exception when invalid_parameter_value then
+    v_failed := sqlerrm like '%transferencia%';
+  end;
+  if not v_failed then raise exception 'La portada sin transferencia debía rechazarse'; end if;
+
+  v_failed := false;
+  begin
+    perform public.helios_solicitar_afiliacion(v_datos || '{"owner_document":"12.345.678"}');
+  exception when invalid_parameter_value then v_failed := true;
+  end;
+  if not v_failed then raise exception 'Una cédula sin su letra debía rechazarse'; end if;
 
   v_failed := false;
   begin
@@ -108,7 +127,8 @@ begin
   if not exists (select 1 from public.merchant_applications where id = v_app
                  and owner_name = 'Ana María Pérez' and phone = '+582125551234'
                  and email = 'ana.prueba.afiliacion@example.com' and tax_id is null
-                 and pago_movil_phone = '+584141234567' and pago_movil_document = 'V12345678'
+                 and account_number = '01340000000000000001' and bank = 'Banesco'
+                 and holder_document = 'V12345678' and pago_movil_phone is null
                  and ip = '203.0.113.9') then
     raise exception 'La solicitud no se guardó normalizada';
   end if;
@@ -138,9 +158,10 @@ begin
     raise exception 'La clínica no nació con los datos de la solicitud: %', to_jsonb(v_m);
   end if;
   select * into v_cuenta from public.merchant_payout_accounts where merchant_id = v_merchant;
-  if v_cuenta.pago_movil_phone <> '+584141234567' or v_cuenta.pago_movil_bank <> 'Banesco'
+  if v_cuenta.account_number <> '01340000000000000001' or v_cuenta.bank <> 'Banesco'
+     or v_cuenta.pago_movil_phone is not null
      or v_cuenta.account_holder <> 'Ana María Pérez' or v_cuenta.holder_document <> 'V12345678' then
-    raise exception 'La cuenta de Pago Móvil no quedó bien: %', to_jsonb(v_cuenta);
+    raise exception 'La cuenta de pago no quedó bien: %', to_jsonb(v_cuenta);
   end if;
   if not exists (select 1 from public.merchant_applications where id = v_app and status = 'approved' and merchant_id = v_merchant) then
     raise exception 'La solicitud debía quedar aprobada y ligada a la clínica';
@@ -152,9 +173,9 @@ begin
   -- --- 7. Rechazar --------------------------------------------------------
   insert into public.merchant_applications
     (owner_name, owner_document, specialty, clinic_name, address, phone, email,
-     pago_movil_bank, pago_movil_document, pago_movil_phone)
+     account_holder, holder_document, bank, account_number)
   values ('Luis Prueba', 'V87654321', 'Cosmetología', 'Estética Prueba', 'Calle 1, local 2',
-          '+582125550000', 'luis.prueba@example.com', 'Mercantil', 'V87654321', '+584241112233')
+          '+582125550000', 'luis.prueba@example.com', 'Luis Prueba', 'V87654321', 'Mercantil', '01050000000000000002')
   returning id into v_app2;
 
   set local role authenticated;
@@ -174,19 +195,30 @@ begin
   if not v_failed then raise exception 'Una solicitud rechazada no se aprueba'; end if;
 
   -- --- 8. El alta desde el panel -----------------------------------------
-  v_res := public.admin_create_clinic(v_datos || '{"clinic_name":"Clínica Prueba Panel","tax_id":"J-501234567","specialty":"Pediatría","pago_movil_document":"J501234567","owner_document":"V11222333","email":"panel.prueba@example.com"}');
+  -- El equipo: solo Pago Móvil, con el titular por RIF.
+  v_res := public.admin_create_clinic((v_datos - 'account_number' - 'bank') || '{"clinic_name":"Clínica Prueba Panel","tax_id":"J501234567","specialty":"Pediatría","account_holder":"Clínica Prueba Panel C.A.","holder_document":"J501234567","owner_document":"V11222333","email":"panel.prueba@example.com"}');
   reset role;
   select * into v_m from public.merchants where id = (v_res->>'merchant_id')::uuid;
   if v_m.category <> 'consultorio' or v_m.tax_id <> 'J-501234567' then
     raise exception 'El alta del panel no guardó la categoría o el RIF: %', to_jsonb(v_m);
   end if;
-  if (select account_holder from public.merchant_payout_accounts where merchant_id = v_m.id) <> 'Clínica Prueba Panel' then
-    raise exception 'Un Pago Móvil con RIF va a nombre de la clínica';
+  select * into v_cuenta from public.merchant_payout_accounts where merchant_id = v_m.id;
+  if v_cuenta.holder_document <> 'J-501234567' or v_cuenta.pago_movil_phone <> '+584141234567'
+     or v_cuenta.pago_movil_bank <> 'Mercantil' or v_cuenta.account_number is not null then
+    raise exception 'El Pago Móvil del equipo no quedó bien: %', to_jsonb(v_cuenta);
   end if;
+  set local role authenticated;
+  v_failed := false;
+  begin
+    perform public.admin_create_clinic(v_datos - 'account_number' - 'pago_movil_phone' || '{"email":"sin.pago@example.com","owner_document":"V11222334"}');
+  exception when invalid_parameter_value then v_failed := true;
+  end;
+  if not v_failed then raise exception 'Sin transferencia ni Pago Móvil no debía crearse'; end if;
+  reset role;
 
   -- --- 9. Corregir el titular ---------------------------------------------
   set local role authenticated;
-  perform public.admin_set_merchant_owner(v_m.id, '{"owner_name":"","owner_document":"E-8.123.456","college_number":""}');
+  perform public.admin_set_merchant_owner(v_m.id, '{"owner_name":"","owner_document":"E8123456","college_number":""}');
   reset role;
   select * into v_m from public.merchants where id = v_m.id;
   if v_m.owner_name <> 'Ana María Pérez' or v_m.owner_document <> 'E8123456' or v_m.college_number is not null then
