@@ -51,6 +51,17 @@ update public.platform_contact
  where id;
 update public.payment_destinations set is_active = false where is_active;
 
+-- Y la cola real: los mensajes que ya había quedan fuera del alcance de los
+-- despachadores (`helios_dispatch_*`: pendientes con la hora ya cumplida) y
+-- de `helios_check_email_status` (enviados sin revisar en un rato). Si no,
+-- un correo real de hace un minuto se cuela en la prueba y se lleva una de
+-- sus respuestas simuladas (2026-10-09). Como lo de arriba, el `rollback`
+-- lo deshace.
+update public.outbound_messages
+   set next_attempt_at = now() + interval '1 day',
+       last_checked_at = now()
+ where status in ('pendiente', 'enviado');
+
 /**
  * Un consumo confirmado de `p_base` (sin fee) para `p_user` en `p_merchant`,
  * registrado por `p_staff`. Devuelve lo mismo que devolvía `confirm_charge`.
