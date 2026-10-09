@@ -826,7 +826,7 @@ flowchart LR
   - dentro de la ventana → se envía el `rendered_text` como **texto libre** (admite saltos de línea, cuentas de cobro, etc.);
   - fuera → la **plantilla aprobada** con sus variables;
   - fuera y sin plantilla aprobada → el mensaje pasa a `whatsapp_manual` ("Avisos de hoy").
-- `helios_whatsapp_dispatch()`: `pg_cron` cada **10 segundos** (el paciente está en el consultorio esperando), `http` a `{d360_base_url}/messages` con la cabecera `D360-API-KEY` y el formato de la Cloud API. Tres reintentos con espera creciente; si se rinde, el mensaje **cae a la cola manual** y queda `fallido`.
+- `helios_whatsapp_dispatch()`: `pg_cron` cada **10 segundos** (el paciente está en el consultorio esperando), `http` a `{d360_base_url}/messages` con la cabecera `D360-API-KEY` y el formato de la Cloud API. Un fallo pasajero y rápido (la conexión, un 429, un 5xx) se repite al momento, una vez (2026-10-09: esperar al cron separaba ~20 s dos mensajes seguidos del bot); después, reintentos con espera creciente; si se rinde, el mensaje **cae a la cola manual** y queda `fallido`.
 - **Sin `d360_api_key` en Vault** todo mensaje `whatsapp` cae a la cola manual. Por eso el código puede estar en producción antes de que Meta apruebe.
 - Estados de entrega (`sent`, `delivered`, `read`, `failed`) desde el webhook: `outbound_messages.wa_message_id`, `wa_status`, `wa_error`. Un `failed` en la plantilla de confirmación se le avisa a la clínica ("No pudimos escribirle al paciente: revise el teléfono con Helios").
 

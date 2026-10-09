@@ -18,7 +18,8 @@
 --  5. Ventana abierta → botones interactivos (la pregunta) o texto (la
 --     bienvenida); ventana cerrada y sin plantilla → cola manual.
 --  6. Teléfono sin WhatsApp (131026) → `fallido`; plantilla sin aprobar
---     (132001) → cola manual; 5xx → reintento y, al rendirse, cola manual;
+--     (132001) → cola manual; un 5xx se repite al momento una vez (y si
+--     sale, va en ese intento); si no, reintento y, al rendirse, cola manual;
 --     401 → espera sin gastar intento y corta el lote.
 --  7. Un `failed` del webhook deja el mensaje `fallido`.
 --  8. El cron existe y la configuración dice que la API está lista.
@@ -305,22 +306,35 @@ begin
     raise exception 'Una plantilla sin aprobar pasa a la cola manual: %', to_jsonb(v_row);
   end if;
 
+  -- Un 5xx pasajero se repite al momento: sale en el mismo intento.
   v_msg := public.helios_enqueue_confirmation(v_charge);
-  insert into pg_temp._respuestas (status, body) values (503, 'caído');
+  insert into pg_temp._respuestas (status, body)
+  values (503, 'caído'), (200, '{"messages":[{"id":"wamid.R"}]}');
+  v_r := public.helios_dispatch_whatsapp_batch();
+  select * into v_row from public.outbound_messages where id = v_msg;
+  if v_row.status <> 'enviado' or v_row.attempts <> 1 or v_row.provider_id <> 'wamid.R' then
+    raise exception 'Un 5xx pasajero se repite al momento: %', to_jsonb(v_row);
+  end if;
+  if jsonb_array_length(v_r -> 'errores') <> 1 or v_r -> 'errores' -> 0 ->> 'error' not like 'HTTP 503%' then
+    raise exception 'El resultado trae la causa del fallo pasajero: %', v_r;
+  end if;
+
+  v_msg := public.helios_enqueue_confirmation(v_charge);
+  insert into pg_temp._respuestas (status, body) values (503, 'caído'), (503, 'caído');
   perform public.helios_dispatch_whatsapp_batch();
   select * into v_row from public.outbound_messages where id = v_msg;
   if v_row.status <> 'pendiente' or v_row.channel <> 'whatsapp' or v_row.attempts <> 1
      or v_row.next_attempt_at <= now() then
-    raise exception 'Un 5xx se reintenta más tarde: %', to_jsonb(v_row);
+    raise exception 'Un 5xx que se repite se reintenta más tarde: %', to_jsonb(v_row);
   end if;
   -- Todavía no le toca: no se llama.
   perform public.helios_dispatch_whatsapp_batch();
-  if (select count(*) from pg_temp._llamadas) <> 6 then
+  if (select count(*) from pg_temp._llamadas) <> 9 then
     raise exception 'Un mensaje en espera no sale antes de tiempo (llamadas: %)', (select count(*) from pg_temp._llamadas);
   end if;
   -- Al quinto intento sin respuesta, a la cola manual.
   update public.outbound_messages set attempts = 4, next_attempt_at = now() - interval '1 second' where id = v_msg;
-  insert into pg_temp._respuestas (status, body) values (null, null);
+  insert into pg_temp._respuestas (status, body) values (null, null), (null, null);
   perform public.helios_dispatch_whatsapp_batch();
   select * into v_row from public.outbound_messages where id = v_msg;
   if v_row.channel <> 'whatsapp_manual' or v_row.attempts <> 5

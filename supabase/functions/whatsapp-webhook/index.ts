@@ -151,7 +151,9 @@ Deno.serve(async (req) => {
   // Lo que se encoló (las respuestas del bot, la bienvenida tras un «Sí»)
   // sale ya, sin esperar al cron de 10 s. Si falla, el cron lo manda.
   try {
-    await rpc('helios_dispatch_whatsapp_batch', { p_limit: 10 })
+    const r = await rpc<{ errores?: unknown[] }>('helios_dispatch_whatsapp_batch', { p_limit: 10 })
+    // Los fallos pasajeros (se reintentan solos): la causa queda en el log.
+    if (r?.errores?.length) console.warn('whatsapp-webhook despacho, fallos pasajeros', JSON.stringify(r.errores))
   } catch (err) {
     console.error('whatsapp-webhook despacho', err)
   }
