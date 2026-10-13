@@ -8,8 +8,9 @@
 --  3. Las operaciones van como la persona: elegibilidad con su límite, la
 --     orden con su nombre y `channel = 'whatsapp'`, la regla de «primero
 --     consulta la cédula», y la lista solo de su clínica.
---  4. El médico se entera: aceptada, rechazada y vencida (solo con su ventana
---     abierta).
+--  4. El médico se entera: aceptada, rechazada y vencida (con su ventana
+--     abierta), también si registró en el panel; con la ventana cerrada, solo
+--     «aceptó» y solo con la plantilla `aviso_al_medico` conectada.
 --  5. La sesión: nueva, guardada y vencida por inactividad.
 --  6. Solo el webhook (service_role) llama al bot.
 -- ============================================================================
@@ -185,6 +186,48 @@ begin
                   where recipient_staff_id = v_doc and rendered_text like '❌ José P. no aceptó la orden #%') then
     raise exception 'El médico debía enterarse del No: %', v_j;
   end if;
+
+  -- Registrada desde el PANEL (20261013000300): también se entera. El bot dejó
+  -- `helios.canal = whatsapp` en esta transacción: se limpia.
+  perform set_config('helios.canal', '', true);
+  set local role authenticated;
+  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', v_doc::text, 'role', 'authenticated')::text, true);
+  perform public.helios_patient_eligibility(v_m, 'V50000004');
+  v_charge2 := (public.create_patient_charge(v_m, null,
+                  v_pac || jsonb_build_object('document', 'V50000004', 'phone', '04161114455', 'email', 'c@gmail.com'),
+                  60, null, null, 'panel-aviso-1')->>'id')::uuid;
+  reset role;
+  if (select channel from public.charges where id = v_charge2) <> 'panel' then
+    raise exception 'La orden debía ser del panel';
+  end if;
+  perform public.helios_patient_decision(v_charge2, 'si', '584161114455', 'wamid.bot.panel.si');
+  if not exists (select 1 from public.outbound_messages
+                  where recipient_staff_id = v_doc and template_key = 'bot_respuesta'
+                    and rendered_text like '✅ José P. aceptó. Orden #% confirmada: consulta de $60.') then
+    raise exception 'Con una orden del panel, el médico también debía enterarse';
+  end if;
+
+  -- Ventana cerrada: sin plantilla, nada; con la plantilla, sale con ella.
+  delete from public.whatsapp_contacts where phone_e164 = '+' || v_tel;
+  perform public.helios_notify_staff_of_charge(v_charge2, 'aceptada');
+  if exists (select 1 from public.outbound_messages where template_key = 'aviso_al_medico' and charge_id = v_charge2) then
+    raise exception 'Sin plantilla aprobada, fuera de la ventana no se le escribe';
+  end if;
+  update public.notification_templates set wa_template_name = 'helios_paciente_acepto' where key = 'aviso_al_medico';
+  perform public.helios_notify_staff_of_charge(v_charge2, 'aceptada');
+  select * into v_row from public.outbound_messages where template_key = 'aviso_al_medico' and charge_id = v_charge2;
+  if v_row.id is null or v_row.recipient_staff_id <> v_doc or v_row.wa_template->>'name' <> 'helios_paciente_acepto'
+     or v_row.wa_template->'params' <> jsonb_build_array('José P.', (select order_number::text from public.charges where id = v_charge2), '$60') then
+    raise exception 'Fuera de la ventana, el aviso sale con la plantilla: %', to_jsonb(v_row);
+  end if;
+  perform public.helios_notify_staff_of_charge(v_charge2, 'vencida');
+  if (select count(*) from public.outbound_messages where recipient_staff_id = v_doc and rendered_text like '⌛%#' || (select order_number from public.charges where id = v_charge2) || '%') > 0 then
+    raise exception 'Fuera de la ventana, solo «aceptó» sale con plantilla';
+  end if;
+  update public.notification_templates set wa_template_name = null where key = 'aviso_al_medico';
+  insert into public.whatsapp_contacts (phone_e164, last_inbound_at, staff_user_id)
+  values ('+' || v_tel, now(), v_doc);
 
   -- =========================================================================
   -- 5. La sesión

@@ -814,10 +814,13 @@ Implementado en 20261005000300 (canal, plantillas, bienvenida) y
 
   Cuando pagues, envíanos el comprobante por este chat. También te mandamos todos los detalles a tu correo.
   ```
-- Avisos al médico que registró por WhatsApp (canal `whatsapp`, plantilla
-  interna `bot_respuesta` = `{texto}`, **solo texto libre**: si su ventana de 24 h
-  está cerrada se omiten y el resultado queda en el panel): aceptada, rechazada
-  y vencida (§5.4).
+- Avisos a quien registró la orden, **desde el panel o desde el bot**, si
+  tiene número del bot (20261013000300; antes solo las del bot): aceptada,
+  rechazada y vencida (§5.4). Con su ventana de 24 h abierta, texto libre
+  (plantilla interna `bot_respuesta` = `{texto}`). Con la ventana cerrada,
+  solo «aceptó», con la plantilla de Meta de `aviso_al_medico` ({{1}}
+  paciente, {{2}} orden, {{3}} consulta) cuando tenga `wa_template_name`; si
+  no, se omite y el resultado queda en el panel.
 - En WhatsApp, `outbound_messages` usa las columnas del correo: `provider_id`
   = el id del mensaje (wamid), `last_event` = `sent` | `delivered` | `read` |
   `failed` y `last_error`. Un mensaje que la API no puede mandar pero una
@@ -915,9 +918,10 @@ textos). Bitácora con `canal = whatsapp`.
 Las respuestas del bot y los avisos al médico salen con
 `helios_whatsapp_text(p_to, p_text, p_staff_user_id, p_buttons jsonb default '[]') → uuid`
 (hasta 3 botones `{id, title}`; solo con la ventana de 24 h abierta). El
-médico que registró por WhatsApp recibe `✅ … aceptó`, `❌ … no aceptó` o
-`⌛ … venció` (`helios_notify_staff_of_charge`); con la ventana cerrada, el
-resultado queda en el panel. El webhook llama a
+médico que registró la orden (por WhatsApp o en el panel, si tiene número del
+bot) recibe `✅ … aceptó`, `❌ … no aceptó` o `⌛ … venció`
+(`helios_notify_staff_of_charge`); con la ventana cerrada, solo «aceptó» y
+con la plantilla `aviso_al_medico` (§4.1). El webhook llama a
 `helios_dispatch_whatsapp_batch` al terminar cada evento para que salga ya.
 
 `p_idempotency_key` del bot = `wa:<id del mensaje que confirmó la orden>`: si
