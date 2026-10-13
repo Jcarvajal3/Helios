@@ -526,6 +526,19 @@ letras)`: el panel manda la letra pegada al número (`V12345678`,
 `J123456789`, `PAB1234567`) y se guardan como cédula `V12345678` o RIF
 `J-123456789`; sin letra válida, `22023`.
 
+- **Al aprobar (20261013000400)**, el panel encadena, si se deja marcado:
+  `merchant_staff_add` (administrador, con el correo y el nombre de la
+  solicitud y una contraseña generada) → `admin_set_staff_whatsapp` (su
+  teléfono, si es celular) → `merchant_staff_send_welcome` →
+  `admin_send_staff_whatsapp_welcome(p_merchant_id uuid, p_user_id uuid) →
+  {status: 'en_cola' | 'sin_numero' | 'sin_plantilla' | 'ya_enviado', via:
+  'texto' | 'plantilla', phone}`. Esta última (super admin) encola el
+  WhatsApp de bienvenida: texto libre con la ventana de 24 h abierta, o la
+  plantilla de Meta de `notification_templates.bienvenida_medico`
+  (`helios_cuenta_activa` desde 20261013000500: {{1}} nombre, {{2}} clínica,
+  {{3}} correo; el texto libre lleva el botón «Empezar», `menu:empezar`). Sin plantilla
+  conectada y con la ventana cerrada no encola nada. Una vez por persona y
+  clínica (`dedupe_key`). Bitácora `merchant.staff_whatsapp_welcome`.
 - `admin_create_clinic(p jsonb) → {merchant_id}`: super admin. Crea la
   clínica (categoría sacada de la especialidad: odontología, cosmetología o
   consultorio), su cuenta de Pago Móvil (titular: el médico si va con cédula,

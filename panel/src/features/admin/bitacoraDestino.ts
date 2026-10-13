@@ -75,6 +75,7 @@ const FICHA_DEL_TARGET: Record<string, FichaDeBitacora | undefined> = {
   'merchant.terms_changed': 'local',
   'merchant.staff_added': 'local',
   'merchant.staff_welcome_sent': 'local',
+  'merchant.staff_whatsapp_welcome': 'local',
   'merchant.staff_updated': 'local',
   'merchant.staff_removed': 'local',
   'merchant.staff_password_reset': 'local',

@@ -77,3 +77,28 @@ export async function revocarNumeroDelBot(id: string, motivo: string): Promise<v
   const { error } = await supabase.rpc('admin_revoke_staff_whatsapp', { p_id: id, p_reason: motivo })
   if (error) throw error
 }
+
+/** Cómo le fue al WhatsApp de bienvenida (`admin_send_staff_whatsapp_welcome`). */
+export type ResultadoBienvenidaWhatsApp = {
+  status: 'en_cola' | 'sin_numero' | 'sin_plantilla' | 'ya_enviado'
+  via: 'texto' | 'plantilla' | null
+}
+
+/**
+ * El WhatsApp de bienvenida al médico: con su ventana de 24 h abierta, como
+ * texto; si no, con la plantilla de Meta conectada (`bienvenida_medico`). Sin
+ * plantilla conectada no se manda nada y lo dice el resultado. Solo super admin.
+ */
+export async function enviarBienvenidaPorWhatsApp(p: {
+  merchantId: string
+  userId: string
+}): Promise<ResultadoBienvenidaWhatsApp> {
+  const { data, error } = await supabase.rpc('admin_send_staff_whatsapp_welcome', {
+    p_merchant_id: p.merchantId,
+    p_user_id: p.userId,
+  })
+  if (error) throw error
+  const r = comoFila(data)
+  const status = r.status === 'en_cola' || r.status === 'sin_numero' || r.status === 'ya_enviado' ? r.status : 'sin_plantilla'
+  return { status, via: r.via === 'texto' || r.via === 'plantilla' ? r.via : null }
+}

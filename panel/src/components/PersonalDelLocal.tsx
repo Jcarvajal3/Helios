@@ -923,7 +923,7 @@ function Reseteo({
  * alguien las teclea en un WhatsApp: una ele y un uno se confunden, y una
  * contraseña mal copiada es otra llamada.
  */
-function Credenciales({
+export function Credenciales({
   email,
   password,
 }: {

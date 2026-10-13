@@ -979,33 +979,3 @@ Decidido por Javier el 2026-10-06. Si un paciente le escribe a Helios (y no es s
 Piezas: `paciente.ts` y `textos_paciente.ts` en la Edge Function; en la base, `bot_paciente_contexto`, `bot_paciente_guardar`, `bot_paciente_resumen` y `helios_whatsapp_patient_text` (20261006000100). Lo que recuerda de cada número vive en `whatsapp_contacts` (`bot_menu_at`, `human_until`, `patient_profile_id`, `patient_state`). **Hacen falta las cuentas de cobro** (Ajustes › Cuentas de cobro) para que «Pagar cuota» diga cómo pagar.
 
 Los mensajes al paciente cambiaron el mismo día (textos de Javier): la pregunta (§15.5.1) y la bienvenida («🩺 ¡Listo, {nombre}! Tu financiamiento #{orden} ya está activo…»). Los montos de todos los mensajes van al estilo venezolano («$100», «$1,92»).
-
-### 15.7 Las plantillas para los médicos (2026-10-13)
-
-Bienvenida, afiliación y capacitación, en dos versiones: para el médico que ya llenó `/afiliacion` y para el que no. Las manda el equipo; no las dispara la base. Fuera de la ventana de 24 h hacen falta aprobadas en Meta; dentro, o desde un teléfono normal, valen como texto libre.
-
-- Variables **numéricas**, idioma `es`. {{1}} es como se le habla al médico, con su título: ejemplo `Dra. Pérez`.
-- Ni «financiamiento» ni «crédito»: solo lo que ya dice la portada.
-
-#### `helios_bienvenida_medico_afiliado` — ya llenó el formulario · **Utility**
-
-> 👋 Hola, {{1}}. Te damos la bienvenida a Helios 💙
->
-> Recibimos tu formulario de afiliación. ¡Gracias por sumarte!
->
-> El siguiente paso es una capacitación para enseñarte a registrar los pagos en cuotas de tus pacientes, desde el panel o por WhatsApp.
->
-> 📅 ¿Qué día y a qué hora te queda mejor? Respóndenos por aquí y la agendamos.
-
-#### `helios_bienvenida_medico_por_afiliar` — aún no lo llena · **Marketing**
-
-> 👋 Hola, {{1}}. Te damos la bienvenida a Helios 💙
->
-> ¡Qué alegría comenzar este camino juntos! Estamos felices de que tus pacientes puedan contar con Helios.
->
-> 📝 Para afiliarte, llena este formulario:
-> https://conhelios.com/afiliacion
->
-> 📅 Y cuéntanos qué día y a qué hora te queda mejor para una capacitación: te enseñamos a registrar los pagos en cuotas desde el panel o por WhatsApp.
-
-Meta suele pasar a Marketing cualquier bienvenida; si reclasifica la primera, no cambia el texto.
