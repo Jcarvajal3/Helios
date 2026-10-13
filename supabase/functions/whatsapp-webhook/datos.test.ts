@@ -65,13 +65,13 @@ comprueba(l.paciente.birth_date === '1990-04-12', 'la fecha dd/mm/aaaa', l.pacie
 comprueba(l.paciente.sex === 'M', 'el sexo en palabras')
 comprueba(l.paciente.phone === '0414-123.45.67', 'el teléfono tal cual (lo normaliza la base)')
 comprueba(l.paciente.email === 'jose@gmail.com', 'el correo en minúsculas')
-comprueba(l.paciente.reference_phone === '0212-555.12.34', 'el teléfono de la referencia')
+comprueba(!Object.keys(l.paciente).some((k) => k.startsWith('reference')), 'un formulario viejo: la referencia se ignora')
 comprueba(l.monto === 80.5 && l.concepto === 'Consulta + eco', 'monto y concepto', `${l.monto} ${l.concepto}`)
 comprueba(l.moneda === 'USD', 'un formulario viejo («Monto ($)») es en dólares', String(l.moneda))
 comprueba(faltantes(l.paciente).length === 0, 'no falta nada', faltantes(l.paciente).join(', '))
 
 const vacio = leerFormulario(FORMULARIO)
-comprueba(vacio.etiquetado && faltantes(vacio.paciente).length === 11, 'el formulario sin llenar: falta todo')
+comprueba(vacio.etiquetado && faltantes(vacio.paciente).length === 8, 'el formulario sin llenar: falta todo')
 comprueba(!FORMULARIO.includes('Ciudad'), 'el formulario ya no pide la ciudad')
 const sinCiudad = leerFormulario(lleno.replace(/^Ciudad:.*\n/m, ''))
 comprueba(sinCiudad.etiquetado && faltantes(sinCiudad.paciente).length === 0, 'sin ciudad no falta nada')
@@ -177,15 +177,9 @@ comprueba(montoEs(1250.5) === '1.250,50' && montoEs(1234567) === '1.234.567' && 
 comprueba(diaCorto('2026-10-12') === 'lun 12/10', 'día corto', diaCorto('2026-10-12'))
 comprueba(horaCaracas('2026-10-05T20:40:00Z') === '16:40', 'hora de Caracas', horaCaracas('2026-10-05T20:40:00Z'))
 
-console.log('\nLa referencia personal')
-comprueba(FORMULARIO.includes('Referencia personal (nombre):'), 'el formulario dice «Referencia personal (nombre)»')
-comprueba(!FORMULARIO.includes('Referencia (nombre)'), 'ya no dice «Referencia (nombre)»')
-comprueba(
-  leerFormulario('Nombres: Ana\nApellidos: Ruiz\nReferencia personal (nombre): Luis Ruiz').paciente.reference_name === 'Luis Ruiz',
-  'lee la etiqueta nueva',
-)
-comprueba(l.paciente.reference_name === 'María Pérez', 'y la vieja («Referencia (nombre)») sigue valiendo')
-comprueba(faltantes({}).includes('Referencia personal (nombre)'), 'lo que falta usa la etiqueta nueva')
+console.log('\nSin contacto de referencia')
+comprueba(!/referencia|parentesco/i.test(FORMULARIO), 'el formulario no pide la referencia')
+comprueba(!faltantes({}).some((f) => /referencia|parentesco/i.test(f)), 'lo que falta no incluye la referencia')
 
 console.log('\nSolo las respuestas, en orden')
 const TODAS = CAMPOS_DEL_FORMULARIO.map(([k]) => k)
@@ -197,9 +191,6 @@ M
 Jose@Gmail.com
 Miranda
 Los Palos Grandes, calle 3
-María Pérez
-0212-555.12.34
-Madre
 80,50
 euros
 Consulta + eco`
@@ -210,23 +201,21 @@ comprueba(
     r.paciente.birth_date === '1990-04-12' &&
     r.paciente.sex === 'M' &&
     r.paciente.email === 'jose@gmail.com' &&
-    r.paciente.reference_name === 'María Pérez' &&
-    r.paciente.reference_relationship === 'Madre' &&
     r.monto === 80.5 &&
     r.moneda === 'EUR' &&
     r.concepto === 'Consulta + eco',
-  'las 14 respuestas, cada una en su campo',
+  'las 11 respuestas, cada una en su campo',
   JSON.stringify(r),
 )
 comprueba(r !== null && faltantes(r.paciente).length === 0, 'no falta nada')
 
-const sinMonto = leerPorPosicion(respuestas.split('\n').slice(0, 11).join('\n'), TODAS, MINIMO_DEL_FORMULARIO)
+const sinMonto = leerPorPosicion(respuestas.split('\n').slice(0, 8).join('\n'), TODAS, MINIMO_DEL_FORMULARIO)
 comprueba(
   sinMonto !== null && faltantes(sinMonto.paciente).length === 0 && sinMonto.monto === null && sinMonto.moneda === null,
-  'las 11 obligatorias sin monto: vale (el monto se pide después)',
+  'las 8 obligatorias sin monto: vale (el monto se pide después)',
 )
 comprueba(
-  leerPorPosicion(respuestas.split('\n').slice(0, 10).join('\n'), TODAS, MINIMO_DEL_FORMULARIO) === null,
+  leerPorPosicion(respuestas.split('\n').slice(0, 7).join('\n'), TODAS, MINIMO_DEL_FORMULARIO) === null,
   'menos de las obligatorias: null (no se adivina cuál falta)',
 )
 comprueba(leerPorPosicion(respuestas + '\notra', TODAS, MINIMO_DEL_FORMULARIO) === null, 'más líneas que preguntas: null')
@@ -241,19 +230,19 @@ comprueba(
 comprueba(leerPorPosicion('ana@x.com', ['email', 'state']) === null, 'lo que falta: hacen falta todas las respuestas')
 
 console.log('\nLo que falta, para copiar')
-const pidiendo = faltantesClaves({ first_name: 'Ana', last_name: 'Ruiz', birth_date: '1990-04-12', sex: 'F', phone: '04141234567', state: 'Miranda', address: 'x', reference_name: 'Luis' })
+const pidiendo = faltantesClaves({ first_name: 'Ana', last_name: 'Ruiz', birth_date: '1990-04-12', sex: 'F', phone: '04141234567' })
 comprueba(
-  JSON.stringify(pidiendo) === JSON.stringify(['email', 'reference_phone', 'reference_relationship']),
+  JSON.stringify(pidiendo) === JSON.stringify(['email', 'state', 'address']),
   'faltantesClaves en el orden del formulario',
   JSON.stringify(pidiendo),
 )
 comprueba(
-  formularioDe(pidiendo) === 'Correo:\nTeléfono de la referencia:\nParentesco:',
+  formularioDe(pidiendo) === 'Correo:\nEstado:\nDirección:',
   'formularioDe: las líneas para copiar',
   formularioDe(pidiendo),
 )
 comprueba(formularioDe(TODAS) === FORMULARIO, 'formularioDe de todo es el formulario')
-comprueba(MINIMO_DEL_FORMULARIO === 11, 'once obligatorias')
+comprueba(MINIMO_DEL_FORMULARIO === 8, 'ocho obligatorias')
 
 console.log(fallos === 0 ? '\nTODO BIEN' : `\n${fallos} FALLOS`)
 process.exit(fallos === 0 ? 0 : 1)

@@ -378,7 +378,6 @@ begin
        jsonb_build_object('birth_date', (v_bdate - interval '17 years' - interval '300 days')::date)),
       ('Teléfono móvil inválido', jsonb_build_object('phone', '02125551234')),
       ('Correo inválido', jsonb_build_object('email', 'jose@')),
-      ('Falta el contacto de referencia', jsonb_build_object('reference_name', '')),
       ('El teléfono del contacto de referencia tiene que ser distinto del del paciente',
        jsonb_build_object('reference_phone', '04141234567')),
       ('Teléfono del contacto de referencia inválido', jsonb_build_object('reference_phone', '123')),
@@ -396,7 +395,6 @@ begin
       raise exception 'Esperaba «%», salió «%»', v_err, v_doc;
     end if;
   end loop;
-
   v_err := null;
   begin
     perform public.create_patient_charge(v_m, null, v_pac || '{"document":"V20000001"}', 9.99, null, null, 'pc-bad-min');

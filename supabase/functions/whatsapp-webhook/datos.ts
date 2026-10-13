@@ -24,9 +24,6 @@ export type DatosDelPaciente = {
   city?: string
   address?: string
   occupation?: string
-  reference_name?: string
-  reference_phone?: string
-  reference_relationship?: string
 }
 
 /**
@@ -64,9 +61,6 @@ export const CAMPOS_DEL_FORMULARIO: Array<[Clave, string]> = [
   ['email', 'Correo'],
   ['state', 'Estado'],
   ['address', 'Dirección'],
-  ['reference_name', 'Referencia personal (nombre)'],
-  ['reference_phone', 'Teléfono de la referencia'],
-  ['reference_relationship', 'Parentesco'],
   ['monto', 'Monto'],
   ['moneda', 'Moneda (dólares o euros)'],
   ['concepto', 'Concepto'],
@@ -103,16 +97,6 @@ const ETIQUETAS: Record<string, Clave> = {
   ciudad: 'city',
   direccion: 'address',
   ocupacion: 'occupation',
-  referencia: 'reference_name',
-  'referencia personal': 'reference_name',
-  'nombre de la referencia': 'reference_name',
-  'nombre de la referencia personal': 'reference_name',
-  'contacto de referencia': 'reference_name',
-  'telefono de la referencia': 'reference_phone',
-  'telefono de referencia': 'reference_phone',
-  'telefono de la referencia personal': 'reference_phone',
-  'telefono de referencia personal': 'reference_phone',
-  parentesco: 'reference_relationship',
   monto: 'monto',
   moneda: 'moneda',
   concepto: 'concepto',
@@ -299,9 +283,6 @@ const OBLIGATORIOS: Array<[keyof DatosDelPaciente, string]> = [
   ['email', 'Correo'],
   ['state', 'Estado'],
   ['address', 'Dirección'],
-  ['reference_name', 'Referencia personal (nombre)'],
-  ['reference_phone', 'Teléfono de la referencia'],
-  ['reference_relationship', 'Parentesco'],
 ]
 
 /** Cuántas respuestas sin etiquetas valen como formulario completo: las obligatorias. */

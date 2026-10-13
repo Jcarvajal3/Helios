@@ -11,7 +11,6 @@ import {
   diasDelMes,
   edadEn,
   esCorreo,
-  esFijo,
   esMovil,
   formatearFecha,
   formatearTelefono,
@@ -85,7 +84,6 @@ comprueba(esMovil('04221234567'), 'el 0422 es móvil')
 comprueba(esMovil('04261234567'), 'el 0426 es móvil')
 comprueba(!esMovil('04151234567'), 'el 0415 no es móvil')
 comprueba(!esMovil('02121234567'), 'un fijo no es móvil')
-comprueba(esFijo('0212-123.45.67'), 'un fijo de Caracas')
 igual(telefonoLegible('04141234567'), '0414-123.45.67', 'como se dicta')
 igual(telefonoLegible('123'), '123', 'lo que no se lee, tal cual')
 igual(problemaDeMovil('02121234567')?.startsWith('Tiene que ser un móvil'), true, 'un fijo no vale de móvil')
@@ -115,15 +113,12 @@ const bueno: BorradorPaciente = {
   state: 'Miranda',
   address: 'Los Palos Grandes, calle 4',
   occupation: '',
-  referenceName: 'María Pérez',
-  referencePhone: '0424 123 4567',
-  referenceRelationship: 'Madre',
 }
 igual(problemasDelPaciente(bueno, HOY), {}, 'un paciente completo no tiene problemas')
 
 const vacio = problemasDelPaciente(PACIENTE_VACIO, HOY)
 comprueba(
-  Object.keys(vacio).length === 10,
+  Object.keys(vacio).length === 7,
   'vacío: todo menos la ocupación y el estado',
   `dio ${Object.keys(vacio).join(',')}`,
 )
@@ -136,13 +131,8 @@ igual(
   'un menor de titular',
 )
 comprueba(
-  problemasDelPaciente({ ...bueno, referencePhone: '04141234567' }, HOY).referencePhone !== undefined,
-  'la referencia no puede ser el mismo teléfono',
-)
-igual(
-  problemasDelPaciente({ ...bueno, referencePhone: '0212-555.12.34' }, HOY).referencePhone,
-  undefined,
-  'la referencia puede ser un fijo',
+  !Object.keys(PACIENTE_VACIO).some((k) => k.startsWith('reference')),
+  'el formulario ya no pide contacto de referencia',
 )
 
 igual(
@@ -158,9 +148,6 @@ igual(
     state: 'Miranda',
     address: 'Los Palos Grandes, calle 4',
     occupation: null,
-    reference_name: 'María Pérez',
-    reference_phone: '04241234567',
-    reference_relationship: 'Madre',
   },
   'el p_patient del contrato, normalizado',
 )

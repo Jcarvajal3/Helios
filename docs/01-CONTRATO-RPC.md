@@ -144,8 +144,7 @@ sobrescribir nada.
   "phone": "04141234567",              // móvil VE: 0412/0414/0416/0422/0424/0426 → se guarda E.164
   "email": "jose@gmail.com",
   "state": "Miranda", "city": "Caracas", "address": "Los Palos Grandes, …",
-  "occupation": null,                  // opcional
-  "reference_name": "María Pérez", "reference_phone": "04241234567", "reference_relationship": "Madre"
+  "occupation": null                   // opcional
 }
 ```
 
@@ -157,8 +156,11 @@ Implementado en 20261003000400 (+ 000500). Precisiones:
   inactiva → `22023`.
 - Igual que la vista previa, exige haber consultado la cédula en las últimas
   24 h ("Primero consulta la cédula del paciente").
-- `reference_phone` acepta móvil **o fijo** venezolano (02XX…), se guarda en
-  E.164 y no puede ser el teléfono del paciente. `sex` admite minúsculas.
+- **Sin contacto de referencia** desde 20261013000100 (Javier, 2026-10-13):
+  `reference_name`, `reference_phone` y `reference_relationship` son
+  opcionales y ni el panel ni el bot los piden. Si llegan, `reference_phone`
+  acepta móvil **o fijo** venezolano (02XX…), se guarda en E.164 y no puede
+  ser el teléfono del paciente. `sex` admite minúsculas.
 - `p_concept` vacío → se guarda "Consulta" (es también el nombre de la única
   línea de `charge_items`).
 - La misma clave usada en otra clínica → `22023`.
@@ -198,7 +200,7 @@ Errores típicos (`22023` salvo que se indique):
 | "El monto supera lo disponible para financiar ($X)" | No cabe en el cupo |
 | "El monto mínimo es $10" | Por debajo de `min_charge_usd` |
 | "El titular debe ser mayor de edad. Si el paciente es menor, registra a su representante" | Menor de 18 |
-| "Teléfono móvil inválido" / "Correo inválido" / "Falta el contacto de referencia" | Datos del paciente |
+| "Teléfono móvil inválido" / "Correo inválido" | Datos del paciente |
 | `42501` "No tienes permiso para registrar en esta clínica" | Sin permiso |
 | `55000` texto de mantenimiento / "La clínica está pausada" | Plataforma o clínica sin poder operar |
 

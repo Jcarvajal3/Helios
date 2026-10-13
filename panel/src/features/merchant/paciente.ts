@@ -6,7 +6,7 @@
 // regla escrita dentro de un componente.
 //
 // ⚠️ La autoridad es la base. `create_patient_charge` vuelve a comprobar la
-// edad, el teléfono, el correo y la referencia, y si algo no le cuadra lo
+// edad, el teléfono y el correo, y si algo no le cuadra lo
 // rechaza con un texto en español que el panel enseña tal cual. Estas reglas
 // existen para que la secretaria se entere ANTES, con el paciente delante,
 // y no después de rellenar todo el formulario (docs/01-CONTRATO-RPC §1.3).
@@ -275,15 +275,6 @@ export function esMovil(texto: string): boolean {
   return n !== null && (PREFIJOS_MOVILES as readonly string[]).includes(n.slice(0, 4))
 }
 
-/**
- * Un fijo venezolano: 02XX y siete dígitos. Solo se admite en el teléfono del
- * contacto de referencia, que puede ser la casa de la madre.
- */
-export function esFijo(texto: string): boolean {
-  const n = telefonoNacional(texto)
-  return n !== null && /^02\d{9}$/.test(n)
-}
-
 /** '04141234567' → '0414-123.45.67', como se dicta. Lo que no se lee, tal cual. */
 export function telefonoLegible(texto: string): string {
   const n = telefonoNacional(texto)
@@ -449,22 +440,6 @@ export function nombreDelEstado(estado: string): string {
   return estado === 'Distrito Capital' ? 'Distrito Capital (Caracas)' : estado
 }
 
-/** Los parentescos que se ofrecen en la referencia, en un desplegable. */
-export const PARENTESCOS = [
-  'Madre',
-  'Padre',
-  'Hermano/a',
-  'Hijo/a',
-  'Esposo/a',
-  'Pareja',
-  'Abuelo/a',
-  'Tío/a',
-  'Primo/a',
-  'Amigo/a',
-  'Compañero/a de trabajo',
-  'Otro',
-] as const
-
 // ── El formulario entero ──────────────────────────────────────────────────
 
 /** Lo que se teclea de un paciente nuevo, todo como texto de campo. */
@@ -479,9 +454,6 @@ export type BorradorPaciente = {
   state: string
   address: string
   occupation: string
-  referenceName: string
-  referencePhone: string
-  referenceRelationship: string
 }
 
 export const PACIENTE_VACIO: BorradorPaciente = {
@@ -494,9 +466,6 @@ export const PACIENTE_VACIO: BorradorPaciente = {
   state: ESTADO_POR_DEFECTO,
   address: '',
   occupation: '',
-  referenceName: '',
-  referencePhone: '',
-  referenceRelationship: '',
 }
 
 export type CampoDePaciente = keyof BorradorPaciente
@@ -512,9 +481,6 @@ export const ORDEN_DE_CAMPOS: CampoDePaciente[] = [
   'state',
   'address',
   'occupation',
-  'referenceName',
-  'referencePhone',
-  'referenceRelationship',
 ]
 
 /** Un texto con los espacios de sobra quitados. */
@@ -526,11 +492,9 @@ const TOPE_DIRECCION = 160
 const TOPE_TEXTO = 80
 
 /**
- * Los problemas de cada campo, por nombre. Vacío = se puede seguir.
- *
- * Las mismas reglas que la base, más una que solo tiene sentido con alguien
- * tecleando: el teléfono de referencia distinto del propio (una referencia
- * que es el mismo número no sirve para cobrar).
+ * Los problemas de cada campo, por nombre. Vacío = se puede seguir. Las
+ * mismas reglas que la base. Sin contacto de referencia desde el 2026-10-13
+ * (Javier): ya no se pide.
  */
 export function problemasDelPaciente(
   p: BorradorPaciente,
@@ -568,20 +532,6 @@ export function problemasDelPaciente(
 
   if (limpio(p.occupation).length > TOPE_TEXTO) e.occupation = 'La ocupación es demasiado larga.'
 
-  if (limpio(p.referenceName).length < 2) e.referenceName = 'Falta el contacto de referencia.'
-
-  if (soloDigitos(p.referencePhone) === '') {
-    e.referencePhone = 'Escribe el teléfono de la referencia.'
-  } else if (!esMovil(p.referencePhone) && !esFijo(p.referencePhone)) {
-    e.referencePhone = 'El número tiene que tener 11 dígitos, como 0424-123.45.67.'
-  } else if (telefonoNacional(p.referencePhone) === telefonoNacional(p.phone)) {
-    e.referencePhone = 'Es el mismo teléfono del paciente: la referencia tiene que ser otra persona.'
-  }
-
-  if (limpio(p.referenceRelationship).length < 2) {
-    e.referenceRelationship = 'Elige el parentesco.'
-  }
-
   return e
 }
 
@@ -606,9 +556,6 @@ export function pacienteParaEnviar(
     state: p.state,
     address: limpio(p.address),
     occupation: ocupacion === '' ? null : ocupacion,
-    reference_name: limpio(p.referenceName),
-    reference_phone: telefonoNacional(p.referencePhone),
-    reference_relationship: limpio(p.referenceRelationship),
   }
 }
 

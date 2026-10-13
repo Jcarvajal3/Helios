@@ -5,7 +5,6 @@ import { Card, SectionTitle, Tecla } from '@/components/ui'
 import {
   ESTADOS_DE_VENEZUELA,
   ORDEN_DE_CAMPOS,
-  PARENTESCOS,
   edadEn,
   esCorreo,
   esMovil,
@@ -31,8 +30,8 @@ const SEXOS: Array<{ value: 'F' | 'M'; label: string }> = [
  *
  * Todo obligatorio salvo la ocupación. Cada dato tiene un trabajo en la
  * cobranza, que depende al 100 % de poder localizar al paciente: el móvil
- * con WhatsApp, el correo donde le llega el comprobante y una referencia a
- * quien llamar si él no contesta. El estado nace en Distrito Capital.
+ * con WhatsApp y el correo donde le llega el comprobante. Sin contacto de
+ * referencia desde el 2026-10-13. El estado nace en Distrito Capital.
  *
  * Los problemas de un campo se dicen al salir de él, no mientras se teclea:
  * un «correo inválido» en rojo desde la primera letra es ruido. Enter
@@ -269,55 +268,6 @@ export function PasoDatos({
             maxLength={80}
             error={visible('occupation')}
             className="sm:col-span-2"
-          />
-        </div>
-      </Card>
-
-      <Card as="section" className="flex flex-col gap-4">
-        <div>
-          <SectionTitle>Contacto de referencia</SectionTitle>
-          <p className="mt-1 type-panel-body text-on-surface-variant">
-            Otra persona a quien llamar si no logramos hablar con el paciente.
-          </p>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Campo
-            id="alta-ref-nombre"
-            label="Nombre y apellido"
-            value={paciente.referenceName}
-            onChange={(v) => onCambio('referenceName', v)}
-            onBlur={tocar('referenceName')}
-            inputRef={guardar('referenceName')}
-            autoComplete="off"
-            maxLength={80}
-            error={visible('referenceName')}
-          />
-          <Campo
-            id="alta-ref-telefono"
-            label="Teléfono"
-            type="tel"
-            inputMode="tel"
-            value={paciente.referencePhone}
-            onChange={(v) => onCambio('referencePhone', v)}
-            onBlur={tocar('referencePhone')}
-            inputRef={guardar('referencePhone')}
-            autoComplete="off"
-            placeholder="0424-123.45.67"
-            formato={formatearTelefono}
-            error={visible('referencePhone')}
-          />
-          <CampoLista
-            id="alta-ref-parentesco"
-            label="Parentesco"
-            value={paciente.referenceRelationship}
-            opciones={PARENTESCOS}
-            onChange={(v) => {
-              onCambio('referenceRelationship', v)
-              tocar('referenceRelationship')()
-            }}
-            onBlur={tocar('referenceRelationship')}
-            selectRef={guardar('referenceRelationship')}
-            error={visible('referenceRelationship')}
           />
         </div>
       </Card>
