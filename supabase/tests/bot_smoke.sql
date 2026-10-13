@@ -4,8 +4,7 @@
 --   bash supabase/tests/run.sh bot_smoke
 --
 --  1. Un número sin registrar no tiene bot (42501).
---  2. El PIN: 4 dígitos, sin los obvios, uno solo; el equivocado se cuenta
---     SIN lanzar; al 5.º se bloquea; resetearlo deja crear otro.
+--  2. Sin PIN (20261013000200): no quedan sus funciones ni su tabla.
 --  3. Las operaciones van como la persona: elegibilidad con su límite, la
 --     orden con su nombre y `channel = 'whatsapp'`, la regla de «primero
 --     consulta la cédula», y la lista solo de su clínica.
@@ -88,74 +87,28 @@ begin
   end if;
 
   -- =========================================================================
-  -- 2. El PIN
+  -- 2. Sin PIN
   -- =========================================================================
-  foreach v_err in array array['1234', '0000', '9876', '12a4', '123'] loop
-    v_failed := false;
-    begin
-      perform public.bot_set_pin(v_tel, v_err);
-    exception when others then v_failed := true; end;
-    if not v_failed then
-      raise exception 'El PIN «%» no debía aceptarse', v_err;
-    end if;
-  end loop;
-
-  if not (public.bot_set_pin(v_tel, ' 4821 ')->>'ok')::boolean then
-    raise exception 'Un PIN bueno debía guardarse';
-  end if;
-  v_failed := false;
-  begin
-    perform public.bot_set_pin(v_tel, '5937');
-  exception when others then v_failed := true; end;
-  if not v_failed then
-    raise exception 'Con un PIN ya creado no se crea otro';
+  if exists (select 1 from pg_proc where proname in ('bot_set_pin', 'helios_bot_check_pin', 'admin_reset_staff_pin'))
+     or to_regclass('public.staff_pins') is not null then
+    raise exception 'Quedó algo del PIN';
   end if;
 
   perform public.bot_patient_eligibility(v_tel, 'V50000001');
-
-  v_j := public.bot_create_charge(v_tel, '0001', v_pac, 100, null, null, 'wa:pin-1');
-  if (v_j->>'ok')::boolean or v_j->>'error' <> 'pin' or (v_j->>'attempts_left')::integer <> 4
-     or (select failed_attempts from public.staff_pins where user_id = v_doc) <> 1 then
-    raise exception 'Un PIN equivocado se cuenta sin lanzar: %', v_j;
-  end if;
-  if exists (select 1 from public.charges where idempotency_key = 'wa:pin-1') then
-    raise exception 'Con el PIN equivocado no se crea nada';
-  end if;
-
-  for v_i in 2..5 loop
-    v_j := public.bot_create_charge(v_tel, '0001', v_pac, 100, null, null, 'wa:pin-' || v_i);
-  end loop;
-  if not (v_j->>'locked')::boolean
-     or (select locked_at from public.staff_pins where user_id = v_doc) is null then
-    raise exception 'Al quinto PIN equivocado se bloquea: %', v_j;
-  end if;
-  v_j := public.bot_create_charge(v_tel, '4821', v_pac, 100, null, null, 'wa:pin-6');
-  if (v_j->>'ok')::boolean or not (v_j->>'locked')::boolean then
-    raise exception 'Bloqueado, ni el PIN bueno vale: %', v_j;
-  end if;
-
-  -- El bot dejó a la doctora como `auth.uid()` en esta transacción (en el
-  -- webhook cada mensaje es su propia transacción): se vuelve al admin.
-  set local role authenticated;
-  perform set_config('request.jwt.claim.sub', '', true);
-  perform set_config('request.jwt.claims', json_build_object('sub', v_admin::text, 'role', 'authenticated')::text, true);
-  perform public.admin_reset_staff_pin(v_doc, 'Bloqueado en la prueba');
-  reset role;
-  perform public.bot_set_pin(v_tel, '4821');
 
   -- =========================================================================
   -- 3. Como la persona
   -- =========================================================================
   v_failed := false;
   begin
-    perform public.bot_create_charge(v_tel, '4821',
+    perform public.bot_create_charge(v_tel,
       v_pac || jsonb_build_object('document', 'V50000009'), 50, null, null, 'wa:sin-consulta');
   exception when others then v_failed := true; v_err := sqlerrm; end;
   if not v_failed or v_err <> 'Primero consulta la cédula del paciente' then
     raise exception 'El bot sigue la regla de consultar la cédula: %', coalesce(v_err, 'sin error');
   end if;
 
-  v_j := public.bot_create_charge(v_tel, '4821', v_pac, 100, 'Consulta', null, 'wa:msg-1');
+  v_j := public.bot_create_charge(v_tel, v_pac, 100, 'Consulta', null, 'wa:msg-1');
   v_charge := (v_j->'charge'->>'id')::uuid;
   select * into v_row from public.charges where id = v_charge;
   if not (v_j->>'ok')::boolean or v_row.status <> 'pending' or v_row.channel <> 'whatsapp'
@@ -168,7 +121,7 @@ begin
   end if;
 
   -- Idempotente por el id del mensaje.
-  if (public.bot_create_charge(v_tel, '4821', v_pac, 100, 'Consulta', null, 'wa:msg-1'))->'charge'->>'id' <> v_charge::text then
+  if (public.bot_create_charge(v_tel, v_pac, 100, 'Consulta', null, 'wa:msg-1'))->'charge'->>'id' <> v_charge::text then
     raise exception 'El mismo mensaje no crea otra orden';
   end if;
 
@@ -216,7 +169,7 @@ begin
   end if;
 
   perform public.bot_patient_eligibility(v_tel, 'V50000002');
-  v_charge2 := ((public.bot_create_charge(v_tel, '4821',
+  v_charge2 := ((public.bot_create_charge(v_tel,
                   v_pac || jsonb_build_object('document', 'V50000002', 'phone', '04161112233', 'email', 'b@gmail.com'),
                   40, null, null, 'wa:msg-2'))->'charge'->>'id')::uuid;
   update public.charges set expires_at = now() - interval '1 minute' where id = v_charge2;
@@ -257,7 +210,7 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub', v_doc::text, 'role', 'authenticated')::text, true);
   v_failed := false;
   begin
-    perform public.bot_create_charge(v_tel, '4821', v_pac, 10, null, null, 'wa:api');
+    perform public.bot_create_charge(v_tel, v_pac, 10, null, null, 'wa:api');
   exception when insufficient_privilege then v_failed := true; end;
   reset role;
   if not v_failed then

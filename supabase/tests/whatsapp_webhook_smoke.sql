@@ -5,11 +5,12 @@
 --
 --  1. Los números del bot: registrar (móvil VE, solo personal activo de esa
 --     clínica), un número es de una sola persona, cambiar de número revoca el
---     anterior, revocar exige motivo, resetear el PIN, la bitácora y que solo
---     el super_admin escribe.
+--     anterior, revocar exige motivo, la bitácora y que solo el super_admin
+--     escribe.
 --  2. Recibir: se guarda una vez (el reintento es `duplicate`), abre la
 --     ventana de 24 h, reconoce al personal y la orden pendiente del paciente.
---  3. El PIN del personal se guarda tachado; el de un paciente no se toca.
+--  3. Lo que escribe el personal se guarda tal cual (sin PIN desde
+--     20261013000200), igual que lo de un paciente.
 --  4. Dos órdenes esperando al mismo teléfono (una familia): ninguna se
 --     decide por texto.
 --  5. Dar de baja a la persona revoca su número; anotar adónde fue un mensaje.
@@ -76,7 +77,7 @@ begin
   v_j := public.admin_set_staff_whatsapp(v_gerente, v_m, '0414-555.66.77');
   v_num := (v_j->>'id')::uuid;
   if v_j->>'phone_e164' <> '+584145556677' or v_j->>'role' <> 'gerente'
-     or v_j->>'staff_name' <> 'Dra. Laura Gómez' or (v_j->>'has_pin')::boolean then
+     or v_j->>'staff_name' <> 'Dra. Laura Gómez' or v_j ? 'has_pin' then
     raise exception 'El número no quedó bien: %', v_j;
   end if;
 
@@ -136,20 +137,9 @@ begin
   end if;
 
   reset role;
-  insert into public.staff_pins (user_id, pin_hash) values (v_gerente, extensions.crypt('4821', extensions.gen_salt('bf')));
-  set local role authenticated;
-  perform set_config('request.jwt.claims', json_build_object('sub', v_admin::text, 'role', 'authenticated')::text, true);
-  if not ((select public.admin_staff_whatsapp(v_m)) @> jsonb_build_array(jsonb_build_object('id', v_num, 'has_pin', true))) then
-    raise exception 'La lista debía decir que tiene PIN';
-  end if;
-  v_j := public.admin_reset_staff_pin(v_gerente, 'Olvidó el PIN');
-  reset role;
-  if not (v_j->>'had_pin')::boolean or exists (select 1 from public.staff_pins where user_id = v_gerente) then
-    raise exception 'Resetear el PIN debía borrarlo: %', v_j;
-  end if;
 
   if (select count(*) from audit.admin_actions
-       where action in ('staff.whatsapp_set', 'staff.pin_reset') and target_id in (v_gerente, v_cajero)) < 4 then
+       where action = 'staff.whatsapp_set' and target_id in (v_gerente, v_cajero)) < 3 then
     raise exception 'Faltan entradas en la bitácora';
   end if;
 
@@ -198,15 +188,15 @@ begin
   end if;
 
   -- =========================================================================
-  -- 3. El PIN se guarda tachado
+  -- 3. Lo del personal se guarda tal cual
   -- =========================================================================
   v_j := public.helios_whatsapp_inbound('wamid.G1', '584245556677', 'text', '{"text":{"body":" 4821 "}}');
   if v_j->'staff'->>'user_id' <> v_gerente::text or v_j->'staff'->>'merchant_id' <> v_m::text
      or v_j->'staff'->>'role' <> 'gerente' then
     raise exception 'Debía reconocer a la doctora: %', v_j;
   end if;
-  if (select payload->'text'->>'body' from public.whatsapp_inbound where wa_message_id = 'wamid.G1') <> '[PIN]' then
-    raise exception 'El PIN del personal se guarda tachado';
+  if (select payload->'text'->>'body' from public.whatsapp_inbound where wa_message_id = 'wamid.G1') <> ' 4821 ' then
+    raise exception 'Sin PIN, lo que escribe el personal se guarda tal cual';
   end if;
   perform public.helios_whatsapp_inbound('wamid.P2', '584141234567', 'text', '{"text":{"body":"1234"}}');
   if (select payload->'text'->>'body' from public.whatsapp_inbound where wa_message_id = 'wamid.P2') <> '1234' then

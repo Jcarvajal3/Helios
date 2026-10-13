@@ -676,7 +676,7 @@ bitácora.
 
 - `admin_staff_whatsapp(p_merchant_id uuid default null) → jsonb` (un arreglo; implementado en 20261005000500 con el resto de esta sección):
   `id, phone_e164, user_id, staff_name, role, merchant_id, merchant_name,
-  has_pin, pin_locked, last_inbound_at, created_at, created_by_name,
+  last_inbound_at, created_at, created_by_name,
   revoked_at, revoked_by_name, revoke_reason`. Null = todas las clínicas.
 - `admin_set_staff_whatsapp(p_user_id uuid, p_merchant_id uuid, p_phone text) → jsonb`.
   La persona tiene que ser personal activo (`gerente` o `cajero`) de esa
@@ -688,9 +688,8 @@ bitácora.
 - `admin_revoke_staff_whatsapp(p_id uuid, p_reason text) → jsonb`. Motivo
   obligatorio. Borra la sesión del bot de ese número. Bitácora
   `staff.whatsapp_revoked`.
-- `admin_reset_staff_pin(p_user_id uuid, p_reason text) → jsonb`. Borra el PIN
-  y el bloqueo; el bot pedirá crear otro en el próximo mensaje. Bitácora
-  `staff.pin_reset`.
+- ~~`admin_reset_staff_pin`~~: eliminada con el PIN (20261013000200). Las
+  líneas viejas `staff.pin_reset` de la bitácora quedan.
 - Dar de baja a una persona (`merchant_staff_update` → inactiva) revoca su
   número.
 
@@ -715,7 +714,7 @@ bitácora.
 | `patient_confirmation_required` | 0 | 1 = la orden espera el "Sí" del paciente (§1.3.1). Se pasa a 1 cuando Meta apruebe la plantilla |
 | `patient_confirmation_minutes` | 120 | plazo de la orden pendiente |
 | `confirmation_resends_per_day` | 3 | reenvíos de la confirmación por orden y día |
-| `staff_pin_max_attempts` | 5 | intentos de PIN antes del bloqueo |
+| `staff_pin_max_attempts` | 5 | sin uso desde 20261013000200 (el bot ya no pide PIN) |
 | `bot_session_minutes` | 30 | inactividad que reinicia la conversación del bot |
 
 Sembrados en 20261002000100 con vigencia desde 2026-09-30 (más una fila de
@@ -841,11 +840,10 @@ Las del webhook **no lanzan** errores de negocio: devuelven
 
 | Tabla | Para qué |
 |---|---|
-| `whatsapp_inbound` | Cada evento recibido, crudo (`wa_message_id` único). El texto de un PIN se guarda como `[PIN]` |
+| `whatsapp_inbound` | Cada evento recibido, crudo (`wa_message_id` único) |
 | `whatsapp_contacts` | Por número: `last_inbound_at` (la ventana de 24 h), `profile_id` / `staff_user_id` si se conoce |
 | `whatsapp_sessions` | Estado de la conversación del bot por número (`state`, `data jsonb`, `updated_at`). La Edge Function la lee y la escribe directamente |
 | `staff_whatsapp_numbers` | Número → persona y clínica (§2.7) |
-| `staff_pins` | `user_id`, `pin_hash` (bcrypt), `failed_attempts`, `locked_at`, `set_at` |
 
 `charges` gana `channel` (`panel` | `whatsapp`), `answered_at` y
 `answer_wa_message_id` (la prueba del "Sí").
@@ -855,7 +853,7 @@ Las del webhook **no lanzan** errores de negocio: devuelven
 - `helios_whatsapp_inbound(p_message_id text, p_from text, p_type text, p_payload jsonb) → jsonb`.
   Guarda el evento (si ya estaba: `{duplicate: true}` y no se hace nada más),
   actualiza `whatsapp_contacts` y devuelve lo que hace falta para enrutar:
-  `{duplicate, staff: {user_id, staff_name, merchant_id, merchant_name, role, has_pin, pin_locked} | null,
+  `{duplicate, staff: {user_id, staff_name, merchant_id, merchant_name, role} | null,
   pending_charge_id: uuid | null}` (la única orden `pending` vigente cuyo
   paciente tiene ese teléfono registrado).
 - `helios_patient_decision(p_charge_id uuid, p_decision text, p_from_phone text, p_wa_message_id text) → jsonb`.
@@ -905,10 +903,9 @@ textos). Bitácora con `canal = whatsapp`.
 
 | RPC | Equivale a | Nota |
 |---|---|---|
-| `bot_set_pin(p_phone, p_pin text) → jsonb` | — | Solo si no tiene PIN. 4 dígitos, no triviales (`22023` "Elige un PIN menos obvio") |
 | `bot_patient_eligibility(p_phone, p_document)` | `helios_patient_eligibility` | `p_merchant_id` sale del número |
 | `bot_preview_charge(p_phone, p_document, p_amount_usd)` | `preview_patient_charge` | |
-| `bot_create_charge(p_phone, p_pin, p_patient jsonb, p_amount_usd, p_concept, p_beneficiary_name, p_idempotency_key)` | `create_patient_charge` | Verifica el PIN primero y **no lanza** si está mal (un error desharía el intento contado): devuelve `{ok: false, error: "pin", message, attempts_left, locked}`. Al 5.º fallo se bloquea. Con el PIN bien devuelve `{ok: true, charge}`; los errores de negocio lanzan como en el panel. Sede: la del `cajero` o la principal del `gerente`. `charges.channel = 'whatsapp'` |
+| `bot_create_charge(p_phone, p_patient jsonb, p_amount, p_concept, p_beneficiary_name, p_idempotency_key, p_currency default 'USD')` | `create_patient_charge` | **Sin PIN** desde 20261013000200 (Javier, 2026-10-13): basta el número registrado; la orden no es deuda hasta el "Sí" del paciente. Devuelve `{ok: true, charge}`; los errores de negocio lanzan como en el panel. Sede: la del `cajero` o la principal del `gerente`. `charges.channel = 'whatsapp'` |
 | `bot_recent_charges(p_phone, p_limit int default 10)` | `merchant_transactions` | Las de los últimos 30 días con su `status`; el `cajero` ve las suyas |
 | `bot_resend_confirmation(p_phone, p_charge_id)` | `staff_resend_confirmation` | |
 | `bot_resend_receipt(p_phone, p_charge_id)` | `staff_resend_receipt` | |
@@ -923,7 +920,7 @@ médico que registró por WhatsApp recibe `✅ … aceptó`, `❌ … no aceptó
 resultado queda en el panel. El webhook llama a
 `helios_dispatch_whatsapp_batch` al terminar cada evento para que salga ya.
 
-`p_idempotency_key` del bot = `wa:<id del mensaje que llevó el PIN>`: si
+`p_idempotency_key` del bot = `wa:<id del mensaje que confirmó la orden>`: si
 360dialog reintenta el webhook, no se crea otra orden.
 
 ### 5.5 El bot del paciente (2026-10-06)

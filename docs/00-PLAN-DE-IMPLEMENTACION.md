@@ -74,7 +74,7 @@ El resto del documento conserva "financiamiento" como término interno del dise�
 | Cupo durante la espera | La orden pendiente **reserva el cupo** del paciente hasta que acepte, rechace o venza | Javier, 2026-10-05 |
 | Panel y WhatsApp | El panel web **también exige el "Sí"**: un solo modelo para los dos canales | Javier, 2026-10-05 |
 | Canal del médico | Los médicos registran y consultan **desde WhatsApp** (muchos no tienen secretaria ni computador) | Javier, 2026-10-02 |
-| Identidad del médico | El equipo de Helios **registra su número**; escribir desde ese número lo identifica. **PIN** solo para operaciones de dinero. Nunca usuario y clave por chat | Javier, 2026-10-02 |
+| Identidad del médico | El equipo de Helios **registra su número**; escribir desde ese número lo identifica. **Sin PIN** desde el 2026-10-13 (Javier; antes lo pedía para cada orden). Nunca usuario y clave por chat | Javier, 2026-10-02 y 2026-10-13 |
 | Alta de paciente nuevo por WhatsApp | El médico manda **todos los datos en un solo mensaje**; el bot los lee con el formulario o con solo las respuestas en orden (sin IA desde el 2026-10-09), pide lo que falte y muestra un resumen antes de confirmar | Javier, 2026-10-02 |
 | Proveedor de WhatsApp | **360dialog**, **un solo número con coexistencia**: la app WhatsApp Business para el equipo y la API para el bot y los envíos automáticos | Javier, 2026-10-05 |
 | Total al paciente | **Al paciente sí se le enseña el total con el cargo por servicio**; a la clínica, nunca. Montos de los mensajes al estilo venezolano ($1,92) | Javier, 2026-10-06 |
@@ -133,7 +133,7 @@ sequenceDiagram
   S->>S: Datos del paciente + monto y concepto
   S->>DB: preview_patient_charge(...)
   DB-->>S: Desglose, 2 cuotas con fechas
-  S->>DB: create_patient_charge(..., idempotency_key) [+ PIN si es el bot]
+  S->>DB: create_patient_charge(..., idempotency_key)
   Note over DB: Orden PENDIENTE: crea o bloquea al paciente,<br/>valida y reserva el cupo, vence en 2 h.<br/>Todavía no hay deuda
   DB->>W: Plantilla "confirmar financiamiento" (Sí / No)
   W->>P: Resumen de la orden: consulta, servicio Helios, cuotas
@@ -182,11 +182,11 @@ sequenceDiagram
 
 El mismo flujo, conversado. El detalle técnico está en §15.
 
-1. El médico escribe al WhatsApp de Helios desde **su número registrado**. La primera vez el bot le pide **crear un PIN** de 4 dígitos (dos veces). Después le ofrece botones: **Nuevo financiamiento**, **Mis financiamientos**, **Ayuda**.
+1. El médico escribe al WhatsApp de Helios desde **su número registrado**. El bot le ofrece botones (sin PIN desde el 2026-10-13): **Nuevo financiamiento**, **Mis financiamientos**, **Ayuda**.
 2. **Cédula** → la misma respuesta que en el panel (nuevo / disponible $X con nombre enmascarado / no disponible, sin motivo).
 3. **Paciente conocido**: pide monto y concepto ("80 consulta"). **Paciente nuevo**: pide **todos los datos en un solo mensaje** (el bot le manda el formulario en un mensaje aparte para copiarlo; valen también solo las respuestas, una por línea y en orden). El bot **pregunta solo lo que falte** y nunca inventa un dato.
 4. **Resumen**: datos del paciente (con el **correo bien visible**, porque ahí llega el comprobante), monto de la consulta, línea "Servicio Helios 20 % + IVA" y las 2 cuotas con fechas. Botones **Confirmar** / **Corregir**.
-5. **Confirmar** → el bot pide el **PIN** → orden pendiente → WhatsApp al paciente. El bot avisa "Esperando la respuesta de José (vence a las 16:40)".
+5. **Confirmar** → orden pendiente → WhatsApp al paciente. El bot avisa "Esperando la respuesta de José (vence a las 16:40)".
 6. El bot le avisa al médico cuando el paciente **acepta**, **rechaza** o la orden **vence** (con botón **Reenviar**).
 
 ---
@@ -664,7 +664,7 @@ Es el único documento que recibe el paciente, así que tiene que estar completo
   - `risk_alerts`: cada alerta de H10 se dispara en su umbral y no antes;
   - `patient_confirmation`: orden pendiente sin deuda, reserva de cupo (dos sedes a la vez), una sola pendiente por paciente, "Sí" del teléfono registrado y no de otro, revalidación al aceptar (lista negra o mora surgidas en la espera), "No", vencimiento, reenvío con fechas recalculadas, idempotencia por id de mensaje, y el interruptor en 0 que conserva el comportamiento de hoy;
   - `whatsapp`: despacho a 360dialog con el `http` simulado (plantilla fuera de la ventana de 24 h, texto libre dentro), reintentos, caída a la cola manual, estados de entrega;
-  - `bot`: número no registrado o revocado, PIN (creación, intentos, bloqueo, reseteo), y que cada `bot_*` aplique exactamente las reglas de rol, sede, límites y privacidad del panel.
+  - `bot`: número no registrado o revocado, que no quede nada del PIN, y que cada `bot_*` aplique exactamente las reglas de rol, sede, límites y privacidad del panel.
 - **`plpgsql_check`** sobre todas las funciones, con cero errores, como paso de CI.
 - **CI** (GitHub Actions), mejorando lo que hoy hace Ronda, que no corre las pruebas de BD en CI:
   1. `panel`: `npm ci` → typecheck → lint → tests (`tsx`).
@@ -726,7 +726,7 @@ Estimación para una persona con asistencia de IA, en semanas de trabajo efectiv
 |---|---|---|
 | **Clínica o secretaria que da de alta pacientes falsos** | Sin KYC ni consentimiento digital, Helios paga el 100% a la clínica aunque el paciente no pague, y la secretaria cobra comisión por cada alta. Es el fraude #1 que ya identificó Ronda, aquí agravado | **Desde el 2026-10-05, el "Sí" del paciente** desde su teléfono registrado: sin él no hay deuda, ni pago a la clínica, ni comisión. Además, las alertas automáticas de H10, el comprobante por correo con "si no reconoces este financiamiento, escríbenos", cédula única y lista negra. Queda el caso del paciente **nuevo** con un teléfono que controla la propia clínica: lo cubren las alertas (`telefono_repetido`, ráfagas) y las medidas de §14 |
 | **Datos de contacto malos** | La cobranza depende 100% del teléfono, el WhatsApp y el correo | **El "Sí" verifica el teléfono**: sin un WhatsApp que responda no hay financiamiento. Además, validación de formato, email confirmado (dos veces en el panel; destacado en el resumen del bot) y alerta por correo rebotado. Sin contacto de referencia desde el 2026-10-13 |
-| **Teléfono del médico robado o clonado** | El número registrado identifica al médico | **PIN** en toda operación de dinero (5 intentos y bloqueo; reseteo solo por Helios), revocación inmediata desde el superadmin, y el "Sí" del paciente: con el teléfono del médico solo no se crea deuda |
+| **Teléfono del médico robado o clonado** | El número registrado identifica al médico | Revocación inmediata desde el superadmin y el "Sí" del paciente: con el teléfono del médico solo no se crea deuda. **Sin PIN** desde el 2026-10-13 (Javier) |
 | **El bot interpreta mal un dato** | Un correo o una cédula mal leídos llegan al comprobante o a la persona equivocada | Sin IA: el formulario se lee con código y las respuestas sin etiquetas solo si cuadran con las preguntas (si no, se pide el formulario); el bot pregunta lo que falte, muestra un resumen que el médico confirma, y las RPC revalidan todo. El "Sí" del paciente es la última barrera |
 | **Dependencia de 360dialog y Meta** | Si el número se bloquea, ni el bot ni las confirmaciones funcionan | Plantillas *utility* y solo a pacientes que piden financiar (calidad alta), soporte de 360dialog, y el interruptor `patient_confirmation_required` para volver al registro sin "Sí" desde el panel en una emergencia |
 | **Datos personales en terceros** | Cédula, dirección y teléfono pasan por 360dialog y Meta | Aviso de privacidad y consentimiento revisados por un abogado antes del piloto; nada clínico en los mensajes |
@@ -763,7 +763,7 @@ Estimación para una persona con asistencia de IA, en semanas de trabajo efectiv
 | D-H15 | ¿Cuánto espera la orden? | **2 horas**; si vence, la clínica la reenvía |
 | D-H16 | ¿La orden pendiente reserva cupo? | **Sí** |
 | D-H17 | ¿El panel también exige el "Sí"? | **Sí**, un solo modelo |
-| D-H18 | ¿Cómo se identifica el médico en WhatsApp? | **Número registrado por Helios + PIN** para el dinero; sin usuario y clave por chat, sin códigos de vinculación |
+| D-H18 | ¿Cómo se identifica el médico en WhatsApp? | **Número registrado por Helios**; sin usuario y clave por chat, sin códigos de vinculación. El PIN se quitó el 2026-10-13 (Javier) |
 | D-H19 | ¿Alta de paciente nuevo por WhatsApp? | **Un solo mensaje** con todos los datos; el bot interpreta, pregunta lo que falte y pide confirmación |
 | D-H20 | ¿Proveedor y números? | **360dialog**, **un número con coexistencia** |
 
@@ -848,18 +848,13 @@ flowchart LR
 - `staff_whatsapp_numbers`: número (E.164, único entre los activos), persona (`merchant_users` activo, `gerente` o `cajero`) y clínica; quién lo registró, y la revocación con motivo. Lo administra un `super_admin` desde la ficha de la clínica, con bitácora. **Por ahora un número sirve a una sola clínica.**
 - Un número que no está registrado, o revocado, no tiene bot (cae al paso 5 de §15.3).
 
-**PIN.**
-- `staff_pins`: hash bcrypt (`pgcrypto`), intentos fallidos, bloqueo. **4 dígitos**, sin los triviales (0000, 1111, 1234…).
-- La primera vez que el médico escribe, el bot le pide crearlo (dos veces). El equipo de Helios, que acaba de registrar el número, lo confirma por llamada.
-- Se pide **al confirmar cada orden** (lo único que acaba creando deuda). Consultar y reenviar no lo piden.
-- **5 fallos → bloqueado** hasta que Helios lo resetee (`admin_reset_staff_pin`, con motivo y bitácora).
-- El mensaje con el PIN se guarda **tachado** en `whatsapp_inbound` y **nunca** pasa por la IA.
+**Sin PIN** (2026-10-13, Javier; 20261013000200). Hasta entonces el bot pedía un PIN de 4 dígitos al confirmar cada orden. Se quitaron `staff_pins`, `bot_set_pin`, `helios_bot_check_pin` y `admin_reset_staff_pin`. Lo que protege ahora: el número registrado (revocable al instante) y el "Sí" del paciente desde su propio WhatsApp.
 
 **Ejecutar como la persona.** Los `bot_*` son RPC solo para `service_role`. Resuelven el número → la persona, fijan `request.jwt.claims` en la transacción (`sub` = esa persona) y llaman a la RPC del panel. Así `auth.uid()` es el médico y se aplican **exactamente** las reglas del panel: rol y sede, límite de 60 cédulas, privacidad entre clínicas, idempotencia. La bitácora anota además `canal = whatsapp`.
 
 **Conversación.**
 - `whatsapp_sessions` (número → estado y datos de la operación en curso). **30 minutos** sin actividad la reinician.
-- Pasos: menú → cédula → (monto | datos del paciente nuevo) → resumen → PIN → esperando al paciente.
+- Pasos: menú → cédula → (monto | datos del paciente nuevo) → resumen → esperando al paciente.
 - Botones de respuesta (máx. 3) y listas (máx. 10) para que casi nada haya que escribirlo.
 - **v1:** nuevo financiamiento, mis financiamientos (los últimos 10 con su estado), reenviar al paciente, reenviar comprobante, ayuda.
 - **Después:** "¿cuánto me pagan el lunes?" (`merchant_settlement_outlook`), comisiones y notas de voz.

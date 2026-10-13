@@ -22,9 +22,7 @@ import {
 import {
   claveNumerosDelBot,
   consultaNumerosDelBot,
-  estadoDelPin,
   registrarNumeroDelBot,
-  resetearPinDelBot,
   revocarNumeroDelBot,
   telefonoLegible,
 } from '@/features/admin/clinicas/bot'
@@ -62,9 +60,9 @@ import { describeError } from '@/lib/supabase'
  *
  * El acceso al bot de WhatsApp (docs/00 §15.4, contrato §2.7) va dentro de
  * la tarjeta de cada persona, en su alta y en su edición, con `conBot`. Solo
- * lo enciende la ficha del superadmin: registrar un número, resetear el PIN
- * o quitar el acceso lo hace el equipo de Helios (super admin), y el gerente
- * no puede ni leer los números (`admin_staff_whatsapp`).
+ * lo enciende la ficha del superadmin: registrar un número o quitar el
+ * acceso lo hace el equipo de Helios (super admin), y el gerente no puede ni
+ * leer los números (`admin_staff_whatsapp`). Sin PIN desde el 2026-10-13.
  *
  * Al crear una cuenta se le manda (si se deja marcado) un correo con sus
  * datos de acceso y cómo usar el bot, con copia oculta a Helios
@@ -224,9 +222,9 @@ type EstadoBot =
   | { tipo: 'error'; reintentar: () => void }
   | { tipo: 'listo'; numero: NumeroDelBot | null }
 
-type AccionBot = { tipo: 'revocar' | 'pin'; numero: NumeroDelBot; quien: string }
+type AccionBot = { tipo: 'revocar'; numero: NumeroDelBot; quien: string }
 
-/** El renglón del bot dentro de la tarjeta: su número, su PIN y qué hacer. */
+/** El renglón del bot dentro de la tarjeta: su número y qué hacer. */
 function LineaDelBot({
   bot,
   quien,
@@ -261,18 +259,6 @@ function LineaDelBot({
               ? ` · último mensaje ${formatDateTime(bot.numero.lastInboundAt)}`
               : ' · todavía no ha escrito'}
           </p>
-          <Badge tone={estadoDelPin(bot.numero).tone} icono>
-            {estadoDelPin(bot.numero).texto}
-          </Badge>
-          <Button
-            size="sm"
-            variant="text"
-            disabled={!isSuperAdmin || !bot.numero.hasPin}
-            motivoApagado={!isSuperAdmin ? SOLO_SUPER_ADMIN : 'Todavía no ha creado su PIN'}
-            onClick={() => bot.numero && onBot({ tipo: 'pin', numero: bot.numero, quien })}
-          >
-            Resetear PIN
-          </Button>
           <Button
             size="sm"
             variant="text"
@@ -288,7 +274,7 @@ function LineaDelBot({
   )
 }
 
-/** Resetear el PIN o quitar el acceso al bot, con su motivo (bitácora). */
+/** Quitar el acceso al bot, con su motivo (bitácora). */
 function DialogoDelBot({
   accion,
   onDone,
@@ -300,31 +286,23 @@ function DialogoDelBot({
 }) {
   const avisar = useToast()
   const mutation = useMutation({
-    mutationFn: async (motivo: string) => {
-      if (accion.tipo === 'revocar') await revocarNumeroDelBot(accion.numero.id, motivo)
-      else await resetearPinDelBot(accion.numero.userId, motivo)
-    },
+    mutationFn: (motivo: string) => revocarNumeroDelBot(accion.numero.id, motivo),
     onSuccess: () => {
-      avisar(accion.tipo === 'revocar' ? 'Acceso al bot quitado' : 'PIN reseteado: lo creará de nuevo en su próximo mensaje')
+      avisar('Acceso al bot quitado')
       onDone()
       onClose()
     },
   })
 
-  const revocar = accion.tipo === 'revocar'
   return (
     <ConfirmDialog
-      title={revocar ? '¿Quitar el acceso al bot?' : '¿Resetear el PIN?'}
-      summary={
-        revocar
-          ? `${accion.quien} ya no podrá usar el bot desde el ${telefonoLegible(accion.numero.phone)}. Sigue entrando al panel.`
-          : `${accion.quien} tendrá que crear un PIN nuevo en su próximo mensaje al bot.`
-      }
-      confirmLabel={revocar ? 'Quitar acceso' : 'Resetear PIN'}
+      title="¿Quitar el acceso al bot?"
+      summary={`${accion.quien} ya no podrá usar el bot desde el ${telefonoLegible(accion.numero.phone)}. Sigue entrando al panel.`}
+      confirmLabel="Quitar acceso"
       nivel="sensible"
       reasonLabel="Motivo"
-      reasonPlaceholder={revocar ? 'Perdió el teléfono, ya no trabaja aquí…' : 'Lo olvidó, se bloqueó…'}
-      danger={revocar}
+      reasonPlaceholder="Perdió el teléfono, ya no trabaja aquí…"
+      danger
       busy={mutation.isPending}
       error={mutation.isError ? describeError(mutation.error) : undefined}
       onConfirm={(motivo) => mutation.mutate(motivo)}
@@ -649,7 +627,7 @@ function Alta({
                 error={!!motivoDelWhatsApp(whatsapp)}
               />
               <p className="mt-2 type-panel-body text-on-surface-variant">
-                Desde ese número podrá registrar pagos en cuotas con el bot. La primera vez el bot le pide crear un PIN.
+                Desde ese número podrá registrar pagos en cuotas con el bot.
               </p>
             </div>
           )}
@@ -839,7 +817,7 @@ function Edicion({
                 {quitaElBot
                   ? `Al guardar, ya no podrá usar el bot desde el ${telefonoActual}.`
                   : cambioDeBot && numeroActual
-                    ? `Al guardar, el ${telefonoActual} deja de servir y tendrá que crear un PIN nuevo desde el número nuevo.`
+                    ? `Al guardar, el ${telefonoActual} deja de servir y usará el bot desde el número nuevo.`
                     : numeroActual
                       ? 'Bórralo para quitarle el acceso al bot, o escribe otro para cambiarlo.'
                       : 'Escríbelo para que pueda registrar pagos en cuotas con el bot.'}

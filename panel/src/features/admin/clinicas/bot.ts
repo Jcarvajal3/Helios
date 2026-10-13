@@ -1,12 +1,12 @@
-import { booleano, comoLista, comoFila, texto, textoONulo } from '@/lib/json'
+import { comoLista, comoFila, texto, textoONulo } from '@/lib/json'
 import { supabase } from '@/lib/supabase'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Los números del bot de WhatsApp de una clínica (docs/00 §15.4, contrato
 // §2.7). El equipo de Helios registra el número de cada persona del personal
-// que usa el bot; escribir desde ese número la identifica y el PIN protege lo
-// que crea deuda. Escribir lo exige el servidor a un super admin y queda en
-// la bitácora.
+// que usa el bot; escribir desde ese número la identifica (sin PIN desde el
+// 2026-10-13). Escribir lo exige el servidor a un super admin y queda en la
+// bitácora.
 // ═══════════════════════════════════════════════════════════════════════════
 
 export type NumeroDelBot = {
@@ -15,8 +15,6 @@ export type NumeroDelBot = {
   userId: string
   staffName: string | null
   role: 'gerente' | 'cajero' | null
-  hasPin: boolean
-  pinLocked: boolean
   lastInboundAt: string | null
   createdAt: string | null
   createdByName: string | null
@@ -32,8 +30,6 @@ export function leerNumeroDelBot(v: unknown): NumeroDelBot {
     userId: texto(r.user_id),
     staffName: textoONulo(r.staff_name),
     role: r.role === 'gerente' || r.role === 'cajero' ? r.role : null,
-    hasPin: booleano(r.has_pin),
-    pinLocked: booleano(r.pin_locked),
     lastInboundAt: textoONulo(r.last_inbound_at),
     createdAt: textoONulo(r.created_at),
     createdByName: textoONulo(r.created_by_name),
@@ -48,16 +44,6 @@ export function telefonoLegible(e164: string): string {
   const local = d.startsWith('58') ? `0${d.slice(2)}` : d
   const m = /^(0\d{3})(\d{3})(\d{2})(\d{2})$/.exec(local)
   return m ? `${m[1]}-${m[2]}-${m[3]}-${m[4]}` : e164
-}
-
-/** Cómo está el PIN, para la insignia. */
-export function estadoDelPin(n: Pick<NumeroDelBot, 'hasPin' | 'pinLocked'>): {
-  texto: string
-  tone: 'neutral' | 'warning' | 'error' | 'success'
-} {
-  if (n.pinLocked) return { texto: 'PIN bloqueado', tone: 'error' }
-  if (n.hasPin) return { texto: 'Con PIN', tone: 'success' }
-  return { texto: 'Sin PIN todavía', tone: 'warning' }
 }
 
 export const claveNumerosDelBot = (merchantId: string) => ['admin-numeros-del-bot', merchantId] as const
@@ -89,10 +75,5 @@ export async function registrarNumeroDelBot(p: {
 
 export async function revocarNumeroDelBot(id: string, motivo: string): Promise<void> {
   const { error } = await supabase.rpc('admin_revoke_staff_whatsapp', { p_id: id, p_reason: motivo })
-  if (error) throw error
-}
-
-export async function resetearPinDelBot(userId: string, motivo: string): Promise<void> {
-  const { error } = await supabase.rpc('admin_reset_staff_pin', { p_user_id: userId, p_reason: motivo })
   if (error) throw error
 }

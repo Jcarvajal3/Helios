@@ -6,7 +6,9 @@
 // sin actividad la reinician. Todo lo que toca dinero o datos pasa por los
 // `bot_*`, que actúan COMO esa persona con las reglas del panel.
 //
-//   (sin PIN)  pin_nuevo → pin_repetir → menú
+//   Sin PIN desde el 2026-10-13 (Javier): el número registrado basta, y la
+//   orden no es deuda hasta que el paciente responde Sí.
+//
 //   menú       Nuevo pago en cuotas · Mis pagos en cuotas · Ayuda
 //              (o directamente una cédula, o «reenviar 1042»)
 //   cedula     → nuevo: datos      disponible: moneda      no disponible: menú
@@ -17,8 +19,8 @@
 //              una vez: «€80 consulta»)
 //   monto      «80 consulta», «€80 consulta», «80 euros consulta»; un botón
 //              de moneda aquí la cambia y vuelve a pedir el monto
-//   resumen    Confirmar · Corregir (también la moneda) · Cancelar
-//   pin        el PIN → la orden sale al paciente → menú
+//   resumen    Confirmar (la orden sale al paciente) · Corregir (también la
+//              moneda) · Cancelar
 //
 // La moneda (decisión del 2026-10-07): el médico cobra la consulta en
 // dólares o en euros y la orden queda en esa moneda; el paciente la paga en
@@ -66,16 +68,13 @@ export type Personal = {
   role: 'gerente' | 'cajero' | null
   merchant_id: string
   merchant_name: string | null
-  has_pin: boolean
-  pin_locked: boolean
 }
 
 export type Rpc = <T>(fn: string, args: Record<string, unknown>) => Promise<T>
 
-type Estado = 'menu' | 'pin_nuevo' | 'pin_repetir' | 'cedula' | 'datos' | 'moneda' | 'monto' | 'resumen' | 'pin'
+type Estado = 'menu' | 'cedula' | 'datos' | 'moneda' | 'monto' | 'resumen'
 
 type Datos = {
-  pinHmac?: string
   cedula?: string
   nuevo?: boolean
   /** Lo disponible en DÓLARES, como lo mide la base. */
@@ -140,28 +139,6 @@ const ESTADO_DE_LA_ORDEN: Record<string, string> = {
  * las RPC del bot. Cualquier otro es un fallo interno.
  */
 const ERRORES_DE_NEGOCIO = new Set(['P0001', '22023', 'P0002', '42501', '28000', '55000'])
-
-/** HMAC del PIN nuevo con el secreto del webhook: así no queda en claro en la sesión. */
-async function huellaDelPin(pin: string, telefono: string): Promise<string> {
-  // Sin secreto el webhook ya responde 401 (index.ts) y no llega aquí; sin
-  // clave de respaldo, por si algún día se llama desde otro sitio.
-  const secreto = Deno.env.get('WHATSAPP_WEBHOOK_TOKEN')
-  if (!secreto) throw new Error('Falta WHATSAPP_WEBHOOK_TOKEN')
-  const clave = new TextEncoder().encode(secreto)
-  const k = await crypto.subtle.importKey('raw', clave, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
-  const firma = await crypto.subtle.sign('HMAC', k, new TextEncoder().encode(`${telefono}:${pin}`))
-  return Array.from(new Uint8Array(firma), (b) => b.toString(16).padStart(2, '0')).join('')
-}
-
-/** Lo mismo que `helios_pin_aceptable` en la base: 4 dígitos, sin los obvios. */
-function pinAceptable(pin: string): boolean {
-  return (
-    /^\d{4}$/.test(pin) &&
-    !/^(\d)\1{3}$/.test(pin) &&
-    !'0123456789'.includes(pin) &&
-    !'9876543210'.includes(pin)
-  )
-}
 
 /** Un número positivo de la base, o null. */
 function positivo(v: unknown): number | null {
@@ -229,6 +206,10 @@ export async function atenderAlPersonal({
   }
 
   const sesion = await rpc<{ state: Estado; data: Datos; nueva: boolean }>('bot_session', { p_phone: tel })
+  const saludo = () => {
+    const hola = nombreDePila(personal)
+    return `Hola${hola ? `, ${hola}` : ''}. Soy el asistente de Helios para ${personal.merchant_name ?? 'tu clínica'}. ¿Qué quieres hacer?`
+  }
   let estado: Estado = sesion.state
   const datos: Datos = sesion.data ?? {}
   const texto = (mensaje.texto ?? '').trim()
@@ -237,48 +218,11 @@ export async function atenderAlPersonal({
   /** La moneda pedida con un botón («moneda:EUR») o escrita sola («euros», «$»). */
   const monedaPedida: Moneda | null = boton.startsWith('moneda:') ? monedaDe(boton.slice('moneda:'.length)) : leerMoneda(texto)
 
-  // ── El PIN, antes que nada ────────────────────────────────────────────
-  if (personal.pin_locked) {
-    await enviar('Tu PIN está bloqueado por demasiados intentos. El equipo de Helios ve este chat: escríbenos aquí y lo reseteamos.')
-    return { paso: 'pin_bloqueado' }
-  }
-
-  if (!personal.has_pin) {
-    if (estado === 'pin_nuevo' && /^\d{4}$/.test(texto)) {
-      if (!pinAceptable(texto)) {
-        await enviar('Ese PIN es muy fácil de adivinar. Elige otro de 4 números (no 1234, 0000 ni parecidos):')
-        return { paso: 'pin_nuevo' }
-      }
-      await guardar('pin_repetir', { pinHmac: await huellaDelPin(texto, tel) })
-      await enviar('Escríbelo otra vez para confirmarlo:')
-      return { paso: 'pin_repetir' }
-    }
-    if (estado === 'pin_repetir' && /^\d{4}$/.test(texto)) {
-      if ((await huellaDelPin(texto, tel)) !== datos.pinHmac) {
-        await guardar('pin_nuevo')
-        await enviar('No coincide. Escribe de nuevo el PIN que quieres usar (4 números):')
-        return { paso: 'pin_nuevo' }
-      }
-      const r = await probar('bot_set_pin', { p_phone: tel, p_pin: texto })
-      if (!r.ok) {
-        await guardar('pin_nuevo')
-        await enviar(`${r.mensaje}. Escribe otro PIN de 4 números:`)
-        return { paso: 'pin_nuevo' }
-      }
-      return menu('Listo, tu PIN quedó guardado. Te lo pediré cada vez que registres un pago en cuotas. Te recomendamos borrar los mensajes donde lo escribiste.\n\n¿Qué quieres hacer?')
-    }
-    await guardar('pin_nuevo')
-    const hola = nombreDePila(personal)
-    await enviar(
-      `Hola${hola ? `, ${hola}` : ''}. Soy el asistente de Helios para ${personal.merchant_name ?? 'tu clínica'}.\n\n` +
-        'Para empezar, crea un PIN de 4 números. Te lo pediré cada vez que registres un pago en cuotas. Escríbelo ahora:',
-    )
-    return { paso: 'pin_nuevo' }
-  }
-
   // ── Volver al menú desde cualquier paso ───────────────────────────────
-  if (['menu', 'cancelar', 'inicio', 'salir', 'hola', 'buenas', 'buenos dias', 'buenas tardes'].includes(n) || boton === 'orden:cancelar') {
-    return menu(boton === 'orden:cancelar' || n === 'cancelar' ? 'Cancelado: no se envió nada. ¿Qué quieres hacer?' : undefined)
+  // «Empezar» es el botón de la bienvenida (plantilla `helios_cuenta_activa`).
+  if (['menu', 'cancelar', 'inicio', 'salir', 'hola', 'buenas', 'buenos dias', 'buenas tardes', 'empezar'].includes(n) || boton === 'orden:cancelar') {
+    if (boton === 'orden:cancelar' || n === 'cancelar') return menu('Cancelado: no se envió nada. ¿Qué quieres hacer?')
+    return menu(sesion.nueva ? saludo() : undefined)
   }
 
   // ── Reenviar una orden: «reenviar 1042» ───────────────────────────────
@@ -341,7 +285,7 @@ export async function atenderAlPersonal({
         '1. Pulsa «Nuevo pago en cuotas» y escribe la cédula del paciente.\n' +
         '2. Si es nuevo, envíame sus datos en un solo mensaje.\n' +
         '3. Elige si cobras la consulta en dólares o en euros y escribe el monto.\n' +
-        '4. Revisa el resumen y confírmalo con tu PIN.\n' +
+        '4. Revisa el resumen y confírmalo.\n' +
         '5. Al paciente le llega un WhatsApp: cuando responda Sí, la orden queda confirmada y te aviso aquí.\n\n' +
         'El paciente paga siempre en bolívares, a la tasa BCV del día en que paga.\n\n' +
         'Escribe «menú» para volver al inicio en cualquier momento. El equipo de Helios ve este chat: si algo no funciona, escríbenos aquí.',
@@ -492,9 +436,7 @@ export async function atenderAlPersonal({
   // ── El resumen ────────────────────────────────────────────────────────
   if (estado === 'resumen') {
     if (boton === 'orden:confirmar' || n === 'confirmar' || n === 'si') {
-      await guardar('pin', datos)
-      await enviar('Escribe tu PIN para enviar la orden al paciente:')
-      return { paso: 'pin' }
+      return enviarLaOrden(datos)
     }
     if (boton === 'orden:corregir' || n === 'corregir') {
       if (datos.nuevo) {
@@ -512,55 +454,6 @@ export async function atenderAlPersonal({
     }
     await enviar('Usa los botones: Confirmar, Corregir o Cancelar.', RESUMEN)
     return { paso: 'resumen' }
-  }
-
-  // ── El PIN: la orden sale al paciente ─────────────────────────────────
-  if (estado === 'pin') {
-    if (!/^\d{4}$/.test(texto)) {
-      await enviar('El PIN son 4 números. Escríbelo (o «cancelar»):')
-      return { paso: 'pin' }
-    }
-    const paciente = datos.nuevo ? { document: datos.cedula, ...datos.paciente } : { document: datos.cedula }
-    const r = await probar<Record<string, unknown>>('bot_create_charge', {
-      p_phone: tel,
-      p_pin: texto,
-      p_patient: paciente,
-      p_amount: datos.monto,
-      p_concept: datos.concepto ?? null,
-      p_beneficiary_name: datos.atendido ?? null,
-      p_idempotency_key: `wa:${mensaje.id}`,
-      p_currency: datos.moneda ?? 'USD',
-    })
-    if (!r.ok) {
-      await guardar('menu')
-      await enviar(`No se registró: ${r.mensaje}`, MENU)
-      return { paso: 'pin', error: r.mensaje }
-    }
-    if (r.data.ok === false) {
-      if (r.data.locked) {
-        await guardar('menu')
-        await enviar(String(r.data.message))
-        return { paso: 'pin', bloqueado: true }
-      }
-      await enviar(`${r.data.message} Escribe tu PIN otra vez:`)
-      return { paso: 'pin', intentos: r.data.attempts_left }
-    }
-
-    const f = r.data.charge as Record<string, unknown>
-    const conf = (f.confirmation ?? {}) as Record<string, unknown>
-    const quien = datos.nuevo ? `${datos.paciente?.first_name ?? 'el paciente'}` : (datos.nombreEnmascarado ?? 'el paciente')
-    await guardar('menu')
-    if (f.status === 'pending') {
-      await enviar(
-        `Listo. Orden #${f.order_number} enviada. Le escribimos a ${quien}` +
-          `${conf.telefono_enmascarado ? ` al ${conf.telefono_enmascarado}` : ''} para que responda Sí.\n` +
-          `Tiene hasta las ${horaCaracas(String(f.expires_at ?? ''))}. Te aviso aquí cuando responda.`,
-        MENU,
-      )
-    } else {
-      await enviar(`Listo. Orden #${f.order_number} registrada.`, MENU)
-    }
-    return { paso: 'enviada', charge_id: f.id, status: f.status }
   }
 
   // ── Con los datos del paciente listos: moneda, monto y resumen ────────
@@ -596,6 +489,40 @@ export async function atenderAlPersonal({
       return { paso: 'monto' }
     }
     return resumen(d)
+  }
+
+  // ── Confirmado: la orden sale al paciente ─────────────────────────────
+  async function enviarLaOrden(d: Datos) {
+    const paciente = d.nuevo ? { document: d.cedula, ...d.paciente } : { document: d.cedula }
+    const r = await probar<Record<string, unknown>>('bot_create_charge', {
+      p_phone: tel,
+      p_patient: paciente,
+      p_amount: d.monto,
+      p_concept: d.concepto ?? null,
+      p_beneficiary_name: d.atendido ?? null,
+      p_idempotency_key: `wa:${mensaje.id}`,
+      p_currency: d.moneda ?? 'USD',
+    })
+    await guardar('menu')
+    if (!r.ok) {
+      await enviar(`No se registró: ${r.mensaje}`, MENU)
+      return { paso: 'enviada', error: r.mensaje }
+    }
+
+    const f = r.data.charge as Record<string, unknown>
+    const conf = (f.confirmation ?? {}) as Record<string, unknown>
+    const quien = d.nuevo ? `${d.paciente?.first_name ?? 'el paciente'}` : (d.nombreEnmascarado ?? 'el paciente')
+    if (f.status === 'pending') {
+      await enviar(
+        `Listo. Orden #${f.order_number} enviada. Le escribimos a ${quien}` +
+          `${conf.telefono_enmascarado ? ` al ${conf.telefono_enmascarado}` : ''} para que responda Sí.\n` +
+          `Tiene hasta las ${horaCaracas(String(f.expires_at ?? ''))}. Te aviso aquí cuando responda.`,
+        MENU,
+      )
+    } else {
+      await enviar(`Listo. Orden #${f.order_number} registrada.`, MENU)
+    }
+    return { paso: 'enviada', charge_id: f.id, status: f.status }
   }
 
   // ── El resumen antes de confirmar ─────────────────────────────────────
@@ -659,5 +586,5 @@ export async function atenderAlPersonal({
   }
 
   // ── Cualquier otra cosa: el menú ──────────────────────────────────────
-  return menu(sesion.nueva ? `Hola${nombreDePila(personal) ? `, ${nombreDePila(personal)}` : ''}. ¿Qué quieres hacer?` : 'No entendí. ¿Qué quieres hacer?')
+  return menu(sesion.nueva ? saludo() : 'No entendí. ¿Qué quieres hacer?')
 }
