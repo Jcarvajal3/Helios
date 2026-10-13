@@ -3,7 +3,14 @@
  *
  *   npx tsx src/features/merchant/financiamientos.test.ts
  */
-import { leerDetalle, leerFilaDeFinanciamiento, leerPorPersona, leerResumen } from './financiamientos'
+import {
+  formatTotalesPorMoneda,
+  hayOtraMoneda,
+  leerDetalle,
+  leerFilaDeFinanciamiento,
+  leerPorPersona,
+  leerResumen,
+} from './financiamientos'
 import { COLUMNAS_VENTAS, leerFilaDeVentas, usdOEur } from './ventas'
 
 let fallos = 0
@@ -68,6 +75,22 @@ const pp = leerPorPersona({
 igual(pp.rows[0].commissionUsd, 2, 'la comisión por persona')
 igual(leerPorPersona({ rows: [] }).scope, 'self', 'sin scope: solo lo propio')
 igual(leerPorPersona({ rows: [{ user_id: 'u', role: 'inventario' }] }).rows[0].role, null, 'un rol que no existe en Helios')
+
+// $100 + €100 + $50: el total va por moneda, no los €100 pasados a dólares.
+const mixto = leerResumen({
+  sale_usd: '261.99',
+  sale_by_currency: [{ currency: 'USD', sale: '150.00' }, { currency: 'EUR', sale: '100.00' }],
+})
+igual(formatTotalesPorMoneda(mixto.porMoneda, mixto.saleUsd), '$150,00 + €100,00', 'el total, cada moneda por su lado')
+igual(hayOtraMoneda(mixto.porMoneda), true, 'con euros se da el equivalente')
+const soloDolares = leerResumen({ sale_usd: 150, sale_by_currency: [{ currency: 'USD', sale: 150 }] })
+igual(hayOtraMoneda(soloDolares.porMoneda), false, 'solo dólares: sin equivalente')
+igual(formatTotalesPorMoneda(leerResumen({ sale_usd: 42 }).porMoneda, 42), '$42,00', 'base sin el reparto: el equivalente')
+igual(
+  leerPorPersona({ rows: [{ user_id: 'u', sale_by_currency: [{ currency: 'EUR', sale: 100 }] }] }).rows[0].porMoneda[0].moneda,
+  'EUR',
+  'el reparto por persona',
+)
 
 console.log('\n── la ficha ──────────────────────────────────────────────────')
 const detalle = leerDetalle({

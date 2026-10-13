@@ -32,6 +32,8 @@ import {
   EQUIVALENTE_EN_DOLARES,
   ESTADO_DEL_FINANCIAMIENTO,
   LIMITE_DE_FILAS,
+  formatTotalesPorMoneda,
+  hayOtraMoneda,
 } from '@/features/merchant/financiamientos'
 import type {
   CuotaDeLaClinica,
@@ -129,6 +131,7 @@ function Financiamientos({ staff }: { staff: StaffContext }) {
 
   const propios = resumen.data?.scope === 'self'
   const deTodos = resumen.data?.scope === 'gerente'
+  const conEuros = hayOtraMoneda(resumen.data?.porMoneda ?? [])
 
   const porPersona = useQuery({
     queryKey: ['merchant-sales-by-staff', rango.from, rango.to],
@@ -194,10 +197,14 @@ function Financiamientos({ staff }: { staff: StaffContext }) {
               llegan las de la clínica y a la secretaria las suyas. Nunca un
               cero que no se leyó: con error, «No se pudo leer». */}
           <StatGrid className="mb-3">
+            {/* Cada moneda por su lado, como en la lista: con una orden en
+                euros, sumarla pasada a dólares daba un total que no cuadraba
+                con la columna «Consulta». El equivalente va de pista. */}
             <Stat
-              label={propios ? 'Lo que registraste' : 'Registrado en el rango'}
-              value={formatUsd(resumen.data?.saleUsd ?? 0)}
-              info={`La suma de las consultas, lo que cobra la clínica. Sin la comisión de servicio, que paga el paciente. ${EQUIVALENTE_EN_DOLARES}`}
+              label="Total"
+              value={formatTotalesPorMoneda(resumen.data?.porMoneda ?? [], resumen.data?.saleUsd ?? 0)}
+              hint={conEuros ? `≈ ${formatUsd(resumen.data?.saleUsd ?? 0)} en dólares` : undefined}
+              info={`La suma de las consultas de las fechas elegidas, cada moneda por su lado.${conEuros ? ` ${EQUIVALENTE_EN_DOLARES}` : ''}`}
               estado={estadoCifras}
               onReintentar={() => void resumen.refetch()}
             />
@@ -211,8 +218,8 @@ function Financiamientos({ staff }: { staff: StaffContext }) {
               <Stat
                 label="Consulta promedio"
                 value={formatUsd(resumen.data?.avgTicketUsd ?? 0)}
-                hint="Registrado ÷ órdenes"
-                info={EQUIVALENTE_EN_DOLARES}
+                hint="Total ÷ órdenes"
+                info={conEuros ? EQUIVALENTE_EN_DOLARES : undefined}
                 estado={estadoCifras}
                 onReintentar={() => void resumen.refetch()}
               />
@@ -294,7 +301,7 @@ function Financiamientos({ staff }: { staff: StaffContext }) {
                   : []),
                 {
                   label: 'Consulta',
-                  info: 'Lo que cobra la clínica, en la moneda en que se cobró: dólares o euros. Sin la comisión de servicio.',
+                  info: 'Lo que cobra la clínica, en la moneda en que se cobró: dólares o euros.',
                 },
                 ...(conComision
                   ? [
@@ -526,7 +533,7 @@ function QuienRegistro({
         headers={[
           'Persona',
           'Órdenes',
-          'Registrado',
+          'Total',
           ...(conComision ? ['Comisión'] : []),
           'Último',
         ]}
@@ -542,7 +549,9 @@ function QuienRegistro({
               </span>
             </Td>
             <Td className="tabular-nums">{fila.count}</Td>
-            <Td className="font-semibold tabular-nums">{formatUsd(fila.saleUsd)}</Td>
+            <Td className="font-semibold tabular-nums">
+              {formatTotalesPorMoneda(fila.porMoneda, fila.saleUsd)}
+            </Td>
             {conComision && (
               <Td className="tabular-nums">
                 {fila.commissionUsd === null ? '—' : formatUsd(fila.commissionUsd)}
@@ -553,8 +562,8 @@ function QuienRegistro({
         ))}
       </Table>
       <p className="mt-3 type-panel-caption leading-5 text-panel-muted">
-        Lo registrado en el rango, repartido por quien registró cada pago en cuotas. {EQUIVALENTE_EN_DOLARES}{' '}
-        El detalle de las comisiones, pagado y por pagar, está en Comisiones.
+        Las órdenes de estas fechas, repartidas por quien registró cada una. El detalle de las
+        comisiones, pagado y por pagar, está en Comisiones.
       </p>
     </section>
   )

@@ -1,4 +1,4 @@
-import { leerMoneda } from '@/components/ui'
+import { formatMoneda, leerMoneda } from '@/components/ui'
 import type { Moneda } from '@/components/ui'
 import { booleano, comoFila, filaONula, filas, numero, numeroONulo, texto, textoONulo } from '@/lib/json'
 
@@ -16,7 +16,8 @@ import type { EstadoDelComprobante } from './registro'
 //                                   staff_commission_usd, registered_by_name
 //   merchant_charge_detail        + concept, beneficiary_name, receipt,
 //                                   staff_commission_usd, commission_staff_name
-//   merchant_sales_by_staff       + commission_usd
+//   merchant_sales_by_staff       + commission_usd, sale_by_currency
+//   merchant_transactions_summary + sale_by_currency
 //
 // Cada lector acepta también la forma de Ronda (sin los campos nuevos): así
 // el panel no se cae contra una base a la que todavía no le llegó la
@@ -28,8 +29,10 @@ import type { EstadoDelComprobante } from './registro'
 //
 // La moneda (2026-10-07): cada orden se cobra en dólares o en euros, y la
 // fila y la ficha se enseñan en esa moneda (`merchant_sale_cur`, `*_cur`).
-// Las cifras del rango y el reparto por persona siguen en dólares: suman
-// órdenes de las dos monedas, y la suma solo cuadra en la del libro.
+// El total del rango y el reparto por persona se enseñan por moneda
+// («$150,00 + €100,00», `sale_by_currency`), como la lista: los euros
+// pasados a dólares daban un total que no cuadraba con lo que se ve debajo.
+// El equivalente en dólares (`sale_usd`) queda de pista y para el promedio.
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
@@ -37,7 +40,30 @@ import type { EstadoDelComprobante } from './registro'
  * alguna se cobrara en euros.
  */
 export const EQUIVALENTE_EN_DOLARES =
-  'Equivalente en dólares: las consultas en euros se suman pasadas a dólares.'
+  'Equivalente en dólares: las consultas en euros se suman pasadas a dólares, a la tasa BCV del día en que se registraron.'
+
+/** Lo registrado en una moneda, tal como se registró. */
+export type TotalEnMoneda = { moneda: Moneda; monto: number }
+
+/** `sale_by_currency` de la base: `[{currency, sale}]`, el dólar primero. */
+export function leerTotalesPorMoneda(v: unknown): TotalEnMoneda[] {
+  return filas(v).map((f) => ({ moneda: leerMoneda(f.currency), monto: numero(f.sale) }))
+}
+
+/**
+ * «$150,00 + €100,00»: cada moneda por su lado, como se ven las órdenes en
+ * la lista. Una base que aún no manda el reparto (o un rango vacío) cae al
+ * equivalente en dólares.
+ */
+export function formatTotalesPorMoneda(totales: TotalEnMoneda[], respaldoUsd: number): string {
+  if (totales.length === 0) return formatMoneda(respaldoUsd, 'USD')
+  return totales.map((t) => formatMoneda(t.monto, t.moneda)).join(' + ')
+}
+
+/** Si alguna orden del total no es en dólares: entonces se da el equivalente. */
+export function hayOtraMoneda(totales: TotalEnMoneda[]): boolean {
+  return totales.some((t) => t.moneda !== 'USD')
+}
 
 /**
  * Cuándo cobra la clínica una de las dos mitades de un pago en cuotas.
@@ -131,6 +157,8 @@ export type ResumenDeFinanciamientos = {
   scope: 'gerente' | 'self'
   count: number
   saleUsd: number
+  /** Lo mismo que `saleUsd`, en la moneda de cada orden. */
+  porMoneda: TotalEnMoneda[]
   avgTicketUsd: number
   activeDays: number
 }
@@ -141,6 +169,7 @@ export function leerResumen(v: unknown): ResumenDeFinanciamientos {
     scope: r.scope === 'self' ? 'self' : 'gerente',
     count: numero(r.order_count),
     saleUsd: numero(r.sale_usd),
+    porMoneda: leerTotalesPorMoneda(r.sale_by_currency),
     avgTicketUsd: numero(r.avg_ticket_usd),
     activeDays: numero(r.active_days),
   }
@@ -156,6 +185,7 @@ export type RegistroPorPersona = {
   isSelf: boolean
   count: number
   saleUsd: number
+  porMoneda: TotalEnMoneda[]
   /** Lo que ganó en comisiones en el rango. Null si la base no lo manda. */
   commissionUsd: number | null
   lastAt: string | null
@@ -176,6 +206,7 @@ export function leerPorPersona(v: unknown): PorPersona {
       isSelf: booleano(f.is_self),
       count: numero(f.order_count),
       saleUsd: numero(f.sale_usd),
+      porMoneda: leerTotalesPorMoneda(f.sale_by_currency),
       commissionUsd: numeroONulo(f.commission_usd),
       lastAt: textoONulo(f.last_sale_at),
     })),

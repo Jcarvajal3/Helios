@@ -308,7 +308,7 @@ function Recurrence({ data }: { data: MerchantRecurrence }) {
           label="Te dejaron"
           value={formatUsd(bucket.saleUsd)}
           info={EQUIVALENTE_EN_DOLARES}
-          hint="Sus consultas, sin la comisión de servicio"
+          hint="Lo que suman sus consultas"
         />
       </StatGrid>
     </div>
