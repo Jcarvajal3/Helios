@@ -3,6 +3,7 @@ import { Link, useNavigate } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { CircleAlert, Landmark } from 'lucide-react'
 
+import { ArchivoDelBanco } from '@/components/admin/caja/ArchivoDelBanco'
 import { DataTable, ENLACE_EN_CELDA } from '@/components/DataTable'
 import type { Column } from '@/components/DataTable'
 import {
@@ -14,12 +15,10 @@ import {
   SkeletonTable,
   formatDay,
   formatUsd,
-  hoyCaracas,
 } from '@/components/ui'
 import { fetchMerchantPayables } from '@/features/admin/api'
 import type { MerchantPayable } from '@/features/admin/api'
 import { comprometidoFuturoDe, payablesTotals } from '@/features/admin/definitions'
-import { csvDinero } from '@/lib/csv'
 import { describeError } from '@/lib/supabase'
 
 /** Qué locales se ven: todos, los que tienen algo atrasado o los que cobran hoy. */
@@ -126,7 +125,9 @@ export function LoQueSeDebeHoy({
           columns={COLUMNAS}
           noun={['clínica', 'clínicas']}
           summary={resumen}
-          exportar={{ archivo: `por-pagar-a-locales-${hoyCaracas()}` }}
+          // El archivo del pago masivo del banco sustituye al CSV: es lo que
+          // se carga para pagarles (2026-10-14).
+          acciones={<ArchivoDelBanco />}
           rowTone={(m) => (m.overdueUsd > 0.005 && !m.isTest ? 'error' : undefined)}
           onRowClick={(m) =>
             void navigate({ to: '/admin/pagos-clinicas/$id', params: { id: m.merchantId }, search: {} })
@@ -171,7 +172,6 @@ const COLUMNAS: Array<Column<MerchantPayable>> = [
     header: 'Clínica',
     identity: true,
     sort: (m) => m.merchantName,
-    csv: (m) => m.merchantName,
     cell: (m) => (
       <span className="block">
         <span className="flex items-center gap-2">
@@ -192,7 +192,6 @@ const COLUMNAS: Array<Column<MerchantPayable>> = [
     key: 'rif',
     header: 'RIF',
     hidden: true,
-    csv: (m) => m.taxId,
     cell: (m) => m.taxId ?? '—',
   },
   {
@@ -202,7 +201,6 @@ const COLUMNAS: Array<Column<MerchantPayable>> = [
     info: 'Lo que hay que transferirle hoy: lo que venció ayer más lo atrasado de días anteriores. Arriba, «que toca pagar hoy» no lleva lo atrasado. Son sus consultas (financiado sin fee, menos su comisión) más las comisiones de su personal; debajo, partido.',
     sort: (m) => m.nextRunUsd,
     sortDir: 'desc',
-    csv: (m) => csvDinero(m.nextRunUsd),
     cell: (m) => (
       <>
         <span className="font-semibold">{formatUsd(m.nextRunUsd)}</span>
@@ -220,7 +218,6 @@ const COLUMNAS: Array<Column<MerchantPayable>> = [
     type: 'number',
     hidden: true,
     sort: (m) => m.desglose?.consultasUsd ?? null,
-    csv: (m) => (m.desglose ? csvDinero(m.desglose.consultasUsd) : null),
     cell: (m) => (m.desglose ? formatUsd(m.desglose.consultasUsd) : '—'),
   },
   {
@@ -229,7 +226,6 @@ const COLUMNAS: Array<Column<MerchantPayable>> = [
     type: 'number',
     hidden: true,
     sort: (m) => m.desglose?.comisionesUsd ?? null,
-    csv: (m) => (m.desglose ? csvDinero(m.desglose.comisionesUsd) : null),
     cell: (m) => (m.desglose ? formatUsd(m.desglose.comisionesUsd) : '—'),
   },
   {
@@ -239,7 +235,6 @@ const COLUMNAS: Array<Column<MerchantPayable>> = [
     info: 'Lo que tocaba pagar ayer o antes y sigue sin transferirse. Ya va dentro de «Sale hoy».',
     sort: (m) => m.overdueUsd,
     sortDir: 'desc',
-    csv: (m) => csvDinero(m.overdueUsd),
     cell: (m) =>
       m.overdueUsd > 0 ? (
         <span className="font-semibold">
@@ -261,7 +256,6 @@ const COLUMNAS: Array<Column<MerchantPayable>> = [
     info: 'Lo que se le deberá después del pago de hoy: lo que vence hoy (sale mañana) y, sobre todo, cuotas de sus pacientes que todavía no vencen y aún no son liquidaciones. Hoy no toca pagarlo.',
     sort: futuroDe,
     sortDir: 'desc',
-    csv: (m) => csvDinero(futuroDe(m)),
     cell: (m) => <span className="text-on-surface-variant">{formatUsd(futuroDe(m))}</span>,
   },
   {
@@ -271,7 +265,6 @@ const COLUMNAS: Array<Column<MerchantPayable>> = [
     info: '«Sale hoy» más «Por pagar en los próximos días».',
     hidden: true,
     sort: (m) => m.totalPendingUsd,
-    csv: (m) => csvDinero(m.totalPendingUsd),
     cell: (m) => formatUsd(m.totalPendingUsd),
   },
   {
@@ -280,7 +273,6 @@ const COLUMNAS: Array<Column<MerchantPayable>> = [
     header: 'Última transferencia',
     sort: (m) => m.lastPayoutOn,
     sortDir: 'desc',
-    csv: (m) => m.lastPayoutOn,
     cell: (m) =>
       m.lastPayoutOn ? (
         <span className="block whitespace-nowrap text-on-surface-variant">

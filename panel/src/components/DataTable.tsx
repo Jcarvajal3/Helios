@@ -187,6 +187,7 @@ export function DataTable<T>({
   noun,
   summary,
   exportar,
+  acciones,
   ordenEnServidor,
   className = '',
 }: {
@@ -233,6 +234,11 @@ export function DataTable<T>({
    * estén a la vista o no. `archivo` va sin extensión.
    */
   exportar?: { archivo: string }
+  /**
+   * Botones propios en la barra de la tabla, donde iría «Exportar CSV»: lo
+   * que se hace con lo que se ve (el archivo del banco en «Por pagar»).
+   */
+  acciones?: ReactNode
   /**
    * El orden lo hace el servidor. En una lista paginada, ordenar en el
    * navegador solo reordenaría la página que se ve: «lo más nuevo arriba»
@@ -348,6 +354,8 @@ export function DataTable<T>({
         )}
 
         <div className="ml-auto flex items-center gap-1">
+          {acciones}
+
           {exportar && columnasCsv.length > 0 && (
             <Button size="sm" variant="text" onClick={bajarCsv} disabled={ordenadas.length === 0}>
               <Download size={15} aria-hidden />

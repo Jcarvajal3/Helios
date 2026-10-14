@@ -1062,3 +1062,33 @@ van en columnas `_cur`.
   nuevas: `total_bs`, `moneda` («dólar» | «euro», por defecto «dólar»).
 - `bot_paciente_resumen`: cada orden con `moneda`, la consulta y las cuotas en
   ella (el cargo por atraso en dólares), y `tasa_bcv` + `tasa_bcv_eur`.
+
+## 8. El archivo de pago masivo del banco (2026-10-14)
+
+A las clínicas se les paga con el «pago masivo a proveedores» del banco: un
+.xlsm (la plantilla del banco, con su macro, en
+`panel/src/features/admin/plantilla-pago-masivo.xlsm`) con una transferencia
+por fila en la hoja «Validar Datos». Lo arma el superadmin desde «Pagos a
+clínicas» → «Por pagar» → «Archivo del banco», que sustituye al CSV.
+
+- `admin_bulk_payout_sheet() → jsonb` (solo el equipo, solo lee):
+  `{ today_date, fx_rate_usd, fx_rate_eur, debit_account, merchants[] }`.
+  `debit_account` es la primera cuenta de cobro activa de transferencia
+  (`{bank_name, holder_name, rif, account_number}` o null), como sugerencia de
+  la cuenta a debitar. Cada clínica con algo en el pago de hoy trae
+  `merchant_id, merchant_name, is_test, email, has_payout_account, bank,
+  account_holder, holder_document, account_number, pago_movil_phone, lineas,
+  pending_usd, pending_usd_part, pending_eur, pending_ves`. Las líneas son las
+  de `in_next_run` (lo pendiente que vence antes del pago de hoy: lo mismo que
+  «Sale hoy»); `pending_ves` va como `admin_report_merchant_payout` sin tasa
+  escrita (cada moneda a su BCV de hoy, redondeada y sumada), null si falta
+  una tasa.
+- Solo transferencia: una clínica sin cuenta de 20 dígitos (solo Pago Móvil o
+  sin cuenta), con un documento que no sea V/E/J/G de hasta 10 caracteres o
+  sin tasa queda fuera, dicha, y se le paga a mano. Las de prueba no entran.
+- Las columnas: fecha de pago (≥ hoy), cuenta a debitar, cuenta del
+  beneficiario, monto en Bs, descripción (≤ 60, «Pago Helios 14/10/2026»),
+  ID (`J123456789`), titular (≤ 80), correo de la clínica (si es válido) y
+  referencia del cliente (`MMDD` + número de fila: `10140001`).
+- Bajar el archivo no registra nada: cada transferencia se sigue registrando
+  en la página de su clínica (`admin_report_merchant_payout`).
