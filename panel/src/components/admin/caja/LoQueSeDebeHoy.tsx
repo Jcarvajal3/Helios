@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { CircleAlert, Landmark } from 'lucide-react'
 
 import { ArchivoDelBanco } from '@/components/admin/caja/ArchivoDelBanco'
+import { RegistrarPagoMasivo } from '@/components/admin/caja/RegistrarPagoMasivo'
 import { DataTable, ENLACE_EN_CELDA } from '@/components/DataTable'
 import type { Column } from '@/components/DataTable'
 import {
@@ -126,8 +127,14 @@ export function LoQueSeDebeHoy({
           noun={['clínica', 'clínicas']}
           summary={resumen}
           // El archivo del pago masivo del banco sustituye al CSV: es lo que
-          // se carga para pagarles (2026-10-14).
-          acciones={<ArchivoDelBanco />}
+          // se carga para pagarles (2026-10-14). Cuando el banco lo procesa,
+          // se registra de una vez.
+          acciones={
+            <>
+              <ArchivoDelBanco />
+              <RegistrarPagoMasivo />
+            </>
+          }
           rowTone={(m) => (m.overdueUsd > 0.005 && !m.isTest ? 'error' : undefined)}
           onRowClick={(m) =>
             void navigate({ to: '/admin/pagos-clinicas/$id', params: { id: m.merchantId }, search: {} })

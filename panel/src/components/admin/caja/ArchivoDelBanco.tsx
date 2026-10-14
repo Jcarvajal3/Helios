@@ -1,23 +1,32 @@
 import { useState } from 'react'
-import { queryOptions, useQuery } from '@tanstack/react-query'
+import { queryOptions, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Download } from 'lucide-react'
 
 import { Badge, Button, ErrorBox, Input, SkeletonTable, formatDay, formatUsd, formatVes, hoyCaracas } from '@/components/ui'
 import { Callout } from '@/components/kit/Callout'
 import { Modal } from '@/components/overlays'
+import { createBulkPayout } from '@/features/admin/api'
 import { llamarRpc } from '@/features/admin/metricas/consulta'
 import {
   MAX_DESCRIPCION,
   bloqueoDelPagoMasivo,
+  cuentaCorta,
   cuentaDelBanco,
   descripcionPorDefecto,
   leerHojaDePagoMasivo,
+  lineasDelLote,
   llenarPlantilla,
   nombreDelArchivo,
   repartirPagoMasivo,
 } from '@/features/admin/pagoMasivo'
-import plantillaUrl from '@/features/admin/plantilla-pago-masivo.xlsm?url'
+import { SOLO_SUPER_ADMIN, useIsSuperAdmin } from '@/features/admin/role'
 import { describeError } from '@/lib/supabase'
+
+/**
+ * La plantilla del banco, tal cual. Va en `public/` y no importada desde
+ * `src/`: el servidor de desarrollo no sirve un .xlsm de `src/` (daba 404).
+ */
+const PLANTILLA_URL = '/plantillas/pago-masivo.xlsm'
 
 /** La última cuenta a debitar que se usó, en este navegador. */
 const CLAVE_CUENTA = 'helios.pago-masivo.cuenta-debito'
@@ -45,18 +54,14 @@ function consultaPagoMasivo() {
   })
 }
 
-/** «0191 •••• 0001»: la cuenta, sin enseñarla entera. */
-function cuentaCorta(cuenta: string | null): string {
-  return cuenta ? `${cuenta.slice(0, 4)} •••• ${cuenta.slice(-4)}` : '—'
-}
-
 /**
  * «Archivo del banco»: el .xlsm del pago masivo a proveedores con lo que se
  * le debe hoy a cada clínica, en bolívares, por transferencia.
  *
- * Sustituye al «Exportar CSV» de «Por pagar». Bajar el archivo no registra
- * nada: cuando el banco procese el pago, cada transferencia se registra en
- * la página de su clínica, como siempre.
+ * Sustituye al «Exportar CSV» de «Por pagar». Bajar el archivo guarda lo que
+ * va en él (el lote, con las liquidaciones exactas de cada fila) pero no
+ * registra ninguna transferencia: cuando el banco procese el pago, se
+ * registran todas de una vez con «Registrar el pago masivo».
  */
 export function ArchivoDelBanco() {
   const [abierto, setAbierto] = useState(false)
@@ -96,6 +101,8 @@ function Formulario({
   onClose: () => void
 }) {
   const hoy = hoyCaracas()
+  const queryClient = useQueryClient()
+  const isSuperAdmin = useIsSuperAdmin()
   const [cuentaDebito, setCuentaDebito] = useState(() => cuentaGuardada() || hoja.debitAccount?.accountNumber || '')
   const [fechaPago, setFechaPago] = useState(hoy)
   const [descripcion, setDescripcion] = useState(() => descripcionPorDefecto(hoy))
@@ -104,16 +111,28 @@ function Formulario({
 
   const opciones = { cuentaDebito: cuentaDelBanco(cuentaDebito) ?? cuentaDebito, fechaPago, descripcion }
   const reparto = repartirPagoMasivo(hoja, opciones)
-  const bloqueo = bloqueoDelPagoMasivo(opciones, hoy, reparto.dentro.length)
+  // Bajar el archivo guarda el lote: es una escritura, solo del super admin.
+  const bloqueo = isSuperAdmin ? bloqueoDelPagoMasivo(opciones, hoy, reparto.dentro.length) : SOLO_SUPER_ADMIN
 
   async function bajar() {
     setBajando(true)
     setError(null)
     try {
-      const respuesta = await fetch(plantillaUrl)
+      const respuesta = await fetch(PLANTILLA_URL)
       if (!respuesta.ok) throw new Error(`No se pudo leer la plantilla del banco (${respuesta.status}).`)
       const plantilla = new Uint8Array(await respuesta.arrayBuffer())
       const archivo = llenarPlantilla(plantilla, reparto.dentro.map((d) => d.fila))
+
+      // El lote se guarda antes de bajar el archivo: lo que se carga en el
+      // banco es exactamente lo que luego se registra. Si lo que se debe
+      // cambió desde que se abrió la ventana, la base no lo guarda.
+      await createBulkPayout({
+        payDate: fechaPago,
+        description: opciones.descripcion.trim(),
+        debitAccount: opciones.cuentaDebito,
+        lines: lineasDelLote(reparto.dentro),
+      })
+      void queryClient.invalidateQueries({ queryKey: ['admin-bulk-payouts'] })
 
       const blob = new Blob([archivo as BlobPart], { type: 'application/vnd.ms-excel.sheet.macroEnabled.12' })
       const url = URL.createObjectURL(blob)
@@ -273,8 +292,8 @@ function Formulario({
       </div>
 
       <p className="type-panel-caption text-panel-muted">
-        Bajar el archivo no mueve dinero ni registra nada. Cuando el banco procese el pago, registra cada
-        transferencia en la página de su clínica.
+        Bajar el archivo no mueve dinero ni registra ninguna transferencia. Cuando el banco procese el pago,
+        regístralas todas de una vez con «Registrar el pago masivo».
       </p>
     </div>
   )

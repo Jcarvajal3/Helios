@@ -7,6 +7,7 @@ import { unoDe } from '@/lib/busqueda'
 import type { PayoutMethod } from '@/features/admin/liquidaciones'
 import { leerConsultasYComisiones } from '@/features/admin/clinicas/clinicas'
 import type { ConsultasYComisiones } from '@/features/admin/clinicas/clinicas'
+import type { LineaParaGuardar, LineaParaRegistrar } from '@/features/admin/pagoMasivo'
 
 export type PlatformRole = 'operador' | 'super_admin'
 
@@ -716,6 +717,46 @@ export async function reportMerchantPayout(params: {
     p_receipt_path: params.receiptPath ?? null,
   })
   if (error) throw error
+}
+
+/**
+ * Guarda el archivo de pago masivo que se va a bajar: sus filas, con las
+ * liquidaciones exactas de cada clínica. Si los bolívares de una fila ya no
+ * son los de hoy, la base no lo guarda y hay que volver a abrir la ventana.
+ */
+export async function createBulkPayout(params: {
+  payDate: string
+  description: string
+  debitAccount: string
+  lines: LineaParaGuardar[]
+}): Promise<string> {
+  const { data, error } = await supabase.rpc('admin_create_bulk_payout', {
+    p_pay_date: params.payDate,
+    p_description: params.description,
+    p_debit_account: params.debitAccount,
+    p_lines: params.lines,
+  })
+  if (error) throw error
+  return String((data as { bulk_payout_id: string }).bulk_payout_id)
+}
+
+/**
+ * Registra de una vez las transferencias de un archivo de pago masivo que el
+ * banco ya procesó. Todo o nada; una línea ya registrada no se repite.
+ */
+export async function registerBulkPayout(params: {
+  bulkPayoutId: string
+  lines: LineaParaRegistrar[]
+  note: string
+}): Promise<{ registered: number; alreadyRegistered: number }> {
+  const { data, error } = await supabase.rpc('admin_register_bulk_payout', {
+    p_bulk_payout_id: params.bulkPayoutId,
+    p_lines: params.lines,
+    p_note: params.note,
+  })
+  if (error) throw error
+  const r = data as { registered: number; already_registered: number }
+  return { registered: Number(r.registered), alreadyRegistered: Number(r.already_registered) }
 }
 
 /**

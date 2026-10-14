@@ -71,6 +71,8 @@ SUITES=(
   afiliacion_smoke
   bienvenida_personal_smoke
   bienvenida_medico_whatsapp_smoke
+  pago_masivo_smoke
+  registro_pago_masivo_smoke
 )
 if [ "$#" -gt 0 ]; then SUITES=("$@"); fi
 

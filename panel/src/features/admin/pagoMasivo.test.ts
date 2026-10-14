@@ -13,11 +13,17 @@ import { fileURLToPath } from 'node:url'
 import { strFromU8, unzipSync } from 'fflate'
 
 import {
+  MAX_REFERENCIA,
   bloqueoDelPagoMasivo,
+  bloqueoDelRegistro,
   cuentaDelBanco,
   descripcionPorDefecto,
   idDelBeneficiario,
+  leerLotesDePagoMasivo,
+  lineasARegistrar,
+  lineasDelLote,
   llenarPlantilla,
+  porRegistrar,
   repartirPagoMasivo,
   serieDeExcel,
 } from './pagoMasivo'
@@ -103,9 +109,56 @@ check(bloqueoDelPagoMasivo({ ...opciones, fechaPago: '2026-10-13' }, '2026-10-14
 check(bloqueoDelPagoMasivo({ ...opciones, cuentaDebito: '123' }, '2026-10-14', 2) !== null, 'cuenta a debitar corta', 'bloquea')
 check(bloqueoDelPagoMasivo({ ...opciones, descripcion: 'x'.repeat(61) }, '2026-10-14', 2) !== null, 'descripción larga', 'bloquea')
 
+// ── El lote ───────────────────────────────────────────────────────────────
+
+const guardadas = lineasDelLote(reparto.dentro)
+check(
+  guardadas.length === 2 && guardadas[0].reference === '10140001' && guardadas[1].amount_ves === 2000.25,
+  'el lote lleva las filas',
+  guardadas.map((g) => `${g.reference}:${g.amount_ves}`).join(' '),
+)
+check(guardadas[1].beneficiary_id === 'V8765432', 'el lote lleva el ID limpio', guardadas[1].beneficiary_id)
+
+const [lote] = leerLotesDePagoMasivo([
+  {
+    id: 'lote-1',
+    pay_date: '2026-10-14',
+    description: 'Pago Helios 14/10/2026',
+    debit_account: '01910000000000009999',
+    fx_rate_usd: '191.01',
+    fx_rate_eur: null,
+    total_usd: '100.0000',
+    total_ves: '3000.25',
+    created_at: '2026-10-14T12:00:00Z',
+    created_by_name: 'Jefa',
+    lines: [
+      { id: 'l1', row_number: 1, merchant_id: 'm1', merchant_name: 'A', settlements: 2, amount_usd: '50', amount_ves: '1000', reference: '10140001', state: 'pendiente' },
+      { id: 'l2', row_number: 2, merchant_id: 'm2', merchant_name: 'B', settlements: 1, amount_usd: '50', amount_ves: '2000.25', reference: '10140002', state: 'registrada', payout_reference: 'BANCO9' },
+      { id: 'l3', row_number: 3, merchant_id: 'm3', merchant_name: 'C', settlements: 1, amount_usd: '5', amount_ves: '955', reference: '10140003', state: 'raro' },
+    ],
+  },
+])
+check(lote.fxRateUsd === 191.01 && lote.totalVes === 3000.25, 'se lee el lote', `${lote.fxRateUsd} ${lote.totalVes}`)
+check(lote.lines[2].state === 'cambio', 'estado desconocido', 'es cambio: no se ofrece')
+check(porRegistrar(lote).map((l) => l.id).join() === 'l1', 'por registrar', 'solo la pendiente')
+check(bloqueoDelRegistro(lote, porRegistrar(lote), {}, '2026-10-14') === null, 'se puede registrar', '')
+check(bloqueoDelRegistro(lote, porRegistrar(lote), {}, '2026-10-13') !== null, 'antes de su fecha', 'bloquea')
+check(bloqueoDelRegistro(lote, [], {}, '2026-10-14') !== null, 'sin marcar', 'bloquea')
+check(
+  bloqueoDelRegistro(lote, porRegistrar(lote), { l1: 'x'.repeat(MAX_REFERENCIA + 1) }, '2026-10-14') !== null,
+  'referencia larga',
+  'bloquea',
+)
+const aRegistrar = lineasARegistrar(lote.lines.slice(0, 2), { l1: '  ', l2: ' BANCO9 ' })
+check(
+  JSON.stringify(aRegistrar) === '[{"line_id":"l1"},{"line_id":"l2","reference":"BANCO9"}]',
+  'referencia del banco o la del archivo',
+  JSON.stringify(aRegistrar),
+)
+
 // ── La plantilla, llena ───────────────────────────────────────────────────
 
-const ruta = fileURLToPath(new URL('./plantilla-pago-masivo.xlsm', import.meta.url))
+const ruta = fileURLToPath(new URL('../../../public/plantillas/pago-masivo.xlsm', import.meta.url))
 const plantilla = new Uint8Array(readFileSync(ruta))
 const llena = llenarPlantilla(plantilla, reparto.dentro.map((d) => d.fila))
 const antes = unzipSync(plantilla)

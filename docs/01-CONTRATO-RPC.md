@@ -1067,7 +1067,7 @@ van en columnas `_cur`.
 
 A las clínicas se les paga con el «pago masivo a proveedores» del banco: un
 .xlsm (la plantilla del banco, con su macro, en
-`panel/src/features/admin/plantilla-pago-masivo.xlsm`) con una transferencia
+`panel/public/plantillas/pago-masivo.xlsm`) con una transferencia
 por fila en la hoja «Validar Datos». Lo arma el superadmin desde «Pagos a
 clínicas» → «Por pagar» → «Archivo del banco», que sustituye al CSV.
 
@@ -1090,5 +1090,59 @@ clínicas» → «Por pagar» → «Archivo del banco», que sustituye al CSV.
   beneficiario, monto en Bs, descripción (≤ 60, «Pago Helios 14/10/2026»),
   ID (`J123456789`), titular (≤ 80), correo de la clínica (si es válido) y
   referencia del cliente (`MMDD` + número de fila: `10140001`).
-- Bajar el archivo no registra nada: cada transferencia se sigue registrando
-  en la página de su clínica (`admin_report_merchant_payout`).
+- Bajar el archivo guarda el lote pero no registra ninguna transferencia.
+  Cuando el banco lo procesa, se registra de una vez desde «Por pagar» →
+  «Registrar el pago masivo» (2026-10-14, diseño A de Javier). Lo que no va
+  en el archivo se sigue registrando en la página de su clínica
+  (`admin_report_merchant_payout`).
+
+### El lote del archivo y su registro
+
+Tablas `bulk_payouts` (el archivo: `pay_date`, `description`,
+`debit_account`, `fx_rate_usd`, `fx_rate_eur`, `business_date`, totales,
+`created_by`) y `bulk_payout_lines` (una fila: `row_number`, `merchant_id`,
+`settlement_ids` exactas, `amount_usd`, `amount_usd_part`, `amount_eur`,
+`amount_ves`, `reference`, los datos del beneficiario y `payout_id` cuando se
+registra). Con RLS y sin políticas: solo se leen y escriben por estas RPC.
+
+- `admin_create_bulk_payout(p_pay_date date, p_description text,
+  p_debit_account text, p_lines jsonb) → jsonb` (super admin, MFA). Lo llama
+  «Bajar el archivo» antes de bajarlo. `p_lines`: las filas en orden,
+  `{ merchant_id, reference, amount_ves, beneficiary_account, beneficiary_id,
+  beneficiary_name }`. Por cada una la base vuelve a calcular lo que sale hoy
+  (las mismas líneas y bolívares que `admin_bulk_payout_sheet`) y guarda los
+  ids de esas liquidaciones; si los bolívares no son los que manda el panel
+  («Lo que se le debe a … cambió desde que abriste la ventana»), no se guarda
+  nada. Rechaza fecha de pago anterior a hoy, descripción vacía o de más de
+  60, cuenta a debitar que no sea de 20 dígitos, clínicas de prueba, una
+  clínica dos veces, referencias que no sean números de hasta 10 dígitos o
+  repetidas y beneficiarios que el banco no acepta. Bitácora
+  `merchant.bulk_payout_file`. Devuelve `{ ok, bulk_payout_id, lines,
+  total_usd, total_ves }`.
+- `admin_bulk_payouts(p_limit int default 10) → jsonb` (solo el equipo, solo
+  lee): los últimos archivos, del más nuevo al más viejo, `{ id, pay_date,
+  description, debit_account, fx_rate_usd, fx_rate_eur, business_date,
+  total_usd, total_ves, created_at, created_by_name, lines[] }`, cada línea
+  `{ id, row_number, merchant_id, merchant_name, settlements, amount_usd,
+  amount_usd_part, amount_eur, amount_ves, reference, beneficiary_account,
+  beneficiary_id, beneficiary_name, state, payout_id, payout_reference,
+  registered_at }`. `state`: `registrada` (tiene su transferencia),
+  `pendiente` (sus liquidaciones siguen sin pagar y deben lo mismo: se puede
+  registrar) o `cambio` (algo de ellas se pagó por otro lado: se revisa a
+  mano).
+- `admin_register_bulk_payout(p_bulk_payout_id uuid, p_lines jsonb, p_note
+  text default null) → jsonb` (super admin, MFA). `p_lines`: las líneas que
+  el banco pagó, `{ line_id, reference? }`; sin `reference` va la del
+  cliente del archivo. En UNA transacción, por cada línea en el orden del
+  archivo llama a `admin_report_merchant_payout` con método
+  `transferencia`, sus liquidaciones, sus dólares, sus bolívares, la fecha de
+  pago del archivo y la nota (`p_note` o la descripción), y deja en la
+  transferencia las tasas del archivo. Todo o nada: una línea en `cambio` o
+  que no es del archivo hace fallar el registro entero, y un archivo cuya
+  fecha de pago aún no llegó no se registra. Idempotente: el lote y cada
+  línea se bloquean al registrar, y una línea que ya tiene `payout_id` se
+  salta (cuenta en `already_registered`). Bitácora `merchant.bulk_payout`
+  (más la `merchant.payout` de cada transferencia). Devuelve `{ ok,
+  registered, already_registered, total_usd, total_ves, payouts[] }`, cada
+  una `{ line_id, merchant_id, payout_id, reference, amount_usd,
+  amount_ves }`.

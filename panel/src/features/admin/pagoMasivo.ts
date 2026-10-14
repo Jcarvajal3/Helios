@@ -6,7 +6,7 @@ import { filaONula, filas, numero, numeroONulo, textoONulo } from '@/lib/json'
 // El archivo de pago masivo del banco.
 //
 // A las clínicas se les paga con el «pago masivo a proveedores» del banco: se
-// carga un .xlsm (`plantilla-pago-masivo.xlsm`, el del banco tal cual, con su
+// carga un .xlsm (`public/plantillas/pago-masivo.xlsm`, el del banco tal cual, con su
 // macro «ANALIZAR REGISTROS») con una transferencia por fila en la hoja
 // «Validar Datos». Aquí se decide quién entra y se llena la plantilla; los
 // datos salen de `admin_bulk_payout_sheet`. Módulo puro: lo prueba
@@ -118,6 +118,11 @@ export function idDelBeneficiario(valor: string | null | undefined): string | nu
 function emailDelBanco(valor: string | null): string | null {
   const v = (valor ?? '').trim()
   return v.length <= MAX_EMAIL && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? v : null
+}
+
+/** «0191 •••• 0001»: la cuenta, sin enseñarla entera. */
+export function cuentaCorta(cuenta: string | null): string {
+  return cuenta ? `${cuenta.slice(0, 4)} •••• ${cuenta.slice(-4)}` : '—'
 }
 
 /** «Pago Helios 14/10/2026»: la descripción por defecto de un día de pago. */
@@ -321,4 +326,144 @@ export function llenarPlantilla(plantilla: Uint8Array, filasDelBanco: ReadonlyAr
 /** `pago-masivo-2026-10-14.xlsm`. */
 export function nombreDelArchivo(fechaPago: string): string {
   return `pago-masivo-${fechaPago}.xlsm`
+}
+
+// ── El lote: lo que se bajó y lo que se registra ──────────────────────────
+// Bajar el archivo guarda el lote (`admin_create_bulk_payout`) con las
+// liquidaciones exactas de cada fila. Cuando el banco lo procesa, se registra
+// de una vez (`admin_register_bulk_payout`): una transferencia por línea, con
+// los bolívares, la fecha y la referencia del archivo.
+
+/** Las filas del archivo como las guarda `admin_create_bulk_payout`, en orden. */
+/** Una fila del archivo para `admin_create_bulk_payout`. */
+export type LineaParaGuardar = {
+  merchant_id: string
+  reference: string
+  amount_ves: number
+  beneficiary_account: string
+  beneficiary_id: string
+  beneficiary_name: string
+}
+
+/** Una línea para `admin_register_bulk_payout`. */
+export type LineaParaRegistrar = { line_id: string; reference?: string }
+
+export function lineasDelLote(dentro: RepartoDelPagoMasivo['dentro']): LineaParaGuardar[] {
+  return dentro.map(({ clinica, fila }) => ({
+    merchant_id: clinica.merchantId,
+    reference: String(fila.referencia),
+    amount_ves: fila.monto,
+    beneficiary_account: fila.cuentaBeneficiario,
+    beneficiary_id: fila.idBeneficiario,
+    beneficiary_name: fila.nombreBeneficiario,
+  }))
+}
+
+/**
+ * `pendiente`: se puede registrar. `registrada`: ya tiene su transferencia.
+ * `cambio`: algo de lo que pagaba se pagó por otro lado; se revisa a mano.
+ */
+export type EstadoDeLinea = 'pendiente' | 'registrada' | 'cambio'
+
+export type LineaDelLote = {
+  id: string
+  fila: number
+  merchantId: string
+  merchantName: string
+  liquidaciones: number
+  amountUsd: number
+  amountVes: number
+  /** La referencia del cliente del archivo (MMDD + fila). */
+  reference: string
+  beneficiaryAccount: string
+  beneficiaryName: string
+  state: EstadoDeLinea
+  /** La referencia con la que se registró, si ya se registró. */
+  payoutReference: string | null
+}
+
+export type LoteDePagoMasivo = {
+  id: string
+  /** La fecha de pago del archivo: el día en que el banco paga. */
+  payDate: string
+  description: string
+  debitAccount: string
+  fxRateUsd: number | null
+  fxRateEur: number | null
+  totalUsd: number
+  totalVes: number
+  createdAt: string
+  createdByName: string | null
+  lines: LineaDelLote[]
+}
+
+function estadoDeLinea(v: unknown): EstadoDeLinea {
+  return v === 'registrada' || v === 'pendiente' ? v : 'cambio'
+}
+
+/** `admin_bulk_payouts`. */
+export function leerLotesDePagoMasivo(raw: unknown): LoteDePagoMasivo[] {
+  return filas(raw).map((b) => ({
+    id: String(b.id),
+    payDate: String(b.pay_date ?? ''),
+    description: String(b.description ?? ''),
+    debitAccount: String(b.debit_account ?? ''),
+    fxRateUsd: numeroONulo(b.fx_rate_usd),
+    fxRateEur: numeroONulo(b.fx_rate_eur),
+    totalUsd: numero(b.total_usd),
+    totalVes: numero(b.total_ves),
+    createdAt: String(b.created_at ?? ''),
+    createdByName: textoONulo(b.created_by_name),
+    lines: filas(b.lines).map((l) => ({
+      id: String(l.id),
+      fila: numero(l.row_number),
+      merchantId: String(l.merchant_id),
+      merchantName: String(l.merchant_name ?? ''),
+      liquidaciones: numero(l.settlements),
+      amountUsd: numero(l.amount_usd),
+      amountVes: numero(l.amount_ves),
+      reference: String(l.reference ?? ''),
+      beneficiaryAccount: String(l.beneficiary_account ?? ''),
+      beneficiaryName: String(l.beneficiary_name ?? ''),
+      state: estadoDeLinea(l.state),
+      payoutReference: textoONulo(l.payout_reference),
+    })),
+  }))
+}
+
+/** Lo que queda por registrar de un lote. */
+export function porRegistrar(lote: LoteDePagoMasivo): LineaDelLote[] {
+  return lote.lines.filter((l) => l.state === 'pendiente')
+}
+
+/** La referencia del banco: hasta 64 caracteres, como acepta la base. */
+export const MAX_REFERENCIA = 64
+
+/** Qué falta para poder registrar el lote, o `null` si nada. */
+export function bloqueoDelRegistro(
+  lote: LoteDePagoMasivo,
+  marcadas: ReadonlyArray<LineaDelLote>,
+  referencias: Readonly<Record<string, string>>,
+  hoy: string,
+): string | null {
+  if (lote.payDate > hoy) return 'El banco todavía no paga este archivo: regístralo el día de su fecha de pago.'
+  if (marcadas.length === 0) return 'Marca al menos una transferencia que el banco haya pagado.'
+  if (marcadas.some((l) => (referencias[l.id] ?? '').trim().length > MAX_REFERENCIA)) {
+    return `Una referencia tiene como mucho ${MAX_REFERENCIA} caracteres.`
+  }
+  return null
+}
+
+/**
+ * Las líneas para `admin_register_bulk_payout`: sin referencia escrita va la
+ * del cliente del archivo.
+ */
+export function lineasARegistrar(
+  marcadas: ReadonlyArray<LineaDelLote>,
+  referencias: Readonly<Record<string, string>>,
+): LineaParaRegistrar[] {
+  return marcadas.map((l) => {
+    const escrita = (referencias[l.id] ?? '').trim()
+    return escrita ? { line_id: l.id, reference: escrita } : { line_id: l.id }
+  })
 }
