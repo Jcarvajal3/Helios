@@ -1146,3 +1146,40 @@ registra). Con RLS y sin políticas: solo se leen y escriben por estas RPC.
   registered, already_registered, total_usd, total_ves, payouts[] }`, cada
   una `{ line_id, merchant_id, payout_id, reference, amount_usd,
   amount_ves }`.
+
+## 9. Pacientes demo para las capacitaciones (2026-10-14)
+
+Migraciones `20261014100000_la_orden_de_un_paciente_de_prueba_no_se_liquida`
+y `20261014100100_los_pacientes_demo_para_las_capacitaciones`. Pantalla:
+Ajustes › Capacitaciones › Pacientes demo (`?tab=demo`).
+
+Un paciente demo es un paciente **general** (de ninguna clínica) ligado al
+WhatsApp de quien capacita. El médico lo usa en su propia clínica, con su
+panel o su bot: busca la cédula demo, registra y el capacitador contesta «sí».
+
+- **Las órdenes de un paciente de prueba no se liquidan**: el trigger
+  `settlements_aa_paciente_de_prueba` descarta toda fila de `settlements`
+  cuya orden (o cuota) sea de un paciente `is_test`, y
+  `helios_accrue_staff_commission` no devenga la comisión del personal. Una
+  clínica de prueba con un paciente real sigue como antes.
+- `profiles.is_demo` (implica `is_test`, por constraint). Nivel 9 «Demo»
+  (`helios_demo_level()`), apagado, fuera de `admin_level_config` y rechazado
+  por `admin_set_level_config`. Por defecto $3.000.
+- Reinicio: `helios_demo_reset(p_user uuid default null, p_actor uuid default
+  null) → { revertidas, anuladas, sin_reiniciar[{ charge_id, order_number,
+  motivo }] }` (interna). Anula las órdenes demo `pending` y revierte las
+  `confirmed` con `helios_demo_reverse_charge`, que solo acepta órdenes de un
+  paciente demo y respeta `helios_charge_reverse_blocker`. Cada reinicio deja
+  fila en `demo_resets`; el manual, además, `demo.reset` en la bitácora. Cron
+  `helios_demo_reset` a las 23:30 Caracas (`30 3 * * *` UTC).
+- `admin_demo_patients() → { limit_usd, patients[{ id, full_name,
+  document_number, phone_e164, email, created_at, used_usd, available_usd,
+  blocked_reason, pending_orders, open_orders }], last_reset{ at, automatic,
+  detail } | null }` (personal de Helios).
+- `admin_create_demo_patient(p_document, p_first_name, p_last_name, p_phone,
+  p_email) → { id }` (super admin). Rechaza una cédula o un teléfono que ya
+  sean de otro paciente. Bitácora `demo.patient_created`.
+- `admin_set_demo_limit(p_limit_usd numeric) → void` (super admin; del
+  mínimo de una orden a $100.000). Bitácora `demo.limit`.
+- `admin_reset_demo(p_user_id uuid default null) → jsonb` (super admin; null =
+  todos). Devuelve lo mismo que `helios_demo_reset`.

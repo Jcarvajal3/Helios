@@ -8,6 +8,7 @@ import { Contacto } from '@/components/admin/ajustes/Contacto'
 import { CuentaDeCobro } from '@/components/admin/ajustes/CuentaDeCobro'
 import { Equipo } from '@/components/admin/ajustes/Equipo'
 import { Feriados } from '@/components/admin/ajustes/Feriados'
+import { PacientesDemo } from '@/components/admin/ajustes/PacientesDemo'
 import { Parametros } from '@/components/admin/ajustes/Parametros'
 import { Seguridad } from '@/components/admin/ajustes/Seguridad'
 import { SubmenuAjustes } from '@/components/admin/ajustes/SubmenuAjustes'
@@ -61,6 +62,7 @@ function AjustesPage() {
         {tab === 'terminos' && <Terminos />}
         {tab === 'equipo' && <Equipo />}
         {tab === 'seguridad' && <Seguridad />}
+        {tab === 'demo' && <PacientesDemo />}
         {tab === 'bitacora' && (
           <Bitacora
             filtros={{

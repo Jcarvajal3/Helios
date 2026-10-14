@@ -39,6 +39,11 @@ export const ACCION_VERBO: Record<string, string | undefined> = {
   'charge.void': 'anuló un cobro pendiente',
   'charge.reverted': 'revirtió un financiamiento ya confirmado',
 
+  // ── Pacientes demo (20261014100100) ──────────────────────────────────────
+  'demo.patient_created': 'creó un paciente demo',
+  'demo.limit': 'cambió el límite de la demo',
+  'demo.reset': 'reinició la demo',
+
   // ── Cobranza ─────────────────────────────────────────────────────────────
   'late_fee.waived': 'condonó un cargo por atraso',
   'collection.contact': 'anotó una gestión de cobranza',
@@ -189,6 +194,9 @@ export const FILTROS_BITACORA: ReadonlyArray<TemaBitacora> = [
     acciones: [
       'level.configure',
       'parameter.set',
+      'demo.patient_created',
+      'demo.limit',
+      'demo.reset',
       'holiday.set',
       'holiday.removed',
       'fx_rate.manual',

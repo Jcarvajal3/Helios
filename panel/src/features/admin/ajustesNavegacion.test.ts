@@ -23,7 +23,7 @@ function comprueba(ok: boolean, titulo: string, detalle = '') {
 }
 
 console.log('── Las secciones ─────────────────────────────────────────────')
-comprueba(PESTANAS_AJUSTES.length === 11, 'once secciones', String(PESTANAS_AJUSTES.length))
+comprueba(PESTANAS_AJUSTES.length === 12, 'doce secciones', String(PESTANAS_AJUSTES.length))
 for (const podada of ['promociones', 'version', 'eliminaciones', 'qa']) {
   comprueba(!PESTANAS_AJUSTES.includes(podada as never), `${podada} ya no es de Ajustes`)
 }
@@ -37,8 +37,9 @@ comprueba(
   'ninguna sección se repite',
 )
 comprueba(
-  GRUPOS_AJUSTES.map((g) => g.titulo).join(',') === 'Reglas,Lo que ve el paciente,El comprobante,Equipo,Registro,Emergencia',
-  'los seis grupos, en su orden',
+  GRUPOS_AJUSTES.map((g) => g.titulo).join(',') ===
+    'Reglas,Lo que ve el paciente,El comprobante,Equipo,Capacitaciones,Registro,Emergencia',
+  'los siete grupos, en su orden',
   GRUPOS_AJUSTES.map((g) => g.titulo).join(','),
 )
 comprueba(

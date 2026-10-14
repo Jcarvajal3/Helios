@@ -5,7 +5,7 @@ import { GRUPOS_AJUSTES } from '@/features/admin/ajustesNavegacion'
 import type { GrupoAjustes, PestanaAjustes } from '@/features/admin/ajustesNavegacion'
 
 /**
- * El submenú de Ajustes: cinco grupos y doce secciones.
+ * El submenú de Ajustes: siete grupos y doce secciones.
  *
  * El activo se dice como en el menú lateral —fondo levantado, texto en blanco
  * y una raya de 3 px— pero en neutro: Ajustes no es de ningún área, y el
