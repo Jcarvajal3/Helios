@@ -60,8 +60,8 @@ begin
   insert into public.merchant_users (user_id, merchant_id, branch_id, role)
   values (v_staff, v_merchant, v_branch, 'cajero');
 
-  insert into public.profiles (id, phone_e164, first_name, full_name)
-  values (v_pac, '+584140009301', 'Luis', 'Luis Pagos');
+  insert into public.profiles (id, phone_e164, first_name, full_name, email)
+  values (v_pac, '+584140009301', 'Luis', 'Luis Pagos', 'luis.pagos@prueba.helios.test');
 
   update public.levels set monthly_limit_usd = 150 where level = 1;
   update public.notification_templates set enabled = true
@@ -260,7 +260,7 @@ begin
 
   -- --- 7a. pago_recibido -------------------------------------------------------
   if not exists (select 1 from public.outbound_messages
-                 where dedupe_key = 'pago_recibido:' || v_rep.id and status = 'pendiente'
+                 where dedupe_key = 'pago_recibido:email:' || v_rep.id and status = 'pendiente'
                    and rendered_text like '%$56,96%') then
     raise exception 'Conciliar debía encolar pago_recibido';
   end if;
@@ -293,7 +293,7 @@ begin
                                           v_today, 4000, null, null);
   perform public.admin_reconcile_payment((v_res3->>'report_id')::uuid, false, 'la referencia no aparece en el banco');
   if not exists (select 1 from public.outbound_messages
-                 where dedupe_key = 'pago_rechazado:' || (v_res3->>'report_id')
+                 where dedupe_key = 'pago_rechazado:email:' || (v_res3->>'report_id')
                    and rendered_text like '%la referencia no aparece en el banco%') then
     raise exception 'Rechazar debía encolar pago_rechazado con el motivo';
   end if;

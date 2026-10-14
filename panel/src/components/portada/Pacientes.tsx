@@ -42,12 +42,12 @@ function Desglose() {
   const filas = [
     { concepto: 'Consulta', monto: CONSULTA, color: 'bg-portada-azul' },
     {
-      concepto: `Comisión de servicio (${COMISION_PCT}%)`,
+      concepto: `Comisión Helios (${COMISION_PCT}%)`,
       monto: comision,
       color: 'bg-portada-cielo',
     },
     {
-      concepto: `IVA de la comisión (${IVA_PCT}%)`,
+      concepto: `IVA de la Comisión Helios (${IVA_PCT}%)`,
       monto: iva,
       color: 'bg-portada-cielo-2',
     },
@@ -203,7 +203,7 @@ export function Pacientes() {
             <Revelar retraso={160}>
               <p className="portada-entrada mt-7 max-w-[44ch] text-portada-tinta-2">
                 Una sola comisión, dicha desde el principio. Antes de confirmar
-                ves el monto, la comisión y tus dos cuotas.
+                ves el monto, la Comisión Helios y tus dos cuotas.
               </p>
             </Revelar>
           </div>

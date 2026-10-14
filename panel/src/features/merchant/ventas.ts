@@ -15,7 +15,7 @@ import type { EstadoDelComprobante } from './registro'
 //   2. LO QUE HELIOS LE FACTURA A LA CLÍNICA — hoy 0 %, pero el campo existe
 //      por si una clínica pacta otra cosa; es un gasto.
 //
-// ⚠️ SIN LA COMISIÓN DE SERVICIO DEL PACIENTE, ni suelta ni sumada. La RPC heredada de Ronda
+// ⚠️ SIN LA COMISIÓN HELIOS DEL PACIENTE, ni suelta ni sumada. La RPC heredada de Ronda
 // todavía lo manda (`consumer_fee_*`, `charged_to_customer_*`) y aquí no se
 // lee a propósito: lo que Helios le cobra al paciente no es de la clínica.
 //
@@ -147,9 +147,10 @@ export const COLUMNAS_VENTAS: Array<CsvColumn<FilaDeVentas>> = [
   { header: 'CONSULTA USD', value: (r) => csvDinero(r.saleUsd) },
 
   // ── Lo que Helios le factura a la clínica ───────────────────────────────
-  { header: 'Comision de Helios %', value: (r) => csvDinero(r.merchantFeePct) },
-  { header: 'Comision de Helios USD', value: (r) => csvDinero(r.merchantFeeUsd) },
-  { header: 'IVA de la comision USD', value: (r) => csvDinero(r.merchantFeeVatUsd) },
+  // «Cargo», no «comisión»: la Comisión Helios es la del paciente y aquí no va.
+  { header: 'Cargo de Helios a la clinica %', value: (r) => csvDinero(r.merchantFeePct) },
+  { header: 'Cargo de Helios a la clinica USD', value: (r) => csvDinero(r.merchantFeeUsd) },
+  { header: 'IVA del cargo USD', value: (r) => csvDinero(r.merchantFeeVatUsd) },
   { header: 'NETO PARA LA CLINICA USD', value: (r) => csvDinero(r.netToMerchantUsd) },
 
   // ── En bolívares, a la tasa del día de la orden ─────────────────────────
@@ -178,4 +179,4 @@ export const COLUMNAS_VENTAS: Array<CsvColumn<FilaDeVentas>> = [
 
 /** Lo que lleva el archivo, en una línea para quien lo descarga. */
 export const QUE_LLEVA =
-  'El libro de pagos en cuotas: la consulta, lo que Helios te factura (hoy nada), el neto, cuándo te lo pagamos y la comisión de quien lo registró. En dólares (las consultas en euros, pasadas a dólares) y en bolívares. Sin la comisión de servicio que paga el paciente.'
+  'El libro de pagos en cuotas: la consulta, lo que Helios te factura (hoy nada), el neto, cuándo te lo pagamos y la comisión de quien lo registró. En dólares (las consultas en euros, pasadas a dólares) y en bolívares. Sin la Comisión Helios que paga el paciente.'

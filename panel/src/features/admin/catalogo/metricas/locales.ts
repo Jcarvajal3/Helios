@@ -75,7 +75,7 @@ export const metricasLocales = [
       'cuánto le pagamos',
     ],
     destino: { to: '/admin/metricas', search: { vista: 'locales' } },
-    que: 'Por clínica, las liquidaciones de las cuotas que vencen de lunes a domingo, que se le transfieren se paguen o no, cada una el día siguiente a su vencimiento (de martes a lunes): lo ya generado más lo que el cron generará hasta el domingo con las condiciones del día de cada financiamiento. Es su neto, que no lleva la comisión de servicio, y la misma cuenta que Pagos a clínicas. Lo atrasado de semanas anteriores va aparte.',
+    que: 'Por clínica, las liquidaciones de las cuotas que vencen de lunes a domingo, que se le transfieren se paguen o no, cada una el día siguiente a su vencimiento (de martes a lunes): lo ya generado más lo que el cron generará hasta el domingo con las condiciones del día de cada financiamiento. Es su neto, que no lleva la Comisión Helios, y la misma cuenta que Pagos a clínicas. Lo atrasado de semanas anteriores va aparte.',
     rpc: 'admin_metricas_locales',
   },
   {

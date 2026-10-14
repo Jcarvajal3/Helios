@@ -17,8 +17,9 @@
 //              → moneda (si no la dijo) → monto (si no lo dijo) → resumen
 //   moneda     Dólares (USD) · Euros (EUR)   (o el monto con su moneda de
 //              una vez: «€80 consulta»)
-//   monto      «80 consulta», «€80 consulta», «80 euros consulta»; un botón
-//              de moneda aquí la cambia y vuelve a pedir el monto
+//   monto      «$80, Limpieza Dental», «80 consulta»; la moneda elegida manda
+//              y el símbolo escrito se ignora (2026-10-13). Un botón de
+//              moneda aquí la cambia y vuelve a pedir el monto
 //   resumen    Confirmar (la orden sale al paciente) · Corregir (también la
 //              moneda) · Cancelar
 //
@@ -144,6 +145,17 @@ const ERRORES_DE_NEGOCIO = new Set(['P0001', '22023', 'P0002', '42501', '28000',
 function positivo(v: unknown): number | null {
   const x = Number(v)
   return v != null && Number.isFinite(x) && x > 0 ? x : null
+}
+
+/**
+ * El ejemplo de cómo escribir el monto y el concepto, con el símbolo de la
+ * moneda elegida: «$80, Limpieza Dental» o «€80, Limpieza Dental» (Javier,
+ * 2026-10-13: «80 consulta» no se entendía). `leerMontoYConcepto` lo lee tal
+ * cual (la coma no es decimal si no la sigue un dígito); el símbolo no
+ * cambia la moneda elegida.
+ */
+function ejemploDeMonto(m: Moneda): string {
+  return `${dineroEn(80, m)}, Limpieza Dental`
 }
 
 /** Lo disponible en la moneda elegida, o null si no se sabe (sin tasa del euro). */
@@ -388,7 +400,9 @@ export async function atenderAlPersonal({
       ...datos,
       paciente,
       monto: lectura.monto ?? datos.monto ?? null,
-      moneda: lectura.moneda ?? datos.moneda ?? null,
+      // La moneda ya elegida manda sobre el símbolo del monto (2026-10-13);
+      // solo una línea «Moneda:» la cambia.
+      moneda: lectura.monedaElegida ?? datos.moneda ?? lectura.moneda ?? null,
       concepto: lectura.concepto ?? datos.concepto ?? null,
       atendido: lectura.atendido ?? datos.atendido ?? null,
     }
@@ -422,13 +436,15 @@ export async function atenderAlPersonal({
     if (monedaPedida) return seguir({ ...datos, moneda: monedaPedida, monto: null })
     const mc = leerMontoYConcepto(texto)
     if (!mc) {
-      await enviar('No entendí el monto. Escríbelo así: 80 consulta')
+      await enviar(`No entendí el monto. Escríbelo así: ${ejemploDeMonto(datos.moneda ?? 'USD')}`)
       return { paso: 'monto' }
     }
     return seguir({
       ...datos,
       monto: mc.monto,
-      moneda: mc.moneda ?? datos.moneda ?? null,
+      // La moneda elegida manda: «$80» con euros elegidos son €80 (Javier,
+      // 2026-10-13). El símbolo solo cuenta si aún no hay moneda.
+      moneda: datos.moneda ?? mc.moneda ?? null,
       concepto: mc.concepto ?? datos.concepto ?? null,
     })
   }
@@ -446,7 +462,7 @@ export async function atenderAlPersonal({
       }
       await guardar('monto', datos)
       await enviar(
-        `Escribe otra vez el monto en ${enPlural(datos.moneda ?? 'USD')} y el concepto (por ejemplo: 80 consulta), ` +
+        `Escribe otra vez el monto en ${enPlural(datos.moneda ?? 'USD')} y el concepto (ejemplo: ${ejemploDeMonto(datos.moneda ?? 'USD')}), ` +
           'o elige otra moneda:',
         MONEDA,
       )
@@ -484,7 +500,7 @@ export async function atenderAlPersonal({
       await enviar(
         antes +
           (disponible != null ? `Tiene disponible para pagar en cuotas hasta ${dineroEn(disponible, d.moneda)}.\n\n` : '') +
-          `Escribe el monto de la consulta en ${enPlural(d.moneda)} y el concepto (por ejemplo: 80 consulta):`,
+          `Escribe el monto de la consulta en ${enPlural(d.moneda)} y el concepto (ejemplo: ${ejemploDeMonto(d.moneda)}):`,
       )
       return { paso: 'monto' }
     }
@@ -536,7 +552,7 @@ export async function atenderAlPersonal({
     })
     if (!p.ok) {
       await guardar('monto', d)
-      await enviar(`${p.mensaje}\n\nEscribe otro monto en ${enPlural(moneda)} (por ejemplo: 80 consulta):`)
+      await enviar(`${p.mensaje}\n\nEscribe otro monto en ${enPlural(moneda)} (ejemplo: ${ejemploDeMonto(moneda)}):`)
       return { paso: 'monto', error: p.mensaje }
     }
     const v = p.data
@@ -575,8 +591,10 @@ export async function atenderAlPersonal({
     await enviar(
       `Revisa antes de enviar:\n\n${quien}\n\n` +
         `Consulta: ${en(v.base_cur, v.base_usd)}${d.concepto ? ` (${d.concepto})` : ''}\n` +
-        `Comisión de servicio (${v.consumer_fee_pct}%): ${en(v.consumer_fee_cur, v.consumer_fee_usd)}\n` +
-        `IVA de la comisión: ${en(v.consumer_fee_vat_cur, v.consumer_fee_vat_usd)}\n` +
+        // «(Lo paga el paciente)» en las dos líneas (Javier, 2026-10-13): que
+        // ningún médico crea que se la descuentan.
+        `Comisión Helios (${v.consumer_fee_pct}%): ${en(v.consumer_fee_cur, v.consumer_fee_usd)} (Lo paga el paciente)\n` +
+        `IVA de la Comisión Helios: ${en(v.consumer_fee_vat_cur, v.consumer_fee_vat_usd)} (Lo paga el paciente)\n` +
         `Cuotas:\n${cuotas}\n\n` +
         `El paciente paga en bolívares a la tasa BCV del ${nombreDeLaMoneda(m)} del día en que pague.\n` +
         'Al confirmar, le llega un WhatsApp al paciente y tiene 2 horas para responder Sí.',

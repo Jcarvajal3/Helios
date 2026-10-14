@@ -419,8 +419,8 @@ begin
     raise exception 'El cobro de la cuota en euros debía asentarse en dólares (64,08)';
   end if;
   select rendered_text into v_txt from public.outbound_messages
-  where dedupe_key = 'pago_recibido:' || v_rep;
-  if v_txt not like '%tu pago de €56,96 (Bs 50.124,80)%' then
+  where dedupe_key = 'pago_recibido:email:' || v_rep;
+  if v_txt is null or v_txt not like '%tu pago de €56,96 (Bs 50.124,80)%' then
     raise exception '«Recibimos tu pago» debía decir euros y bolívares: %', v_txt;
   end if;
   raise notice 'TEST MONEDA 6 OK — el pago en euros a la tasa del euro del día del pago; libro en dólares';
@@ -456,8 +456,8 @@ begin
   perform public.helios_enqueue_reminders('cuota_manana', v_today - 1);
   select rendered_text into v_txt from public.outbound_messages
   where profile_id = v_profile and template_key = 'cuota_manana' and installment_due_date = v_today
-    and channel = 'whatsapp_manual';
-  if v_txt not like '%a la tasa BCV del dólar o del euro, según la moneda de cada cuota, del día en que pagues%' then
+    and channel = 'whatsapp';
+  if v_txt is null or v_txt not like '%a la tasa BCV del dólar o del euro, según la moneda de cada cuota, del día en que pagues%' then
     raise exception 'Con cuotas en las dos monedas, la víspera debía nombrar las dos tasas: %', v_txt;
   end if;
   update public.installments set due_date = v_d where id = v_k;

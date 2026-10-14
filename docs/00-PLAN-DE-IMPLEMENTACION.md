@@ -65,7 +65,7 @@ El resto del documento conserva "financiamiento" como término interno del dise�
 
 | Tema | Decisión | Origen |
 |---|---|---|
-| Moneda | ~~Solo dólar BCV~~ (2026-09-30). **El médico cobra en dólares o en euros**, a su elección en el paso del monto (panel y bot). Una orden en euros queda en euros: el paciente paga cada cuota en Bs a la tasa BCV del euro del día en que paga y a la clínica se le paga en Bs a la tasa del euro. El libro, los límites, la mora y el superadmin siguen en **dólares** (la orden en euros se convierte con la tasa cruzada del día del registro) | Javier, 2026-10-07 |
+| Moneda | ~~Solo dólar BCV~~ (2026-09-30). **El médico cobra en dólares o en euros**, a su elección en el paso del monto (panel y bot). En el bot, **la moneda elegida manda sobre el símbolo escrito**: con euros elegidos, «$80» son €80 (Javier, 2026-10-13); el símbolo solo cuenta si aún no hay moneda, y solo la cambian el botón o una línea «Moneda:». Una orden en euros queda en euros: el paciente paga cada cuota en Bs a la tasa BCV del euro del día en que paga y a la clínica se le paga en Bs a la tasa del euro. El libro, los límites, la mora y el superadmin siguen en **dólares** (la orden en euros se convierte con la tasa cruzada del día del registro) | Javier, 2026-10-07 |
 | Medios de pago del paciente | **Solo bolívares**: Pago Móvil o transferencia. Fuera Zelle, USDT y efectivo | Javier, 2026-10-07 |
 | Cargos por mora | **Apagados por ahora** (`late_fee_usd` = 0). El motor se queda en el código; retomarlo es volver a poner el monto en el parámetro | Javier, 2026-10-07 |
 | Montos al paciente | **La moneda y los bolívares**: «€56,96 (Bs 56.063,47)»; el monto en la moneda es fijo y los Bs son los de la tasa del día | Javier, 2026-10-07 |
@@ -184,7 +184,7 @@ El mismo flujo, conversado. El detalle técnico está en §15.
 
 1. El médico escribe al WhatsApp de Helios desde **su número registrado**. El bot le ofrece botones (sin PIN desde el 2026-10-13): **Nuevo financiamiento**, **Mis financiamientos**, **Ayuda**.
 2. **Cédula** → la misma respuesta que en el panel (nuevo / disponible $X con nombre enmascarado / no disponible, sin motivo).
-3. **Paciente conocido**: pide monto y concepto ("80 consulta"). **Paciente nuevo**: pide **todos los datos en un solo mensaje** (el bot le manda el formulario en un mensaje aparte para copiarlo; valen también solo las respuestas, una por línea y en orden). El bot **pregunta solo lo que falte** y nunca inventa un dato.
+3. **Paciente conocido**: pide monto y concepto ("$80, Limpieza Dental"). **Paciente nuevo**: pide **todos los datos en un solo mensaje** (el bot le manda el formulario en un mensaje aparte para copiarlo; valen también solo las respuestas, una por línea y en orden). El bot **pregunta solo lo que falte** y nunca inventa un dato.
 4. **Resumen**: datos del paciente (con el **correo bien visible**, porque ahí llega el comprobante), monto de la consulta, línea "Servicio Helios 20 % + IVA" y las 2 cuotas con fechas. Botones **Confirmar** / **Corregir**.
 5. **Confirmar** → orden pendiente → WhatsApp al paciente. El bot avisa "Esperando la respuesta de José (vence a las 16:40)".
 6. El bot le avisa al médico cuando el paciente **acepta**, **rechaza** o la orden **vence** (con botón **Reenviar**).
@@ -559,6 +559,21 @@ Hay además un **camino alternativo, que ya existe en Ronda**: si el paciente pa
   - A partir de unos **300 por semana** conviene la fase de WhatsApp Cloud API (§11, fase 6). Solo cambia el *transporte* (`outbound_messages` → API) y **se mantienen las plantillas**. Plantillas categoría *utility*; hay que empezar ya la verificación del Business Manager, que tarda semanas.
 - **2026-10-05:** la **bienvenida** deja esta cola: sale sola por la API al confirmarse el financiamiento (§5.1, §15). Los recordatorios pasan a la API plantilla a plantilla en la fase 7. Todo mensaje que la API no pueda entregar **cae a esta cola** como `whatsapp_manual`, así que nada se pierde.
 - **Recordatorio por email** además del WhatsApp (automático, sin trabajo humano): el aviso de la víspera también sale por correo, usando la misma cola que el comprobante (§7.3). Se puede apagar por plantilla.
+- **2026-10-13 (Javier; 20261013000700): los avisos del paciente salen solos y por los dos canales.** Todos pasan a `whatsapp` (automático) + `email`, y se suma uno **tres días antes** del vencimiento. La cola de "Avisos de hoy" queda solo para lo que la API no puede entregar (ventana cerrada sin plantilla aprobada, un 4xx…). Las plantillas para Meta están en §15.7.
+
+  | Momento | Plantilla | Hora (Caracas) |
+  |---|---|---|
+  | D-3 | `cuota_en_3_dias` | 12:00 |
+  | Víspera | `cuota_manana` | 19:00 |
+  | Día del vencimiento | `cuota_hoy` | 08:00 |
+  | +1 día | `cuota_vencida_d1` | 08:05 |
+  | +4 días | `cargo_por_atraso_d4` (no sale con `late_fee_usd` = 0) | 10:30 |
+  | +7 días | pasa a **Cobranza** | — |
+  | Al aprobar / rechazar un pago | `pago_recibido` / `pago_rechazado` (**solo correo**, 20261013000800: para ahorrar en WhatsApp; sin correo, el paciente no lo recibe) | — |
+
+  - **`cuenta_congelada`, apagada.** El motor de mora (10:05) congela la cuenta el día +1, dos horas después de `cuota_vencida_d1`, que ya dice que no puede pagar nuevas consultas en cuotas: llegaban dos mensajes casi iguales el mismo día, y el congelamiento no mira los pagos registrados, así que también le llegaba a quien ya había mandado su comprobante. Se puede encender desde el panel.
+  - `{por_whatsapp}` dice dónde mandar el comprobante: «por este chat» en WhatsApp y «por WhatsApp al 0414-…» en el correo. Así un solo cuerpo vale para los dos canales.
+  - Sin correo, o con un correo que rebotó, sale solo el WhatsApp.
 
 ### 7.3 El comprobante por correo
 
@@ -964,6 +979,12 @@ La v1 y la v2 dicen "financiamiento", que desde el 2026-10-06 no se usa hacia fu
    where key = 'confirmar_financiamiento';
   ```
 
+#### 15.5.3 «Comisión Helios» (2026-10-13)
+
+Decidido por Javier el 2026-10-13: hacia el médico la comisión de servicio se llama **«Comisión Helios»**, y en todo desglose que ve (panel y bot) va seguida de **«(Lo paga el paciente)»**, para que ningún médico crea que se le descuenta. Hecho en el panel, la portada, `/legal/terminos` y el bot del médico.
+
+**Los mensajes al paciente no cambian**: la pregunta de WhatsApp (`confirmar_financiamiento`, y su plantilla de Meta `helios_confirmar_pago_en_cuotas`) y el comprobante por correo siguen diciendo «comisión de servicio». 20261013000900 los había cambiado y 20261013001000 los devolvió a su texto.
+
 ### 15.6 El bot del paciente (2026-10-06)
 
 Decidido por Javier el 2026-10-06. Si un paciente le escribe a Helios (y no es su respuesta a una confirmación), antes de que lo atienda una persona:
@@ -979,3 +1000,68 @@ Decidido por Javier el 2026-10-06. Si un paciente le escribe a Helios (y no es s
 Piezas: `paciente.ts` y `textos_paciente.ts` en la Edge Function; en la base, `bot_paciente_contexto`, `bot_paciente_guardar`, `bot_paciente_resumen` y `helios_whatsapp_patient_text` (20261006000100). Lo que recuerda de cada número vive en `whatsapp_contacts` (`bot_menu_at`, `human_until`, `patient_profile_id`, `patient_state`). **Hacen falta las cuentas de cobro** (Ajustes › Cuentas de cobro) para que «Pagar cuota» diga cómo pagar.
 
 Los mensajes al paciente cambiaron el mismo día (textos de Javier): la pregunta (§15.5.1) y la bienvenida («🩺 ¡Listo, {nombre}! Tu financiamiento #{orden} ya está activo…»). Los montos de todos los mensajes van al estilo venezolano («$100», «$1,92»).
+
+### 15.7 Las plantillas de los recordatorios del paciente (2026-10-13)
+
+Para que los avisos de §7.2 salgan solos también con la ventana de 24 h cerrada (casi siempre: el paciente no escribe antes de cada cuota). Hasta que Meta apruebe cada una, ese aviso cae a "Avisos de hoy" como antes.
+
+Todas: categoría **Utility** · idioma **Spanish** (`es`) · variables **numéricas** · sin botones · sin encabezado ni pie. Las variables de dinero ya traen su símbolo y los bolívares de hoy. `{{7}}`/`{{6}}` (las cuentas de cobro) llegan en una sola línea: Meta no admite saltos de línea en una variable. Ninguna variable puede ir vacía, por eso `{aviso_cargo_atraso}` no está en la de cuota vencida.
+
+**1. `helios_cuota_en_3_dias`** → `cuota_en_3_dias`
+
+> Hola, {{1}}. Te recordamos que el {{2}} vence tu cuota de {{3}} de la orden #{{4}} en {{5}}.
+>
+> Puedes pagar en bolívares (Pago Móvil o transferencia), a la tasa BCV del {{6}} del día en que pagues:
+> {{7}}
+>
+> Cuando pagues, envíanos el comprobante por este chat. ¡Gracias!
+
+Ejemplo: {{1}} `María` · {{2}} `jueves 15/10` · {{3}} `$56,96 (Bs 49.942,39)` · {{4}} `1042` · {{5}} `Clínica Demo` · {{6}} `dólar` · {{7}} `• Pago Móvil: Banco Nacional · J504967866 · 0412-1714930 · Quarto Latam`
+
+**2. `helios_cuota_vence_manana`** → `cuota_manana`
+
+> Hola, {{1}}. Te recordamos que mañana, {{2}}, vence tu cuota de {{3}} de la orden #{{4}} en {{5}}.
+>
+> Puedes pagar en bolívares (Pago Móvil o transferencia), a la tasa BCV del {{6}} del día en que pagues:
+> {{7}}
+>
+> Cuando pagues, envíanos el comprobante por este chat. ¡Gracias!
+
+Ejemplo: el mismo de la 1.
+
+**3. `helios_cuota_vence_hoy`** → `cuota_hoy`
+
+> Buenos días, {{1}}. Hoy vence tu cuota de {{2}} de la orden #{{3}} en {{4}}.
+>
+> Para pagar, en bolívares a la tasa BCV del {{5}} del día:
+> {{6}}
+>
+> Cuando pagues, envíanos el comprobante por este chat. Si ya pagaste, ignora este mensaje.
+
+Ejemplo: {{1}} `María` · {{2}} `$56,96 (Bs 49.942,39)` · {{3}} `1042` · {{4}} `Clínica Demo` · {{5}} `dólar` · {{6}} `• Pago Móvil: Banco Nacional · J504967866 · 0412-1714930 · Quarto Latam`
+
+**4. `helios_cuota_vencida`** → `cuota_vencida_d1`
+
+> Hola, {{1}}. Tu cuota de {{2}} del {{3}} (orden #{{4}}) sigue pendiente.
+>
+> Mientras esté vencida no podrás pagar nuevas consultas en cuotas con Helios.
+>
+> Para pagar, en bolívares a la tasa BCV del {{5}} del día:
+> {{6}}
+>
+> Si tienes algún inconveniente, escríbenos por este chat y lo resolvemos juntos.
+
+Ejemplo: {{1}} `María` · {{2}} `$56,96 (Bs 49.942,39)` · {{3}} `jueves 15/10` · {{4}} `1042` · {{5}} `dólar` · {{6}} `• Pago Móvil: Banco Nacional · J504967866 · 0412-1714930 · Quarto Latam`
+
+**Sin plantilla, a propósito:** `pago_recibido` y `pago_rechazado` (solo por correo desde el 2026-10-13), `cargo_por_atraso_d4` (no sale mientras `late_fee_usd` = 0; si vuelve el cargo, hacen falta su plantilla y una v2 de la 4 con la frase del cargo) y `cuenta_congelada` (apagada).
+
+**Al aprobarse cada una**, el equipo técnico la conecta (los parámetros, en ese orden, ya están puestos en `wa_template_params`):
+
+```sql
+update public.notification_templates set wa_template_name = 'helios_cuota_en_3_dias'    where key = 'cuota_en_3_dias';
+update public.notification_templates set wa_template_name = 'helios_cuota_vence_manana' where key = 'cuota_manana';
+update public.notification_templates set wa_template_name = 'helios_cuota_vence_hoy'    where key = 'cuota_hoy';
+update public.notification_templates set wa_template_name = 'helios_cuota_vencida'      where key = 'cuota_vencida_d1';
+```
+
+Si se edita un texto en el panel, cambia el WhatsApp dentro de la ventana y el correo, **no** la plantilla de Meta: hay que editarla allí y volver a mandarla a aprobación.

@@ -120,7 +120,7 @@ igual(detalle.pagos.map((p) => p.sequence), [1, 2], 'las dos mitades en orden, s
 igual(detalle.pagos[0].paidToMerchantOn, '2026-10-09', 'run_date se lee como paid_to_merchant_on (el día siguiente al vencimiento)')
 igual(detalle.concept, 'Consulta y eco', 'sin concept suelto, el nombre de la única línea')
 igual(detalle.receipt, { status: 'entregado', sentAt: '2026-10-01T14:01:00Z', lastEvent: 'delivered' }, 'el comprobante')
-igual(detalle.feePct, 12, 'el porcentaje de la comisión de servicio sale de sus cifras')
+igual(detalle.feePct, 12, 'el porcentaje de la Comisión Helios sale de sus cifras')
 comprueba(!JSON.stringify(detalle).includes('overdue'), 'el estado de pago del paciente no llega a la ficha')
 
 const nueva = leerDetalle({
@@ -203,11 +203,11 @@ const venta = leerFilaDeVentas({
 igual(venta.saleUsd, 100, 'la consulta desde sale_eur')
 igual(venta.netToMerchantUsd, 100, 'el neto desde net_to_merchant_eur')
 igual(venta.registeredBy, 'Ana', 'quien registró desde cashier')
-comprueba(!JSON.stringify(venta).includes('113.92'), 'el total con la comisión de servicio del paciente no se lee')
+comprueba(!JSON.stringify(venta).includes('113.92'), 'el total con la Comisión Helios del paciente no se lee')
 const cabeceras = COLUMNAS_VENTAS.map((c) => c.header.toLowerCase()).join('|')
 comprueba(
-  !/cliente|consumer|servicio helios|comisi[oó]n de servicio/.test(cabeceras),
-  'ninguna columna habla de la comisión de servicio del paciente',
+  !/cliente|consumer|servicio helios|comisi[oó]n de servicio|comisi[oó]n (de )?helios/.test(cabeceras),
+  'ninguna columna habla de la Comisión Helios del paciente',
 )
 comprueba(!/financ|lunes/.test(cabeceras), 'ninguna columna habla de financiamientos ni de lunes')
 

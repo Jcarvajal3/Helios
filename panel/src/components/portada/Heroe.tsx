@@ -99,8 +99,8 @@ function Recibo() {
       </ol>
 
       <p className="mt-4 border-t border-portada-linea pt-4 text-[0.82rem] leading-relaxed text-portada-tinta-3">
-        Las cuotas incluyen la comisión de servicio: {COMISION_PCT}% de la
-        consulta más el IVA de la comisión ({dinero(comision + iva)} en este
+        Las cuotas incluyen la Comisión Helios: {COMISION_PCT}% de la
+        consulta más su IVA ({dinero(comision + iva)} en este
         ejemplo).{' '}
         <a
           href="#pacientes"

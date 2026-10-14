@@ -98,6 +98,9 @@ comprueba(
   'la línea «Moneda» manda sobre el símbolo',
 )
 comprueba(leerFormulario('Moneda: euros').moneda === 'EUR', 'una corrección de solo la moneda')
+// El símbolo del monto no es una elección (2026-10-13): no cambia la moneda ya elegida.
+comprueba(leerFormulario('Monto: $90').monedaElegida === null, 'el símbolo del monto no es la moneda elegida')
+comprueba(leerFormulario('Monto: $90\nMoneda: euros').monedaElegida === 'EUR', 'la línea «Moneda» sí lo es')
 
 const juntos = juntar({ first_name: 'Ana', email: 'viejo@x.com' }, { email: 'nuevo@x.com', city: '  ' })
 comprueba(juntos.email === 'nuevo@x.com' && juntos.first_name === 'Ana' && juntos.city === undefined, 'juntar')
@@ -136,6 +139,10 @@ const conMoneda: Array<[string, number, 'USD' | 'EUR' | null, string | null]> = 
   ['80 consulta en euros', 80, 'EUR', 'consulta'],
   ['consulta 80, en dólares', 80, 'USD', 'consulta'],
   ['80 eurocolor', 80, null, 'eurocolor'],
+  // El ejemplo que manda el bot (2026-10-13), copiado tal cual.
+  ['$80, Limpieza Dental', 80, 'USD', 'Limpieza Dental'],
+  ['€80, Limpieza Dental', 80, 'EUR', 'Limpieza Dental'],
+  ['$80,50, Limpieza Dental', 80.5, 'USD', 'Limpieza Dental'],
 ]
 for (const [texto, monto, moneda, concepto] of conMoneda) {
   const r = leerMontoYConcepto(texto)

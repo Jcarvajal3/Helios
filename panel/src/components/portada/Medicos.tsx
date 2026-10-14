@@ -25,7 +25,7 @@ import {
  * Lo central es la línea de tiempo: el paciente paga a los 7 y a los 14
  * días, y la clínica cobra cada mitad al día siguiente, a los 8 y a los 15,
  * pague o no el paciente. Aquí, como en todo lo que ve una clínica, los
- * montos van sin la comisión de servicio.
+ * montos van sin la Comisión Helios.
  */
 
 const NOCHE = '#020B24'

@@ -236,7 +236,7 @@ function Conversacion({ activo }: { activo: boolean }) {
             <dd className="tabular-nums">{dineroCorto(CONSULTA)}</dd>
           </div>
           <div className="flex justify-between gap-3">
-            <dt>Comisión de servicio</dt>
+            <dt>Comisión Helios</dt>
             <dd className="tabular-nums">{dinero(comision + iva)}</dd>
           </div>
           <div className="flex justify-between gap-3 border-t border-portada-linea pt-1 text-portada-tinta">

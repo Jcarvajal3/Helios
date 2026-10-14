@@ -106,7 +106,7 @@ export function CifrasDelLocal({
       <CifraConTendencia
         titulo={rotuloDelCierre(d.cierre)}
         valor={formatUsd(totalDelCierre(l.transferencia))}
-        info="Calculado de las liquidaciones: lo que se le paga por las cuotas que vencen esta semana, se paguen o no, cada mitad el día siguiente a su vencimiento. Es su neto, que no lleva la comisión de servicio. Es lo mismo que dice Pagos a clínicas; lo atrasado de semanas anteriores va en el pie, aparte."
+        info="Calculado de las liquidaciones: lo que se le paga por las cuotas que vencen esta semana, se paguen o no, cada mitad el día siguiente a su vencimiento. Es su neto, que no lleva la Comisión Helios. Es lo mismo que dice Pagos a clínicas; lo atrasado de semanas anteriores va en el pie, aparte."
         pie={pieDelCierre(l.transferencia, d.cierre)}
         link={{ to: '/admin/pagos-clinicas' }}
       />

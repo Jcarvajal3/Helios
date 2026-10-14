@@ -205,7 +205,7 @@ export function PasoMonto({
                 )}
               </>
             ) : (
-              `${rango}. Sin la comisión de servicio: esa la paga el paciente en sus cuotas.`
+              `${rango}. Sin la Comisión Helios: esa la paga el paciente en sus cuotas.`
             )
           }
           className="max-w-sm"

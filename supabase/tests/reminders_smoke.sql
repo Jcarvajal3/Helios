@@ -4,23 +4,26 @@
 --   bash supabase/tests/run.sh reminders_smoke
 --
 --  1. El día operativo empieza a medianoche (la fecha de los avisos).
---  2. Los 5 momentos de una fecha de vencimiento D:
---       D-1 cuota_manana (WhatsApp + correo) · D cuota_hoy · D+1 cuota_vencida_d1
---       · D+4 cargo_por_atraso_d4 (solo con el cargo ya cobrado, y lo suma)
---       · D+7 ningún mensaje.
---     Y ninguno sale en un día que no le toca.
+--  2. Los momentos de una fecha de vencimiento D, cada uno por WhatsApp
+--     (automático) y por correo (20261013000700):
+--       D-3 cuota_en_3_dias · D-1 cuota_manana · D cuota_hoy
+--       · D+1 cuota_vencida_d1 · D+4 cargo_por_atraso_d4 (solo con el cargo
+--       ya cobrado, y lo suma) · D+7 ningún mensaje.
+--     Y ninguno sale en un día que no le toca. {por_whatsapp}: «por este
+--     chat» en WhatsApp, el número de Helios en el correo.
 --  3. Correrlo dos veces no duplica nada (dedupe_key por plantilla, canal,
 --     paciente y fecha). El texto queda listo para pegar.
 --  4. Dos financiamientos que vencen el mismo día: un solo aviso con la suma.
 --  5. Registrar un pago cancela los avisos pendientes de las fechas que cubre,
 --     y solo esos.
---  6. Conciliar → pago_recibido.
---  7. cuenta_congelada solo en el paso activa → congelada; al descongelarse
---     el pendiente se cancela.
+--  6. Conciliar → pago_recibido, solo por correo (20261013000800).
+--  7. cuenta_congelada está apagada: congelarse no encola nada. Encendida,
+--     solo en el paso activa → congelada; al descongelarse el pendiente se
+--     cancela.
 --  8. A los 7 días el caso está en Cobranza (admin_collections).
 --  9. La cola del equipo: admin_outbound_queue, admin_mark_outbound (enviado
 --     → collection_contacts; omitido exige nota), admin_outbound_history.
--- 10. Los crons: los 4 de Helios a su hora y ninguno de los 12 de Ronda;
+-- 10. Los crons: los 5 de Helios a su hora y ninguno de los 12 de Ronda;
 --     admin_set_notification_schedule los reprograma.
 -- ============================================================================
 
@@ -81,9 +84,10 @@ begin
          (v_pac2, '+584140009202', 'Pedro', 'Pedro Avisos', null);
 
   update public.levels set monthly_limit_usd = 150 where level = 1;
+  update public.platform_contact set whatsapp_number = '+584140001122';
   update public.notification_templates set enabled = true
-   where key in ('cuota_manana', 'cuota_hoy', 'cuota_vencida_d1', 'cargo_por_atraso_d4',
-                 'pago_recibido', 'pago_rechazado', 'cuenta_congelada');
+   where key in ('cuota_en_3_dias', 'cuota_manana', 'cuota_hoy', 'cuota_vencida_d1',
+                 'cargo_por_atraso_d4', 'pago_recibido', 'pago_rechazado');
 
   v_c1 := (pg_temp.prueba_cobro(v_pac, v_merchant, v_branch, v_staff, 100.00, 'aviso-1')->>'charge_id')::uuid;
   select * into v_i1 from public.installments where charge_id = v_c1 and sequence = 1;
@@ -93,6 +97,8 @@ begin
 
   -- --- 2. Los momentos de D ------------------------------------------------
   -- Ningún momento sale el día que no le toca.
+  perform public.helios_enqueue_reminders('cuota_en_3_dias', v_d - 4);
+  perform public.helios_enqueue_reminders('cuota_en_3_dias', v_d - 2);
   perform public.helios_enqueue_reminders('cuota_manana', v_d - 2);
   perform public.helios_enqueue_reminders('cuota_hoy', v_d - 1);
   perform public.helios_enqueue_reminders('cuota_vencida_d1', v_d);
@@ -100,6 +106,32 @@ begin
   if exists (select 1 from public.outbound_messages where profile_id = v_pac and installment_due_date = v_d) then
     raise exception 'Ningún aviso de D debía salir en un día que no le toca';
   end if;
+
+  -- D-3: tres días antes, por WhatsApp (automático) y por correo.
+  v_res := public.helios_enqueue_reminders('cuota_en_3_dias', v_d - 3);
+  if v_res->>'due_date' <> v_d::text then
+    raise exception 'Tres días antes debía apuntar a D: %', v_res;
+  end if;
+  select * into v_row from public.outbound_messages
+   where profile_id = v_pac and template_key = 'cuota_en_3_dias' and channel = 'whatsapp';
+  if not found or v_row.status <> 'pendiente' or v_row.next_attempt_at is null
+     or v_row.rendered_text not like '%el ' || public.helios_weekday_es(v_d) || ' ' || to_char(v_d, 'DD/MM') || ' vence tu cuota de $56,96%'
+     or v_row.rendered_text not like '%envíanos el comprobante por este chat.%'
+     or v_row.rendered_text like '%{%'
+     or v_row.wa_template -> 'params' ->> 0 <> 'María'
+     or jsonb_array_length(v_row.wa_template -> 'params') <> 7 then
+    raise exception 'El WhatsApp de tres días antes no está listo para la API: %', to_jsonb(v_row);
+  end if;
+  select * into v_row from public.outbound_messages
+   where profile_id = v_pac and template_key = 'cuota_en_3_dias' and channel = 'email';
+  if not found or v_row.recipient <> 'maria.avisos@prueba.helios.test'
+     or v_row.subject not like 'Tu cuota de $56,96%vence el%'
+     or v_row.rendered_text not like '%envíanos el comprobante por WhatsApp al 0414-%'
+     or v_row.html not like '%Vence el%' or v_row.html not like '%Hola, María%'
+     or v_row.html ~ '{[a-z_]+}' or v_row.html like '%[[%' then
+    raise exception 'El correo de tres días antes no salió bien: %', to_jsonb(v_row);
+  end if;
+  raise notice 'TEST AVISOS 2a OK — tres días antes, por WhatsApp y por correo';
 
   -- D-1: víspera, por WhatsApp y por correo.
   v_res := public.helios_enqueue_reminders('cuota_manana', v_d - 1);
@@ -115,10 +147,10 @@ begin
     raise exception 'La víspera debía salir por WhatsApp y por correo (hay %)', v_n;
   end if;
   select * into v_row from public.outbound_messages
-   where profile_id = v_pac and template_key = 'cuota_manana' and channel = 'whatsapp_manual';
+   where profile_id = v_pac and template_key = 'cuota_manana' and channel = 'whatsapp';
   if v_row.recipient <> '+584140009201' or v_row.charge_id <> v_c1
      or v_row.rendered_text not like '%mañana%56,96%'
-     or v_row.rendered_text like '%{%' or v_row.dedupe_key <> format('cuota_manana:whatsapp_manual:%s:%s', v_pac, v_d) then
+     or v_row.rendered_text like '%{%' or v_row.dedupe_key <> format('cuota_manana:whatsapp:%s:%s', v_pac, v_d) then
     raise exception 'El WhatsApp de la víspera no está listo para pegar: %', to_jsonb(v_row);
   end if;
 
@@ -136,12 +168,13 @@ begin
   perform public.helios_enqueue_reminders('cuota_vencida_d1', v_d + 1);
   if (select count(*) from public.outbound_messages
        where profile_id = v_pac and installment_due_date = v_d
-         and template_key in ('cuota_hoy', 'cuota_vencida_d1') and channel = 'whatsapp_manual') <> 2 then
+         and template_key in ('cuota_hoy', 'cuota_vencida_d1') and channel = 'whatsapp') <> 2 then
     raise exception 'Faltan los avisos del día y del día siguiente';
   end if;
-  if exists (select 1 from public.outbound_messages
-             where profile_id = v_pac and template_key in ('cuota_hoy', 'cuota_vencida_d1') and channel = 'email') then
-    raise exception 'cuota_hoy y cuota_vencida_d1 son solo WhatsApp';
+  if (select count(*) from public.outbound_messages
+       where profile_id = v_pac and template_key in ('cuota_hoy', 'cuota_vencida_d1') and channel = 'email'
+         and html !~ '{[a-z_]+}') <> 2 then
+    raise exception 'cuota_hoy y cuota_vencida_d1 también salen por correo';
   end if;
 
   -- D+4 sin cargo cobrado: no sale.
@@ -159,16 +192,17 @@ begin
   end if;
 
   -- D+7: ningún mensaje nuevo para D.
+  perform public.helios_enqueue_reminders('cuota_en_3_dias', v_d + 7);
   perform public.helios_enqueue_reminders('cuota_manana', v_d + 7);
   perform public.helios_enqueue_reminders('cuota_hoy', v_d + 7);
   perform public.helios_enqueue_reminders('cuota_vencida_d1', v_d + 7);
   perform public.helios_enqueue_reminders('cargo_por_atraso_d4', v_d + 7);
   select count(*) into v_n from public.outbound_messages where profile_id = v_pac and installment_due_date = v_d;
-  if v_n <> 5 then
-    raise exception 'Una fecha tiene 5 mensajes (víspera ×2, día, +1, +4) y ninguno a los 7 días; hay %', v_n;
+  if v_n <> 10 then
+    raise exception 'Una fecha tiene 10 mensajes (-3, -1, día, +1 y +4, cada uno ×2) y ninguno a los 7 días; hay %', v_n;
   end if;
   -- (La víspera de la cuota 2 cae justo en D+6: otra fecha, su propio aviso.)
-  raise notice 'TEST AVISOS 2 OK — 5 mensajes por fecha en sus días, el +4 con el cargo';
+  raise notice 'TEST AVISOS 2 OK — 10 mensajes por fecha en sus días, el +4 con el cargo';
 
   -- --- 4. Dos financiamientos el mismo día: un aviso con la suma -------------
   v_c2 := (pg_temp.prueba_cobro(v_pac2, v_merchant, v_branch, v_staff, 50.00, 'aviso-2')->>'charge_id')::uuid;
@@ -200,8 +234,8 @@ begin
     raise exception 'Registrar el pago debía cancelar los avisos pendientes de D';
   end if;
   if (select count(*) from public.outbound_messages
-       where profile_id = v_pac and installment_due_date = v_d and status = 'cancelado') <> 5 then
-    raise exception 'Los 5 avisos de D debían quedar cancelados';
+       where profile_id = v_pac and installment_due_date = v_d and status = 'cancelado') <> 10 then
+    raise exception 'Los 10 avisos de D debían quedar cancelados';
   end if;
   if not exists (select 1 from public.outbound_messages
                  where profile_id = v_pac and installment_due_date = v_d2 and status = 'pendiente') then
@@ -220,25 +254,43 @@ begin
   perform set_config('request.jwt.claims',
     json_build_object('sub', v_super::text, 'role', 'authenticated', 'aal', 'aal2')::text, true);
   perform public.admin_reconcile_payment((v_rep->>'report_id')::uuid, true, 'Cotejado a mano en la prueba');
-  select * into v_row from public.outbound_messages where dedupe_key = 'pago_recibido:' || (v_rep->>'report_id');
-  if not found or v_row.channel <> 'whatsapp_manual' or v_row.profile_id <> v_pac
-     or v_row.rendered_text not like '%$58,96%' then
-    raise exception 'Conciliar debía encolar pago_recibido con el monto: %', to_jsonb(v_row);
+  -- Solo por correo (20261013000800): ningún WhatsApp.
+  if exists (select 1 from public.outbound_messages
+             where profile_id = v_pac and template_key in ('pago_recibido', 'pago_rechazado')
+               and channel <> 'email') then
+    raise exception 'pago_recibido y pago_rechazado ya no salen por WhatsApp';
   end if;
-  raise notice 'TEST AVISOS 6 OK — conciliar encola pago_recibido';
+  select * into v_row from public.outbound_messages where dedupe_key = 'pago_recibido:email:' || (v_rep->>'report_id');
+  if not found or v_row.recipient <> 'maria.avisos@prueba.helios.test' or v_row.profile_id <> v_pac
+     or v_row.rendered_text not like '%$58,96%'
+     or v_row.html not like '%Pago confirmado%' or v_row.html ~ '{[a-z_]+}' then
+    raise exception 'Conciliar debía encolar el correo de pago_recibido con el monto: %', to_jsonb(v_row);
+  end if;
+  raise notice 'TEST AVISOS 6 OK — conciliar encola pago_recibido, solo por correo';
 
   -- --- 7. cuenta_congelada en la transición ---------------------------------
+  -- Apagada (como está en producción): congelarse no encola nada.
   update public.installments set due_date = v_today - 1 where id = v_i2.id;
   perform public.recompute_profile_mora_state(v_pac);
   if (select status from public.profiles where id = v_pac) <> 'frozen' then
     raise exception 'Con una cuota vencida ayer la cuenta debía congelarse';
   end if;
+  if exists (select 1 from public.outbound_messages where profile_id = v_pac and template_key = 'cuenta_congelada') then
+    raise exception 'Con cuenta_congelada apagada, congelarse no encola nada';
+  end if;
+  update public.installments set due_date = v_today + 1 where id = v_i2.id;
+  perform public.recompute_profile_mora_state(v_pac);
+
+  -- Encendida: un aviso por canal, solo en la transición.
+  update public.notification_templates set enabled = true where key = 'cuenta_congelada';
+  update public.installments set due_date = v_today - 1 where id = v_i2.id;
+  perform public.recompute_profile_mora_state(v_pac);
   select count(*) into v_n from public.outbound_messages where profile_id = v_pac and template_key = 'cuenta_congelada';
-  if v_n <> 1 then
-    raise exception 'Congelar debía encolar un cuenta_congelada (hay %)', v_n;
+  if v_n <> 2 then
+    raise exception 'Congelar debía encolar cuenta_congelada por WhatsApp y por correo (hay %)', v_n;
   end if;
   perform public.recompute_profile_mora_state(v_pac);
-  if (select count(*) from public.outbound_messages where profile_id = v_pac and template_key = 'cuenta_congelada') <> 1 then
+  if (select count(*) from public.outbound_messages where profile_id = v_pac and template_key = 'cuenta_congelada') <> 2 then
     raise exception 'Seguir congelada no es una transición: ningún aviso más';
   end if;
   update public.installments set due_date = v_today + 1 where id = v_i2.id;
@@ -248,7 +300,7 @@ begin
                 where profile_id = v_pac and template_key = 'cuenta_congelada' and status = 'pendiente') then
     raise exception 'Al descongelarse, el cuenta_congelada pendiente debía cancelarse';
   end if;
-  raise notice 'TEST AVISOS 7 OK — cuenta_congelada solo al congelarse; se cancela al descongelar';
+  raise notice 'TEST AVISOS 7 OK — cuenta_congelada apagada no encola; encendida, solo al congelarse y se cancela al descongelar';
 
   -- --- 8. A los 7 días, Cobranza ----------------------------------------------
   update public.installments set due_date = v_today - 7 where id = v_i2.id;
@@ -266,6 +318,12 @@ begin
 
   select id into v_msg from public.outbound_messages
    where profile_id = v_pac2 and template_key = 'cuota_hoy' and status = 'pendiente';
+  -- Sale sola por la API; a la cola del equipo llega solo lo que la API no
+  -- pudo (sin plantilla aprobada con la ventana cerrada, un 4xx…).
+  if exists (select 1 from public.admin_outbound_queue() q where q.id = v_msg) then
+    raise exception 'Un aviso automático no está en la cola del equipo';
+  end if;
+  perform public.helios_whatsapp_to_manual(v_msg, 'prueba: fuera de la ventana y sin plantilla');
 
   if not exists (select 1 from public.admin_outbound_queue() q
                  where q.id = v_msg and q.template_label is not null and q.patient_name = 'Pedro Avisos'
@@ -326,11 +384,12 @@ if v_msg is null then raise exception 'Faltaba un correo pendiente para la prueb
     raise exception 'Los 12 crons de avisos de Ronda debían irse';
   end if;
   if (select count(*) from cron.job where
-        (jobname = 'helios_aviso_cuota_manana'        and schedule = '0 23 * * *')
+        (jobname = 'helios_aviso_cuota_en_3_dias'     and schedule = '0 16 * * *')
+     or (jobname = 'helios_aviso_cuota_manana'        and schedule = '0 23 * * *')
      or (jobname = 'helios_aviso_cuota_hoy'           and schedule = '0 12 * * *')
      or (jobname = 'helios_aviso_cuota_vencida_d1'    and schedule = '5 12 * * *')
-     or (jobname = 'helios_aviso_cargo_por_atraso_d4' and schedule = '30 14 * * *')) <> 4 then
-    raise exception 'Los 4 crons de Helios no están a su hora';
+     or (jobname = 'helios_aviso_cargo_por_atraso_d4' and schedule = '30 14 * * *')) <> 5 then
+    raise exception 'Los 5 crons de Helios no están a su hora';
   end if;
 
   perform set_config('request.jwt.claims',
@@ -349,7 +408,12 @@ if v_msg is null then raise exception 'Faltaba un correo pendiente para la prueb
     raise exception 'cuota_hoy no lleva días';
   exception when sqlstate '22023' then null;
   end;
-  raise notice 'TEST AVISOS 10 OK — 4 crons de Helios, ninguno de Ronda; se reprograman desde el panel';
+  perform public.admin_set_notification_schedule('cuota_en_3_dias', time '09:00', 4);
+  if not exists (select 1 from cron.job where jobname = 'helios_aviso_cuota_en_3_dias' and schedule = '0 13 * * *')
+     or public.helios_reminder_offset('cuota_en_3_dias') <> -4 then
+    raise exception 'El aviso de tres días antes también se reprograma desde el panel';
+  end if;
+  raise notice 'TEST AVISOS 10 OK — 5 crons de Helios, ninguno de Ronda; se reprograman desde el panel';
 end;
 $$;
 

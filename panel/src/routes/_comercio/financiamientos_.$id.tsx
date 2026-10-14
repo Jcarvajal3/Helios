@@ -46,7 +46,7 @@ import { describeError } from '@/lib/supabase'
  * Lo que se viene a mirar cuando alguien pregunta por la orden 1043:
  *
  *   1. Qué se registró: la consulta, a quién, quién lo registró y su
- *      comisión, con la comisión de servicio en su propia línea (nunca sumada).
+ *      comisión, con la Comisión Helios en su propia línea (nunca sumada).
  *      La consulta, en la moneda en que se cobró (dólares o euros); la
  *      comisión del personal, siempre en dólares.
  *   2. El comprobante: si le llegó al paciente, y «Reenviar» si dice que no.

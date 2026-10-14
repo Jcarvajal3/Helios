@@ -28,7 +28,7 @@
 --      cobrar, pago_recibido, avisos de esa fecha cancelados; el cupo sigue en
 --      50 hasta pagar las dos.
 --   7. Mora en la cuota 2: congelado desde el día 1, un cargo de $2 pasada la
---      gracia (uno solo aunque se repita), cuenta_congelada y cargo_por_
+--      gracia (uno solo aunque se repita), ningún cuenta_congelada (apagado) y cargo_por_
 --      atraso_d4; la elegibilidad dice «no disponible» con el texto neutro.
 --      Pago de la cuota 2 + cargo → activo, cupo 150, bloque cerrado.
 --   8. Liquidación a la clínica: 50 + 50 + 0.50 de comisión; payables partido;
@@ -467,9 +467,9 @@ begin
      and status = 'pendiente';
   if v_n < 1 or not exists (
        select 1 from public.outbound_messages
-        where profile_id = v_profile and template_key = 'cuota_manana' and channel = 'whatsapp_manual'
+        where profile_id = v_profile and template_key = 'cuota_manana' and channel = 'whatsapp'
           and installment_due_date = v_i1.due_date and rendered_text like '%56,96%'
-          and dedupe_key = format('cuota_manana:whatsapp_manual:%s:%s', v_profile, v_i1.due_date)) then
+          and dedupe_key = format('cuota_manana:whatsapp:%s:%s', v_profile, v_i1.due_date)) then
     raise exception 'PASO 5: cuota_manana debía encolarse con su dedupe (hay %)', v_n;
   end if;
   perform public.helios_enqueue_reminders('cuota_manana', v_i1.due_date - 1);
@@ -557,7 +557,7 @@ begin
     raise exception 'PASO 6: el pago debía asentarse Dr cash 56.96 / Cr user_receivable 56.96: %', to_jsonb(v_row);
   end if;
   if not exists (select 1 from public.outbound_messages
-                 where dedupe_key = 'pago_recibido:' || (v_rep1->>'report_id') and status = 'pendiente'
+                 where dedupe_key = 'pago_recibido:email:' || (v_rep1->>'report_id') and status = 'pendiente'
                    and profile_id = v_profile and rendered_text like '%56,96%') then
     raise exception 'PASO 6: conciliar debía encolar pago_recibido';
   end if;
@@ -593,8 +593,8 @@ begin
     raise exception 'PASO 7: el día 1 está dentro de la gracia: no debía haber cargo';
   end if;
   if (select count(*) from public.outbound_messages
-       where profile_id = v_profile and template_key = 'cuenta_congelada' and status = 'pendiente') is distinct from 1 then
-    raise exception 'PASO 7: congelarse debía encolar un cuenta_congelada';
+       where profile_id = v_profile and template_key = 'cuenta_congelada' and status = 'pendiente') is distinct from 0 then
+    raise exception 'PASO 7: cuenta_congelada está apagada (20261013000700): congelarse no encola nada';
   end if;
 
   -- 4 días de atraso: pasada la gracia (3), un cargo de $2 sobre la cuota 2.
@@ -617,8 +617,8 @@ begin
   if (select status::text from public.profiles where id = v_profile) is distinct from 'frozen' then
     raise exception 'PASO 7: con 4 días de atraso la paciente sigue congelada';
   end if;
-  if (select count(*) from public.outbound_messages where profile_id = v_profile and template_key = 'cuenta_congelada') is distinct from 1 then
-    raise exception 'PASO 7: seguir congelada no es una transición: un solo cuenta_congelada';
+  if (select count(*) from public.outbound_messages where profile_id = v_profile and template_key = 'cuenta_congelada') is distinct from 0 then
+    raise exception 'PASO 7: cuenta_congelada está apagada: ningún aviso al seguir congelada';
   end if;
   select sum(e.debit)  filter (where a.account_type = 'user_receivable' and a.owner_id = v_profile) as dr,
          sum(e.credit) filter (where a.account_type = 'platform_revenue') as cr
@@ -705,7 +705,7 @@ begin
     raise exception 'PASO 7: al pagar, cuenta_congelada y cargo_por_atraso_d4 pendientes debían cancelarse';
   end if;
   if not exists (select 1 from public.outbound_messages
-                 where dedupe_key = 'pago_recibido:' || (v_rep2->>'report_id') and status = 'pendiente') then
+                 where dedupe_key = 'pago_recibido:email:' || (v_rep2->>'report_id') and status = 'pendiente') then
     raise exception 'PASO 7: conciliar la cuota 2 debía encolar pago_recibido';
   end if;
   raise notice 'PASO 7 OK — mora: congelada el día 1, un cargo de $2 al día 4 (idempotente), avisos, no_disponible neutro; pagada la cuota 2 + cargo: activa, cupo 150, bloque cerrado';
@@ -845,11 +845,11 @@ begin
      or exists (select 1 from public.settlements where merchant_id = v_m and status is distinct from 'paid') then
     raise exception 'PASO 10: quedó algo pendiente (cuotas, cargos, pagos, bloque o liquidaciones)';
   end if;
-  -- En la cola solo queda lo que el equipo manda a mano: la bienvenida y los
-  -- dos pago_recibido. Ningún recordatorio de una deuda ya pagada.
-  select string_agg(template_key || ':' || channel, ', ' order by template_key) into v_err
+  -- Pendiente solo queda la bienvenida (a mano) y los dos pago_recibido, solo
+  -- por correo (20261013000800). Ningún recordatorio de una deuda ya pagada.
+  select string_agg(template_key || ':' || channel, ', ' order by template_key, channel) into v_err
     from public.outbound_messages where profile_id = v_profile and status = 'pendiente';
-  if v_err is distinct from 'bienvenida:whatsapp_manual, pago_recibido:whatsapp_manual, pago_recibido:whatsapp_manual' then
+  if v_err is distinct from 'bienvenida:whatsapp_manual, pago_recibido:email, pago_recibido:email' then
     raise exception 'PASO 10: en la cola debían quedar solo la bienvenida y los dos pago_recibido, quedan: %', v_err;
   end if;
   if (select status from public.outbound_messages

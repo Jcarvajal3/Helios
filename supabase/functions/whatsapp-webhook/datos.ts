@@ -42,6 +42,11 @@ export type Lectura = {
   paciente: DatosDelPaciente
   monto: number | null
   moneda: Moneda | null
+  /**
+   * Solo la de la línea «Moneda:». `moneda` también cuenta el símbolo del
+   * monto («Monto: $90»), que no cambia una moneda ya elegida (2026-10-13).
+   */
+  monedaElegida: Moneda | null
   concepto: string | null
   atendido: string | null
 }
@@ -204,7 +209,7 @@ export function leerCedula(t: string): string | null {
  * falta la IA). Las líneas sin valor se ignoran.
  */
 /** Lo que se va leyendo de un mensaje; `cerrar` lo deja como `Lectura`. */
-type Acumulado = Lectura & { monedaDelMonto: Moneda | null }
+type Acumulado = Omit<Lectura, 'monedaElegida'> & { monedaDelMonto: Moneda | null }
 
 function vacio(): Acumulado {
   return { paciente: {}, monto: null, moneda: null, monedaDelMonto: null, concepto: null, atendido: null }
@@ -228,7 +233,14 @@ function asignar(a: Acumulado, clave: Clave, valor: string, etiquetaCruda = ''):
 
 function cerrar(a: Acumulado): Lectura {
   // La línea «Moneda:» manda sobre lo que acompañe al monto.
-  return { paciente: a.paciente, monto: a.monto, moneda: a.moneda ?? a.monedaDelMonto, concepto: a.concepto, atendido: a.atendido }
+  return {
+    paciente: a.paciente,
+    monto: a.monto,
+    moneda: a.moneda ?? a.monedaDelMonto,
+    monedaElegida: a.moneda,
+    concepto: a.concepto,
+    atendido: a.atendido,
+  }
 }
 
 export function leerFormulario(t: string): Lectura & { etiquetado: boolean } {

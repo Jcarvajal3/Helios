@@ -22,8 +22,8 @@ docs/       plan, contrato, reglas
 
 ## El negocio, en cifras (2026-10-06)
 
-- Paciente: **2 cuotas a los 7 y 14 días**, sin inicial. **Comisión de
-  servicio del 12% + IVA 16%** sobre la comisión (`consumer_fee_pct`,
+- Paciente: **2 cuotas a los 7 y 14 días**, sin inicial. **Comisión
+  Helios del 12% + IVA 16%** sobre la comisión (`consumer_fee_pct`,
   `vat_pct`): consulta de $100 → $12 + $1,92 → 2 cuotas de $56,96.
   **Límite inicial de $150** (nivel 1; los demás niveles están apagados, así
   que hacia fuera nunca se dice que el límite «crece»).
@@ -58,10 +58,12 @@ docs/       plan, contrato, reglas
   **medianoche** (`helios_business_date`), no a las 10 AM como en Ronda.
 - **Libro contable**: partida doble, append-only, `idempotency_key` en toda
   mutación de dinero. La única función que crea deuda es `helios_assign_debt`.
-- **A la clínica, ningún total incluye la comisión de servicio.** La
-  comisión (12% + IVA, parámetro `consumer_fee_pct`) aparece solo dentro de
-  las cuotas o como línea aparte en un desglose. La clínica ve solo montos
-  sin comisión. **Al paciente sí** se le enseña el total con la comisión
+- **A la clínica, ningún total incluye la Comisión Helios.** La comisión
+  (12% + IVA, parámetro `consumer_fee_pct`) aparece solo dentro de las
+  cuotas o como línea aparte en un desglose, y en todo desglose que ve el
+  médico (panel y bot) va seguida de **«(Lo paga el paciente)»** (Javier,
+  2026-10-13; `LO_PAGA_EL_PACIENTE`). La clínica ve solo montos sin
+  comisión. **Al paciente sí** se le enseña el total con la comisión
   (decisión de Javier, 2026-10-06: es lo que paga).
 - Los montos en los mensajes (WhatsApp, correo) van al estilo venezolano:
   `helios_money_text` → «$100», «$1,92», «$1.250,50». Con moneda:
@@ -82,8 +84,10 @@ docs/       plan, contrato, reglas
   de marca cambia: `ronda_` → `helios_`. Así los arreglos de Ronda se portan
   con `scripts/portar-de-ronda.mjs`.
 - La interfaz habla en vocabulario médico: médico, centro o clínica, sede,
-  paciente, **pago en cuotas** (u «orden» con su número), **comisión de
-  servicio**, secretaria (rol `cajero`), administrador (rol `gerente`).
+  paciente, **pago en cuotas** (u «orden» con su número), **Comisión Helios**
+  (desde el 2026-10-13; los mensajes al paciente —la pregunta de WhatsApp,
+  su plantilla de Meta y el comprobante— siguen diciendo «comisión de
+  servicio»), secretaria (rol `cajero`), administrador (rol `gerente`).
 - **Prohibido en todo lo externo** (portada, panel de la clínica, bot,
   WhatsApp, correos, errores que ve una clínica): «préstamo»,
   «financiamiento», «financiar», «crédito», «fee». Tampoco se publica que

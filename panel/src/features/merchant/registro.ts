@@ -55,7 +55,7 @@ export const NO_DISPONIBLE_POR_DEFECTO =
   'Esta persona no puede pagar en cuotas con Helios. Si tiene dudas, puede escribir a Helios.'
 
 /**
- * El porcentaje de la comisión de servicio cuando la base no lo manda
+ * El porcentaje de la Comisión Helios cuando la base no lo manda
  * (parámetro `consumer_fee_pct`, 12 % + IVA desde el 2026-10-06). Lo paga el
  * paciente; a la clínica no le cuesta nada.
  */
@@ -230,7 +230,7 @@ export type CuotaDelPlan = {
   sequence: number
   dueDate: string
   /** Lo que paga el paciente en esa cuota: su mitad de la consulta más su
-   *  mitad de la comisión de servicio. En dólares: lo del libro. */
+   *  mitad de la Comisión Helios. En dólares: lo del libro. */
   amountUsd: number
   /** Lo mismo en la moneda de la orden: lo que se enseña. */
   amountCur: number
@@ -251,7 +251,7 @@ export type VistaPrevia = {
   baseUsd: number
   baseCur: number
   feePct: number
-  /** La comisión de servicio y su IVA, por separado. NUNCA se suman a la base. */
+  /** La Comisión Helios y su IVA, por separado. NUNCA se suman a la base. */
   feeUsd: number
   feeVatUsd: number
   feeCur: number
@@ -313,14 +313,20 @@ export function leerVistaPrevia(v: unknown): VistaPrevia {
 }
 
 /**
- * «Comisión de servicio 12% + IVA»: el rótulo de la ÚNICA línea donde aparece
- * la comisión de servicio en la pantalla de la clínica. Con el porcentaje que
- * manda la base.
+ * «Comisión Helios 12% + IVA»: el rótulo de la ÚNICA línea donde aparece la
+ * Comisión Helios en la pantalla de la clínica. Con el porcentaje que manda
+ * la base. Al lado va siempre `LO_PAGA_EL_PACIENTE`.
  */
 export function rotuloDelServicio(feePct: number): string {
   const pct = Number.isInteger(feePct) ? String(feePct) : String(feePct).replace('.', ',')
-  return `Comisión de servicio ${pct}% + IVA`
+  return `Comisión Helios ${pct}% + IVA`
 }
+
+/**
+ * Junto a la Comisión Helios en todo desglose que ve el médico (panel y bot):
+ * que nadie piense que se la descuentan (Javier, 2026-10-13).
+ */
+export const LO_PAGA_EL_PACIENTE = '(Lo paga el paciente)'
 
 /**
  * La regla del cargo por atraso, en una frase para leérsela al paciente.
@@ -551,7 +557,7 @@ export type Financiamiento = {
   businessDate: string | null
   /** La moneda en la que cobró la clínica. */
   moneda: Moneda
-  /** La consulta: lo que se le paga a la clínica. Sin la comisión de servicio. */
+  /** La consulta: lo que se le paga a la clínica. Sin la Comisión Helios. */
   merchantSaleUsd: number
   /** La misma consulta en la moneda de la orden: lo que se enseña. */
   merchantSaleCur: number
@@ -561,7 +567,7 @@ export type Financiamiento = {
   documentoEnmascarado: string | null
   emailEnmascarado: string | null
   cuotas: CuotaDelPlan[]
-  /** Del desglose; la comisión de servicio solo se enseña como línea aparte. */
+  /** Del desglose; la Comisión Helios solo se enseña como línea aparte. */
   feePct: number
   feeUsd: number | null
   feeVatUsd: number | null
@@ -620,7 +626,7 @@ export function leerFinanciamiento(v: unknown): Financiamiento {
 }
 
 /**
- * El porcentaje de la comisión de servicio a partir de sus cifras, para el
+ * El porcentaje de la Comisión Helios a partir de sus cifras, para el
  * rótulo del desglose cuando la respuesta no lo trae (`helios_charge_for_staff`
  * manda el importe, no el porcentaje). Con una décima: $12 sobre $100 es 12.
  */

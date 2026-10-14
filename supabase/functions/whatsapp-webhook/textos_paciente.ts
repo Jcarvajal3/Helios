@@ -2,7 +2,7 @@
 // Helios — Lo que el bot le dice al paciente (decisiones del 2026-10-06,
 // docs/00 §15.6). Módulo puro: lo prueba `textos_paciente.test.ts`.
 //
-// Al paciente SÍ se le enseña lo que paga con la comisión de servicio dentro
+// Al paciente SÍ se le enseña lo que paga con la Comisión Helios dentro
 // (es su deuda); a la clínica, nunca.
 //
 // La moneda (2026-10-07): cada orden está en dólares o en euros y sus cuotas

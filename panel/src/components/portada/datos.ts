@@ -6,7 +6,7 @@
  * una cambia, esta página miente y hay que venir a arreglarla:
  *
  *   · 0 al registrar, 2 cuotas a +7 y +14 días
- *   · Comisión de servicio 12% + IVA 16% sobre la comisión, la paga el paciente
+ *   · Comisión Helios 12% + IVA 16% sobre la comisión, la paga el paciente
  *   · Límite inicial $150 (no decir que «crece»: no hay reglas para subirlo)
  *   · La consulta va en dólares o en euros; el paciente paga en bolívares a la
  *     tasa BCV del día en que paga, por Pago Móvil o transferencia
@@ -16,7 +16,7 @@
  *     el paciente
  *
  * Lo que NO se dice aquí: «préstamo», «financiamiento», «crédito» ni «fee»
- * (se dice «pago en cuotas» y «comisión de servicio»), cómo se verifica o no
+ * (se dice «pago en cuotas» y «Comisión Helios»), cómo se verifica o no
  * al paciente, quién firma los contratos ni nada interno del equipo.
  */
 
@@ -71,7 +71,7 @@ export const PASOS = [
     n: '02',
     titulo: 'El paciente confirma',
     texto:
-      'Le llega un WhatsApp con el monto, la comisión de servicio y sus dos cuotas con fecha. Responde «Sí» y el comprobante le llega por correo.',
+      'Le llega un WhatsApp con el monto, la Comisión Helios y sus dos cuotas con fecha. Responde «Sí» y el comprobante le llega por correo.',
   },
   {
     n: '03',
@@ -90,7 +90,7 @@ export const PARA_MEDICOS = [
   {
     titulo: 'No te cuesta nada',
     texto:
-      'La comisión de servicio la paga el paciente. Tú recibes el 100% del precio, sin descuentos.',
+      'La Comisión Helios la paga el paciente. Tú recibes el 100% del precio, sin descuentos.',
   },
   {
     titulo: 'Registro simple',
@@ -110,7 +110,7 @@ export const PARA_PACIENTES = [
       'Sin inicial. Las fechas van en el mensaje que confirmas y en tu comprobante, y no se mueven.',
   },
   {
-    titulo: `Comisión de servicio del ${COMISION_PCT}%`,
+    titulo: `Comisión Helios del ${COMISION_PCT}%`,
     texto: `Es el ${COMISION_PCT}% del monto de la consulta, más el IVA de esa comisión, y va incluida en tus cuotas. Sin inscripción ni mensualidad.`,
   },
   {
@@ -163,6 +163,6 @@ export const PREGUNTAS = [
   {
     pregunta: 'Soy médico: ¿cuánto me cuesta afiliarme?',
     respuesta:
-      'Nada. No hay inscripción ni mensualidad, y la comisión de servicio la paga el paciente. Tampoco hay permanencia: puedes cancelar con aviso previo.',
+      'Nada. No hay inscripción ni mensualidad, y la Comisión Helios la paga el paciente. Tampoco hay permanencia: puedes cancelar con aviso previo.',
   },
 ] as const

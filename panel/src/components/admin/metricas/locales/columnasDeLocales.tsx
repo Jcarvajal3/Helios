@@ -268,7 +268,7 @@ export function columnasDeLocales({
       header: rotuloDelCierre(d.cierre),
       info: d.cierre.pasado
         ? `Lo que se le generó por las cuotas que vencieron esta semana (cada mitad se paga el día siguiente a su vencimiento, el último el ${diaConNumero(d.cierre.lunes)}), y lo que falte por transferirle. Es lo mismo que dice Pagos a clínicas.`
-        : `Lo que se le transferirá por las cuotas que vencen esta semana, se paguen o no, cada mitad el día siguiente a su vencimiento (el último pago, el ${diaConNumero(d.cierre.lunes)}): lo ya generado más lo que se generará hasta el domingo con sus condiciones. Es su neto: no lleva la comisión de servicio. Si tiene algo atrasado de semanas anteriores, va debajo.`,
+        : `Lo que se le transferirá por las cuotas que vencen esta semana, se paguen o no, cada mitad el día siguiente a su vencimiento (el último pago, el ${diaConNumero(d.cierre.lunes)}): lo ya generado más lo que se generará hasta el domingo con sus condiciones. Es su neto: no lleva la Comisión Helios. Si tiene algo atrasado de semanas anteriores, va debajo.`,
       type: 'number',
       sortDir: 'desc',
       sort: orden((l) => l.transferencia.generadoUsd + l.transferencia.previstoUsd),

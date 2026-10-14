@@ -1,6 +1,6 @@
 import { DataLabel, formatDay, formatMoneda, formatVes } from '@/components/ui'
 import type { Moneda } from '@/components/ui'
-import { DE_LA_MONEDA, diaDeLaSemana, rotuloDelServicio } from '@/features/merchant/registro'
+import { DE_LA_MONEDA, LO_PAGA_EL_PACIENTE, diaDeLaSemana, rotuloDelServicio } from '@/features/merchant/registro'
 import type { CuotaDelPlan } from '@/features/merchant/registro'
 
 /**
@@ -13,10 +13,10 @@ import type { CuotaDelPlan } from '@/features/merchant/registro'
  * serían hoy en bolívares. Solo de referencia: el paciente paga en bolívares
  * a la tasa del día en que paga, y la nota de abajo se lo dice.
  *
- * Cada cuota lleva dentro su parte de la comisión de servicio; eso es lo que
+ * Cada cuota lleva dentro su parte de la Comisión Helios; eso es lo que
  * dice la regla (va «dentro de las cuotas o como línea aparte»). Lo que no
  * hay aquí es una fila de total: sumar las cuotas daría la consulta MÁS la
- * comisión de servicio, y esa cifra no se enseña en el panel de la clínica.
+ * Comisión Helios, y esa cifra no se enseña en el panel de la clínica.
  */
 export function PlanDePagos({ cuotas, moneda }: { cuotas: CuotaDelPlan[]; moneda: Moneda }) {
   return (
@@ -55,13 +55,13 @@ export function PlanDePagos({ cuotas, moneda }: { cuotas: CuotaDelPlan[]; moneda
 }
 
 /**
- * EL DESGLOSE: la consulta y, en su propia línea, la comisión de servicio.
+ * EL DESGLOSE: la consulta y, en su propia línea, la Comisión Helios.
  * En la moneda en la que cobró la clínica.
  *
  * ⚠️ Regla de Ronda que Helios hereda sin excepción: **ningún total mostrado
- * a la clínica incluye la comisión de servicio**. Aquí hay dos líneas y
+ * a la clínica incluye la Comisión Helios**. Aquí hay dos líneas y
  * ninguna tercera que las sume. La consulta es lo que cobra la clínica; la
- * comisión de servicio (el % que manda la base, hoy 12 %, + IVA 16 % sobre
+ * Comisión Helios (el % que manda la base, hoy 12 %, + IVA 16 % sobre
  * ella) es de Helios y la paga el paciente repartida en sus cuotas.
  */
 export function DesgloseDelServicio({
@@ -93,9 +93,10 @@ export function DesgloseDelServicio({
         {servicio !== null && (
           <div className="flex items-baseline justify-between gap-4">
             <dt className="text-on-surface-variant">
-              {rotuloDelServicio(feePct)}
+              {rotuloDelServicio(feePct)}{' '}
+              <strong className="font-semibold text-on-surface">{LO_PAGA_EL_PACIENTE}</strong>
               <span className="block type-panel-caption text-panel-muted">
-                Lo paga el paciente dentro de sus cuotas. No es de la clínica.
+                Va dentro de sus cuotas. No se le descuenta a la clínica.
               </span>
             </dt>
             <dd className="tabular-nums text-on-surface-variant">{formatMoneda(servicio, moneda)}</dd>

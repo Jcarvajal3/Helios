@@ -196,14 +196,14 @@ const vp = leerVistaPrevia({
   disponible_usd: null,
 })
 igual(vp.cuotas.map((c) => c.sequence), [1, 2], 'las cuotas salen en orden')
-igual(vp.feeVatUsd, 1.92, 'el IVA de la comisión de servicio')
+igual(vp.feeVatUsd, 1.92, 'el IVA de la Comisión Helios')
 igual(leerVistaPrevia({}).feePct, 12, 'sin porcentaje de la base, el 12 % de la regla')
 igual(vp.disponibleUsd, null, 'nuevo: sin disponible')
 comprueba(vp.cabe, 'cabe')
 comprueba(!leerVistaPrevia({ cabe: false }).cabe, 'no cabe')
 comprueba(leerVistaPrevia({}).cabe, 'sin el dato, se asume que cabe (la base vuelve a validar)')
-igual(rotuloDelServicio(12), 'Comisión de servicio 12% + IVA', 'el rótulo de la comisión de servicio')
-igual(rotuloDelServicio(12.5), 'Comisión de servicio 12,5% + IVA', 'con decimales')
+igual(rotuloDelServicio(12), 'Comisión Helios 12% + IVA', 'el rótulo de la Comisión Helios')
+igual(rotuloDelServicio(12.5), 'Comisión Helios 12,5% + IVA', 'con decimales')
 igual(
   reglaDelAtraso(vp, usd),
   'Si una cuota se paga con más de 3 días de atraso, se suma un cargo de $2,00 a esa cuota.',

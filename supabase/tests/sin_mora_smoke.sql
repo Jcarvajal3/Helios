@@ -98,9 +98,9 @@ begin
   update public.installments set due_date = v_today - 1 where id = v_inst;
   perform public.helios_enqueue_reminders('cuota_vencida_d1', v_today);
   select rendered_text into v_txt from public.outbound_messages
-  where charge_id = v_charge and template_key = 'cuota_vencida_d1';
+  where charge_id = v_charge and template_key = 'cuota_vencida_d1' and channel = 'whatsapp';
   if v_txt is null or v_txt ilike '%cargo%'
-     or v_txt not like '%no podrás pagar nuevas consultas en cuotas con Helios.' || E'\n\n' || 'Para pagar:%' then
+     or v_txt not like '%no podrás pagar nuevas consultas en cuotas con Helios.' || E'\n\n' || 'Para pagar, en bolívares%' then
     raise exception 'El aviso de cuota vencida no debía hablar de un cargo: %', v_txt;
   end if;
   raise notice 'TEST SIN MORA 3 OK — ni el comprobante ni el aviso prometen un cargo';

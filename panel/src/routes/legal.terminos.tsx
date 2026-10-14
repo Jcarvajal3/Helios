@@ -10,7 +10,7 @@ export const Route = createFileRoute('/legal/terminos')({
   head: () =>
     cabeceraPublica({
       titulo: 'Términos y condiciones · Helios',
-      descripcion: 'Las condiciones del pago en cuotas de Helios para pacientes y para médicos y centros de salud: cuotas, comisión de servicio, límite y pagos.',
+      descripcion: 'Las condiciones del pago en cuotas de Helios para pacientes y para médicos y centros de salud: cuotas, Comisión Helios, límite y pagos.',
       ruta: '/legal/terminos',
     }),
   component: Terminos,
@@ -25,8 +25,8 @@ export const Route = createFileRoute('/legal/terminos')({
  * Las mismas condiciones del paciente van en su comprobante
  * (`terms_versions`), y el centro firma además su contrato de afiliación.
  *
- * Mismo vocabulario que la portada: «pago en cuotas» y «comisión de
- * servicio», nunca «préstamo» ni «financiamiento».
+ * Mismo vocabulario que la portada: «pago en cuotas» y «Comisión
+ * Helios», nunca «préstamo» ni «financiamiento».
  */
 function Terminos() {
   return (
@@ -58,7 +58,7 @@ function Terminos() {
           <Lista>
             <li>
               El médico o el centro registra la consulta. Recibes un WhatsApp con
-              el monto, la comisión de servicio y tus dos cuotas con sus fechas, y
+              el monto, la Comisión Helios y tus dos cuotas con sus fechas, y
               el pago en cuotas solo existe si respondes «Sí». Después te llega el
               comprobante por correo.
             </li>
@@ -67,9 +67,9 @@ function Terminos() {
               consulta, sin inicial.
             </li>
             <li>
-              La comisión de servicio es del 12% del monto de la consulta, más el
+              La Comisión Helios es del 12% del monto de la consulta, más el
               IVA de esa comisión, y va incluida en las cuotas. Por ejemplo, en
-              una consulta de $100 la comisión es de $12 y su IVA de $1,92: pagas
+              una consulta de $100 la Comisión Helios es de $12 y su IVA de $1,92: pagas
               $113,92 en dos cuotas de $56,96.
             </li>
             <li>
@@ -118,7 +118,7 @@ function Terminos() {
               cobro al paciente es responsabilidad de Helios.
             </li>
             <li>
-              Afiliarse no tiene costo: la comisión de servicio la paga el
+              Afiliarse no tiene costo: la Comisión Helios la paga el
               paciente. Al médico o centro no se le descuenta nada.
             </li>
             <li>
