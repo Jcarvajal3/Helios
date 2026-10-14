@@ -52,6 +52,14 @@ export function columnasLocales(porPagar: PorPagar): Array<Column<MerchantRow>> 
       ),
     },
 
+    {
+      key: 'titular',
+      header: 'Médico titular',
+      sort: (m) => m.ownerName,
+      csv: (m) => m.ownerName,
+      cell: (m) => m.ownerName ?? <span className="text-on-surface-variant">Sin titular</span>,
+    },
+
     { key: 'rif', header: 'RIF', hidden: true, csv: (m) => m.taxId, cell: (m) => m.taxId ?? '—' },
 
     {

@@ -4,6 +4,8 @@ import { llamarRpc } from '@/features/admin/metricas/consulta'
 import { filas } from '@/lib/json'
 import { datosDeAlta, leerCuentaDePago, leerSolicitud } from './clinicas'
 import type { AltaDeClinica, CuentaDePagoDeClinica } from './clinicas'
+import { leerDatosDeContrato } from './contrato'
+import type { DatosDeContrato } from './contrato'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // La cuenta a la que Helios le paga a cada clínica (contrato §2.5).
@@ -82,4 +84,15 @@ export async function guardarTitular(params: {
   cambios: { owner_name: string | null; owner_document: string | null; college_number: string | null }
 }): Promise<void> {
   await llamarRpc('admin_set_merchant_owner', { p_merchant_id: params.merchantId, p: params.cambios })
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Los datos de alta, para redactar el contrato (contrato §2.5).
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** Todas las clínicas o, con `merchantId`, solo esa. Personal de Helios. */
+export async function leerDatosDeContratos(merchantId?: string): Promise<Array<DatosDeContrato>> {
+  return llamarRpc('admin_merchant_contract_data', { p_merchant_id: merchantId ?? null }, {
+    leer: (crudo) => filas(crudo).map(leerDatosDeContrato),
+  })
 }

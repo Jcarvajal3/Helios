@@ -412,6 +412,8 @@ export type MerchantRow = {
   socialUrl: string | null
   /** Comercio de prueba: todo lo que se venda en él queda fuera de las cifras. */
   isTest: boolean
+  /** El médico titular (`merchants.owner_name`); null si el alta no lo trajo. */
+  ownerName: string | null
 }
 
 export async function fetchMerchants(): Promise<MerchantRow[]> {
@@ -439,6 +441,7 @@ export async function fetchMerchants(): Promise<MerchantRow[]> {
     handle: (row.handle as string | null) ?? null,
     logoUrl: (row.logo_url as string | null) ?? null,
     socialUrl: (row.social_url as string | null) ?? null,
+    ownerName: (row.owner_name as string | null) ?? null,
   }))
 }
 

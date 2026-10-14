@@ -29,6 +29,27 @@ export type CsvColumn<T> = {
 }
 
 /**
+ * Un texto que una hoja de cálculo no debe leer como fórmula.
+ *
+ * Lo que empieza por `=`, `+`, `-` o `@` (o por un tabulador o un retorno,
+ * que Excel se salta) se abre en Excel como una fórmula y se ejecuta. Y a
+ * estos archivos llegan textos que escribió alguien de fuera: el nombre y la
+ * dirección de la portada pública, los datos de un paciente. Con un
+ * apóstrofo delante queda como texto.
+ *
+ * Se salva la cifra negativa que escriben `csvDinero`, `csvEntero` o
+ * `formatoMontoEditable` («-5,00», «-12»): no es una fórmula, y con el
+ * apóstrofo la columna dejaría de sumar. Un `+` delante, en cambio, sí se
+ * neutraliza aunque lo siga una cifra: ningún formato de aquí lo escribe, y
+ * un teléfono como «+584141234567» saldría en notación científica.
+ */
+export function neutralizarFormula(valor: string): string {
+  if (!/^[=+\-@\t\r]/.test(valor)) return valor
+  if (/^-\d+(,\d+)?$/.test(valor)) return valor
+  return `'${valor}`
+}
+
+/**
  * Un valor dentro de una celda.
  *
  * Se entrecomilla solo cuando hace falta: un archivo con todo entrecomillado
@@ -37,7 +58,7 @@ export type CsvColumn<T> = {
  */
 function celda(raw: string | null | undefined): string {
   if (raw === null || raw === undefined) return ''
-  const value = String(raw)
+  const value = neutralizarFormula(String(raw))
   if (!/[";\r\n]/.test(value)) return value
   // La comilla se escapa doblándola. Es lo que dice el RFC 4180 y lo que
   // entienden Excel, Sheets y cualquier lector.

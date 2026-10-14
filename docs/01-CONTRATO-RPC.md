@@ -593,6 +593,21 @@ letras)`: el panel manda la letra pegada al número (`V12345678`,
   Obligatorios titular y documento, y al menos cuenta (20 dígitos) o Pago
   Móvil (móvil VE; se guarda en E.164). El `gerente` de la clínica puede leer
   su fila directamente en `merchant_payout_accounts` (RLS).
+- `admin_merchant_contract_data(p_merchant_id uuid default null) → jsonb`
+  (20261014000300, 2026-10-14): los datos de alta para redactar el contrato.
+  Solo lectura, `is_platform_admin()` (`42501`); un id que no existe, `P0002`.
+  Sin argumento (o `null`), todas las clínicas, ordenadas por nombre; con él,
+  solo esa. Devuelve un array de `{merchant_id, name, legal_name, tax_id,
+  category, specialty, mpps_number, phone, email, address, city, status,
+  is_test, created_at, owner_name, owner_document, college_number, bank,
+  account_holder, holder_document, account_number, pago_movil_bank,
+  pago_movil_phone, applied_at, approved_at}`. Los de la cuenta de pago van en
+  null si no tiene; `applied_at`/`approved_at` son los de la solicitud de la
+  portada aprobada de la que nació (null si se dio de alta desde el panel).
+  El panel la baja en CSV desde la lista de Clínicas (las que se ven, con el
+  filtro) y desde el «⋯» de la ficha (una).
+- `merchant_directory` (vista, 20261014000300) añade al final `owner_name`: la
+  columna «Médico titular» de la lista de Clínicas.
 - `merchant_staff_add` / `merchant_staff_update`: el rol `inventario` se
   rechaza (`22023`).
 - `merchant_staff_send_welcome(p_merchant_id uuid, p_user_id uuid, p_password text) →

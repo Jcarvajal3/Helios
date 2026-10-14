@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import type { UseQueryResult } from '@tanstack/react-query'
-import { Inbox, Plus, Store } from 'lucide-react'
+import { FileDown, Inbox, Plus, Store } from 'lucide-react'
 
 import { DataTable } from '@/components/DataTable'
 import { AltaLocal } from '@/components/admin/directorio/AltaLocal'
@@ -14,6 +14,7 @@ import type { Deuda, PorPagar } from '@/components/admin/directorio/columnasLoca
 import {
   Button,
   EmptyState,
+  ErrorBox,
   FilterBar,
   Filtro,
   NoSePudoLeer,
@@ -25,6 +26,7 @@ import { fetchMerchantPayables, fetchMerchants } from '@/features/admin/api'
 import type { MerchantPayable, MerchantRow } from '@/features/admin/api'
 import { consultaSolicitudes } from '@/features/admin/clinicas/api'
 import type { SolicitudDeAfiliacion } from '@/features/admin/clinicas/clinicas'
+import { useDatosDeContrato } from '@/features/admin/clinicas/useDatosDeContrato'
 import { filtrarLocales, normalizarTexto } from '@/features/admin/directorio/locales'
 import { SOLO_SUPER_ADMIN, useIsSuperAdmin } from '@/features/admin/role'
 import { comoTexto, unoDe } from '@/lib/busqueda'
@@ -75,8 +77,8 @@ function LocalesPage() {
 /**
  * La lista de todos los locales aliados.
  *
- * La lista es corta y viene entera, así que la búsqueda (nombre, razón social
- * o RIF) y el estado filtran en el navegador; los dos viven en la URL. El
+ * La lista es corta y viene entera, así que la búsqueda (nombre, razón social,
+ * titular o RIF) y el estado filtran en el navegador; los dos viven en la URL. El
  * alta cierra la fila de filtros y abre una ventana.
  */
 function ListaDeLocales() {
@@ -85,6 +87,7 @@ function ListaDeLocales() {
   const isSuperAdmin = useIsSuperAdmin()
   const [dandoDeAlta, setDandoDeAlta] = useState(false)
   const [revisando, setRevisando] = useState<SolicitudDeAfiliacion | null>(null)
+  const datosDeAlta = useDatosDeContrato()
 
   const merchants = useQuery({
     queryKey: ['merchants'],
@@ -133,7 +136,7 @@ function ListaDeLocales() {
         <BuscadorEnUrl
           id="buscar-local"
           valor={search.q}
-          placeholder="Nombre, razón social o RIF"
+          placeholder="Nombre, razón social, titular o RIF"
           onBuscar={(q) => cambiar({ q }, true)}
         />
         <Filtro label="Estado">
@@ -205,6 +208,10 @@ function ListaDeLocales() {
             />
           )}
 
+          {datosDeAlta.error && (
+            <ErrorBox title="No se pudieron bajar los datos de alta" detail={datosDeAlta.error} />
+          )}
+
           {filas.length > 0 && (
             <DataTable
               rows={filas}
@@ -220,6 +227,18 @@ function ListaDeLocales() {
                 />
               }
               exportar={{ archivo: 'locales' }}
+              acciones={
+                <Button
+                  size="sm"
+                  variant="text"
+                  disabled={datosDeAlta.pendiente}
+                  title="Los datos de alta de las clínicas que se ven, con su médico titular y su cuenta de pago, para redactar el contrato"
+                  onClick={() => datosDeAlta.descargar({ de: 'lista', ids: filas.map((m) => m.id) })}
+                >
+                  <FileDown size={15} aria-hidden />
+                  {datosDeAlta.pendiente ? 'Leyendo…' : 'Datos de alta'}
+                </Button>
+              }
               onRowClick={(m) =>
                 void navigate({
                   to: '/admin/clinicas/$id',
