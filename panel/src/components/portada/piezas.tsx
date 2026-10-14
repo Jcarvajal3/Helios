@@ -189,21 +189,50 @@ export function Cifra({
 export function Rotulo({
   children,
   tono = 'claro',
+  como: Etiqueta = 'p',
   className = '',
 }: {
   children: ReactNode
   tono?: 'claro' | 'oscuro'
+  /** `span` cuando va dentro de un titular (un `<p>` no puede). */
+  como?: 'p' | 'span'
   className?: string
 }) {
   return (
-    <p
+    <Etiqueta
       className={`portada-etiqueta inline-flex items-center gap-2.5 ${
         tono === 'claro' ? 'text-portada-azul' : 'text-portada-cielo-2'
       } ${className}`}
     >
       <span className="portada-latido relative inline-block size-1.5 rounded-full bg-current" />
       {children}
-    </p>
+    </Etiqueta>
+  )
+}
+
+/** «Más para médicos →»: de una sección de la portada a su página. */
+export function EnlaceMas({
+  to,
+  children,
+  tono = 'claro',
+}: {
+  to: string
+  children: ReactNode
+  tono?: 'claro' | 'oscuro'
+}) {
+  return (
+    <Link
+      to={to}
+      className={`group inline-flex items-center gap-1.5 text-[0.97rem] font-medium underline-offset-4 hover:underline ${
+        tono === 'claro' ? 'text-portada-azul' : 'text-portada-cielo-2'
+      }`}
+    >
+      {children}
+      <ArrowRight
+        aria-hidden
+        className="size-4 transition-transform duration-300 group-hover:translate-x-0.5"
+      />
+    </Link>
   )
 }
 

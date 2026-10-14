@@ -1,10 +1,31 @@
-import { Link } from '@tanstack/react-router'
+import { Link, useLocation } from '@tanstack/react-router'
 import { Menu as IconoMenu, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import type { ReactNode } from 'react'
 
 import { MENU } from './datos'
 import { BotonAfiliarme } from './piezas'
 import { HeliosLogo } from '@/components/HeliosLogo'
+
+/**
+ * Una ruta va con `Link` (navega sin recargar y precarga); una sección de
+ * la portada (`/#…`), con `<a>`: en la portada solo desplaza.
+ */
+function Enlace({
+  href,
+  ...resto
+}: {
+  href: string
+  className: string
+  onClick?: () => void
+  children: ReactNode
+}) {
+  return href.startsWith('/#') ? (
+    <a href={href} {...resto} />
+  ) : (
+    <Link to={href} {...resto} />
+  )
+}
 
 /**
  * El menú: transparente sobre la primera pantalla y, al bajar, una píldora
@@ -13,6 +34,7 @@ import { HeliosLogo } from '@/components/HeliosLogo'
 export function Menu() {
   const [bajo, setBajo] = useState(false)
   const [abierto, setAbierto] = useState(false)
+  const enPortada = useLocation({ select: (l) => l.pathname === '/' })
 
   useEffect(() => {
     const alDesplazar = () => setBajo(window.scrollY > 24)
@@ -36,8 +58,10 @@ export function Menu() {
         className="portada-menu-barra mx-auto flex w-full max-w-[calc(var(--portada-ancho)+1.5rem)] items-center justify-between gap-6 rounded-full py-2 pl-5 pr-2"
       >
         <a
-          href="#arriba"
-          aria-label="Helios, volver arriba"
+          href={enPortada ? '#arriba' : '/'}
+          aria-label={
+            enPortada ? 'Helios, volver arriba' : 'Helios, ir a la portada'
+          }
           className="flex shrink-0 items-center"
         >
           <HeliosLogo height={26} color="#002770" />
@@ -46,12 +70,12 @@ export function Menu() {
         <ul className="hidden items-center gap-1 lg:flex">
           {MENU.map((item) => (
             <li key={item.href}>
-              <a
+              <Enlace
                 href={item.href}
                 className="rounded-full px-4 py-2 text-[0.92rem] tracking-[-0.01em] text-portada-tinta-2 transition-colors duration-300 hover:bg-portada-tinta/[0.05] hover:text-portada-tinta"
               >
                 {item.texto}
-              </a>
+              </Enlace>
             </li>
           ))}
         </ul>
@@ -101,7 +125,7 @@ export function Menu() {
               key={item.href}
               style={{ transitionDelay: `${abierto ? 60 + i * 40 : 0}ms` }}
             >
-              <a
+              <Enlace
                 href={item.href}
                 onClick={() => setAbierto(false)}
                 className="flex items-center justify-between rounded-2xl px-4 py-3.5 text-[1.35rem] font-medium tracking-[-0.03em] text-portada-tinta hover:bg-portada-niebla"
@@ -110,7 +134,7 @@ export function Menu() {
                 <span className="portada-etiqueta text-portada-tinta-3">
                   0{i + 1}
                 </span>
-              </a>
+              </Enlace>
             </li>
           ))}
           <li className="mt-2 px-1 pb-1 sm:hidden">

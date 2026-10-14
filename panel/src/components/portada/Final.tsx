@@ -12,7 +12,18 @@ import { REDES } from '@/config/sitio'
  * PREGUNTAS, EL CIERRE Y EL PIE.
  */
 
-export function Preguntas() {
+/**
+ * Las preguntas frecuentes. La portada usa las suyas; cada página para
+ * buscadores (`Guia`) pasa su lista y su titular. Las respuestas van en el
+ * HTML aunque estén cerradas: Google las lee igual.
+ */
+export function Preguntas({
+  lista = PREGUNTAS,
+  titular = { antes: 'Lo que todo el mundo', enfasis: 'pregunta.' },
+}: {
+  lista?: ReadonlyArray<{ pregunta: string; respuesta: string }>
+  titular?: { antes: string; enfasis: string }
+} = {}) {
   return (
     <section id="preguntas" className="relative bg-portada-niebla">
       <Lienzo className="py-24 sm:py-32">
@@ -23,8 +34,10 @@ export function Preguntas() {
             </Revelar>
             <Revelar retraso={80}>
               <h2 className="portada-titular mt-6 text-portada-tinta">
-                Lo que todo el mundo{' '}
-                <em className="portada-serif text-portada-azul">pregunta.</em>
+                {titular.antes}{' '}
+                <em className="portada-serif text-portada-azul">
+                  {titular.enfasis}
+                </em>
               </h2>
             </Revelar>
             <Revelar retraso={160}>
@@ -41,7 +54,7 @@ export function Preguntas() {
           </div>
 
           <div className="flex flex-col gap-3">
-            {PREGUNTAS.map((p, i) => (
+            {lista.map((p, i) => (
               <Revelar key={p.pregunta} retraso={i * 60}>
                 {/* `<details>` nativo, como en Ronda: se abre sin JavaScript y el
                     teclado ya sabe manejarlo. El CSS anima la altura donde se puede. */}
@@ -131,19 +144,61 @@ export function Pie() {
 
           <nav
             aria-label="Enlaces del pie"
-            className="flex flex-wrap gap-x-20 gap-y-10"
+            className="grid grid-cols-2 gap-x-12 gap-y-10 sm:flex sm:flex-wrap sm:gap-x-16"
           >
+            <div>
+              <p className="portada-etiqueta text-portada-tinta-3">Pacientes</p>
+              <ul className="mt-4 flex flex-col gap-3">
+                <li>
+                  <Link to="/pacientes" className={enlace}>
+                    Pagar en cuotas
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/consulta-medica-en-cuotas" className={enlace}>
+                    Consulta médica en cuotas
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/odontologia-en-cuotas" className={enlace}>
+                    Odontología en cuotas
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/cosmetologia-en-cuotas" className={enlace}>
+                    Cosmetología en cuotas
+                  </Link>
+                </li>
+              </ul>
+            </div>
+            <div>
+              <p className="portada-etiqueta text-portada-tinta-3">
+                Médicos y centros
+              </p>
+              <ul className="mt-4 flex flex-col gap-3">
+                <li>
+                  <Link to="/medicos" className={enlace}>
+                    Cómo funciona
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/afiliacion" className={enlace}>
+                    Quiero afiliarme
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/login" className={enlace}>
+                    Entrar
+                  </Link>
+                </li>
+              </ul>
+            </div>
             <div>
               <p className="portada-etiqueta text-portada-tinta-3">Helios</p>
               <ul className="mt-4 flex flex-col gap-3">
                 <li>
                   <Link to="/soporte" className={enlace}>
                     Soporte
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/login" className={enlace}>
-                    Entrar
                   </Link>
                 </li>
                 {REDES.map((r) => (

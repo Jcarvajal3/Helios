@@ -22,7 +22,7 @@ import {
   total,
 } from './datos'
 import type { Moneda } from './datos'
-import { Lienzo, Revelar, Rotulo, useEnVista } from './piezas'
+import { EnlaceMas, Lienzo, Revelar, Rotulo, useEnVista } from './piezas'
 
 /**
  * PARA PACIENTES — lo que se paga, con todos sus números.
@@ -35,7 +35,7 @@ import { Lienzo, Revelar, Rotulo, useEnVista } from './piezas'
 
 const ICONOS = [CalendarCheck2, Percent, Gauge, Banknote, Clock, IdCard]
 
-function Desglose() {
+export function Desglose() {
   const [moneda, setMoneda] = useState<Moneda>('USD')
   const [ref, visto] = useEnVista<HTMLDivElement>({ umbral: 0.35 })
 
@@ -204,6 +204,11 @@ export function Pacientes() {
               <p className="portada-entrada mt-7 max-w-[44ch] text-portada-tinta-2">
                 Una sola comisión, dicha desde el principio. Antes de confirmar
                 ves el monto, la Comisión Helios y tus dos cuotas.
+              </p>
+              <p className="mt-5">
+                <EnlaceMas to="/pacientes">
+                  Todo sobre pagar tu consulta en cuotas
+                </EnlaceMas>
               </p>
             </Revelar>
           </div>

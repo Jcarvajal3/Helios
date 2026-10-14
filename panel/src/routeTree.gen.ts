@@ -13,7 +13,13 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ComercioRouteImport } from './routes/_comercio'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AfiliacionRouteImport } from './routes/afiliacion'
+import { Route as ConsultaMedicaEnCuotasRouteImport } from './routes/consulta-medica-en-cuotas'
+import { Route as CosmetologiaEnCuotasRouteImport } from './routes/cosmetologia-en-cuotas'
+import { Route as LlmsDottxtRouteImport } from './routes/llms[.]txt'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as MedicosRouteImport } from './routes/medicos'
+import { Route as OdontologiaEnCuotasRouteImport } from './routes/odontologia-en-cuotas'
+import { Route as PacientesRouteImport } from './routes/pacientes'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SoporteRouteImport } from './routes/soporte'
@@ -65,9 +71,39 @@ const AfiliacionRoute = AfiliacionRouteImport.update({
   path: '/afiliacion',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ConsultaMedicaEnCuotasRoute = ConsultaMedicaEnCuotasRouteImport.update({
+  id: '/consulta-medica-en-cuotas',
+  path: '/consulta-medica-en-cuotas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CosmetologiaEnCuotasRoute = CosmetologiaEnCuotasRouteImport.update({
+  id: '/cosmetologia-en-cuotas',
+  path: '/cosmetologia-en-cuotas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LlmsDottxtRoute = LlmsDottxtRouteImport.update({
+  id: '/llms.txt',
+  path: '/llms.txt',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MedicosRoute = MedicosRouteImport.update({
+  id: '/medicos',
+  path: '/medicos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OdontologiaEnCuotasRoute = OdontologiaEnCuotasRouteImport.update({
+  id: '/odontologia-en-cuotas',
+  path: '/odontologia-en-cuotas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PacientesRoute = PacientesRouteImport.update({
+  id: '/pacientes',
+  path: '/pacientes',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
@@ -232,7 +268,13 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/afiliacion': typeof AfiliacionRoute
+  '/consulta-medica-en-cuotas': typeof ConsultaMedicaEnCuotasRoute
+  '/cosmetologia-en-cuotas': typeof CosmetologiaEnCuotasRoute
+  '/llms.txt': typeof LlmsDottxtRoute
   '/login': typeof LoginRoute
+  '/medicos': typeof MedicosRoute
+  '/odontologia-en-cuotas': typeof OdontologiaEnCuotasRoute
+  '/pacientes': typeof PacientesRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/soporte': typeof SoporteRoute
@@ -268,7 +310,13 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/afiliacion': typeof AfiliacionRoute
+  '/consulta-medica-en-cuotas': typeof ConsultaMedicaEnCuotasRoute
+  '/cosmetologia-en-cuotas': typeof CosmetologiaEnCuotasRoute
+  '/llms.txt': typeof LlmsDottxtRoute
   '/login': typeof LoginRoute
+  '/medicos': typeof MedicosRoute
+  '/odontologia-en-cuotas': typeof OdontologiaEnCuotasRoute
+  '/pacientes': typeof PacientesRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/soporte': typeof SoporteRoute
@@ -307,7 +355,13 @@ export interface FileRoutesById {
   '/_comercio': typeof ComercioRouteWithChildren
   '/admin': typeof AdminRouteWithChildren
   '/afiliacion': typeof AfiliacionRoute
+  '/consulta-medica-en-cuotas': typeof ConsultaMedicaEnCuotasRoute
+  '/cosmetologia-en-cuotas': typeof CosmetologiaEnCuotasRoute
+  '/llms.txt': typeof LlmsDottxtRoute
   '/login': typeof LoginRoute
+  '/medicos': typeof MedicosRoute
+  '/odontologia-en-cuotas': typeof OdontologiaEnCuotasRoute
+  '/pacientes': typeof PacientesRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/soporte': typeof SoporteRoute
@@ -346,7 +400,13 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/afiliacion'
+    | '/consulta-medica-en-cuotas'
+    | '/cosmetologia-en-cuotas'
+    | '/llms.txt'
     | '/login'
+    | '/medicos'
+    | '/odontologia-en-cuotas'
+    | '/pacientes'
     | '/robots.txt'
     | '/sitemap.xml'
     | '/soporte'
@@ -382,7 +442,13 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/afiliacion'
+    | '/consulta-medica-en-cuotas'
+    | '/cosmetologia-en-cuotas'
+    | '/llms.txt'
     | '/login'
+    | '/medicos'
+    | '/odontologia-en-cuotas'
+    | '/pacientes'
     | '/robots.txt'
     | '/sitemap.xml'
     | '/soporte'
@@ -420,7 +486,13 @@ export interface FileRouteTypes {
     | '/_comercio'
     | '/admin'
     | '/afiliacion'
+    | '/consulta-medica-en-cuotas'
+    | '/cosmetologia-en-cuotas'
+    | '/llms.txt'
     | '/login'
+    | '/medicos'
+    | '/odontologia-en-cuotas'
+    | '/pacientes'
     | '/robots.txt'
     | '/sitemap.xml'
     | '/soporte'
@@ -459,7 +531,13 @@ export interface RootRouteChildren {
   ComercioRoute: typeof ComercioRouteWithChildren
   AdminRoute: typeof AdminRouteWithChildren
   AfiliacionRoute: typeof AfiliacionRoute
+  ConsultaMedicaEnCuotasRoute: typeof ConsultaMedicaEnCuotasRoute
+  CosmetologiaEnCuotasRoute: typeof CosmetologiaEnCuotasRoute
+  LlmsDottxtRoute: typeof LlmsDottxtRoute
   LoginRoute: typeof LoginRoute
+  MedicosRoute: typeof MedicosRoute
+  OdontologiaEnCuotasRoute: typeof OdontologiaEnCuotasRoute
+  PacientesRoute: typeof PacientesRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   SoporteRoute: typeof SoporteRoute
@@ -497,11 +575,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AfiliacionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/consulta-medica-en-cuotas': {
+      id: '/consulta-medica-en-cuotas'
+      path: '/consulta-medica-en-cuotas'
+      fullPath: '/consulta-medica-en-cuotas'
+      preLoaderRoute: typeof ConsultaMedicaEnCuotasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cosmetologia-en-cuotas': {
+      id: '/cosmetologia-en-cuotas'
+      path: '/cosmetologia-en-cuotas'
+      fullPath: '/cosmetologia-en-cuotas'
+      preLoaderRoute: typeof CosmetologiaEnCuotasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/llms.txt': {
+      id: '/llms.txt'
+      path: '/llms.txt'
+      fullPath: '/llms.txt'
+      preLoaderRoute: typeof LlmsDottxtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/medicos': {
+      id: '/medicos'
+      path: '/medicos'
+      fullPath: '/medicos'
+      preLoaderRoute: typeof MedicosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/odontologia-en-cuotas': {
+      id: '/odontologia-en-cuotas'
+      path: '/odontologia-en-cuotas'
+      fullPath: '/odontologia-en-cuotas'
+      preLoaderRoute: typeof OdontologiaEnCuotasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pacientes': {
+      id: '/pacientes'
+      path: '/pacientes'
+      fullPath: '/pacientes'
+      preLoaderRoute: typeof PacientesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/robots.txt': {
@@ -799,7 +919,13 @@ const rootRouteChildren: RootRouteChildren = {
   ComercioRoute: ComercioRouteWithChildren,
   AdminRoute: AdminRouteWithChildren,
   AfiliacionRoute: AfiliacionRoute,
+  ConsultaMedicaEnCuotasRoute: ConsultaMedicaEnCuotasRoute,
+  CosmetologiaEnCuotasRoute: CosmetologiaEnCuotasRoute,
+  LlmsDottxtRoute: LlmsDottxtRoute,
   LoginRoute: LoginRoute,
+  MedicosRoute: MedicosRoute,
+  OdontologiaEnCuotasRoute: OdontologiaEnCuotasRoute,
+  PacientesRoute: PacientesRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   SoporteRoute: SoporteRoute,

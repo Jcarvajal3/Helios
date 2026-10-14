@@ -12,6 +12,8 @@ export const Route = createFileRoute('/legal/privacidad')({
       titulo: 'Política de privacidad · Helios',
       descripcion: 'Cómo trata Helios los datos de pacientes, médicos y centros de salud.',
       ruta: '/legal/privacidad',
+      migas: [{ nombre: 'Política de privacidad', ruta: '/legal/privacidad' }],
+      aspecto: 'panel',
     }),
   component: Privacidad,
 })

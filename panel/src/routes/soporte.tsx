@@ -9,9 +9,12 @@ import { cabeceraPublica } from '@/config/sitio'
 export const Route = createFileRoute('/soporte')({
   head: () =>
     cabeceraPublica({
-      titulo: 'Soporte · Helios',
-      descripcion: 'Cómo contactar a Helios si tienes dudas sobre tus cuotas, tu comprobante o la afiliación de tu consultorio o centro de salud.',
+      titulo: 'Soporte y atención a pacientes y médicos | Helios',
+      descripcion:
+        'Cómo contactar a Helios si tienes dudas sobre tus cuotas, tu comprobante o la afiliación de tu consultorio o centro de salud.',
       ruta: '/soporte',
+      migas: [{ nombre: 'Soporte', ruta: '/soporte' }],
+      aspecto: 'panel',
     }),
   component: Soporte,
 })

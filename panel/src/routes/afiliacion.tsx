@@ -15,10 +15,15 @@ import { describeError, supabase } from '@/lib/supabase'
 export const Route = createFileRoute('/afiliacion')({
   head: () =>
     cabeceraPublica({
-      titulo: 'Quiero afiliarme · Helios',
+      titulo: 'Afilia tu consultorio y ofrece pago en cuotas | Helios',
       descripcion:
-        'Afilia tu consultorio o centro de salud a Helios y ofrece a tus pacientes pagar sus consultas en cuotas. Sin costo para ti.',
+        'Solicita la afiliación de tu consultorio o centro de salud: tus pacientes pagan en 2 cuotas y tú cobras el 100% a los 8 y 15 días. Sin costo ni permanencia.',
       ruta: '/afiliacion',
+      migas: [
+        { nombre: 'Médicos y centros', ruta: '/medicos' },
+        { nombre: 'Quiero afiliarme', ruta: '/afiliacion' },
+      ],
+      aspecto: 'panel',
     }),
   component: Afiliacion,
 })

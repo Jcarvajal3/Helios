@@ -25,19 +25,21 @@ import { Boton, BotonAfiliarme, Lienzo, Rotulo } from './piezas'
 function Entra({
   retraso = 0,
   children,
+  como: Etiqueta = 'div',
   className = '',
 }: {
   retraso?: number
   children: ReactNode
+  como?: 'div' | 'span'
   className?: string
 }) {
   return (
-    <div
+    <Etiqueta
       className={`portada-entra ${className}`}
       style={{ '--retraso': `${retraso}ms` } as CSSProperties}
     >
       {children}
-    </div>
+    </Etiqueta>
   )
 }
 
@@ -99,9 +101,8 @@ function Recibo() {
       </ol>
 
       <p className="mt-4 border-t border-portada-linea pt-4 text-[0.82rem] leading-relaxed text-portada-tinta-3">
-        Las cuotas incluyen la Comisión Helios: {COMISION_PCT}% de la
-        consulta más su IVA ({dinero(comision + iva)} en este
-        ejemplo).{' '}
+        Las cuotas incluyen la Comisión Helios: {COMISION_PCT}% de la consulta
+        más su IVA ({dinero(comision + iva)} en este ejemplo).{' '}
         <a
           href="#pacientes"
           className="font-medium text-portada-azul underline-offset-4 hover:underline"
@@ -132,22 +133,27 @@ export function Heroe() {
       <Lienzo className="relative flex flex-col justify-end pb-24 pt-[44svh] sm:pb-28 lg:min-h-[max(100svh,820px)] lg:pt-36">
         <div className="grid items-end gap-12 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-16">
           <div>
-            <Entra>
-              <Rotulo>Salud privada en cuotas</Rotulo>
-            </Entra>
-
-            <h1 className="portada-display mt-6 text-portada-tinta">
-              <span className="portada-linea">
-                <span style={{ '--retraso': '120ms' } as CSSProperties}>
-                  Tu salud hoy…
-                </span>
-              </span>{' '}
-              <span className="portada-linea">
-                <span style={{ '--retraso': '220ms' } as CSSProperties}>
-                  Págala en{' '}
-                  <em className="portada-serif portada-degradado pr-[0.06em]">
-                    dos cuotas.
-                  </em>
+            {/* El rótulo va dentro del H1: es la frase que la gente busca
+                («consultas médicas en cuotas»), y el eslogan solo no lo dice. */}
+            <h1 className="text-portada-tinta">
+              <Entra como="span" className="block">
+                <Rotulo como="span">
+                  Consultas médicas en cuotas · Venezuela
+                </Rotulo>
+              </Entra>{' '}
+              <span className="portada-display mt-6 block">
+                <span className="portada-linea">
+                  <span style={{ '--retraso': '120ms' } as CSSProperties}>
+                    Tu salud hoy…
+                  </span>
+                </span>{' '}
+                <span className="portada-linea">
+                  <span style={{ '--retraso': '220ms' } as CSSProperties}>
+                    Págala en{' '}
+                    <em className="portada-serif portada-degradado pr-[0.06em]">
+                      dos cuotas.
+                    </em>
+                  </span>
                 </span>
               </span>
             </h1>
@@ -155,8 +161,9 @@ export function Heroe() {
             <Entra retraso={420}>
               <p className="portada-entrada mt-7 max-w-[50ch] text-portada-tinta-2">
                 Helios es una forma de pagar consultas y tratamientos de salud
-                privada en cuotas. Hoy no pagas nada: pagas en dos cuotas, a los
-                7 y a los 14 días.
+                privada en cuotas en Venezuela: con el médico, el odontólogo o
+                el cosmetólogo. Hoy no pagas nada: pagas en dos cuotas, a los 7
+                y a los 14 días.
               </p>
             </Entra>
 

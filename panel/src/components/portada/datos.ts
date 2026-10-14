@@ -53,11 +53,16 @@ export const ESPECIALIDADES = [
   'Cosmetología',
 ] as const
 
+/**
+ * El menú, el mismo en la portada y en las páginas para buscadores. Médicos
+ * y pacientes llevan a su página (son enlaces que Google sigue); los demás,
+ * a su sección de la portada.
+ */
 export const MENU = [
-  { href: '#como-funciona', texto: 'Cómo funciona' },
-  { href: '#medicos', texto: 'Médicos y centros' },
-  { href: '#pacientes', texto: 'Pacientes' },
-  { href: '#preguntas', texto: 'Preguntas' },
+  { href: '/#como-funciona', texto: 'Cómo funciona' },
+  { href: '/medicos', texto: 'Médicos y centros' },
+  { href: '/pacientes', texto: 'Pacientes' },
+  { href: '/#preguntas', texto: 'Preguntas' },
 ] as const
 
 export const PASOS = [

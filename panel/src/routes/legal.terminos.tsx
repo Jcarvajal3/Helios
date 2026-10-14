@@ -12,6 +12,8 @@ export const Route = createFileRoute('/legal/terminos')({
       titulo: 'Términos y condiciones · Helios',
       descripcion: 'Las condiciones del pago en cuotas de Helios para pacientes y para médicos y centros de salud: cuotas, Comisión Helios, límite y pagos.',
       ruta: '/legal/terminos',
+      migas: [{ nombre: 'Términos y condiciones', ruta: '/legal/terminos' }],
+      aspecto: 'panel',
     }),
   component: Terminos,
 })

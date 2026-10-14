@@ -11,6 +11,7 @@ import { CONSULTA, PARA_MEDICOS, dineroCorto } from './datos'
 import {
   Boton,
   BotonAfiliarme,
+  EnlaceMas,
   Lienzo,
   Revelar,
   Rotulo,
@@ -51,7 +52,7 @@ const HITOS = [
   },
 ] as const
 
-function LineaDeCobro() {
+export function LineaDeCobro() {
   const [ref, visto] = useEnVista<HTMLDivElement>({
     umbral: 0.4,
     continuo: true,
@@ -198,6 +199,11 @@ export function Medicos() {
                 <p className="portada-entrada mt-7 max-w-[46ch] text-white/70">
                   Atiendes hoy y Helios te paga la consulta completa. El cobro
                   al paciente corre por nuestra cuenta.
+                </p>
+                <p className="mt-5">
+                  <EnlaceMas to="/medicos" tono="oscuro">
+                    Cómo funciona para médicos y centros
+                  </EnlaceMas>
                 </p>
               </Revelar>
               <Revelar retraso={240}>

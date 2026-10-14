@@ -12,9 +12,8 @@ import {
   Pie,
   Preguntas,
 } from '@/components/portada'
-import { ESPECIALIDADES, PREGUNTAS } from '@/components/portada/datos'
-import { RESPONSABLE } from '@/config/legal'
-import { NOMBRE, REDES, SITIO_URL, cabeceraPublica, jsonLd, urlAbsoluta } from '@/config/sitio'
+import { PREGUNTAS } from '@/components/portada/datos'
+import { cabeceraPublica, preguntasFrecuentes, servicio } from '@/config/sitio'
 
 /**
  * LA PORTADA — `/`.
@@ -27,72 +26,47 @@ import { NOMBRE, REDES, SITIO_URL, cabeceraPublica, jsonLd, urlAbsoluta } from '
  * La portada va SIEMPRE en claro: no lee los tokens del tema del panel
  * (que cambian con `data-theme`) sino su propia paleta fija, la de
  * `styles/portada.css`. Trae además su tipografía (Geist, Geist Mono e
- * Instrument Serif), que solo se descarga aquí.
+ * Instrument Serif), que comparte con las páginas para buscadores (`Guia`).
  */
-// Google corta el título hacia los 60 caracteres y la descripción hacia los
-// 155: lo que importa va delante.
-const TITULO = 'Tu salud hoy, en dos cuotas | Helios Venezuela'
+const TITULO = 'Consultas médicas en cuotas, sin inicial | Helios Venezuela'
 
 const DESCRIPCION =
-  'Paga tu consulta de medicina, odontología o cosmetología en dos cuotas, a los 7 y 14 días, sin inicial. En bolívares, por Pago Móvil o transferencia.'
-
-const FUENTES =
-  'https://fonts.googleapis.com/css2?family=Geist:wght@300..700&family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap'
+  'Paga tu consulta de medicina, odontología o cosmetología en 2 cuotas, a los 7 y 14 días, sin inicial. El médico cobra el 100%, pague o no el paciente.'
 
 /**
- * Lo que el buscador entiende de la página sin leerla: quién opera Helios,
- * el servicio y las preguntas frecuentes (las mismas de la sección).
+ * Lo que el buscador entiende de la página sin leerla, además de quién es
+ * Helios (eso lo pone `cabeceraPublica`): el servicio visto por cada público
+ * y las preguntas frecuentes (las mismas de la sección).
  */
-const DATOS_ESTRUCTURADOS = {
-  '@context': 'https://schema.org',
-  '@graph': [
-    {
-      '@type': 'Organization',
-      '@id': `${SITIO_URL}/#organizacion`,
-      name: NOMBRE,
-      legalName: RESPONSABLE.razonSocial,
-      url: urlAbsoluta('/'),
-      logo: urlAbsoluta('/icon-512.png'),
-      areaServed: { '@type': 'Country', name: 'Venezuela' },
-      sameAs: REDES.map((r) => r.url),
-    },
-    {
-      '@type': 'WebSite',
-      '@id': `${SITIO_URL}/#sitio`,
-      name: NOMBRE,
-      url: urlAbsoluta('/'),
-      inLanguage: 'es-VE',
-      publisher: { '@id': `${SITIO_URL}/#organizacion` },
-    },
-    {
-      '@type': 'Service',
-      name: 'Pago en cuotas de consultas y tratamientos de salud privada',
-      serviceType: 'Pago en cuotas',
-      description: DESCRIPCION,
-      provider: { '@id': `${SITIO_URL}/#organizacion` },
-      areaServed: { '@type': 'Country', name: 'Venezuela' },
-      audience: ESPECIALIDADES.map((e) => ({ '@type': 'Audience', audienceType: e })),
-    },
-    {
-      '@type': 'FAQPage',
-      mainEntity: PREGUNTAS.map((p) => ({
-        '@type': 'Question',
-        name: p.pregunta,
-        acceptedAnswer: { '@type': 'Answer', text: p.respuesta },
-      })),
-    },
-  ],
-}
+const DATOS_ESTRUCTURADOS = [
+  servicio({
+    ruta: '/pacientes',
+    nombre: 'Pago de consultas de salud en dos cuotas',
+    descripcion:
+      'Consultas y tratamientos de medicina, odontología y cosmetología en dos cuotas, a los 7 y 14 días, sin inicial, pagadas en bolívares por Pago Móvil o transferencia.',
+    publico: 'Patient',
+  }),
+  servicio({
+    ruta: '/medicos',
+    nombre: 'Pago en cuotas para consultorios y centros de salud',
+    descripcion:
+      'El médico o centro de salud recibe el 100% de cada consulta a los 8 y 15 días, pague o no el paciente. Sin costo ni permanencia.',
+    publico: 'Clinician',
+  }),
+  preguntasFrecuentes('/', PREGUNTAS),
+]
 
 export const Route = createFileRoute('/')({
   component: Portada,
   head: () => {
-    const base = cabeceraPublica({ titulo: TITULO, descripcion: DESCRIPCION, ruta: '/' })
-    return {
-      meta: [...base.meta, { name: 'color-scheme', content: 'light' }],
-      links: [...base.links, { rel: 'stylesheet', href: FUENTES }],
-      scripts: [jsonLd(DATOS_ESTRUCTURADOS)],
-    }
+    const base = cabeceraPublica({
+      titulo: TITULO,
+      descripcion: DESCRIPCION,
+      ruta: '/',
+      datos: DATOS_ESTRUCTURADOS,
+      aspecto: 'portada',
+    })
+    return { ...base, meta: [...base.meta, { name: 'color-scheme', content: 'light' }] }
   },
 })
 
