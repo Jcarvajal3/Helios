@@ -1,41 +1,41 @@
-import { booleano, comoFila, comoLista, numero, numeroONulo, texto, textoONulo } from '@/lib/json'
+import { booleano, comoFila, comoLista, numero, numeroONulo, texto } from '@/lib/json'
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Los pacientes demo de las capacitaciones (20261014100100).
+// Los números de capacitación (20261014100200).
 //
-// Quien capacita lleva su teléfono ligado a un paciente demo y va de médico en
-// médico: el médico busca la cédula demo en su panel o en su bot, registra y
-// el capacitador contesta «sí». Las órdenes demo no le liquidan nada a la
-// clínica y se revierten cada noche a las 23:30.
+// Lo único fijo en una capacitación es el WhatsApp de quien capacita. El
+// médico registra un paciente nuevo con datos inventados y ese número, en su
+// panel o en su bot: el paciente nace de prueba, la pregunta llega a ese
+// WhatsApp y el médico ve todo el proceso. A medianoche se borran del todo,
+// el paciente y sus órdenes: la cédula vuelve a ser «nuevo» (20261014100300).
 //
 // Módulo puro, probado en `demo.test.ts`; las llamadas, en `api.ts`.
 // ═══════════════════════════════════════════════════════════════════════════
 
-export type PacienteDemo = {
-  id: string
-  fullName: string
-  documentNumber: string
+export type NumeroDeCapacitacion = {
   phone: string
-  email: string | null
-  usedUsd: number
-  availableUsd: number
-  /** Por qué no puede tomar una orden ahora (`cuota_vencida`, `estado`, `bloqueo`), o null. */
-  blockedReason: string | null
-  /** Órdenes esperando el «sí». Solo puede haber una a la vez por paciente. */
-  pendingOrders: number
+  label: string
+  /** Pacientes de prueba de hoy con ese número (los retirados no cuentan). */
+  patients: number
   /** Órdenes confirmadas que el próximo reinicio revertirá. */
   openOrders: number
+  /** Preguntas esperando el «sí». */
+  pendingOrders: number
 }
 
 export type ReinicioDeDemo = {
   revertidas: number
   anuladas: number
+  /** Pacientes borrados del todo, con sus órdenes (20261014100300). */
+  borrados: number
+  ordenesBorradas: number
+  /** Los que tenían asiento en el libro (de antes de 20261014100300): sin cédula. */
+  retirados: number
   sinReiniciar: Array<{ orderNumber: number | null; motivo: string }>
 }
 
 export type EstadoDeDemo = {
-  limitUsd: number
-  pacientes: PacienteDemo[]
+  numeros: NumeroDeCapacitacion[]
   ultimoReinicio: (ReinicioDeDemo & { at: string; automatico: boolean }) | null
 }
 
@@ -44,6 +44,9 @@ export function leerReinicio(raw: unknown): ReinicioDeDemo {
   return {
     revertidas: numero(r.revertidas),
     anuladas: numero(r.anuladas),
+    borrados: numero(r.borrados),
+    ordenesBorradas: numero(r.ordenes_borradas),
+    retirados: numero(r.retirados),
     sinReiniciar: comoLista(r.sin_reiniciar).map((x) => {
       const f = comoFila(x)
       return { orderNumber: numeroONulo(f.order_number), motivo: texto(f.motivo) }
@@ -55,20 +58,14 @@ export function leerEstadoDeDemo(raw: unknown): EstadoDeDemo {
   const r = comoFila(raw)
   const ultimo = r.last_reset == null ? null : comoFila(r.last_reset)
   return {
-    limitUsd: numero(r.limit_usd),
-    pacientes: comoLista(r.patients).map((x) => {
+    numeros: comoLista(r.phones).map((x) => {
       const p = comoFila(x)
       return {
-        id: texto(p.id),
-        fullName: texto(p.full_name),
-        documentNumber: texto(p.document_number),
         phone: texto(p.phone_e164),
-        email: textoONulo(p.email),
-        usedUsd: numero(p.used_usd),
-        availableUsd: numero(p.available_usd),
-        blockedReason: textoONulo(p.blocked_reason),
-        pendingOrders: numero(p.pending_orders),
+        label: texto(p.label),
+        patients: numero(p.patients),
         openOrders: numero(p.open_orders),
+        pendingOrders: numero(p.pending_orders),
       }
     }),
     ultimoReinicio: ultimo
@@ -77,38 +74,31 @@ export function leerEstadoDeDemo(raw: unknown): EstadoDeDemo {
   }
 }
 
+function contar(n: number, uno: string, varios: string): string {
+  return `${n} ${n === 1 ? uno : varios}`
+}
+
 /** El resumen de un reinicio, en una línea. */
 export function resumenDeReinicio(r: ReinicioDeDemo): string {
   const partes: string[] = []
-  if (r.revertidas > 0) partes.push(`${r.revertidas} ${r.revertidas === 1 ? 'orden revertida' : 'órdenes revertidas'}`)
-  if (r.anuladas > 0) partes.push(`${r.anuladas} ${r.anuladas === 1 ? 'pregunta anulada' : 'preguntas anuladas'}`)
-  if (r.sinReiniciar.length > 0) {
-    partes.push(`${r.sinReiniciar.length} sin reiniciar`)
+  if (r.borrados > 0) {
+    partes.push(
+      `${contar(r.borrados, 'paciente borrado', 'pacientes borrados')} con ${contar(r.ordenesBorradas, 'orden', 'órdenes')}`,
+    )
   }
+  if (r.revertidas > 0) partes.push(contar(r.revertidas, 'orden revertida', 'órdenes revertidas'))
+  if (r.retirados > 0) partes.push(contar(r.retirados, 'paciente retirado', 'pacientes retirados'))
+  if (r.sinReiniciar.length > 0) partes.push(`${r.sinReiniciar.length} sin reiniciar`)
   return partes.length > 0 ? partes.join(', ') : 'No había nada que reiniciar'
 }
 
-export type BorradorDePacienteDemo = {
-  document: string
-  firstName: string
-  lastName: string
-  phone: string
-  email: string
-}
+export type BorradorDeNumero = { phone: string; label: string }
 
-export const BORRADOR_VACIO: BorradorDePacienteDemo = {
-  document: '',
-  firstName: '',
-  lastName: '',
-  phone: '',
-  email: '',
-}
+export const BORRADOR_VACIO: BorradorDeNumero = { phone: '', label: '' }
 
-/** Lo que falta para poder crear; el servidor valida el formato. */
-export function faltaEnBorrador(b: BorradorDePacienteDemo): string | undefined {
-  if (!b.document.trim()) return 'Falta la cédula demo.'
-  if (!b.firstName.trim() || !b.lastName.trim()) return 'Faltan el nombre y el apellido.'
-  if (!b.phone.trim()) return 'Falta el WhatsApp de quien da la capacitación.'
-  if (!b.email.trim()) return 'Falta el correo: ahí llega el comprobante.'
+/** Lo que falta para poder añadir; el servidor valida el formato. */
+export function faltaEnBorrador(b: BorradorDeNumero): string | undefined {
+  if (!b.phone.trim()) return 'Falta el WhatsApp de quien capacita.'
+  if (!b.label.trim()) return 'Falta quién capacita con ese número.'
   return undefined
 }

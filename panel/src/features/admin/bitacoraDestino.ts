@@ -116,9 +116,11 @@ const SECCION_DE_AJUSTES: Record<string, PestanaAjustes | undefined> = {
   'platform_admin.revoke': 'equipo',
   'platform_admin.restore': 'equipo',
   'security.require_mfa': 'seguridad',
+  'demo.phone_added': 'demo',
+  'demo.phone_removed': 'demo',
+  'demo.reset': 'demo',
   'demo.patient_created': 'demo',
   'demo.limit': 'demo',
-  'demo.reset': 'demo',
 }
 
 /** Lo que vive en una pantalla sin ficha propia. */

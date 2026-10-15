@@ -1162,39 +1162,54 @@ registra). Con RLS y sin políticas: solo se leen y escriben por estas RPC.
   una `{ line_id, merchant_id, payout_id, reference, amount_usd,
   amount_ves }`.
 
-## 9. Pacientes demo para las capacitaciones (2026-10-14)
+## 9. Capacitaciones: números de WhatsApp de prueba (2026-10-14)
 
-Migraciones `20261014100000_la_orden_de_un_paciente_de_prueba_no_se_liquida`
-y `20261014100100_los_pacientes_demo_para_las_capacitaciones`. Pantalla:
-Ajustes › Capacitaciones › Pacientes demo (`?tab=demo`).
+Migraciones `20261014100000_la_orden_de_un_paciente_de_prueba_no_se_liquida`,
+`20261014100200_los_numeros_de_capacitacion` (que sustituye a los
+pacientes demo fijos de `20261014100100`) y
+`20261014100300_lo_de_capacitacion_se_borra_a_medianoche`. Pantalla: Ajustes ›
+Capacitaciones › Números de capacitación (`?tab=demo`).
 
-Un paciente demo es un paciente **general** (de ninguna clínica) ligado al
-WhatsApp de quien capacita. El médico lo usa en su propia clínica, con su
-panel o su bot: busca la cédula demo, registra y el capacitador contesta «sí».
+En la capacitación el médico hace el proceso entero en su propia clínica, con
+su panel o su bot: registra un **paciente nuevo** con datos inventados y,
+como teléfono, el WhatsApp de quien capacita. Ese paciente nace de prueba y
+la pregunta le llega a quien capacita.
 
 - **Las órdenes de un paciente de prueba no se liquidan**: el trigger
   `settlements_aa_paciente_de_prueba` descarta toda fila de `settlements`
   cuya orden (o cuota) sea de un paciente `is_test`, y
   `helios_accrue_staff_commission` no devenga la comisión del personal. Una
   clínica de prueba con un paciente real sigue como antes.
-- `profiles.is_demo` (implica `is_test`, por constraint). Nivel 9 «Demo»
-  (`helios_demo_level()`), apagado, fuera de `admin_level_config` y rechazado
-  por `admin_set_level_config`. Por defecto $3.000.
-- Reinicio: `helios_demo_reset(p_user uuid default null, p_actor uuid default
-  null) → { revertidas, anuladas, sin_reiniciar[{ charge_id, order_number,
-  motivo }] }` (interna). Anula las órdenes demo `pending` y revierte las
-  `confirmed` con `helios_demo_reverse_charge`, que solo acepta órdenes de un
-  paciente demo y respeta `helios_charge_reverse_blocker`. Cada reinicio deja
-  fila en `demo_resets`; el manual, además, `demo.reset` en la bitácora. Cron
-  `helios_demo_reset` a las 23:30 Caracas (`30 3 * * *` UTC).
-- `admin_demo_patients() → { limit_usd, patients[{ id, full_name,
-  document_number, phone_e164, email, created_at, used_usd, available_usd,
-  blocked_reason, pending_orders, open_orders }], last_reset{ at, automatic,
-  detail } | null }` (personal de Helios).
-- `admin_create_demo_patient(p_document, p_first_name, p_last_name, p_phone,
-  p_email) → { id }` (super admin). Rechaza una cédula o un teléfono que ya
-  sean de otro paciente. Bitácora `demo.patient_created`.
-- `admin_set_demo_limit(p_limit_usd numeric) → void` (super admin; del
-  mínimo de una orden a $100.000). Bitácora `demo.limit`.
-- `admin_reset_demo(p_user_id uuid default null) → jsonb` (super admin; null =
+- `demo_phones (phone_e164 pk, label, created_at, created_by)`. El trigger
+  `profiles_demo_por_telefono` (BEFORE INSERT) marca `is_test` e `is_demo`
+  a todo paciente que nazca con uno de esos números. Nivel 1, límite real.
+  Varios pacientes pueden compartir el número.
+- **Lo de capacitación no entra al libro**: `helios_finalize_charge` no
+  escribe el asiento ni el adelanto de una orden de un paciente `is_demo`
+  (sí sus cuotas, el comprobante, la bienvenida y el aviso al médico).
+- Reinicio: `helios_demo_reset(p_phone text default null, p_actor uuid
+  default null) → { anuladas, revertidas, borrados, ordenes_borradas,
+  retirados, sin_reiniciar[{ charge_id, order_number, motivo }] }`
+  (interna). En orden: anula las órdenes demo `pending`; revierte con
+  `helios_demo_reverse_charge` las `confirmed` que sí tienen asiento (las de
+  antes de 20261014100300); **borra** con `helios_demo_purge(p_phone)` a
+  todo paciente demo sin rastro en el libro, sin cuotas pagadas, sin pagos
+  reportados y sin liquidaciones, con todo lo suyo (cotizaciones, cuotas,
+  mensajes, órdenes, notificaciones, límite, consultas de cédula; las
+  sesiones del bot que lo recordaban vuelven al menú y los contactos de
+  WhatsApp se quedan sin paciente); y **retira** (sin cédula,
+  `profiles.demo_retired_at`) a los que quedan por tener historia en el
+  libro. La cédula vuelve a ser «nuevo». Nunca toca el libro ni la
+  bitácora. Cada reinicio deja fila en `demo_resets`; el manual, además,
+  `demo.reset` en la bitácora. Cron `helios_demo_reset` a medianoche de
+  Caracas (`0 4 * * *` UTC).
+- `admin_demo_phones() → { phones[{ phone_e164, label, created_at, patients,
+  open_orders, pending_orders }], last_reset{ at, automatic, detail } | null }`
+  (personal de Helios). `patients` cuenta los no retirados.
+- `admin_add_demo_phone(p_phone text, p_label text) → { phone_e164, label }`
+  (super admin). Rechaza un número repetido o el de un paciente real.
+  Bitácora `demo.phone_added`.
+- `admin_remove_demo_phone(p_phone text) → void` (super admin). Lo ya creado
+  sigue siendo demo y se borra a medianoche. Bitácora `demo.phone_removed`.
+- `admin_reset_demo(p_phone text default null) → jsonb` (super admin; null =
   todos). Devuelve lo mismo que `helios_demo_reset`.

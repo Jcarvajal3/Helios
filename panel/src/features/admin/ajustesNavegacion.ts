@@ -72,10 +72,10 @@ export const GRUPOS_AJUSTES: ReadonlyArray<GrupoAjustes> = [
     ],
   },
   {
-    // Los pacientes demo con los que el equipo de Helios capacita a los
-    // médicos en su propia clínica (20261014100100).
+    // Los WhatsApp con los que el equipo de Helios capacita a los médicos
+    // en su propia clínica (20261014100200).
     titulo: 'Capacitaciones',
-    secciones: [{ value: 'demo', label: 'Pacientes demo' }],
+    secciones: [{ value: 'demo', label: 'Números de capacitación' }],
   },
   {
     titulo: 'Registro',
