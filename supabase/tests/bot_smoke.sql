@@ -9,7 +9,8 @@
 --     orden con su nombre y `channel = 'whatsapp'`, la regla de «primero
 --     consulta la cédula», y la lista solo de su clínica.
 --  4. El médico se entera: aceptada, rechazada y vencida (con su ventana
---     abierta), también si registró en el panel; con la ventana cerrada, solo
+--     abierta), también si registró en el panel, y el administrador de la
+--     clínica aunque registre la secretaria (una vez cada uno); con la ventana cerrada, solo
 --     «aceptó» y solo con la plantilla `aviso_al_medico` conectada.
 --  5. La sesión: nueva, guardada y vencida por inactividad.
 --  6. Solo el webhook (service_role) llama al bot.
@@ -24,6 +25,8 @@ declare
   v_admin   uuid;
   v_doc     uuid := gen_random_uuid();
   v_otro    uuid := gen_random_uuid();
+  v_sec     uuid := gen_random_uuid();
+  v_charge3 uuid;
   v_m       uuid;
   v_otra    uuid;
   v_bdate   date := public.helios_business_date(now());
@@ -206,6 +209,34 @@ begin
                   where recipient_staff_id = v_doc and template_key = 'bot_respuesta'
                     and rendered_text like E'¡Buenas noticias! José P. aceptó su pago en cuotas.\n\nLa orden #% por una consulta de $60 ya está confirmada ✅') then
     raise exception 'Con una orden del panel, el médico también debía enterarse';
+  end if;
+  if (select count(*) from public.outbound_messages where charge_id is null and recipient_staff_id = v_doc
+        and rendered_text like '%#' || (select order_number from public.charges where id = v_charge2) || ' por una consulta%') <> 1 then
+    raise exception 'Quien registró y además es administrador recibe el aviso una sola vez';
+  end if;
+
+  -- La SECRETARIA registra en el panel, sin número del bot (20261015000300):
+  -- el aviso le llega al administrador de la clínica.
+  insert into auth.users (id, instance_id, aud, role, email, created_at, updated_at, raw_user_meta_data)
+  values (v_sec, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
+          'bot-sec@prueba.helios.test', now(), now(), '{"full_name":"Ana Secretaria"}');
+  insert into public.merchant_users (user_id, merchant_id, branch_id, role)
+  values (v_sec, v_m, (select id from public.merchant_branches where merchant_id = v_m and is_default), 'cajero');
+  set local role authenticated;
+  perform set_config('request.jwt.claims', json_build_object('sub', v_sec::text, 'role', 'authenticated')::text, true);
+  perform public.helios_patient_eligibility(v_m, 'V50000005');
+  v_charge3 := (public.create_patient_charge(v_m, null,
+                  v_pac || jsonb_build_object('document', 'V50000005', 'phone', '04161116677', 'email', 'd@gmail.com'),
+                  70, null, null, 'panel-aviso-sec')->>'id')::uuid;
+  reset role;
+  perform public.helios_patient_decision(v_charge3, 'si', '584161116677', 'wamid.bot.sec.si');
+  if (select count(*) from public.outbound_messages
+       where recipient_staff_id = v_doc and template_key = 'bot_respuesta'
+         and rendered_text like '%#' || (select order_number from public.charges where id = v_charge3) || ' por una consulta de $70%') <> 1 then
+    raise exception 'Si la secretaria registra, el administrador debía enterarse (una vez)';
+  end if;
+  if exists (select 1 from public.outbound_messages where recipient_staff_id = v_sec) then
+    raise exception 'La secretaria sin número del bot no recibe WhatsApp';
   end if;
 
   -- Ventana cerrada: sin plantilla, nada; con la plantilla, sale con ella.

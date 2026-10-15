@@ -842,8 +842,9 @@ Implementado en 20261005000300 (canal, plantillas, bienvenida) y
 
   Cuando pagues, envíanos el comprobante por este chat. También te mandamos todos los detalles a tu correo.
   ```
-- Avisos a quien registró la orden, **desde el panel o desde el bot**, si
-  tiene número del bot (20261013000300; antes solo las del bot): aceptada,
+- Avisos a quien registró la orden, **desde el panel o desde el bot**, y a
+  los administradores (`gerente`) de la clínica, una vez cada uno y solo con
+  número del bot (20261013000300 y 20261015000300; antes solo las del bot): aceptada,
   rechazada y vencida (§5.4). Con su ventana de 24 h abierta, texto libre
   (plantilla interna `bot_respuesta` = `{texto}`). Con la ventana cerrada,
   solo «aceptó», con la plantilla de Meta de `aviso_al_medico` ({{1}}
