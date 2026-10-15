@@ -73,6 +73,7 @@ SUITES=(
   bienvenida_medico_whatsapp_smoke
   pago_masivo_smoke
   registro_pago_masivo_smoke
+  bank_sms_smoke
   datos_de_contrato_smoke
   demo_smoke
 )

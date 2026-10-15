@@ -9,6 +9,7 @@ import { ImportarBanco } from '@/components/admin/ImportarBanco'
 import { BotonRegistrarPago } from '@/components/admin/pagos/RegistrarPago'
 import { abrirEnCola } from '@/components/admin/ModoCola'
 import { AvisoExtracto } from '@/components/admin/caja/AvisoExtracto'
+import { PestanaAvisos } from '@/components/admin/caja/PestanaAvisos'
 import { PestanaAbonos, VALORES_ESTADO_ABONOS } from '@/components/admin/caja/PestanaAbonos'
 import type { EstadoAbonos } from '@/components/admin/caja/PestanaAbonos'
 import { consultaAbonosSinDueno, consultaPagosPorAprobar } from '@/components/admin/inicio/consultas'
@@ -51,17 +52,18 @@ import {
 import type { EstadoCola, FiltrosPagos } from '@/features/admin/colaDePagos'
 import { estadoDePagoReportado } from '@/features/admin/estados'
 import { lineaDeSumandos, sumandosDeLosPagos } from '@/features/admin/sumandosDelPago'
-import { comoBooleano, comoId, unoDe } from '@/lib/busqueda'
+import { comoBooleano, comoDia, comoId, unoDe } from '@/lib/busqueda'
 import { csvDinero, csvInstante } from '@/lib/csv'
 import { describeError } from '@/lib/supabase'
 
 /**
- * Las dos pestañas: lo que dice la persona (pagos reportados) y lo que dice
- * el banco (abonos sin dueño). Sin `vista`, los reportados.
+ * Las tres pestañas: lo que registró el equipo (pagos reportados), lo que
+ * dice el banco (abonos sin dueño) y lo que hizo el bot con los SMS del BNC
+ * (avisos). Sin `vista`, los reportados.
  */
-type Vista = 'reportados' | 'abonos'
+type Vista = 'reportados' | 'abonos' | 'avisos'
 
-const VALORES_VISTA: readonly Vista[] = ['reportados', 'abonos']
+const VALORES_VISTA: readonly Vista[] = ['reportados', 'abonos', 'avisos']
 
 /**
  * Pestañas que ya no existen y se aceptan solo para redirigir: `sin-dueno` es
@@ -87,6 +89,7 @@ const TABS_VALIDAS: ReadonlyArray<EstadoCola | TabVieja> = [
  *               enlazan desde Inicio), `q`, `banco`, `desde` y `hasta`.
  *   abonos      `abonos` (sin él, los pendientes) y `asignar`, el abono que
  *               se está asignando.
+ *   avisos      `avisosDesde` y `avisosHasta`, el día en que llegó el SMS.
  *
  * `importar` abre la ventana de importar el extracto, en las dos.
  */
@@ -95,6 +98,8 @@ type CobrosSearch = Omit<FiltrosPagos, 'tab'> & {
   tab?: EstadoCola | TabVieja
   abonos?: EstadoAbonos
   asignar?: string
+  avisosDesde?: string
+  avisosHasta?: string
   importar?: true
 }
 
@@ -115,6 +120,8 @@ export const Route = createFileRoute('/admin/cobros')({
     tab: unoDe(TABS_VALIDAS, search.tab),
     abonos: unoDe(VALORES_ESTADO_ABONOS, search.abonos),
     asignar: comoId(search.asignar),
+    avisosDesde: comoDia(search.avisosDesde),
+    avisosHasta: comoDia(search.avisosHasta),
     importar: comoBooleano(search.importar),
   }),
 })
@@ -154,11 +161,12 @@ function CobrosPage() {
         options={[
           { value: 'reportados', label: 'Pagos reportados', insignia: porAprobar.data },
           { value: 'abonos', label: 'Abonos sin dueño', insignia: sinDueno.data },
+          { value: 'avisos', label: 'Avisos del BNC' },
         ]}
         value={vista}
         // El abono abierto no sobrevive al cambio de pestaña; los filtros de
         // cada una, sí.
-        onChange={(v) => cambiar({ vista: v === 'abonos' ? 'abonos' : undefined, asignar: undefined })}
+        onChange={(v) => cambiar({ vista: v === 'reportados' ? undefined : v, asignar: undefined })}
       />
 
       <AvisoExtracto onImportar={() => cambiar({ importar: true })} />
@@ -175,6 +183,12 @@ function CobrosPage() {
               {importar}
             </div>
           }
+        />
+      ) : vista === 'avisos' ? (
+        <PestanaAvisos
+          desde={search.avisosDesde}
+          hasta={search.avisosHasta}
+          onFechas={(r) => cambiar({ avisosDesde: r.desde, avisosHasta: r.hasta }, true)}
         />
       ) : (
         <PestanaAbonos

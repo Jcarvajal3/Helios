@@ -423,3 +423,8 @@ enabled = true
 # que un `functions deploy` sin `--no-verify-jwt` no lo deje respondiendo 401.
 [functions.whatsapp-webhook]
 verify_jwt = false
+
+# El SMS de pago móvil del BNC, desde el Atajo del iPhone del CEO. Sin JWT de
+# Supabase: lo protege el encabezado x-helios-clave (secreto AVISO_BNC_CLAVE).
+[functions.aviso-bnc]
+verify_jwt = false
