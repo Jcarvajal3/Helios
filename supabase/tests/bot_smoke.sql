@@ -165,7 +165,7 @@ begin
   select * into v_row from public.outbound_messages
   where recipient_staff_id = v_doc and template_key = 'bot_respuesta' order by created_at desc limit 1;
   if v_row.id is null or v_row.profile_id is not null or v_row.recipient <> '+' || v_tel
-     or v_row.rendered_text not like '✅ José P. aceptó. Orden #% confirmada: consulta de $100.' then
+     or v_row.rendered_text not like E'¡Buenas noticias! José P. aceptó su pago en cuotas.\n\nLa orden #% por una consulta de $100 ya está confirmada ✅' then
     raise exception 'El médico debía enterarse de que aceptó: %', to_jsonb(v_row);
   end if;
 
@@ -204,11 +204,12 @@ begin
   perform public.helios_patient_decision(v_charge2, 'si', '584161114455', 'wamid.bot.panel.si');
   if not exists (select 1 from public.outbound_messages
                   where recipient_staff_id = v_doc and template_key = 'bot_respuesta'
-                    and rendered_text like '✅ José P. aceptó. Orden #% confirmada: consulta de $60.') then
+                    and rendered_text like E'¡Buenas noticias! José P. aceptó su pago en cuotas.\n\nLa orden #% por una consulta de $60 ya está confirmada ✅') then
     raise exception 'Con una orden del panel, el médico también debía enterarse';
   end if;
 
   -- Ventana cerrada: sin plantilla, nada; con la plantilla, sale con ella.
+  update public.notification_templates set wa_template_name = null where key = 'aviso_al_medico';
   delete from public.whatsapp_contacts where phone_e164 = '+' || v_tel;
   perform public.helios_notify_staff_of_charge(v_charge2, 'aceptada');
   if exists (select 1 from public.outbound_messages where template_key = 'aviso_al_medico' and charge_id = v_charge2) then

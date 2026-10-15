@@ -1065,3 +1065,8 @@ update public.notification_templates set wa_template_name = 'helios_cuota_vencid
 ```
 
 Si se edita un texto en el panel, cambia el WhatsApp dentro de la ventana y el correo, **no** la plantilla de Meta: hay que editarla allí y volver a mandarla a aprobación.
+
+**Estado al 2026-10-15** (20261015000100, leídas en vivo de 360dialog):
+- Conectadas: `helios_confirmar_pago_en_cuotas`, `helios_cuenta_activa` (bienvenida del médico), `helios_paciente_acepto` (`aviso_al_medico`) y `helios_cuota_vence_hoy`. Esta última quedó aprobada con idioma **`en`** (texto en español) y así se manda (`wa_template_lang = 'en'`). Su texto aprobado trae un «del__» de más.
+- **Sin conectar a propósito**: `helios_cuota_en_3_dias` y `helios_cuota_vence_manana`. Su texto aprobado añadió «Paga a tiempo para subir de nivel y aumentar tu limite de credito!», que choca con dos reglas: en lo externo no se dice «crédito» ni que el límite crece (los niveles están apagados). Hace falta una versión sin esa frase; mientras tanto, fuera de la ventana, caen a «Avisos de hoy».
+- Sin crear: `helios_cuota_vencida`.
