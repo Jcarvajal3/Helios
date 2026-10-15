@@ -1,9 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { FileDown } from 'lucide-react'
 
 import { PersonalDelLocal } from '@/components/PersonalDelLocal'
 import { MarcoDeFicha, VolverA } from '@/components/admin/ficha'
-import type { HuecoDeMenu } from '@/components/admin/ficha'
 import { SeccionSinLeer } from '@/components/admin/directorio/SeccionSinLeer'
 import { usePageTitle } from '@/components/layouts/PageAction'
 import { ErrorBox, SkeletonList, Tabs } from '@/components/ui'
@@ -144,25 +142,19 @@ function FichaLocal({
   const estado = useEstadoDelLocal({ merchant, pendingUsd: detalle.pendingUsd, onDone: refrescar })
   const datosDeAlta = useDatosDeContrato()
 
-  // Bajar los datos para el contrato va delante de «Terminar»: no cambia
-  // nada, y lo destructivo cierra el menú.
-  const menu: Array<HuecoDeMenu> = [
-    {
-      label: datosDeAlta.pendiente ? 'Leyendo los datos de alta…' : 'Descargar datos de alta (CSV)',
-      icon: FileDown,
-      disabled: datosDeAlta.pendiente,
-      onSelect: () => datosDeAlta.descargar({ de: 'ficha', id: merchant.id, nombre: merchant.name }),
-    },
-    'separador',
-    ...estado.menu,
-  ]
-
   return (
     <>
       <MarcoDeFicha
         cabecera={
           <>
-            <Cabecera merchant={merchant} menu={menu} />
+            <Cabecera
+              merchant={merchant}
+              menu={estado.menu}
+              datosDeAlta={{
+                pendiente: datosDeAlta.pendiente,
+                onDescargar: () => datosDeAlta.descargar({ de: 'ficha', id: merchant.id, nombre: merchant.name }),
+              }}
+            />
             {datosDeAlta.error && (
               <ErrorBox title="No se pudieron bajar los datos de alta" detail={datosDeAlta.error} />
             )}
