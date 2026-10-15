@@ -22,11 +22,12 @@ import {
 import {
   claveNumerosDelBot,
   consultaNumerosDelBot,
+  enviarBienvenidaPorWhatsApp,
   registrarNumeroDelBot,
   revocarNumeroDelBot,
   telefonoLegible,
 } from '@/features/admin/clinicas/bot'
-import type { NumeroDelBot } from '@/features/admin/clinicas/bot'
+import type { NumeroDelBot, ResultadoBienvenidaWhatsApp } from '@/features/admin/clinicas/bot'
 import { celularAE164 } from '@/features/admin/clinicas/clinicas'
 import { generatePassword } from '@/features/admin/password'
 import { SOLO_SUPER_ADMIN, useIsSuperAdmin } from '@/features/admin/role'
@@ -66,7 +67,9 @@ import { describeError } from '@/lib/supabase'
  *
  * Al crear una cuenta se le manda (si se deja marcado) un correo con sus
  * datos de acceso y cómo usar el bot, con copia oculta a Helios
- * (`merchant_staff_send_welcome`).
+ * (`merchant_staff_send_welcome`), y, si se le registró el WhatsApp del bot,
+ * su bienvenida por WhatsApp (`admin_send_staff_whatsapp_welcome`), igual
+ * que al aprobar la solicitud de una clínica.
  *
  * La contraseña se enseña UNA vez y en claro. No es un descuido: el servidor
  * guarda el hash y no la devuelve nunca más, así que si se cierra el aviso
@@ -501,6 +504,8 @@ type DespuesDelAlta = {
   bot: 'ok' | { error: string } | null
   /** `null` si no se pidió el correo. */
   correo: ResultadoBienvenida | { status: 'error'; error: string } | null
+  /** `null` si no se registró el bot o no se pidió la bienvenida. */
+  whatsapp: ResultadoBienvenidaWhatsApp | { status: 'error'; error: string } | null
 }
 
 function Alta({
@@ -551,7 +556,18 @@ function Alta({
           correo = { status: 'error', error: describeError(e) ?? 'No se pudo enviar' }
         }
       }
-      return { bot, correo }
+
+      // Con el bot registrado, la bienvenida también por WhatsApp (dice que los
+      // datos de acceso le llegaron por correo: va con la misma casilla).
+      let whatsappEnviado: DespuesDelAlta['whatsapp'] = null
+      if (bot === 'ok' && mandarCorreo) {
+        try {
+          whatsappEnviado = await enviarBienvenidaPorWhatsApp({ merchantId, userId })
+        } catch (e) {
+          whatsappEnviado = { status: 'error', error: describeError(e) ?? 'No se pudo enviar' }
+        }
+      }
+      return { bot, correo, whatsapp: whatsappEnviado }
     },
     onSuccess: (resultado) => {
       setDespues(resultado)
@@ -634,7 +650,11 @@ function Alta({
 
           <Checkbox
             id="alta-bienvenida"
-            label={`Enviarle por correo sus datos de acceso y cómo usar el bot (con copia a Helios)`}
+            label={
+              conWhatsapp
+                ? 'Enviarle su bienvenida: por correo sus datos de acceso (con copia a Helios) y por WhatsApp cómo usar el bot'
+                : 'Enviarle por correo sus datos de acceso y cómo usar el bot (con copia a Helios)'
+            }
             checked={mandarCorreo}
             onChange={setMandarCorreo}
           />
@@ -687,6 +707,20 @@ function ResumenDelAlta({
     lineas.push({ ok: false, texto: 'No se envió el correo: el envío de correos de Helios no está configurado. Pásale los datos por otro canal.' })
   } else if (c) {
     lineas.push({ ok: false, texto: `No se pudo enviar el correo${c.error ? ` (${c.error})` : ''}. Pásale los datos por otro canal.` })
+  }
+
+  const w = despues.whatsapp
+  if (w?.status === 'en_cola') {
+    lineas.push({ ok: true, texto: 'Su bienvenida por WhatsApp sale en un momento.' })
+  } else if (w?.status === 'ya_enviado') {
+    lineas.push({ ok: true, texto: 'Su bienvenida por WhatsApp ya se había enviado.' })
+  } else if (w?.status === 'sin_plantilla') {
+    lineas.push({
+      ok: false,
+      texto: 'No se envió el WhatsApp: no ha escrito al bot en las últimas 24 h y la plantilla de bienvenida no está conectada. Escríbele tú.',
+    })
+  } else if (w) {
+    lineas.push({ ok: false, texto: `No se pudo enviar el WhatsApp${'error' in w ? ` (${w.error})` : ''}.` })
   }
 
   if (lineas.length === 0) return null

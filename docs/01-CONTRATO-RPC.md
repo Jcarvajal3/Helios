@@ -539,6 +539,9 @@ letras)`: el panel manda la letra pegada al número (`V12345678`,
   {{3}} correo; el texto libre lleva el botón «Empezar», `menu:empezar`). Sin plantilla
   conectada y con la ventana cerrada no encola nada. Una vez por persona y
   clínica (`dedupe_key`). Bitácora `merchant.staff_whatsapp_welcome`.
+  La llaman al aprobar la solicitud y, desde el 2026-10-15, al **añadir
+  personal** en la ficha de la clínica (superadmin) cuando se le registra el
+  WhatsApp del bot y se deja marcada la bienvenida.
 - `admin_create_clinic(p jsonb) → {merchant_id}`: super admin. Crea la
   clínica (categoría sacada de la especialidad: odontología, cosmetología o
   consultorio), su cuenta de Pago Móvil (titular: el médico si va con cédula,
