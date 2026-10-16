@@ -60,7 +60,7 @@ export type Clave = keyof DatosDelPaciente | 'monto' | 'moneda' | 'concepto' | '
 export const CAMPOS_DEL_FORMULARIO: Array<[Clave, string]> = [
   ['first_name', 'Nombres'],
   ['last_name', 'Apellidos'],
-  ['birth_date', 'Nacimiento (dd/mm/aaaa)'],
+  ['birth_date', 'Nacimiento (día/mes/año)'],
   ['sex', 'Sexo (F/M)'],
   ['phone', 'Teléfono'],
   ['email', 'Correo'],
@@ -70,6 +70,12 @@ export const CAMPOS_DEL_FORMULARIO: Array<[Clave, string]> = [
   ['moneda', 'Moneda (dólares o euros)'],
   ['concepto', 'Concepto'],
 ]
+
+/** La etiqueta de un campo sin lo que va entre paréntesis: «Nacimiento». */
+export function etiquetaDe(clave: Clave): string {
+  const e = CAMPOS_DEL_FORMULARIO.find(([c]) => c === clave)?.[1] ?? clave
+  return e.replace(/\s*\(.*\)\s*$/, '')
+}
 
 /** El formulario que el bot ofrece para copiar, llenar y enviar (en un mensaje aparte). */
 export const FORMULARIO = CAMPOS_DEL_FORMULARIO.map(([, e]) => `${e}:`).join('\n')
@@ -110,21 +116,82 @@ const ETIQUETAS: Record<string, Clave> = {
 }
 
 /** «12/04/1990», «12-04-1990» o «1990-04-12» → «1990-04-12». Lo demás, tal cual. */
-export function normalizarFecha(v: string): string {
-  const t = v.trim()
-  const dmy = /^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})$/.exec(t)
-  if (dmy) {
-    const [, d, m, y] = dmy
-    return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`
+export function normalizarFecha(v: string, hoy: Date = new Date()): string {
+  return leerFecha(v, hoy) ?? v.trim()
+}
+
+const MESES: Record<string, number> = {
+  enero: 1, ene: 1,
+  febrero: 2, feb: 2,
+  marzo: 3, mar: 3,
+  abril: 4, abr: 4,
+  mayo: 5, may: 5,
+  junio: 6, jun: 6,
+  julio: 7, jul: 7,
+  agosto: 8, ago: 8,
+  septiembre: 9, setiembre: 9, sept: 9, sep: 9, set: 9,
+  octubre: 10, oct: 10,
+  noviembre: 11, nov: 11,
+  diciembre: 12, dic: 12,
+}
+
+/**
+ * Una fecha de nacimiento como la escriba el médico → «AAAA-MM-DD», o null si
+ * no es una fecha que exista (31/02) o no puede ser de nacimiento (futura o
+ * antes de 1900). Día primero, como en Venezuela:
+ *
+ *   29/05/1998 · 29-05-1998 · 29.05.1998 · 29 05 1998 · 29/5/98 · 29051998 ·
+ *   290598 · 29 de mayo de 1998 · 29 mayo 1998 · 29-may-98 · mayo 29, 1998 ·
+ *   1998-05-29
+ *
+ * El año con dos cifras es del siglo que no la deja en el futuro: «98» → 1998,
+ * «05» → 2005. Que sea mayor de edad lo decide la base (bot_check_patient).
+ */
+export function leerFecha(v: string, hoy: Date = new Date()): string | null {
+  // Sin acentos y en minúsculas, pero con sus separadores (normalizar los quita).
+  const t = v.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/,/g, ' ').replace(/\s+/g, ' ').trim()
+  if (t === '') return null
+  let d: number, m: number, y: number
+
+  const iso = /^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/.exec(t)
+  const juntos = /^(\d{2})(\d{2})(\d{2}|\d{4})$/.exec(t)
+  if (iso) {
+    ;[y, m, d] = [Number(iso[1]), Number(iso[2]), Number(iso[3])]
+  } else if (juntos) {
+    ;[d, m, y] = [Number(juntos[1]), Number(juntos[2]), Number(juntos[3])]
+    if (juntos[3].length === 2) y = siglo(y, hoy)
+  } else {
+    const partes = t.split(/[\s/\-.]+/).filter((x) => x !== '' && x !== 'de' && x !== 'del')
+    if (partes.length !== 3) return null
+    const mes = (x: string) => (/^\d{1,2}$/.test(x) ? Number(x) : (MESES[x] ?? NaN))
+    let anio: string
+    if (MESES[partes[0]] !== undefined) {
+      // «mayo 29 1998»
+      ;[m, d, anio] = [MESES[partes[0]], Number(partes[1]), partes[2]]
+    } else {
+      ;[d, m, anio] = [Number(partes[0]), mes(partes[1]), partes[2]]
+    }
+    if (!/^\d{2}$|^\d{4}$/.test(anio) || !/^\d{1,2}$/.test(String(d))) return null
+    y = anio.length === 2 ? siglo(Number(anio), hoy) : Number(anio)
   }
-  return t
+
+  if (!Number.isInteger(d) || !Number.isInteger(m) || !Number.isInteger(y)) return null
+  const f = new Date(Date.UTC(y, m - 1, d))
+  if (f.getUTCFullYear() !== y || f.getUTCMonth() !== m - 1 || f.getUTCDate() !== d) return null
+  if (y < 1900 || f.getTime() > hoy.getTime()) return null
+  return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+}
+
+/** «98» → 1998, «05» → 2005: el siglo que no deja la fecha en el futuro. */
+function siglo(aa: number, hoy: Date): number {
+  return 2000 + aa > hoy.getUTCFullYear() ? 1900 + aa : 2000 + aa
 }
 
 /** F/femenino/mujer → F; M/masculino/hombre → M; lo demás, tal cual (la base lo rechaza). */
 export function normalizarSexo(v: string): string {
-  const n = normalizar(v)
-  if (['f', 'femenino', 'mujer'].includes(n)) return 'F'
-  if (['m', 'masculino', 'hombre'].includes(n)) return 'M'
+  const n = normalizar(v).replace(/\.$/, '')
+  if (['f', 'fem', 'femenino', 'femenina', 'mujer', 'dama', 'femenino (f)'].includes(n)) return 'F'
+  if (['m', 'masc', 'masculino', 'masculina', 'hombre', 'varon', 'caballero', 'masculino (m)'].includes(n)) return 'M'
   return v.trim()
 }
 
@@ -197,8 +264,11 @@ export function leerMontoYConcepto(t: string): { monto: number; moneda: Moneda |
 
 /** «V-12.345.678», «e12345678», «12345678» (→ V) → «V12345678». Null si no es una cédula. */
 export function leerCedula(t: string): string | null {
-  const s = t.toUpperCase().replace(/[\s.\-]/g, '')
-  const m = /^([VE])?(\d{6,9})$/.exec(s)
+  // «C.I.», «CI:», «cédula» delante se ignoran; los ceros a la izquierda
+  // también, como en la base (normalize_document).
+  const sinRotulo = normalizar(t).replace(/^(c\s*\.?\s*i\s*\.?|cedula(\s+de\s+identidad)?|ci)\s*:?\s*/, '')
+  const s = sinRotulo.toUpperCase().replace(/[\s.\-]/g, '')
+  const m = /^([VE])?0*(\d{6,9})$/.exec(s)
   if (!m) return null
   return `${m[1] ?? 'V'}${m[2]}`
 }
@@ -289,7 +359,7 @@ export function leerPorPosicion(t: string, claves: Clave[], minimo = claves.leng
 const OBLIGATORIOS: Array<[keyof DatosDelPaciente, string]> = [
   ['first_name', 'Nombres'],
   ['last_name', 'Apellidos'],
-  ['birth_date', 'Nacimiento (dd/mm/aaaa)'],
+  ['birth_date', 'Nacimiento (día/mes/año)'],
   ['sex', 'Sexo (F/M)'],
   ['phone', 'Teléfono'],
   ['email', 'Correo'],

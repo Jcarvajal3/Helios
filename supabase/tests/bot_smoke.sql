@@ -11,6 +11,7 @@
 --  4. El médico se entera: aceptada, rechazada y vencida (con su ventana
 --     abierta), también si registró en el panel; con la ventana cerrada, solo
 --     «aceptó» y solo con la plantilla `aviso_al_medico` conectada.
+--  4b. bot_check_patient: qué datos rechazaría la base, sin escribir nada.
 --  5. La sesión: nueva, guardada y vencida por inactividad.
 --  6. Solo el webhook (service_role) llama al bot.
 -- ============================================================================
@@ -229,6 +230,32 @@ begin
   update public.notification_templates set wa_template_name = null where key = 'aviso_al_medico';
   insert into public.whatsapp_contacts (phone_e164, last_inbound_at, staff_user_id)
   values ('+' || v_tel, now(), v_doc);
+
+  -- =========================================================================
+  -- 4b. Revisar los datos antes del resumen (20261016000100)
+  -- =========================================================================
+  v_j := public.bot_check_patient(v_tel, jsonb_build_object(
+    'first_name', 'Ana', 'birth_date', 'ayer', 'sex', 'X', 'phone', '02125551234',
+    'email', 'ana@', 'state', 'Miranda'));
+  if v_j ? 'first_name' or v_j ? 'state'
+     or v_j->>'birth_date' <> 'Fecha de nacimiento inválida' or v_j->>'sex' <> 'El sexo debe ser F o M'
+     or v_j->>'phone' <> 'Teléfono móvil inválido' or v_j->>'email' <> 'Correo inválido' then
+    raise exception 'bot_check_patient dice qué rechazaría la base, campo por campo: %', v_j;
+  end if;
+  v_j := public.bot_check_patient(v_tel, jsonb_build_object('birth_date', (v_bdate - interval '10 years')::date::text));
+  if v_j->>'birth_date' not like 'El titular debe ser mayor de edad%' then
+    raise exception 'Un menor: el mismo motivo que el registro: %', v_j;
+  end if;
+  if public.bot_check_patient(v_tel, v_pac) <> '{}'::jsonb then
+    raise exception 'Con todo bien, nada que revisar: %', public.bot_check_patient(v_tel, v_pac);
+  end if;
+  v_failed := false;
+  begin
+    perform public.bot_check_patient('584149990000', v_pac);
+  exception when insufficient_privilege then v_failed := true; end;
+  if not v_failed then
+    raise exception 'Un número sin registrar no revisa datos';
+  end if;
 
   -- =========================================================================
   -- 5. La sesión

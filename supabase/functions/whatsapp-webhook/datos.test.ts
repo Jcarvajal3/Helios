@@ -21,7 +21,9 @@ import {
   nombreDeLaMoneda,
   horaCaracas,
   juntar,
+  etiquetaDe,
   leerCedula,
+  leerFecha,
   leerFormulario,
   leerMonto,
   leerMontoYConcepto,
@@ -111,6 +113,24 @@ comprueba(normalizarFecha('1980-02-01') === '1980-02-01', 'fecha ISO')
 comprueba(normalizarFecha('ayer') === 'ayer', 'una fecha rara queda tal cual')
 comprueba(normalizarSexo('Mujer') === 'F' && normalizarSexo('f') === 'F', 'sexo F')
 comprueba(normalizarSexo('otro') === 'otro', 'un sexo raro queda tal cual (lo rechaza la base)')
+comprueba(normalizarSexo('Femenina') === 'F' && normalizarSexo('masc.') === 'M' && normalizarSexo('varón') === 'M', 'más formas del sexo')
+
+console.log('\nLa fecha, como la escriba el médico')
+const HOY = new Date(Date.UTC(2026, 9, 16))
+for (const f of [
+  '29/05/1998', '29-05-1998', '29.05.1998', '29 05 1998', '29/5/98', '29051998', '290598',
+  '29 de mayo de 1998', '29 mayo 1998', '29-may-98', 'mayo 29, 1998', '1998-05-29', '29 de Mayo del 1998',
+]) {
+  comprueba(leerFecha(f, HOY) === '1998-05-29', `«${f}»`, String(leerFecha(f, HOY)))
+}
+comprueba(leerFecha('01011994', HOY) === '1994-01-01', '«01011994» (el caso de la prueba del 16/10)')
+comprueba(leerFecha('29 sept 1980', HOY) === '1980-09-29' && leerFecha('3 de septiembre de 1980', HOY) === '1980-09-03', 'septiembre abreviado o entero')
+comprueba(leerFecha('1/1/05', HOY) === '2005-01-01' && leerFecha('1/1/30', HOY) === '1930-01-01', 'el año de dos cifras no queda en el futuro')
+comprueba(leerFecha('31/02/1998', HOY) === null, 'una fecha que no existe: null')
+comprueba(leerFecha('29/05/2030', HOY) === null, 'una fecha futura: null')
+comprueba(leerFecha('ayer', HOY) === null && leerFecha('', HOY) === null && leerFecha('29/05', HOY) === null, 'lo que no es fecha: null')
+comprueba(normalizarFecha('01011994') === '1994-01-01', 'normalizarFecha entiende lo mismo')
+comprueba(etiquetaDe('birth_date') === 'Nacimiento' && etiquetaDe('email') === 'Correo', 'la etiqueta sin paréntesis')
 comprueba(leerMonto('$ 80') === 80 && leerMonto('nada') === null, 'leerMonto')
 
 const mc = leerMontoYConcepto('80 consulta')
@@ -178,6 +198,12 @@ comprueba(leerCedula('V-12.345.678') === 'V12345678', 'cédula con guiones y pun
 comprueba(leerCedula('e 1234567') === 'E1234567', 'cédula E')
 comprueba(leerCedula('12345678') === 'V12345678', 'sin letra es V')
 comprueba(leerCedula('hola') === null && leerCedula('12') === null, 'no es cédula')
+comprueba(leerCedula('1234567') === 'V1234567', 'siete cifras sin letra: V')
+comprueba(
+  leerCedula('C.I. 12345678') === 'V12345678' && leerCedula('CI: 12.345.678') === 'V12345678' && leerCedula('cédula 12345678') === 'V12345678',
+  'con «C.I.», «CI:» o «cédula» delante',
+)
+comprueba(leerCedula('012345678') === 'V12345678', 'los ceros a la izquierda se quitan, como en la base')
 
 comprueba(dinero(61.6) === '$61,60' && dinero(100) === '$100' && dinero(1.92) === '$1,92', 'dinero al estilo venezolano')
 comprueba(montoEs(1250.5) === '1.250,50' && montoEs(1234567) === '1.234.567' && montoEs(99.999) === '100', 'miles y redondeo')

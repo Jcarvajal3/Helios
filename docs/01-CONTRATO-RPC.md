@@ -938,6 +938,7 @@ textos). Bitácora con `canal = whatsapp`.
 | RPC | Equivale a | Nota |
 |---|---|---|
 | `bot_patient_eligibility(p_phone, p_document)` | `helios_patient_eligibility` | `p_merchant_id` sale del número |
+| `bot_check_patient(p_phone, p_patient jsonb) → jsonb` | `helios_patient_field`, campo por campo | (20261016000100) Lo que la base rechazaría, `{campo: motivo}`; vacío si todo vale. No escribe. El bot la llama al recibir los datos y otra vez si el registro falla, y pide solo lo que esté mal |
 | `bot_preview_charge(p_phone, p_document, p_amount_usd)` | `preview_patient_charge` | |
 | `bot_create_charge(p_phone, p_patient jsonb, p_amount, p_concept, p_beneficiary_name, p_idempotency_key, p_currency default 'USD')` | `create_patient_charge` | **Sin PIN** desde 20261013000200 (Javier, 2026-10-13): basta el número registrado; la orden no es deuda hasta el "Sí" del paciente. Devuelve `{ok: true, charge}`; los errores de negocio lanzan como en el panel. Sede: la del `cajero` o la principal del `gerente`. `charges.channel = 'whatsapp'` |
 | `bot_recent_charges(p_phone, p_limit int default 10)` | `merchant_transactions` | Las de los últimos 30 días con su `status`; el `cajero` ve las suyas |

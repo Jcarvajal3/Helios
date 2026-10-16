@@ -43,7 +43,7 @@ import {
   dineroEn,
   enEuros,
   enPlural,
-  faltantes,
+  etiquetaDe,
   faltantesClaves,
   formularioDe,
   horaCaracas,
@@ -96,6 +96,9 @@ type Datos = {
 }
 
 type Boton = { id: string; title: string }
+
+/** Los datos del paciente revisados por la base: lo bueno, lo malo y lo que hay que pedir. */
+type Revision = { paciente: DatosDelPaciente; malos: string[]; pidiendo: Clave[]; errores: Record<string, string> }
 
 /** Al corregir un paciente nuevo, cada cambio lleva su etiqueta. */
 const CORREGIR =
@@ -310,14 +313,20 @@ export async function atenderAlPersonal({
   const cedulaDirecta = estado === 'menu' ? leerCedula(texto) : null
   if (boton === 'menu:nuevo' || ['nuevo pago en cuotas', 'nuevo pago', 'nuevo financiamiento', 'nuevo'].includes(n) || (estado === 'menu' && n === '1')) {
     await guardar('cedula')
-    await enviar('Escribe la cédula del paciente (por ejemplo V12345678):')
+    await enviar('Escribe la cédula del paciente (por ejemplo 12345678; sin letra la tomo como V):')
     return { paso: 'cedula' }
   }
 
   if (estado === 'cedula' || cedulaDirecta) {
     const cedula = cedulaDirecta ?? leerCedula(texto)
     if (!cedula) {
-      await enviar('No entendí la cédula. Escríbela así: V12345678 o E1234567.')
+      // Un formulario aquí: el médico creía que ya le había pedido los datos.
+      const formulario = texto.split(/\r?\n/).filter((l) => l.trim() !== '').length >= 3
+      await enviar(
+        formulario
+          ? 'Antes de sus datos necesito la cédula del paciente. Escríbela sola, por ejemplo 12345678 (sin letra la tomo como V); después te pido lo demás.'
+          : 'No entendí la cédula. Escribe solo sus números, por ejemplo 12345678 (sin letra la tomo como V), o E1234567 si es extranjero.',
+      )
       return { paso: 'cedula' }
     }
     const r = await probar<Record<string, unknown>>('bot_patient_eligibility', { p_phone: tel, p_document: cedula })
@@ -406,18 +415,7 @@ export async function atenderAlPersonal({
       concepto: lectura.concepto ?? datos.concepto ?? null,
       atendido: lectura.atendido ?? datos.atendido ?? null,
     }
-    const falta = faltantes(paciente)
-    if (falta.length > 0) {
-      const pidiendo = faltantesClaves(paciente)
-      await guardar('datos', { ...nuevo, pidiendo })
-      await enviar(
-        'Me falta lo del siguiente mensaje. No hace falta copiar las preguntas: ' +
-          'envíame solo los datos, uno por línea y en ese orden.',
-      )
-      await enviar(formularioDe(pidiendo))
-      return { paso: 'datos', falta }
-    }
-    return seguir(nuevo, 'Ya tengo los datos. ')
+    return revisarYSeguir(nuevo, 'Ya tengo los datos. ')
   }
 
   // ── La moneda ─────────────────────────────────────────────────────────
@@ -519,11 +517,17 @@ export async function atenderAlPersonal({
       p_idempotency_key: `wa:${mensaje.id}`,
       p_currency: d.moneda ?? 'USD',
     })
-    await guardar('menu')
     if (!r.ok) {
-      await enviar(`No se registró: ${r.mensaje}`, MENU)
-      return { paso: 'enviada', error: r.mensaje }
+      if (d.nuevo) {
+        const rev = await revisar(d)
+        if (rev.pidiendo.length > 0) return { ...(await pedir(d, rev, 'No se registró la orden. ')), error: r.mensaje }
+      }
+      // Otro motivo (el monto, el límite…): los datos se quedan en el resumen.
+      await guardar('resumen', d)
+      await enviar(`No se registró: ${r.mensaje}. Tus datos siguen aquí: corrige o cancela.`, RESUMEN)
+      return { paso: 'resumen', error: r.mensaje }
     }
+    await guardar('menu')
 
     const f = r.data.charge as Record<string, unknown>
     const conf = (f.confirmation ?? {}) as Record<string, unknown>
@@ -539,6 +543,57 @@ export async function atenderAlPersonal({
       await enviar(`Listo. Orden #${f.order_number} registrada.`, MENU)
     }
     return { paso: 'enviada', charge_id: f.id, status: f.status }
+  }
+
+  // ── Los datos del paciente nuevo, revisados ───────────────────────────
+  /**
+   * Lo que la base rechazaría (`bot_check_patient`, las mismas reglas que el
+   * registro) se quita y se pide otra vez junto con lo que falte; lo demás se
+   * queda. Así el bot nunca da por bueno un dato que luego falla, y el médico
+   * solo corrige lo que está mal. Con todo bien, sigue (moneda, monto, resumen).
+   */
+  async function revisarYSeguir(d: Datos, antes = '') {
+    const rev = await revisar(d)
+    if (rev.pidiendo.length === 0) return seguir({ ...d, paciente: rev.paciente }, antes)
+    return pedir(d, rev)
+  }
+
+  async function revisar(d: Datos): Promise<Revision> {
+    const paciente: DatosDelPaciente = { ...(d.paciente ?? {}) }
+    const r = await probar<Record<string, string>>('bot_check_patient', { p_phone: tel, p_patient: paciente })
+    const errores = r.ok && r.data ? r.data : {}
+    const malos: string[] = []
+    for (const [k, motivo] of Object.entries(errores)) {
+      const clave = k as keyof DatosDelPaciente
+      const valor = paciente[clave]
+      delete paciente[clave]
+      const pista =
+        clave === 'birth_date' && !/mayor de edad/i.test(motivo)
+          ? ' Escríbela, por ejemplo, 29/05/1998 o 29 de mayo de 1998.'
+          : clave === 'phone'
+            ? ' Tiene que ser un celular, por ejemplo 0414 1234567.'
+            : clave === 'sex'
+              ? ' Escribe F o M.'
+              : ''
+      malos.push(`• ${etiquetaDe(clave)}: «${valor}». ${motivo}.${pista}`)
+    }
+    return { paciente, malos, pidiendo: faltantesClaves(paciente), errores }
+  }
+
+  /** Pide lo que falte o esté mal, con las preguntas de solo eso aparte. */
+  async function pedir(d: Datos, rev: Revision, aviso = '') {
+    await guardar('datos', { ...d, paciente: rev.paciente, pidiendo: rev.pidiendo })
+    const uno = rev.pidiendo.length === 1
+    await enviar(
+      aviso +
+        (rev.malos.length > 0
+          ? `${rev.malos.length === 1 ? 'Hay un dato que revisar' : 'Hay datos que revisar'}:\n${rev.malos.join('\n')}\n\n`
+          : '') +
+        `Envíame solo ${uno ? 'el dato' : 'los datos'} del siguiente mensaje: lo demás ya lo tengo. ` +
+        (uno ? 'No hace falta copiar la pregunta.' : 'No hace falta copiar las preguntas: uno por línea y en ese orden.'),
+    )
+    await enviar(formularioDe(rev.pidiendo))
+    return { paso: 'datos', falta: rev.pidiendo, errores: rev.errores }
   }
 
   // ── El resumen antes de confirmar ─────────────────────────────────────
