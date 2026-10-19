@@ -202,9 +202,12 @@ export function mensajeComprobante(nombre: string | null): string {
   return `📄 ¡Gracias${hola(nombre)}! Recibimos tu comprobante.\nLo revisamos y te confirmamos el pago por aquí en cuanto esté listo 💙`
 }
 
-/** El botón «Ya pagué» de los recordatorios. */
+/** El botón «Ya pagué» de los recordatorios: la foto y la referencia escrita. */
 export function mensajeYaPague(nombre: string | null): string {
-  return `¡Gracias${hola(nombre)}! Envíanos la foto del comprobante por aquí 📸 y lo confirmamos.`
+  return (
+    `¡Gracias${hola(nombre)}! Envíanos por aquí la foto del comprobante 📸 y escribe también el número de referencia del pago. ` +
+    'Así lo confirmamos más rápido.'
+  )
 }
 
 export function mensajeAyuda(nombre: string | null): string {

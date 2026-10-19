@@ -146,7 +146,9 @@ export async function atenderAlPaciente({
   }
 
   if (boton === 'paciente:ya_pague' || ['ya pague', 'ya pague la cuota'].includes(n)) {
-    await guardar({ humano: 0 })
+    // Cuenta como menú visto: la referencia que escriba después no le
+    // devuelve el menú, la lee el equipo. La foto sí tiene su acuse.
+    await guardar({ humano: 0, menu: true })
     await enviar(mensajeYaPague(perfil.nombre), perfil.id)
     return { paso: 'ya_pague' }
   }

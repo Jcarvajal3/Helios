@@ -77,7 +77,12 @@ comprueba(mensajeGenerico('María').length <= MAXIMO_CON_BOTONES, 'cabe en un me
 
 console.log('\nRespuestas cortas')
 comprueba(mensajeComprobante('María').startsWith('📄 ¡Gracias, María! Recibimos tu comprobante.'), 'el comprobante')
-comprueba(mensajeYaPague('María').includes('Envíanos la foto del comprobante'), 'ya pagué')
+comprueba(
+  mensajeYaPague('María') ===
+    '¡Gracias, María! Envíanos por aquí la foto del comprobante 📸 y escribe también el número de referencia del pago. Así lo confirmamos más rápido.',
+  'ya pagué: la foto y la referencia',
+  mensajeYaPague('María'),
+)
 comprueba(mensajeAyuda('María') === 'Listo, María. Alguien de nuestro equipo te escribe por aquí en breve 💙', 'hablar con alguien')
 comprueba(mensajePedirCedula().startsWith('Para proteger tus datos'), 'pide la cédula y dice por qué')
 comprueba(mensajeCedulaNoCoincide().includes('Revísala'), 'la cédula no coincide')
