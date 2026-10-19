@@ -1,27 +1,40 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // Helios — Lo que el bot le dice al paciente (decisiones del 2026-10-06,
-// docs/00 §15.6). Módulo puro: lo prueba `textos_paciente.test.ts`.
+// docs/00 §15.6; textos nuevos aprobados por Javier el 2026-10-19). Módulo
+// puro: lo prueba `textos_paciente.test.ts`.
 //
 // Al paciente SÍ se le enseña lo que paga con la Comisión Helios dentro
-// (es su deuda); a la clínica, nunca.
+// (es su deuda); a la clínica, nunca. Se le nombra a su médico («la Dra.
+// Nadia Khabbaze»), no a la clínica.
 //
 // La moneda (2026-10-07): cada orden está en dólares o en euros y sus cuotas
 // se enseñan en esa moneda; el cargo por atraso es siempre en dólares. El
 // paciente paga solo en bolívares (Pago Móvil o transferencia): cada monto
 // a la tasa BCV de su moneda del día en que paga. Las monedas no se suman
-// entre sí: el total que las junta es el de bolívares.
+// entre sí: el total que las junta es el de bolívares, y los bolívares salen
+// solo en el bloque de pago, junto a las cuentas (2026-10-19).
 // ═══════════════════════════════════════════════════════════════════════════
 
-import { bolivares, dinero, dineroEn, monedaDe, montoEs, nombreDeLaMoneda } from './datos.ts'
+import { bolivares, dinero, dineroEn, monedaDe, nombreDeLaMoneda } from './datos.ts'
 import type { Moneda } from './datos.ts'
 
 export type Boton = { id: string; title: string }
 
+export const BOTON_PAGAR: Boton = { id: 'paciente:pagar', title: 'Pagar mi cuota' }
+export const BOTON_AYUDA: Boton = { id: 'paciente:ayuda', title: 'Hablar con alguien' }
+
+/** El id `paciente:financiamientos` se queda: lo llevan los menús ya enviados. */
 export const MENU_PACIENTE: Boton[] = [
-  { id: 'paciente:pagar', title: 'Pagar cuota' },
-  { id: 'paciente:financiamientos', title: 'Mis pagos en cuotas' },
-  { id: 'paciente:ayuda', title: 'Ayuda' },
+  BOTON_PAGAR,
+  { id: 'paciente:financiamientos', title: 'Mi saldo y cuotas' },
+  BOTON_AYUDA,
 ]
+
+/** Lo más largo que admite un mensaje con botones. */
+export const MAXIMO_CON_BOTONES = 1024
+
+/** La frase de los niveles: la misma que `helios_level_reminder()` en la base. */
+export const FRASE_NIVEL = '⭐ Recuerda pagar a tiempo para subir de nivel y disponer de mayores beneficios.'
 
 /** Una cuota pendiente, como la manda `bot_paciente_resumen`. */
 export type CuotaPendiente = {
@@ -34,29 +47,54 @@ export type CuotaPendiente = {
   vencida: boolean
 }
 
+export type CuotaPagada = { sequence: number; due_date: string; monto: number }
+
 export type FinanciamientoActivo = {
   orden: number
   clinica: string
+  /** «Dra. Nadia Khabbaze» (o el nombre de la clínica). Sin él, `clinica`. */
+  medico?: string
+  /** «la Dra. Nadia Khabbaze». Sin él, `medico`. */
+  medico_ref?: string
   /** 'USD' | 'EUR'; sin ella (una respuesta vieja), dólares. */
   moneda?: Moneda
   /** En la moneda de la orden. */
   consulta: number
   cuotas: CuotaPendiente[]
+  pagadas?: CuotaPagada[]
 }
+
+export type Terminado = { orden: number; medico: string; moneda?: Moneda; consulta: number }
 
 export type ResumenDelPaciente = {
   nombre: string | null
   financiamientos: FinanciamientoActivo[]
+  terminados?: Terminado[]
+  /** Lo que puede usar hoy, en dólares (la misma cifra que ve el médico). */
+  disponible_usd?: number | null
+  /** Por qué no puede usar nada hoy: 'cuota_vencida', 'estado', 'bloqueo'. */
+  bloqueo?: string | null
   /** Bs por dólar hoy. */
   tasa_bcv: number | null
   /** Bs por euro hoy. */
   tasa_bcv_eur?: number | null
+  /** Las cuentas en una línea cada una (respuesta vieja). */
   cuentas_de_cobro: string
+  /** Las cuentas, cada dato en su línea (`helios_payment_accounts_block`). */
+  datos_de_pago?: string
   pago_en_revision: boolean
 }
 
 function hola(nombre: string | null): string {
   return nombre ? `, ${nombre}` : ''
+}
+
+function medicoDe(f: FinanciamientoActivo): string {
+  return f.medico ?? f.clinica
+}
+
+function medicoRefDe(f: FinanciamientoActivo): string {
+  return f.medico_ref ?? medicoDe(f)
 }
 
 /** Lo que se debe, por moneda, en el orden en que aparece cada una. */
@@ -108,15 +146,13 @@ function deLasMonedas(s: PorMoneda): string {
   return ms.map((m) => `del ${nombreDeLaMoneda(m)}`).join(' y ')
 }
 
-/**
- * «En bolívares hoy: Bs 10.510,26 (tasa BCV del dólar 184,52).» o, si falta
- * una tasa, «En bolívares, a la tasa BCV del euro del día en que pagues.»
- */
-function lineaDeBolivares(r: ResumenDelPaciente, s: PorMoneda): string {
-  const bs = bolivaresDeHoy(r, s)
-  if (bs === null) return `En bolívares, a la tasa BCV ${deLasMonedas(s)} del día en que pagues.`
-  const tasas = [...s.keys()].map((m) => `tasa BCV del ${nombreDeLaMoneda(m)} ${montoEs(tasaDe(r, m)!)}`)
-  return `En bolívares hoy: ${bolivares(bs)} (${tasas.join(' · ')}).`
+const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado']
+
+/** «lunes 26/10» para «2026-10-26» (como `helios_weekday_es` + DD/MM en la base). */
+export function diaLargo(fecha: string): string {
+  const [y, m, d] = fecha.slice(0, 10).split('-').map(Number)
+  const f = new Date(Date.UTC(y, m - 1, d))
+  return `${DIAS[f.getUTCDay()]} ${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}`
 }
 
 /** «12/10/2026» para «2026-10-12». */
@@ -125,12 +161,32 @@ export function fechaLarga(fecha: string): string {
   return `${d}/${m}/${y}`
 }
 
-/** El mensaje genérico, con los tres botones (los pone quien lo envía). */
+/**
+ * El bloque de pago (el mismo que `helios_payment_block` en la base): los
+ * bolívares de hoy y que otro día será la tasa de ese día, las cuentas,
+ * «envíanos la foto del comprobante» y la frase de los niveles.
+ */
+export function bloqueDePago(r: ResumenDelPaciente, s: PorMoneda): string {
+  const bs = bolivaresDeHoy(r, s)
+  const monto =
+    bs !== null
+      ? `💵 *Monto en bolívares hoy: ${bolivares(bs)}*\n` +
+        `Es el equivalente a ${enSusMonedas(s)} a la tasa BCV ${deLasMonedas(s)} de hoy. ` +
+        'Si pagas otro día, paga el equivalente a la tasa BCV de ese día.'
+      : `💵 *Monto en bolívares*\nPagas el equivalente a ${enSusMonedas(s)} a la tasa BCV ${deLasMonedas(s)} del día en que pagues.`
+  return [
+    monto,
+    r.datos_de_pago ?? r.cuentas_de_cobro,
+    '📸 Cuando pagues, envíanos la foto del comprobante por este chat.',
+    FRASE_NIVEL,
+  ].join('\n\n')
+}
+
+/** El menú, con los tres botones (los pone quien lo envía). */
 export function mensajeGenerico(nombre: string | null): string {
   return (
-    `💙 Gracias por escribirnos${hola(nombre)}.\n\n` +
-    'Hemos recibido tu mensaje. Si necesitas asistencia con tu pago en cuotas con Helios, nuestro equipo está para ayudarte.\n\n' +
-    'Mientras tanto, puedes consultar o pagar tu cuota desde aquí:'
+    `💙 ¡Hola${hola(nombre)}! Gracias por escribirnos.\n` +
+    '¿En qué te ayudamos hoy? Si prefieres, cuéntanos por aquí y alguien del equipo te responde.'
   )
 }
 
@@ -143,17 +199,24 @@ export function mensajeSinFinanciamientos(): string {
 }
 
 export function mensajeComprobante(nombre: string | null): string {
-  return (
-    `📄 Recibimos tu comprobante${hola(nombre)}. Nuestro equipo lo revisará y te confirmará el pago por aquí. ¡Gracias! 💙`
-  )
+  return `📄 ¡Gracias${hola(nombre)}! Recibimos tu comprobante.\nLo revisamos y te confirmamos el pago por aquí en cuanto esté listo 💙`
+}
+
+/** El botón «Ya pagué» de los recordatorios. */
+export function mensajeYaPague(nombre: string | null): string {
+  return `¡Gracias${hola(nombre)}! Envíanos la foto del comprobante por aquí 📸 y lo confirmamos.`
 }
 
 export function mensajeAyuda(nombre: string | null): string {
-  return `Listo${hola(nombre)}. Una persona de nuestro equipo te atenderá por este chat en breve. 💙`
+  return `Listo${hola(nombre)}. Alguien de nuestro equipo te escribe por aquí en breve 💙`
 }
 
 export function mensajePedirCedula(): string {
-  return 'Para ayudarte, escribe tu número de cédula (por ejemplo V12345678):'
+  return 'Para proteger tus datos, escríbenos tu número de cédula (por ejemplo V12345678):'
+}
+
+export function mensajeCedulaNoCoincide(): string {
+  return 'Esa cédula no coincide con este número. Revísala y escríbela otra vez (por ejemplo V12345678):'
 }
 
 /**
@@ -169,49 +232,93 @@ export function cuotasAPagar(r: ResumenDelPaciente): Array<{ f: FinanciamientoAc
   return todas.slice(0, 1)
 }
 
-/** «Pagar cuota»: cuánto, en la moneda de cada orden y en bolívares de hoy, y cómo (solo en bolívares). */
+/** «$56,96» o «$56,96 + cargo por atraso $2». */
+function montoDeLaCuota(f: FinanciamientoActivo, c: CuotaPendiente): string {
+  const cargo = c.cargo_atraso > 0 ? ` + cargo por atraso ${dinero(c.cargo_atraso)}` : ''
+  return `${dineroEn(c.monto, monedaDe(f.moneda))}${cargo}`
+}
+
+const PAGO_EN_REVISION = '🔎 Estamos revisando un pago que nos enviaste. Te avisamos por aquí en cuanto lo confirmemos.'
+
+/** «Pagar mi cuota»: cuánto, en la moneda de cada orden, y el bloque de pago. */
 export function mensajePagar(r: ResumenDelPaciente): string {
   const aPagar = cuotasAPagar(r)
   if (aPagar.length === 0) {
     return `No tienes cuotas pendientes${hola(r.nombre)}. ¡Gracias por estar al día! 💙`
   }
 
-  const vencidas = aPagar.some((x) => x.c.vencida)
-  const lineas = aPagar.map(({ f, c }) => {
-    const cargo = c.cargo_atraso > 0 ? ` + cargo por atraso ${dinero(c.cargo_atraso)}` : ''
-    return `* ${dineroEn(c.monto, monedaDe(f.moneda))}${cargo} — ${fechaLarga(c.due_date)} (#${f.orden}, ${f.clinica})${c.vencida ? ' ⚠️ vencida' : ''}`
-  })
   const total = porMoneda(aPagar)
+  const vencidas = aPagar.some((x) => x.c.vencida)
+  let cabeza: string
+  if (vencidas) {
+    const n = aPagar.length
+    const lineas = aPagar.map(({ f, c }) => `• ${montoDeLaCuota(f, c)} · venció el ${diaLargo(c.due_date)} · ${medicoDe(f)}`)
+    cabeza =
+      `⚠️ *Tienes ${n} ${n === 1 ? 'cuota pendiente' : 'cuotas pendientes'}*\n${lineas.join('\n')}\n` +
+      (n > 1 ? `*Total: ${enSusMonedas(total)}*\n` : '') +
+      '\nAún estás a tiempo de ponerte al día 💙'
+  } else {
+    const { f, c } = aPagar[0]
+    cabeza =
+      '💳 *Tu próxima cuota*\n' +
+      `${montoDeLaCuota(f, c)} · vence el ${diaLargo(c.due_date)}\n` +
+      `Consulta con ${medicoRefDe(f)} (orden #${f.orden})`
+  }
 
-  return (
-    `💳 ${vencidas ? 'Tienes cuotas vencidas' : 'Tu próxima cuota'}:\n${lineas.join('\n')}\n\n` +
-    `Total a pagar: ${enSusMonedas(total)}\n${lineaDeBolivares(r, total)}\n\n` +
-    (r.pago_en_revision ? 'Tienes un pago en revisión: te avisaremos por aquí cuando lo confirmemos.\n\n' : '') +
-    `Cómo pagar (en bolívares, por Pago Móvil o transferencia):\n${r.cuentas_de_cobro}\n\n` +
-    'Cuando pagues, envíanos el comprobante por este chat. 💙'
-  )
+  return [cabeza, ...(r.pago_en_revision ? [PAGO_EN_REVISION] : []), bloqueDePago(r, total)].join('\n\n')
 }
 
-/** «Mis pagos en cuotas»: los activos, lo pendiente de cada uno y el total pendiente. */
-export function mensajeFinanciamientos(r: ResumenDelPaciente): string {
-  if (r.financiamientos.length === 0) {
-    return `No tienes pagos en cuotas activos${hola(r.nombre)}. 💙`
+/** «1.ª cuota». */
+function ordinal(n: number): string {
+  return `${n}.ª cuota`
+}
+
+/** Lo disponible: lo que puede usar hoy, o por qué es cero. Null si la base no lo manda. */
+function lineaDisponible(r: ResumenDelPaciente): string | null {
+  if (r.disponible_usd === undefined || r.disponible_usd === null) return null
+  const d = Math.max(0, Number(r.disponible_usd))
+  if (d === 0 && r.bloqueo === 'cuota_vencida') {
+    return '✨ *Disponible: $0*. Tienes una cuota pendiente; en cuanto la pagues, se reactiva.'
   }
-  const bloques = r.financiamientos.map((f) => {
-    const m = monedaDe(f.moneda)
-    const saldo = porMoneda(f.cuotas.map((c) => ({ f, c })))
-    const cuotas = f.cuotas.map((c) => {
-      const cargo = c.cargo_atraso > 0 ? ` + cargo ${dinero(c.cargo_atraso)}` : ''
-      return `* ${dineroEn(c.monto, m)}${cargo} — ${fechaLarga(c.due_date)}${c.vencida ? ' ⚠️ vencida' : ''}`
+  return `✨ *Disponible para tu próxima consulta: ${dinero(d)}*`
+}
+
+/** «Mi saldo y cuotas»: lo disponible, los pagos en cuotas activos, lo que falta por pagar y los terminados. */
+export function mensajeFinanciamientos(r: ResumenDelPaciente): string {
+  const partes: string[] = ['📋 *Tu cuenta Helios*']
+  const disponible = lineaDisponible(r)
+  if (disponible) partes.push(disponible)
+
+  if (r.financiamientos.length === 0) {
+    partes.push(`No tienes pagos en cuotas activos${hola(r.nombre)}. 💙`)
+  } else {
+    const bloques = r.financiamientos.map((f) => {
+      const m = monedaDe(f.moneda)
+      const pagadas = (f.pagadas ?? []).map((p) => ({ sequence: p.sequence, linea: `✅ ${ordinal(p.sequence)} ${dineroEn(p.monto, m)} · pagada` }))
+      const pendientes = f.cuotas.map((c) => ({
+        sequence: c.sequence,
+        linea: c.vencida
+          ? `⚠️ ${ordinal(c.sequence)} ${montoDeLaCuota(f, c)} · venció el ${diaLargo(c.due_date)}`
+          : `⏳ ${ordinal(c.sequence)} ${montoDeLaCuota(f, c)} · vence el ${diaLargo(c.due_date)}`,
+      }))
+      const cuotas = [...pagadas, ...pendientes].sort((a, b) => a.sequence - b.sequence).map((x) => x.linea)
+      return `🩺 ${medicoDe(f)} · orden #${f.orden}\nConsulta: ${dineroEn(f.consulta, m)}\n${cuotas.join('\n')}`
     })
-    return `🩺 #${f.orden} · ${f.clinica} (consulta ${dineroEn(f.consulta, m)})\n${cuotas.join('\n')}\nTotal pendiente: ${enSusMonedas(saldo)}`
-  })
-  const saldoTotal = porMoneda(r.financiamientos.flatMap((f) => f.cuotas.map((c) => ({ f, c }))))
-  const bs = bolivaresDeHoy(r, saldoTotal)
-  return (
-    `📋 Tus pagos en cuotas activos:\n\n${bloques.join('\n\n')}` +
-    (r.financiamientos.length > 1 ? `\n\nTotal pendiente de todos: ${enSusMonedas(saldoTotal)}` : '') +
-    (bs !== null && bs > 0 ? `\nEn bolívares hoy: ${bolivares(bs)}.` : '') +
-    (r.pago_en_revision ? '\n\nTienes un pago en revisión: aún no aparece descontado.' : '')
-  )
+    const porPagar = porMoneda(r.financiamientos.flatMap((f) => f.cuotas.map((c) => ({ f, c }))))
+    partes.push(`*Pagos en cuotas activos*\n${bloques.join('\n\n')}`)
+    partes.push(`*Por pagar: ${enSusMonedas(porPagar)}*`)
+  }
+
+  const terminados = r.terminados ?? []
+  if (terminados.length > 0) {
+    partes.push(`*Terminados*\n${terminados.map((t) => `✔️ ${t.medico} · orden #${t.orden} · pagado completo`).join('\n')}`)
+  }
+
+  if (r.pago_en_revision) partes.push('🔎 Tienes un pago en revisión: aún no aparece descontado.')
+  return partes.join('\n\n')
+}
+
+/** ¿Hay algo que pagar? (para ofrecer el botón «Pagar mi cuota»). */
+export function tienePendientes(r: ResumenDelPaciente): boolean {
+  return r.financiamientos.some((f) => f.cuotas.length > 0)
 }

@@ -81,7 +81,12 @@ export async function rechazarSolicitud(params: { id: string; motivo: string }):
 /** Corrige el titular: `null` = no tocar, `''` = borrar. Solo super admin. */
 export async function guardarTitular(params: {
   merchantId: string
-  cambios: { owner_name: string | null; owner_document: string | null; college_number: string | null }
+  cambios: {
+    owner_name: string | null
+    owner_document: string | null
+    college_number: string | null
+    doctor_display_name: string | null
+  }
 }): Promise<void> {
   await llamarRpc('admin_set_merchant_owner', { p_merchant_id: params.merchantId, p: params.cambios })
 }

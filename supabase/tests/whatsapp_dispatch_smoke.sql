@@ -115,7 +115,7 @@ begin
 
   if public.helios_vault_secret('d360_api_key') is null then
     v_msg := public.helios_enqueue_message('bienvenida', v_profile, null, 'whatsapp',
-               jsonb_build_object('clinica', 'Sol', 'orden', '1', 'moneda', 'dólar', 'cuotas', '• Cuota 1'));
+               jsonb_build_object('clinica', 'Sol', 'medico', 'la Dra. Sol', 'bloque_de_pago', '💵 Bloque', 'orden', '1', 'moneda', 'dólar', 'cuotas', '• Cuota 1'));
     v_r := public.helios_dispatch_whatsapp_batch();
     select * into v_row from public.outbound_messages where id = v_msg;
     if v_r->>'skipped' <> 'sin_clave' or v_row.channel <> 'whatsapp_manual' or v_row.status <> 'pendiente'
@@ -231,7 +231,7 @@ begin
   select * into v_call from pg_temp._llamadas order by n desc limit 1;
   if v_call.body->>'type' <> 'interactive'
      or v_call.body->'interactive'->>'type' <> 'button'
-     or v_call.body->'interactive'->'body'->>'text' not like '👋 Hola, José. Bienvenido a Helios 💙%'
+     or v_call.body->'interactive'->'body'->>'text' not like '👋 ¡Hola, José! Te damos la bienvenida a Helios 💙%'
      or jsonb_array_length(v_call.body->'interactive'->'action'->'buttons') <> 2
      or v_call.body->'interactive'->'action'->'buttons'->0->'reply'->>'id' <> 'confirmar:' || v_charge
      or v_call.body->'interactive'->'action'->'buttons'->1->'reply'->>'title' <> 'No' then
@@ -239,18 +239,18 @@ begin
   end if;
 
   v_msg := public.helios_enqueue_message('bienvenida', v_profile, v_charge, 'whatsapp',
-             jsonb_build_object('clinica', 'Sol', 'orden', '1', 'moneda', 'dólar', 'cuotas', E'• Cuota 1\n• Cuota 2'));
+             jsonb_build_object('clinica', 'Sol', 'medico', 'la Dra. Sol', 'bloque_de_pago', '💵 Bloque', 'orden', '1', 'moneda', 'dólar', 'cuotas', E'• Cuota 1\n• Cuota 2'));
   insert into pg_temp._respuestas (status, body) values (200, '{"messages":[{"id":"wamid.C"}]}');
   perform public.helios_dispatch_whatsapp_batch();
   select * into v_call from pg_temp._llamadas order by n desc limit 1;
-  if v_call.body->>'type' <> 'text' or v_call.body->'text'->>'body' not like '🩺 ¡Listo, José!%'
+  if v_call.body->>'type' <> 'text' or v_call.body->'text'->>'body' not like '✅ ¡Listo, José!%'
      or v_call.body->'text'->>'body' not like E'%• Cuota 1\n• Cuota 2%' then
     raise exception 'Con la ventana abierta la bienvenida va como texto, con sus saltos de línea: %', v_call.body;
   end if;
 
   delete from public.whatsapp_contacts where phone_e164 = '+584141234567';
   v_msg := public.helios_enqueue_message('bienvenida', v_profile, v_charge, 'whatsapp',
-             jsonb_build_object('clinica', 'Sol', 'orden', '1', 'moneda', 'dólar', 'cuotas', '• Cuota 1'));
+             jsonb_build_object('clinica', 'Sol', 'medico', 'la Dra. Sol', 'bloque_de_pago', '💵 Bloque', 'orden', '1', 'moneda', 'dólar', 'cuotas', '• Cuota 1'));
   perform public.helios_dispatch_whatsapp_batch();
   select * into v_row from public.outbound_messages where id = v_msg;
   if v_row.channel <> 'whatsapp_manual' or v_row.status <> 'pendiente'

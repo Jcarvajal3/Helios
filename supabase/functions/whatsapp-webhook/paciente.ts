@@ -1,19 +1,24 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// Helios — El bot del paciente (decisiones del 2026-10-06, docs/00 §15.6)
+// Helios — El bot del paciente (decisiones del 2026-10-06, docs/00 §15.6;
+// textos del 2026-10-19)
 //
 // Cuando un paciente le escribe a Helios (y no es su respuesta a una
 // confirmación), antes de que lo atienda una persona:
 //
-//   · un mensaje cualquiera → el mensaje genérico con tres botones
-//     (Pagar cuota · Mis pagos en cuotas · Ayuda), como mucho una vez cada
+//   · un mensaje cualquiera → el menú con tres botones (Pagar mi cuota ·
+//     Mi saldo y cuotas · Hablar con alguien), como mucho una vez cada
 //     2 horas; si ya lo vio, se calla y lo ve el equipo en la app;
-//   · Pagar cuota → la cuota que toca (las vencidas primero), en la moneda de
-//     su orden (dólares o euros) y en bolívares de hoy, las cuentas de cobro
-//     (solo bolívares: Pago Móvil o transferencia) y «envíanos el
-//     comprobante»;
-//   · Mis pagos en cuotas → los activos, cada uno en su moneda, con lo
-//     pendiente y el saldo;
-//   · Ayuda → «una persona te atenderá» y se calla 24 h;
+//   · Pagar mi cuota → la cuota que toca (las vencidas primero), en la moneda
+//     de su orden (dólares o euros), y el bloque de pago: los bolívares de
+//     hoy, las cuentas (solo bolívares: Pago Móvil o transferencia) y
+//     «envíanos la foto del comprobante»;
+//   · Mi saldo y cuotas → lo disponible para su próxima consulta, los pagos
+//     en cuotas activos (cuotas pagadas y pendientes), lo que falta por
+//     pagar y los terminados;
+//   · Hablar con alguien → «alguien te escribe» y se calla 24 h;
+//   · Ya pagué (botón de los recordatorios) → «envíanos la foto»;
+//   · un «sí» o un «no» cuando su orden ya venció → que pida que se la
+//     reenvíen;
 //   · una foto o un documento (un comprobante) → acuse y se calla 24 h;
 //   · alguien sin pagos en cuotas → un acuse y se calla 24 h;
 //   · un teléfono de varios pacientes → pide la cédula antes de enseñar nada.
@@ -22,17 +27,22 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 import { leerCedula } from './datos.ts'
-import { normalizar } from './logica.ts'
+import { decisionDelTexto, normalizar } from './logica.ts'
 import type { EventoDeMensaje } from './logica.ts'
 import {
+  BOTON_PAGAR,
+  MAXIMO_CON_BOTONES,
   MENU_PACIENTE,
   mensajeAyuda,
+  mensajeCedulaNoCoincide,
   mensajeComprobante,
   mensajeFinanciamientos,
   mensajeGenerico,
   mensajePagar,
   mensajePedirCedula,
   mensajeSinFinanciamientos,
+  mensajeYaPague,
+  tienePendientes,
 } from './textos_paciente.ts'
 import type { Boton, ResumenDelPaciente } from './textos_paciente.ts'
 
@@ -46,6 +56,8 @@ type Contexto = {
   estado: 'cedula' | null
   humano: boolean
   menu_reciente: boolean
+  /** Lo que se le contesta a un «sí» o un «no» si su orden ya venció (o null). */
+  vencida_texto?: string | null
 }
 
 const HORAS_DE_PERSONA = 24
@@ -80,6 +92,12 @@ export async function atenderAlPaciente({
   // Lo atiende una persona: el bot no se mete, salvo que pulse un botón.
   if (ctx.humano && !pidioAlgo) return null
 
+  // Un «sí» o un «no» a una orden que ya venció: que pida que se la reenvíen.
+  if (!pidioAlgo && ctx.vencida_texto && decisionDelTexto(mensaje.texto)) {
+    await enviar(ctx.vencida_texto, null)
+    return { paso: 'vencida' }
+  }
+
   // ¿Quién es?
   let perfil: Perfil | null = null
   if (ctx.perfiles.length === 1) {
@@ -94,7 +112,7 @@ export async function atenderAlPaciente({
         await enviar(mensajeGenerico(perfil.nombre), perfil.id, MENU_PACIENTE)
         return { paso: 'identificado' }
       }
-      await enviar('Esa cédula no coincide con este número. Escríbela otra vez (por ejemplo V12345678):', null)
+      await enviar(mensajeCedulaNoCoincide(), null)
       return { paso: 'cedula', coincide: false }
     }
   }
@@ -121,20 +139,36 @@ export async function atenderAlPaciente({
   }
 
   // Lo que pidió.
-  if (boton === 'paciente:ayuda' || n === 'ayuda') {
+  if (boton === 'paciente:ayuda' || ['ayuda', 'hablar con alguien'].includes(n)) {
     await guardar({ humano: HORAS_DE_PERSONA })
     await enviar(mensajeAyuda(perfil.nombre), perfil.id)
     return { paso: 'ayuda' }
   }
 
-  const quierePagar = boton === 'paciente:pagar' || ['pagar', 'pagar cuota'].includes(n)
+  if (boton === 'paciente:ya_pague' || ['ya pague', 'ya pague la cuota'].includes(n)) {
+    await guardar({ humano: 0 })
+    await enviar(mensajeYaPague(perfil.nombre), perfil.id)
+    return { paso: 'ya_pague' }
+  }
+
+  const quierePagar = boton === 'paciente:pagar' || ['pagar', 'pagar cuota', 'pagar mi cuota'].includes(n)
   const quiereVer =
-    boton === 'paciente:financiamientos' || ['mis pagos en cuotas', 'pagos en cuotas', 'mis pagos', 'ver financiamientos', 'financiamientos', 'saldo', 'total pendiente'].includes(n)
-  if (quierePagar || quiereVer) {
+    boton === 'paciente:financiamientos' ||
+    ['mi saldo y cuotas', 'mi saldo', 'saldo', 'disponible', 'mis pagos en cuotas', 'pagos en cuotas', 'mis pagos', 'ver financiamientos', 'financiamientos', 'total pendiente'].includes(n)
+  if (quierePagar) {
     const r = await rpc<ResumenDelPaciente>('bot_paciente_resumen', { p_profile_id: perfil.id })
     await guardar({ humano: 0 })
-    await enviar(quierePagar ? mensajePagar(r) : mensajeFinanciamientos(r), perfil.id)
-    return { paso: quierePagar ? 'pagar' : 'financiamientos' }
+    await enviar(mensajePagar(r), perfil.id)
+    return { paso: 'pagar' }
+  }
+  if (quiereVer) {
+    const r = await rpc<ResumenDelPaciente>('bot_paciente_resumen', { p_profile_id: perfil.id })
+    const texto = mensajeFinanciamientos(r)
+    await guardar({ humano: 0 })
+    // Con botón solo si cabe: un mensaje con botones admite 1024 caracteres.
+    const botones = tienePendientes(r) && texto.length <= MAXIMO_CON_BOTONES ? [BOTON_PAGAR] : []
+    await enviar(texto, perfil.id, botones)
+    return { paso: 'financiamientos' }
   }
 
   // Cualquier otra cosa: el menú, como mucho una vez cada 2 horas.

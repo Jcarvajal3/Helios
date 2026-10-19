@@ -1199,6 +1199,8 @@ export type TitularDeLaClinica = {
   ownerName: string | null
   ownerDocument: string | null
   collegeNumber: string | null
+  /** Cómo lo nombran los WhatsApp al paciente («Dra. Nadia Khabbaze»). Vacío: el nombre de la clínica. */
+  doctorDisplayName: string | null
 }
 
 export type MerchantDetail = {
@@ -1239,6 +1241,7 @@ export async function fetchMerchantDetail(merchantId: string): Promise<MerchantD
       ownerName: textoONulo(raw.profile.owner_name),
       ownerDocument: textoONulo(raw.profile.owner_document),
       collegeNumber: textoONulo(raw.profile.college_number),
+      doctorDisplayName: textoONulo(raw.profile.doctor_display_name),
     },
     terms: {
       upfrontPct: Number(raw.terms.upfront_pct),

@@ -1217,3 +1217,32 @@ la pregunta le llega a quien capacita.
   sigue siendo demo y se borra a medianoche. Bitácora `demo.phone_removed`.
 - `admin_reset_demo(p_phone text default null) → jsonb` (super admin; null =
   todos). Devuelve lo mismo que `helios_demo_reset`.
+
+## Los mensajes al paciente, más cercanos (20261019000100 y 20261019000200)
+
+- `merchants.doctor_display_name` (texto, 3–80): cómo se nombra al médico
+  ante el paciente («Dra. Nadia Khabbaze»). `admin_merchant_detail.profile`
+  lo añade; `admin_set_merchant_owner(p_merchant_id, p)` acepta la clave
+  `doctor_display_name` (null = no tocar, '' = borrar). Internas:
+  `helios_doctor_name(merchant) → text` (vacío: el nombre de la clínica) y
+  `helios_doctor_ref(merchant) → text` («la Dra. …», «el Dr. …»).
+- Internas del bloque de pago: `helios_rif_text(text)`,
+  `helios_level_reminder()`, `helios_payment_accounts_block()` y
+  `helios_payment_block(p_ves, p_equivalente, p_moneda, p_por)`.
+  `helios_message_builtins` añade `datos_de_pago`, `pago_movil_banco`,
+  `pago_movil_telefono`, `pago_movil_rif` y `pago_movil_titular`.
+- Variables nuevas: `confirmar_financiamiento` (`medico`, `cuotas_lista`,
+  `cuotas_detalle`), `bienvenida` (`medico`, `bloque_de_pago`) y los avisos
+  de cuota (`medico`, `monto`, `monto_bs`, `bloque_de_pago`). Las de antes
+  siguen: las usan las plantillas de Meta conectadas.
+- `bot_paciente_resumen(p_profile_id)`: cada orden añade `medico`,
+  `medico_ref` y `pagadas[{sequence, due_date, monto}]`; arriba,
+  `terminados[{orden, medico, moneda, consulta, confirmada}]` (las 3
+  últimas), `disponible_usd`, `bloqueo` y `datos_de_pago`.
+- `bot_paciente_contexto(p_phone)` añade `vencida_texto`: la respuesta a un
+  «sí»/«no» escrito si su orden venció sin respuesta en las últimas 12 h.
+- `helios_patient_decision` contesta al paciente (si su ventana está
+  abierta) al decir «No», al contestar tarde y si la orden no se confirma;
+  `notify_payment_result`, además del correo, le escribe con la ventana
+  abierta (`helios_payment_result_whatsapp`). Ambos por `helios_tell_patient`,
+  que nunca tumba lo que lo llamó.

@@ -4,16 +4,24 @@
  *   npx tsx supabase/functions/whatsapp-webhook/textos_paciente.test.ts
  */
 import {
+  BOTON_AYUDA,
+  BOTON_PAGAR,
+  FRASE_NIVEL,
+  MAXIMO_CON_BOTONES,
   MENU_PACIENTE,
   cuotasAPagar,
+  diaLargo,
   fechaLarga,
   mensajeAyuda,
+  mensajeCedulaNoCoincide,
   mensajeComprobante,
   mensajeFinanciamientos,
   mensajeGenerico,
   mensajePagar,
   mensajePedirCedula,
   mensajeSinFinanciamientos,
+  mensajeYaPague,
+  tienePendientes,
 } from './textos_paciente.ts'
 import type { ResumenDelPaciente } from './textos_paciente.ts'
 
@@ -24,20 +32,29 @@ function comprueba(ok: boolean, titulo: string, detalle = '') {
   console.log(`${ok ? '  ok  ' : ' FALLA'}  ${titulo}${ok ? '' : ` — ${detalle}`}`)
 }
 
+const DATOS_DE_PAGO = '🏦 *Pago Móvil*\nBanco: BNC (0191)\nTeléfono: 0412-1714930\nRIF: J-50496786-6\nTitular: Quarto Latam'
+
 const base: ResumenDelPaciente = {
-  nombre: 'Javier',
+  nombre: 'María',
   tasa_bcv: 184.52,
   cuentas_de_cobro: '• Pago Móvil: Banesco · J-000000001 · 0414-1112233',
+  datos_de_pago: DATOS_DE_PAGO,
   pago_en_revision: false,
+  disponible_usd: 50,
+  bloqueo: null,
+  terminados: [],
   financiamientos: [
     {
-      orden: 1718,
-      clinica: 'Clínica Test',
+      orden: 1042,
+      clinica: 'Consultorio 103',
+      medico: 'Dra. Nadia Khabbaze',
+      medico_ref: 'la Dra. Nadia Khabbaze',
       consulta: 100,
       cuotas: [
-        { sequence: 1, due_date: '2026-10-12', monto: 56.96, cargo_atraso: 0, vencida: false },
-        { sequence: 2, due_date: '2026-10-19', monto: 56.96, cargo_atraso: 0, vencida: false },
+        { sequence: 1, due_date: '2026-10-26', monto: 56.96, cargo_atraso: 0, vencida: false },
+        { sequence: 2, due_date: '2026-11-02', monto: 56.96, cargo_atraso: 0, vencida: false },
       ],
+      pagadas: [],
     },
   ],
 }
@@ -45,21 +62,52 @@ const base: ResumenDelPaciente = {
 console.log('El menú')
 comprueba(MENU_PACIENTE.length === 3 && MENU_PACIENTE.every((b) => b.title.length <= 20), 'tres botones de 20 caracteres o menos')
 comprueba(
-  mensajeGenerico('Javier').startsWith('💙 Gracias por escribirnos, Javier.') &&
-    mensajeGenerico(null).startsWith('💙 Gracias por escribirnos.'),
-  'el mensaje genérico, con y sin nombre',
+  MENU_PACIENTE.map((b) => b.title).join(' · ') === 'Pagar mi cuota · Mi saldo y cuotas · Hablar con alguien',
+  'los títulos nuevos',
 )
-comprueba(mensajeGenerico('Javier').length <= 1024, 'cabe en un mensaje con botones')
+comprueba(MENU_PACIENTE[1].id === 'paciente:financiamientos', 'el id del segundo botón no cambia (menús ya enviados)')
+comprueba(BOTON_PAGAR.title.length <= 20 && BOTON_AYUDA.title.length <= 20, 'los botones sueltos caben')
+comprueba(
+  mensajeGenerico('María').startsWith('💙 ¡Hola, María! Gracias por escribirnos.') &&
+    mensajeGenerico(null).startsWith('💙 ¡Hola! Gracias por escribirnos.'),
+  'el menú, con y sin nombre',
+  mensajeGenerico(null),
+)
+comprueba(mensajeGenerico('María').length <= MAXIMO_CON_BOTONES, 'cabe en un mensaje con botones')
 
-console.log('\nPagar cuota')
+console.log('\nRespuestas cortas')
+comprueba(mensajeComprobante('María').startsWith('📄 ¡Gracias, María! Recibimos tu comprobante.'), 'el comprobante')
+comprueba(mensajeYaPague('María').includes('Envíanos la foto del comprobante'), 'ya pagué')
+comprueba(mensajeAyuda('María') === 'Listo, María. Alguien de nuestro equipo te escribe por aquí en breve 💙', 'hablar con alguien')
+comprueba(mensajePedirCedula().startsWith('Para proteger tus datos'), 'pide la cédula y dice por qué')
+comprueba(mensajeCedulaNoCoincide().includes('Revísala'), 'la cédula no coincide')
+
+console.log('\nPagar mi cuota')
 comprueba(cuotasAPagar(base).length === 1 && cuotasAPagar(base)[0].c.sequence === 1, 'sin vencidas: la próxima')
 const pagar = mensajePagar(base)
-comprueba(pagar.includes('💳 Tu próxima cuota'), 'el título', pagar)
-comprueba(pagar.includes('* $56,96 — 12/10/2026 (#1718, Clínica Test)'), 'la cuota en formato venezolano', pagar)
-comprueba(pagar.includes('Total a pagar: $56,96'), 'el total', pagar)
-comprueba(pagar.includes('Bs 10.510,26 (tasa BCV del dólar 184,52)'), 'en bolívares de hoy', pagar)
-comprueba(pagar.includes('Pago Móvil: Banesco') && pagar.includes('envíanos el comprobante'), 'cómo pagar')
-comprueba(pagar.includes('Cómo pagar (en bolívares, por Pago Móvil o transferencia)'), 'solo en bolívares', pagar)
+comprueba(pagar.startsWith('💳 *Tu próxima cuota*\n$56,96 · vence el lunes 26/10\n'), 'el título y la cuota', pagar)
+comprueba(pagar.includes('Consulta con la Dra. Nadia Khabbaze (orden #1042)'), 'nombra al médico, no a la clínica', pagar)
+comprueba(!pagar.includes('Consultorio 103'), 'sin el nombre de la clínica', pagar)
+// 56,96 × 184,52 = 10.510,2592
+comprueba(pagar.includes('💵 *Monto en bolívares hoy: Bs 10.510,26*'), 'los bolívares de hoy', pagar)
+comprueba(
+  pagar.includes('Es el equivalente a $56,96 a la tasa BCV del dólar de hoy. Si pagas otro día, paga el equivalente a la tasa BCV de ese día.'),
+  'dice que otro día es la tasa de ese día',
+  pagar,
+)
+comprueba(pagar.split('Bs ').length === 2, 'los bolívares salen una sola vez', pagar)
+comprueba(
+  pagar.indexOf('Monto en bolívares') < pagar.indexOf('🏦 *Pago Móvil*') &&
+    pagar.indexOf('🏦 *Pago Móvil*') < pagar.indexOf('📸 Cuando pagues') &&
+    pagar.trimEnd().endsWith(FRASE_NIVEL),
+  'el orden del bloque: monto, cuentas, comprobante, nivel',
+  pagar,
+)
+comprueba(pagar.includes('Titular: Quarto Latam'), 'las cuentas, cada dato en su línea', pagar)
+comprueba(
+  mensajePagar({ ...base, datos_de_pago: undefined }).includes('• Pago Móvil: Banesco'),
+  'sin `datos_de_pago` (base vieja): las cuentas de antes',
+)
 
 const vencida: ResumenDelPaciente = {
   ...base,
@@ -68,52 +116,96 @@ const vencida: ResumenDelPaciente = {
     {
       ...base.financiamientos[0],
       cuotas: [
-        { sequence: 1, due_date: '2026-10-12', monto: 56.96, cargo_atraso: 2, vencida: true },
-        { sequence: 2, due_date: '2026-10-19', monto: 56.96, cargo_atraso: 0, vencida: false },
+        { sequence: 1, due_date: '2026-10-26', monto: 56.96, cargo_atraso: 0, vencida: true },
+        { sequence: 2, due_date: '2026-11-02', monto: 56.96, cargo_atraso: 0, vencida: true },
       ],
     },
   ],
 }
 const pagarVencida = mensajePagar(vencida)
 comprueba(
-  pagarVencida.includes('Tienes cuotas vencidas') &&
-    pagarVencida.includes('+ cargo por atraso $2') &&
-    pagarVencida.includes('Total a pagar: $58,96') &&
-    pagarVencida.includes('pago en revisión'),
-  'vencida: con el cargo, el total y el pago en revisión',
+  pagarVencida.startsWith('⚠️ *Tienes 2 cuotas pendientes*\n• $56,96 · venció el lunes 26/10 · Dra. Nadia Khabbaze\n') &&
+    pagarVencida.includes('*Total: $113,92*') &&
+    pagarVencida.includes('Aún estás a tiempo de ponerte al día 💙') &&
+    pagarVencida.includes('🔎 Estamos revisando un pago que nos enviaste.'),
+  'vencidas: la lista, el total, el ánimo y el pago en revisión',
   pagarVencida,
 )
+// 113,92 × 184,52 = 21.020,5184
+comprueba(pagarVencida.includes('Monto en bolívares hoy: Bs 21.020,52*'), 'vencidas: los bolívares del total', pagarVencida)
+const unaVencida = mensajePagar({
+  ...vencida,
+  pago_en_revision: false,
+  financiamientos: [{ ...base.financiamientos[0], cuotas: [{ sequence: 1, due_date: '2026-10-26', monto: 56.96, cargo_atraso: 2, vencida: true }] }],
+})
 comprueba(
-  mensajePagar({ ...base, tasa_bcv: null }).includes('En bolívares, a la tasa BCV del dólar del día en que pagues.'),
+  unaVencida.startsWith('⚠️ *Tienes 1 cuota pendiente*\n• $56,96 + cargo por atraso $2 · venció') && !unaVencida.includes('*Total'),
+  'una vencida: en singular, con su cargo y sin total',
+  unaVencida,
+)
+comprueba(
+  mensajePagar({ ...base, tasa_bcv: null }).includes(
+    '💵 *Monto en bolívares*\nPagas el equivalente a $56,96 a la tasa BCV del dólar del día en que pagues.',
+  ),
   'sin tasa: lo dice',
 )
+comprueba(mensajePagar({ ...base, financiamientos: [] }).startsWith('No tienes cuotas pendientes, María'), 'al día')
 comprueba(
-  mensajePagar({ ...base, financiamientos: [] }).startsWith('No tienes cuotas pendientes, Javier'),
-  'al día',
+  mensajePagar({ ...base, financiamientos: [{ ...base.financiamientos[0], medico: undefined, medico_ref: undefined }] }).includes(
+    'Consulta con Consultorio 103',
+  ),
+  'sin médico (base vieja): la clínica',
 )
 
-console.log('\nMis pagos en cuotas')
-const ver = mensajeFinanciamientos(base)
+console.log('\nMi saldo y cuotas')
+const conPagada: ResumenDelPaciente = {
+  ...base,
+  terminados: [{ orden: 1007, medico: 'Dr. Jesús Vivas', consulta: 80 }],
+  financiamientos: [
+    {
+      ...base.financiamientos[0],
+      cuotas: [{ sequence: 2, due_date: '2026-11-02', monto: 56.96, cargo_atraso: 0, vencida: false }],
+      pagadas: [{ sequence: 1, due_date: '2026-10-26', monto: 56.96 }],
+    },
+  ],
+}
+const ver = mensajeFinanciamientos(conPagada)
 comprueba(
-  ver.includes('🩺 #1718 · Clínica Test (consulta $100)') &&
-    ver.includes('* $56,96 — 19/10/2026') &&
-    ver.includes('Total pendiente: $113,92') &&
-    !ver.includes('Total pendiente de todos') && !ver.includes('Saldo'),
-  'un pago en cuotas con su saldo',
+  ver ===
+    '📋 *Tu cuenta Helios*\n\n' +
+      '✨ *Disponible para tu próxima consulta: $50*\n\n' +
+      '*Pagos en cuotas activos*\n' +
+      '🩺 Dra. Nadia Khabbaze · orden #1042\n' +
+      'Consulta: $100\n' +
+      '✅ 1.ª cuota $56,96 · pagada\n' +
+      '⏳ 2.ª cuota $56,96 · vence el lunes 02/11\n\n' +
+      '*Por pagar: $56,96*\n\n' +
+      '*Terminados*\n' +
+      '✔️ Dr. Jesús Vivas · orden #1007 · pagado completo',
+  'el mensaje entero',
   ver,
 )
-const dos = mensajeFinanciamientos({
-  ...base,
-  financiamientos: [
-    ...base.financiamientos,
-    { orden: 1720, clinica: 'Otra', consulta: 50, cuotas: [{ sequence: 2, due_date: '2026-10-20', monto: 28.48, cargo_atraso: 0, vencida: false }] },
-  ],
-})
-comprueba(dos.includes('Total pendiente de todos: $142,40'), 'con dos, el saldo total', dos)
-comprueba(mensajeFinanciamientos({ ...base, financiamientos: [] }).startsWith('No tienes pagos en cuotas activos'), 'sin activos')
-comprueba(ver.startsWith('📋 Tus pagos en cuotas activos:'), 'el título de la lista', ver)
-comprueba(fechaLarga('2026-10-12') === '12/10/2026', 'fecha larga')
-comprueba(ver.includes('En bolívares hoy: Bs 21.020,52.'), 'el saldo en bolívares de hoy', ver)
+comprueba(ver.length <= MAXIMO_CON_BOTONES && tienePendientes(conPagada), 'cabe con el botón «Pagar mi cuota»')
+comprueba(!ver.includes('Bs '), 'sin bolívares (van solo junto a las cuentas)', ver)
+const bloqueada = mensajeFinanciamientos({ ...vencida, disponible_usd: 0, bloqueo: 'cuota_vencida', pago_en_revision: false })
+comprueba(
+  bloqueada.includes('✨ *Disponible: $0*. Tienes una cuota pendiente; en cuanto la pagues, se reactiva.') &&
+    bloqueada.includes('⚠️ 1.ª cuota $56,96 · venció el lunes 26/10'),
+  'con una cuota vencida: lo disponible y por qué',
+  bloqueada,
+)
+const sinNada = mensajeFinanciamientos({ ...base, financiamientos: [], disponible_usd: 150 })
+comprueba(
+  sinNada.includes('✨ *Disponible para tu próxima consulta: $150*') && sinNada.includes('No tienes pagos en cuotas activos, María') && !tienePendientes({ ...base, financiamientos: [] }),
+  'sin activos: lo disponible igual',
+  sinNada,
+)
+comprueba(
+  !mensajeFinanciamientos({ ...base, disponible_usd: undefined }).includes('Disponible'),
+  'sin lo disponible (base vieja): no lo inventa',
+)
+comprueba(mensajeFinanciamientos({ ...base, pago_en_revision: true }).includes('pago en revisión'), 'el pago en revisión')
+comprueba(fechaLarga('2026-10-12') === '12/10/2026' && diaLargo('2026-10-28') === 'miércoles 28/10', 'las fechas')
 
 console.log('\nEn euros')
 const enEuros: ResumenDelPaciente = {
@@ -123,6 +215,8 @@ const enEuros: ResumenDelPaciente = {
     {
       orden: 1801,
       clinica: 'Clínica Euro',
+      medico: 'Dr. Hiram Padrón',
+      medico_ref: 'el Dr. Hiram Padrón',
       moneda: 'EUR',
       consulta: 100,
       cuotas: [
@@ -133,78 +227,57 @@ const enEuros: ResumenDelPaciente = {
   ],
 }
 const pagarEur = mensajePagar(enEuros)
-comprueba(pagarEur.includes('* €56,96 — 14/10/2026 (#1801, Clínica Euro)'), 'la cuota en euros', pagarEur)
-comprueba(pagarEur.includes('Total a pagar: €56,96'), 'el total en euros', pagarEur)
+comprueba(pagarEur.startsWith('💳 *Tu próxima cuota*\n€56,96 · vence el miércoles 14/10\nConsulta con el Dr. Hiram Padrón'), 'la cuota en euros', pagarEur)
 // 56,96 × 215,30 = 12.263,488 → 12.263,49
-comprueba(pagarEur.includes('En bolívares hoy: Bs 12.263,49 (tasa BCV del euro 215,30).'), 'en bolívares a la tasa del euro', pagarEur)
+comprueba(
+  pagarEur.includes('Monto en bolívares hoy: Bs 12.263,49*') && pagarEur.includes('a la tasa BCV del euro de hoy'),
+  'en bolívares a la tasa del euro',
+  pagarEur,
+)
 comprueba(!pagarEur.includes('$') && !pagarEur.includes('dólar'), 'una orden en euros no habla de dólares', pagarEur)
 comprueba(
   mensajePagar({ ...enEuros, tasa_bcv_eur: null }).includes('a la tasa BCV del euro del día en que pagues'),
   'sin tasa del euro: la del euro del día en que pague',
 )
-
-const eurVencida: ResumenDelPaciente = {
+const eurVencida = mensajePagar({
   ...enEuros,
-  financiamientos: [
-    {
-      ...enEuros.financiamientos[0],
-      cuotas: [{ sequence: 1, due_date: '2026-10-14', monto: 56.96, cargo_atraso: 2, vencida: true }],
-    },
-  ],
-}
-const pagarEurVencida = mensajePagar(eurVencida)
+  financiamientos: [{ ...enEuros.financiamientos[0], cuotas: [{ sequence: 1, due_date: '2026-10-14', monto: 56.96, cargo_atraso: 2, vencida: true }] }],
+})
 // 56,96 × 215,30 + 2 × 184,52 = 12.263,488 + 369,04 = 12.632,528 → 12.632,53
 comprueba(
-  pagarEurVencida.includes('* €56,96 + cargo por atraso $2') &&
-    pagarEurVencida.includes('Total a pagar: €56,96 + $2') &&
-    pagarEurVencida.includes('Bs 12.632,53 (tasa BCV del euro 215,30 · tasa BCV del dólar 184,52)'),
+  eurVencida.includes('€56,96 + cargo por atraso $2') &&
+    eurVencida.includes('Bs 12.632,53*') &&
+    eurVencida.includes('Es el equivalente a €56,96 + $2 a la tasa BCV del euro y del dólar de hoy.'),
   'el cargo por atraso, en dólares y a la tasa del dólar',
-  pagarEurVencida,
-)
-comprueba(
-  mensajePagar({ ...eurVencida, tasa_bcv: null }).includes('a la tasa BCV del euro y del dólar del día en que pagues'),
-  'falta la tasa del dólar para el cargo: a la del día',
-)
-
-const verEur = mensajeFinanciamientos(enEuros)
-comprueba(
-  verEur.includes('🩺 #1801 · Clínica Euro (consulta €100)') && verEur.includes('* €56,96 — 21/10/2026') && verEur.includes('Total pendiente: €113,92'),
-  'mis pagos en cuotas, en euros',
-  verEur,
+  eurVencida,
 )
 const mezcla = mensajeFinanciamientos({ ...enEuros, financiamientos: [...base.financiamientos, ...enEuros.financiamientos] })
-// 113,92 × 184,52 + 113,92 × 215,30 = 21.020,5184 + 24.526,976 = 45.547,4944
-comprueba(
-  mezcla.includes('Total pendiente: $113,92') &&
-    mezcla.includes('Total pendiente: €113,92') &&
-    mezcla.includes('Total pendiente de todos: $113,92 + €113,92') &&
-    mezcla.includes('En bolívares hoy: Bs 45.547,49.'),
-  'una en dólares y otra en euros: no se suman entre sí',
-  mezcla,
-)
+comprueba(mezcla.includes('*Por pagar: $113,92 + €113,92*'), 'una en dólares y otra en euros: no se suman entre sí', mezcla)
 
 console.log('\nVocabulario')
-const PROHIBIDAS = /pr[ée]stamo|financ|cr[ée]dito/i
+const PROHIBIDAS = /pr[ée]stamo|financ|cr[ée]dito|\bfee\b/i
 const todos = [
   ...MENU_PACIENTE.map((b) => b.title),
-  mensajeGenerico('Javier'),
+  mensajeGenerico('María'),
   mensajeSinFinanciamientos(),
-  mensajeComprobante('Javier'),
-  mensajeAyuda('Javier'),
+  mensajeComprobante('María'),
+  mensajeYaPague('María'),
+  mensajeAyuda('María'),
   mensajePedirCedula(),
+  mensajeCedulaNoCoincide(),
   pagar,
   pagarVencida,
+  unaVencida,
   ver,
-  dos,
-  mensajeFinanciamientos({ ...base, financiamientos: [] }),
+  bloqueada,
+  sinNada,
   mensajePagar({ ...base, financiamientos: [] }),
   pagarEur,
-  pagarEurVencida,
-  verEur,
+  eurVencida,
   mezcla,
 ]
 const conPalabras = todos.filter((t) => PROHIBIDAS.test(t))
-comprueba(conPalabras.length === 0, 'ningún texto dice préstamo, financiamiento ni crédito', conPalabras.join(' | '))
+comprueba(conPalabras.length === 0, 'ningún texto dice préstamo, financiamiento, crédito ni fee', conPalabras.join(' | '))
 const OTROS_MEDIOS = /zelle|efectivo|usdt|divisas/i
 comprueba(!todos.some((t) => OTROS_MEDIOS.test(t)), 'ningún texto ofrece Zelle, efectivo ni divisas')
 

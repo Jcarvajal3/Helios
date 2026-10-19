@@ -169,9 +169,10 @@ export function Perfil({
 
 
 /**
- * El médico titular: su nombre, su cédula o pasaporte y su número de Colegio.
- * Se guardan aparte del perfil (`admin_set_merchant_owner`). El nombre no se
- * puede dejar vacío; el Colegio sí.
+ * El médico titular: su nombre, su cédula o pasaporte, su número de Colegio
+ * y cómo lo nombran los WhatsApp al paciente. Se guardan aparte del perfil
+ * (`admin_set_merchant_owner`). El nombre no se puede dejar vacío; el
+ * Colegio y el nombre para el paciente sí.
  */
 function Titular({
   merchantId,
@@ -188,6 +189,7 @@ function Titular({
   const [nombre, setNombre] = useState(titular.ownerName ?? '')
   const [documento, setDocumento] = useState(titular.ownerDocument ?? '')
   const [colegio, setColegio] = useState(titular.collegeNumber ?? '')
+  const [paraElPaciente, setParaElPaciente] = useState(titular.doctorDisplayName ?? '')
 
   /** `null` = no tocar; `''` = borrar. */
   const cambio = (antes: string | null, ahora: string) => (ahora.trim() === (antes ?? '').trim() ? null : ahora.trim())
@@ -195,6 +197,7 @@ function Titular({
     owner_name: cambio(titular.ownerName, nombre),
     owner_document: cambio(titular.ownerDocument, documentoParaEnviar(documento, LETRAS_CEDULA)),
     college_number: cambio(titular.collegeNumber, colegio),
+    doctor_display_name: cambio(titular.doctorDisplayName, paraElPaciente),
   }
   const dirty = Object.values(cambios).some((v) => v !== null)
 
@@ -214,15 +217,25 @@ function Titular({
         ? 'Falta el nombre completo del titular.'
         : tieneNumero(documento, LETRAS_CEDULA) && !documentoValido(documento, LETRAS_CEDULA)
           ? 'La cédula o el pasaporte no parecen válidos.'
-          : undefined
+          : paraElPaciente.trim() !== '' && (paraElPaciente.trim().length < 3 || paraElPaciente.trim().length > 80)
+            ? 'El nombre para el paciente debe tener entre 3 y 80 caracteres.'
+            : undefined
 
   return (
-    <Seccion titulo="Médico titular" info="Quién está detrás de la clínica: su nombre, su cédula o pasaporte y su número de Colegio o Federación.">
+    <Seccion titulo="Médico titular" info="Quién está detrás de la clínica: su nombre, su cédula o pasaporte, su número de Colegio o Federación y cómo lo nombramos ante sus pacientes.">
       <Card className="flex flex-col gap-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Input id={`owner-name-${merchantId}`} label="Nombre completo" value={nombre} onChange={setNombre} placeholder="Ana María Pérez" />
           <CampoDocumento id={`owner-doc-${merchantId}`} label="Cédula o pasaporte" value={documento} onChange={setDocumento} letras={LETRAS_CEDULA} />
           <Input id={`college-${merchantId}`} label="N.º de Colegio o Federación (opcional)" value={colegio} onChange={setColegio} placeholder="12345" />
+          <Input
+            id={`doctor-name-${merchantId}`}
+            label="Nombre para el paciente (opcional)"
+            value={paraElPaciente}
+            onChange={setParaElPaciente}
+            placeholder="Dra. Ana Pérez"
+            hint="Así lo nombran los WhatsApp al paciente. Con Dr., Dra. o Lcda. delante. Vacío: el nombre de la clínica."
+          />
         </div>
 
         {mutation.isError && <ErrorBox title="No se pudo guardar el titular" detail={describeError(mutation.error)} />}

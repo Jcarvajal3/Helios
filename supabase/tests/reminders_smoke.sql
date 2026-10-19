@@ -115,8 +115,8 @@ begin
   select * into v_row from public.outbound_messages
    where profile_id = v_pac and template_key = 'cuota_en_3_dias' and channel = 'whatsapp';
   if not found or v_row.status <> 'pendiente' or v_row.next_attempt_at is null
-     or v_row.rendered_text not like '%el ' || public.helios_weekday_es(v_d) || ' ' || to_char(v_d, 'DD/MM') || ' vence tu cuota de $56,96%'
-     or v_row.rendered_text not like '%envíanos el comprobante por este chat.%'
+     or v_row.rendered_text not like '%tu cuota de $56,96 de la consulta con % vence el ' || public.helios_weekday_es(v_d) || ' ' || to_char(v_d, 'DD/MM') || '.%'
+     or v_row.rendered_text not like '%envíanos la foto del comprobante por este chat.%'
      or v_row.rendered_text like '%{%'
      or v_row.wa_template -> 'params' ->> 0 <> 'María'
      or jsonb_array_length(v_row.wa_template -> 'params') <> 7 then
@@ -126,7 +126,7 @@ begin
    where profile_id = v_pac and template_key = 'cuota_en_3_dias' and channel = 'email';
   if not found or v_row.recipient <> 'maria.avisos@prueba.helios.test'
      or v_row.subject not like 'Tu cuota de $56,96%vence el%'
-     or v_row.rendered_text not like '%envíanos el comprobante por WhatsApp al 0414-%'
+     or v_row.rendered_text not like '%envíanos la foto del comprobante por WhatsApp al 0414-%'
      or v_row.html not like '%Vence el%' or v_row.html not like '%Hola, María%'
      or v_row.html ~ '{[a-z_]+}' or v_row.html like '%[[%' then
     raise exception 'El correo de tres días antes no salió bien: %', to_jsonb(v_row);
@@ -149,7 +149,7 @@ begin
   select * into v_row from public.outbound_messages
    where profile_id = v_pac and template_key = 'cuota_manana' and channel = 'whatsapp';
   if v_row.recipient <> '+584140009201' or v_row.charge_id <> v_c1
-     or v_row.rendered_text not like '%mañana%56,96%'
+     or v_row.rendered_text not like '%Mañana, %vence tu cuota de $56,96%'
      or v_row.rendered_text like '%{%' or v_row.dedupe_key <> format('cuota_manana:whatsapp:%s:%s', v_pac, v_d) then
     raise exception 'El WhatsApp de la víspera no está listo para pegar: %', to_jsonb(v_row);
   end if;

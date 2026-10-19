@@ -321,8 +321,11 @@ begin
 
   select rendered_text into v_txt from public.outbound_messages
   where charge_id = v_charge and template_key = 'bienvenida';
-  if v_txt not like '%* €56,96 (hoy Bs 51.264,00) — %'
-     or v_txt not like '%a la tasa BCV del euro%' or v_txt like '%efectivo%' then
+  -- Las cuotas sin bolívares; los de la 1.ª, en el bloque de pago (2026-10-19).
+  if v_txt not like '%1️⃣ €56,96 · %'
+     or v_txt not like '%Monto en bolívares hoy: Bs 51.264,00*%'
+     or v_txt not like '%Es el equivalente a €56,96 a la tasa BCV del euro de hoy%'
+     or v_txt like '%efectivo%' then
     raise exception 'La bienvenida en euros no dice lo esperado: %', v_txt;
   end if;
 
@@ -345,10 +348,12 @@ begin
   if v_j is not null then
     select rendered_text into v_txt from public.outbound_messages
     where charge_id = (v_j->>'id')::uuid and template_key = 'confirmar_financiamiento';
-    if v_txt not like '%tu consulta de €20 para pagarla%'
-       or v_txt not like '%* Total: €22,78 (Bs 20.502,00 a la tasa BCV de hoy)%'
-       or v_txt not like '%Tus cuotas serán de €11,39:%'
-       or v_txt not like '%a la tasa BCV del euro del día en que pagues%' then
+    -- Sin bolívares: aquí no hay cuentas de cobro (2026-10-19).
+    if v_txt not like '%Consulta: €20%'
+       or v_txt not like '%*Total: €22,78*%'
+       or v_txt not like '%📅 €11,39 · %'
+       or v_txt not like '%a la tasa BCV del euro del día en que pagues%'
+       or v_txt like '%Bs %' then
       raise exception 'La pregunta en euros no dice lo esperado: %', v_txt;
     end if;
   end if;
@@ -432,7 +437,8 @@ begin
   perform public.helios_enqueue_reminders('cuota_hoy', v_today);
   select rendered_text into v_txt from public.outbound_messages
   where profile_id = v_profile and template_key = 'cuota_hoy' and installment_due_date = v_today;
-  if v_txt not like '%Hoy vence tu cuota de €56,96 (Bs 51.264,00) de la orden #%' then
+  if v_txt not like '%vence tu cuota de €56,96 de la consulta con %'
+     or v_txt not like '%Monto en bolívares hoy: Bs 51.264,00*%' then
     raise exception 'El aviso de la cuota en euros no dice lo esperado: %', v_txt;
   end if;
 
@@ -441,7 +447,7 @@ begin
   perform public.helios_enqueue_reminders('cuota_manana', v_today - 1);
   if exists (select 1 from public.outbound_messages
               where profile_id = v_profile and template_key = 'cuota_manana' and installment_due_date = v_today
-                and (rendered_text not like '%a la tasa BCV del euro del día en que pagues%'
+                and (rendered_text not like '%a la tasa BCV del euro de hoy%'
                      or (channel = 'email' and html not like '%a la tasa BCV del euro <strong%')))
      or not exists (select 1 from public.outbound_messages
                      where profile_id = v_profile and template_key = 'cuota_manana' and installment_due_date = v_today) then
@@ -457,7 +463,7 @@ begin
   select rendered_text into v_txt from public.outbound_messages
   where profile_id = v_profile and template_key = 'cuota_manana' and installment_due_date = v_today
     and channel = 'whatsapp';
-  if v_txt is null or v_txt not like '%a la tasa BCV del dólar o del euro, según la moneda de cada cuota, del día en que pagues%' then
+  if v_txt is null or v_txt not like '%a la tasa BCV del dólar y del euro de hoy%' then
     raise exception 'Con cuotas en las dos monedas, la víspera debía nombrar las dos tasas: %', v_txt;
   end if;
   update public.installments set due_date = v_d where id = v_k;

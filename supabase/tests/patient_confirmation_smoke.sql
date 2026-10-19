@@ -165,15 +165,18 @@ begin
   end if;
   v_text := v_row.rendered_text;
   -- Al paciente sí se le enseña el total con el cargo (2026-10-06).
-  if v_text not like '👋 Hola, José. Bienvenido a Helios 💙%'
-     or v_text not like '%Clínica Confirma registró tu consulta de $100 para pagarla en 2 cuotas, sin inicial.%'
-     or v_text not like '%* Consulta: $100%'
-     or v_text not like '%* Comisión de servicio (12\%): $12%'
-     or v_text not like '%* IVA de la comisión (16\%): $1,92%'
-     or v_text not like '%¿Confirmas tu pago en cuotas? Responde Sí o No.%'
-     or v_text not like '%* Total: $113,92%'
-     or v_text not like '%Tus cuotas serán de $56,96:%'
-     or v_text not like '%📅 ' || to_char(v_bdate + 7, 'DD/MM') || ' y ' || to_char(v_bdate + 14, 'DD/MM') || '%'
+  -- Textos del 2026-10-19: nombra al médico (aquí, sin nombre para el
+  -- paciente, la clínica) y no dice bolívares.
+  if v_text not like '👋 ¡Hola, José! Te damos la bienvenida a Helios 💙%'
+     or v_text not like '%Tu consulta con Clínica Confirma quedó registrada para que la pagues en *2 cuotas, sin inicial*.%'
+     or v_text not like '%Consulta: $100%'
+     or v_text not like '%Comisión de servicio (12\%): $12%'
+     or v_text not like '%IVA de la comisión (16\%): $1,92%'
+     or v_text not like '%¿Confirmas tu pago en cuotas? Responde Sí o No. Tienes 2 horas para responder.%'
+     or v_text not like '%*Total: $113,92*%'
+     or v_text not like '%📅 $56,96 · ' || public.helios_weekday_es(v_bdate + 7) || ' ' || to_char(v_bdate + 7, 'DD/MM') || E'\n'
+                       || '📅 $56,96 · ' || public.helios_weekday_es(v_bdate + 14) || ' ' || to_char(v_bdate + 14, 'DD/MM') || '%'
+     or v_text like '%Bs %'
      or v_text like '%{%' then
     raise exception 'El texto de la pregunta no es el esperado: %', v_text;
   end if;
@@ -251,7 +254,7 @@ begin
                      where charge_id = v_charge and template_key = 'comprobante_financiamiento' and channel = 'email')
      or not exists (select 1 from public.outbound_messages
                      where charge_id = v_charge and template_key = 'bienvenida' and channel = 'whatsapp'
-                       and rendered_text like '🩺 ¡Listo, José!%') then
+                       and rendered_text like '✅ ¡Listo, José!%') then
     raise exception 'El «Sí» debía devengar la comisión y encolar comprobante y bienvenida automática';
   end if;
 

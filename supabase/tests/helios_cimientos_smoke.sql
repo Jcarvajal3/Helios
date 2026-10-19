@@ -486,14 +486,17 @@ begin
 
   -- Deduplicación, canal, variables que faltan.
   v_msg  := public.helios_enqueue_message('bienvenida', v_pac, v_charge, 'whatsapp_manual',
-              jsonb_build_object('clinica', 'Sol', 'orden', '1', 'cuotas', '• Cuota 1'), null, 'bienvenida:' || v_charge);
+              jsonb_build_object('clinica', 'Sol', 'medico', 'la Dra. Sol', 'orden', '1', 'cuotas', '1️⃣ $10 · lunes 26/10',
+                                 'bloque_de_pago', '💵 Bloque'), null, 'bienvenida:' || v_charge);
   v_msg2 := public.helios_enqueue_message('bienvenida', v_pac, v_charge, 'whatsapp_manual',
-              jsonb_build_object('clinica', 'Sol', 'orden', '1', 'cuotas', '• Cuota 1'), null, 'bienvenida:' || v_charge);
+              jsonb_build_object('clinica', 'Sol', 'medico', 'la Dra. Sol', 'orden', '1', 'cuotas', '1️⃣ $10 · lunes 26/10',
+                                 'bloque_de_pago', '💵 Bloque'), null, 'bienvenida:' || v_charge);
   if v_msg <> v_msg2 or (select count(*) from public.outbound_messages where dedupe_key = 'bienvenida:' || v_charge) <> 1 then
     raise exception 'La misma dedupe_key no debía encolar dos veces';
   end if;
   select * into v_row from public.outbound_messages where id = v_msg;
-  if v_row.recipient <> '+584141234567' or v_row.rendered_text not like '🩺 ¡Listo, José! Tu pago en cuotas #1 ya está activo.%' then
+  if v_row.recipient <> '+584141234567'
+     or v_row.rendered_text not like '✅ ¡Listo, José! Tu pago en cuotas #1 con la Dra. Sol está confirmado.%' then
     raise exception 'WhatsApp mal renderizado: % / %', v_row.recipient, v_row.rendered_text;
   end if;
 
@@ -520,7 +523,8 @@ begin
   insert into public.profiles (phone_e164, full_name, document_number)
   values ('+584241234567', 'Sin Correo', 'V32345678') returning id into v_sin_mail;
   v_msg := public.helios_enqueue_message('cuota_manana', v_sin_mail, null, 'email',
-             jsonb_build_object('clinica', 'Sol', 'orden', '2', 'monto_cuota', '10.00', 'fecha', '01/10/2026'));
+             jsonb_build_object('clinica', 'Sol', 'orden', '2', 'monto_cuota', '10.00', 'fecha', '01/10/2026',
+                                'monto', '$10', 'medico', 'la Dra. Sol', 'bloque_de_pago', '💵 Bloque'));
   select * into v_row from public.outbound_messages where id = v_msg;
   if v_row.status <> 'omitido' or v_row.last_error <> 'El paciente no tiene correo' then
     raise exception 'Sin correo debía quedar omitido: % %', v_row.status, v_row.last_error;

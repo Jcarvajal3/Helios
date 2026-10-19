@@ -27,7 +27,11 @@ docs/       plan, contrato, reglas
   Helios del 12% + IVA 16%** sobre la comisión (`consumer_fee_pct`,
   `vat_pct`): consulta de $100 → $12 + $1,92 → 2 cuotas de $56,96.
   **Límite inicial de $150** (nivel 1; los demás niveles están apagados, así
-  que hacia fuera nunca se dice que el límite «crece»).
+  que hacia fuera nunca se dice que el límite «crece»). **Excepción
+  aprobada por Javier (2026-10-19)**: todo bloque de pago al paciente
+  termina con «⭐ Recuerda pagar a tiempo para subir de nivel y disponer de
+  mayores beneficios.» (`helios_level_reminder()` y `FRASE_NIVEL` en el
+  bot); lo de los niveles se resuelve después.
 - Médico o centro: recibe el **100%** de la consulta en dos mitades, **a los
   8 y 15 días** (cada mitad, el día siguiente al vencimiento de su cuota:
   `helios_settlement_run_for(d) = d + 1`; se paga a diario, ya no los
@@ -66,6 +70,11 @@ docs/       plan, contrato, reglas
   2026-10-13; `LO_PAGA_EL_PACIENTE`). La clínica ve solo montos sin
   comisión. **Al paciente sí** se le enseña el total con la comisión
   (decisión de Javier, 2026-10-06: es lo que paga).
+- **Al paciente se le nombra a su médico, no a la clínica** («de la consulta
+  con la Dra. Nadia Khabbaze»: `helios_doctor_ref`, de
+  `merchants.doctor_display_name`). Y los **bolívares van solo en el bloque
+  de pago** (`helios_payment_block`), junto a las cuentas, como el
+  equivalente de hoy (2026-10-19, docs/00 §15.8).
 - Los montos en los mensajes (WhatsApp, correo) van al estilo venezolano:
   `helios_money_text` → «$100», «$1,92», «$1.250,50». Con moneda:
   `helios_money_cur_text` («€56,96») y `helios_ves_text` («Bs 55.432,10»);

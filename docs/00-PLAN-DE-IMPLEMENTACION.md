@@ -68,7 +68,7 @@ El resto del documento conserva "financiamiento" como término interno del dise�
 | Moneda | ~~Solo dólar BCV~~ (2026-09-30). **El médico cobra en dólares o en euros**, a su elección en el paso del monto (panel y bot). En el bot, **la moneda elegida manda sobre el símbolo escrito**: con euros elegidos, «$80» son €80 (Javier, 2026-10-13); el símbolo solo cuenta si aún no hay moneda, y solo la cambian el botón o una línea «Moneda:». Una orden en euros queda en euros: el paciente paga cada cuota en Bs a la tasa BCV del euro del día en que paga y a la clínica se le paga en Bs a la tasa del euro. El libro, los límites, la mora y el superadmin siguen en **dólares** (la orden en euros se convierte con la tasa cruzada del día del registro) | Javier, 2026-10-07 |
 | Medios de pago del paciente | **Solo bolívares**: Pago Móvil o transferencia. Fuera Zelle, USDT y efectivo | Javier, 2026-10-07 |
 | Cargos por mora | **Apagados por ahora** (`late_fee_usd` = 0). El motor se queda en el código; retomarlo es volver a poner el monto en el parámetro | Javier, 2026-10-07 |
-| Montos al paciente | **La moneda y los bolívares**: «€56,96 (Bs 56.063,47)»; el monto en la moneda es fijo y los Bs son los de la tasa del día | Javier, 2026-10-07 |
+| Montos al paciente | **La moneda y los bolívares**: «€56,96 (Bs 56.063,47)»; el monto en la moneda es fijo y los Bs son los de la tasa del día. Desde el 2026-10-19 los Bs van solo en el bloque de pago, junto a las cuentas (§15.8) | Javier, 2026-10-07 |
 | Aceptación del paciente | ~~Solo la registra la secretaria~~ (2026-09-30). **Sustituida:** el paciente acepta respondiendo **"Sí"** a un WhatsApp de Helios con el resumen de la orden. Sin "Sí" no hay deuda (§5.1) | Javier, 2026-10-05 |
 | Plazo para aceptar | La orden espera el "Sí" **2 horas**. Si vence, la clínica la **reenvía** (nuevo plazo de 2 h, mismas fechas recalculadas) | Javier, 2026-10-05 |
 | Cupo durante la espera | La orden pendiente **reserva el cupo** del paciente hasta que acepte, rechace o venza | Javier, 2026-10-05 |
@@ -78,7 +78,8 @@ El resto del documento conserva "financiamiento" como término interno del dise�
 | Alta de paciente nuevo por WhatsApp | El médico manda **todos los datos en un solo mensaje**; el bot los lee con el formulario o con solo las respuestas en orden (sin IA desde el 2026-10-09), pide lo que falte y muestra un resumen antes de confirmar | Javier, 2026-10-02 |
 | Proveedor de WhatsApp | **360dialog**, **un solo número con coexistencia**: la app WhatsApp Business para el equipo y la API para el bot y los envíos automáticos | Javier, 2026-10-05 |
 | Total al paciente | **Al paciente sí se le enseña el total con el cargo por servicio**; a la clínica, nunca. Montos de los mensajes al estilo venezolano ($1,92) | Javier, 2026-10-06 |
-| Bot del paciente | Menú con Pagar cuota, Mis pagos en cuotas y Ayuda antes de que atienda una persona (§15.6) | Javier, 2026-10-06 |
+| Bot del paciente | Menú con **Pagar mi cuota**, **Mi saldo y cuotas** (lo disponible, las cuotas y el historial) y **Hablar con alguien** antes de que atienda una persona (§15.6, §15.8). ~~Pagar cuota, Mis pagos en cuotas y Ayuda~~ (2026-10-06) | Javier, 2026-10-19 |
+| Mensajes al paciente | **Nombran al médico** («la Dra. …»), no a la clínica; los **bolívares solo junto a las cuentas**, como el equivalente de hoy; cada bloque de pago recuerda **«pagar a tiempo para subir de nivel»** (§15.8) | Javier, 2026-10-19 |
 | IA del bot | **Ninguna** (antes Gemini, y antes Claude): el formulario va en un mensaje aparte para copiarlo, y valen también las respuestas sin etiquetas en el orden de las preguntas | Javier, 2026-10-09 |
 | Pago y reporte del paciente | **Por WhatsApp al equipo Helios**, que registra el pago en el superadmin | Javier, 2026-09-30 |
 | Comisión de la secretaria | **Se suma a la liquidación de la clínica**, y la clínica se la entrega a su personal | Javier, 2026-09-30 |
@@ -1071,3 +1072,111 @@ Si se edita un texto en el panel, cambia el WhatsApp dentro de la ventana y el c
 - Conectadas: `helios_confirmar_pago_en_cuotas`, `helios_cuenta_activa` (bienvenida del médico), `helios_paciente_acepto` (`aviso_al_medico`) y `helios_cuota_vence_hoy`. Esta última quedó aprobada con idioma **`en`** (texto en español) y así se manda (`wa_template_lang = 'en'`). Su texto aprobado trae un «del__» de más.
 - `helios_cuota_en_3_dias` y `helios_cuota_vence_manana`, conectadas como **excepción** (20261015000200). Su texto aprobado añadió «Paga a tiempo para subir de nivel y aumentar tu limite de credito!», que choca con dos reglas: en lo externo no se dice «crédito» ni que el límite crece. Javier incluyó esa frase a petición del CEO y decidió conectarlas así (2026-10-15). La regla sigue valiendo para todo lo demás.
 - Sin crear: `helios_cuota_vencida`.
+
+### 15.8 Los mensajes al paciente, más cercanos (2026-10-19)
+
+Textos aprobados por Javier el 2026-10-19 (20261019000100 y 20261019000200). Lo que cambió:
+
+- **Se nombra al médico, no a la clínica**: «de la consulta con la Dra. Nadia Khabbaze». Sale de `merchants.doctor_display_name` (superadmin › ficha de la clínica › Médico titular › «Nombre para el paciente»); vacío, el nombre de la clínica. `helios_doctor_ref()` le pone el artículo («la Dra.», «el Dr.», «la Lcda.»).
+- **Los bolívares, solo en el bloque de pago**, junto a las cuentas y con la aclaración de que otro día será la tasa de ese día (`helios_payment_block`). La pregunta ya no dice los Bs del total.
+- **Las cuentas, cada dato en su línea** (Banco, Teléfono, RIF con guiones, Titular: `helios_payment_accounts_block`).
+- **La frase de los niveles** en cada bloque de pago: «⭐ Recuerda pagar a tiempo para subir de nivel y disponer de mayores beneficios.» (`helios_level_reminder`). Javier la pidió aunque los niveles estén apagados; lo de los niveles se resuelve después.
+- **La bienvenida tras el «Sí»** trae las cuotas y cómo pagar la primera.
+- **El paciente recibe respuesta** cuando dice «No», cuando contesta pasadas las 2 h y cuando la orden no se pudo confirmar (si debe una cuota, con el botón «Pagar mi cuota»).
+- **Pago confirmado / rechazado** también por WhatsApp (texto libre, gratis) si la ventana de 24 h está abierta; si no, solo el correo.
+- **El bot**: botones «Pagar mi cuota» · «Mi saldo y cuotas» · «Hablar con alguien». «Mi saldo y cuotas» dice lo disponible para la próxima consulta (`helios_available_now_usd`, la misma cifra que ve el médico), las cuotas pagadas y pendientes, lo que falta por pagar y las 3 últimas órdenes terminadas. Atiende también el botón «Ya pagué» (`paciente:ya_pague`) de las plantillas `_v2`.
+
+**Las plantillas aprobadas siguen conectadas** con sus variables de siempre. Cambió el texto libre (dentro de la ventana de 24 h y el texto plano del correo). Las variables nuevas ya se calculan para las `_v2` de abajo.
+
+#### Las plantillas `_v2` para Meta
+
+Todas: **Utility** · idioma **`es`** · variables numéricas · sin encabezado ni pie. B2 a B5 llevan dos botones de respuesta rápida: **Ya pagué** · **Hablar con alguien**.
+
+**B1. `helios_confirmar_pago_en_cuotas_v2`** → `confirmar_financiamiento` · botones de respuesta rápida **Sí, acepto** · **No**
+
+> 👋 ¡Hola, {{1}}! Te damos la bienvenida a Helios 💙
+>
+> Tu consulta con {{2}} quedó registrada para que la pagues en *2 cuotas, sin inicial*.
+>
+> *Tu consulta*
+> Consulta: {{3}}
+> Comisión de servicio ({{4}}%): {{5}}
+> IVA de la comisión ({{6}}%): {{7}}
+> *Total: {{8}}*
+>
+> *Tus cuotas*
+> 📅 {{9}}
+>
+> Pagas cada cuota en bolívares, a la tasa BCV del {{10}} del día en que pagues.
+>
+> ¿Confirmas tu pago en cuotas? Tienes 2 horas para responder.
+
+Ejemplo: María · la Dra. Nadia Khabbaze · $100 · 12 · $12 · 16 · $1,92 · $113,92 · $56,96 el lunes 26/10 y $56,96 el lunes 02/11 · dólar.
+
+(Respecto a la propuesta: «Tu consulta con {{2}} quedó registrada» en vez de «{{2}} registró tu consulta», porque {{2}} lleva el artículo en minúscula, «la Dra.»; y las cuotas van en una sola variable con su monto y su fecha, por si las dos no son iguales por un céntimo. El texto libre dice además «Responde Sí o No.»: si la pregunta cae a la cola manual, sale sin botones.)
+
+**Bloque común de B2 a B5** (variables {{5}} a {{10}}):
+
+> 💵 *Monto en bolívares hoy: {{5}}*
+> Es el equivalente a la tasa BCV del {{6}} de hoy. Si pagas otro día, paga el equivalente a la tasa BCV de ese día.
+>
+> 🏦 *Pago Móvil*
+> Banco: {{7}}
+> Teléfono: {{8}}
+> RIF: {{9}}
+> Titular: {{10}}
+>
+> 📸 Cuando pagues, envíanos la foto del comprobante por este chat.
+>
+> ⭐ Recuerda pagar a tiempo para subir de nivel y disponer de mayores beneficios.
+
+**B2. `helios_cuota_en_3_dias_v2`** → `cuota_en_3_dias`
+
+> Hola, {{1}} 👋 Te recordamos que tu cuota de {{2}} de la consulta con {{3}} vence el {{4}}.
+>
+> *(bloque)*
+
+**B3. `helios_cuota_vence_manana_v2`** → `cuota_manana`
+
+> Hola, {{1}} 👋 Mañana, {{4}}, vence tu cuota de {{2}} de la consulta con {{3}}.
+>
+> *(bloque)*
+
+**B4. `helios_cuota_vence_hoy_v2`** → `cuota_hoy` (en `es`, sin el «del__» de la v1)
+
+> ¡Buenos días, {{1}}! ☀️ Hoy, {{4}}, vence tu cuota de {{2}} de la consulta con {{3}}.
+>
+> *(bloque)*
+>
+> Si ya pagaste, ¡gracias! Puedes ignorar este mensaje.
+
+**B5. `helios_cuota_vencida`** → `cuota_vencida_d1` (nueva)
+
+> Hola, {{1}}. Tu cuota de {{2}} de la consulta con {{3}} venció ayer, {{4}}, y sigue pendiente. Sabemos que a veces pasa 💙 Mientras esté pendiente no podrás pagar nuevas consultas en cuotas; en cuanto pagues, se reactiva.
+>
+> *(bloque)*
+>
+> Si tienes algún inconveniente, escríbenos por este chat y lo resolvemos juntos.
+
+Ejemplo de B2 a B5: María · $56,96 · la Dra. Nadia Khabbaze · lunes 26/10 · Bs 10.624,18 · dólar · BNC (0191) · 0412-1714930 · J-50496786-6 · Quarto Latam, C.A.
+
+**Al aprobarse**, el equipo técnico las conecta (el Pago Móvil de las variables es la primera cuenta de Pago Móvil activa de Ajustes › Cuentas de cobro):
+
+```sql
+update public.notification_templates
+   set wa_template_name = 'helios_confirmar_pago_en_cuotas_v2', wa_template_lang = 'es',
+       wa_template_params = array['nombre','medico','monto_consulta','servicio_pct','cargo_servicio',
+                                  'iva_pct','iva_cargo_servicio','total','cuotas_detalle','moneda']
+ where key = 'confirmar_financiamiento';
+
+update public.notification_templates
+   set wa_template_name = v.nombre, wa_template_lang = 'es',
+       wa_template_params = array['nombre','monto','medico','fecha','monto_bs','moneda',
+                                  'pago_movil_banco','pago_movil_telefono','pago_movil_rif','pago_movil_titular'],
+       wa_buttons = '[{"id":"paciente:ya_pague","title":"Ya pagué"},{"id":"paciente:ayuda","title":"Hablar con alguien"}]'
+  from (values ('cuota_en_3_dias', 'helios_cuota_en_3_dias_v2'), ('cuota_manana', 'helios_cuota_vence_manana_v2'),
+               ('cuota_hoy', 'helios_cuota_vence_hoy_v2'), ('cuota_vencida_d1', 'helios_cuota_vencida')) as v(key, nombre)
+ where notification_templates.key = v.key;
+```
+
+Los botones (`wa_buttons`) se ponen **solo junto con las `_v2`**: una plantilla aprobada sin botones rechaza el envío si se le mandan.
