@@ -262,15 +262,16 @@ function Titular({
           <div>
             <Select<TituloDelMedico>
               id={`doctor-title-${merchantId}`}
-              label="Título (opcional)"
+              label="Título que verán sus pacientes (opcional)"
               value={titulo}
               options={TITULOS_DEL_MEDICO.map((t) => ({ value: t, label: t }))}
               onChange={setTitulo}
               placeholder="Sin título"
             />
-            {comoLoLeen && (
-              <span className="mt-1.5 block type-panel-caption text-panel-muted">Sus pacientes leerán: «{comoLoLeen}»</span>
-            )}
+            <span className="mt-1.5 block type-panel-caption text-panel-muted">
+              Solo cambia cómo lo nombran los mensajes de WhatsApp a sus pacientes. No es un requisito para usar Helios.
+              {comoLoLeen && <> Sus pacientes leerán: «{comoLoLeen}».</>}
+            </span>
           </div>
         </div>
 
