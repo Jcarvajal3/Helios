@@ -167,7 +167,7 @@ const MENU_ADMIN: ReadonlyArray<{
   {
     espacio: 'cobranza',
     titulo: 'Cobranza y riesgo',
-    pantallas: ['cartera-vencida', 'pagos-reportados', 'avisos', 'alertas'],
+    pantallas: ['cartera-vencida', 'pagos-reportados', 'avisos', 'whatsapp', 'alertas'],
   },
   {
     espacio: 'caja',

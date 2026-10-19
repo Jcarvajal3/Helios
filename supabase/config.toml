@@ -428,3 +428,9 @@ verify_jwt = false
 # Supabase: lo protege el encabezado x-helios-clave (secreto AVISO_BNC_CLAVE).
 [functions.aviso-bnc]
 verify_jwt = false
+
+# El inbox de WhatsApp del superadmin: lo llama el panel con la sesión de
+# quien lo usa. Se comprueba el JWT, y la función comprueba además que es del
+# equipo (`is_platform_admin`, con el segundo factor).
+[functions.whatsapp-inbox]
+verify_jwt = true

@@ -1,4 +1,4 @@
-import { Banknote, BellRing, CalendarRange, Handshake, Inbox, PhoneCall } from 'lucide-react'
+import { Banknote, BellRing, CalendarRange, Handshake, Inbox, MessageCircle, PhoneCall } from 'lucide-react'
 
 import type { Entrada } from './tipos'
 
@@ -132,6 +132,26 @@ export const cobranza = [
     ],
     destino: { to: '/admin/avisos' },
     icono: BellRing,
+  },
+  {
+    tipo: 'pantalla',
+    id: 'whatsapp',
+    titulo: 'WhatsApp',
+    descripcion:
+      'El inbox del número de Helios: leer lo que escriben pacientes y médicos y contestarles, desde el Inbox de 360dialog.',
+    espacio: 'cobranza',
+    sinonimos: [
+      'inbox',
+      'bandeja de entrada',
+      'chats',
+      'conversaciones',
+      'mensajes recibidos',
+      'contestar',
+      'responder',
+      '360dialog',
+    ],
+    destino: { to: '/admin/whatsapp' },
+    icono: MessageCircle,
   },
 
   // ── Acciones ─────────────────────────────────────────────────────────────

@@ -106,7 +106,7 @@ console.log('\n── El menú sale del catálogo ──────────
     .map((g) => `${g.title}: ${g.items.map((i) => i.label).join(', ')}`)
   comprueba(
     bloques.join(' | ') ===
-      'Cobranza y riesgo: Por cobrar, Pagos reportados, Avisos, Alertas | ' +
+      'Cobranza y riesgo: Por cobrar, Pagos reportados, Avisos, WhatsApp, Alertas | ' +
         'Caja y contabilidad: Pagos a clínicas, Libro y cierre de mes | ' +
         'Directorio: Pacientes, Clínicas, Financiamientos | Ajustes: Ajustes',
     'los bloques del menú, con sus pantallas en orden (CONTRATOS §1)',

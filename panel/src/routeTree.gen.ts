@@ -42,6 +42,7 @@ import { Route as AdminFinanciamientosRouteImport } from './routes/admin/financi
 import { Route as AdminMetricasRouteImport } from './routes/admin/metricas'
 import { Route as AdminPacientesRouteImport } from './routes/admin/pacientes'
 import { Route as AdminPagosClinicasRouteImport } from './routes/admin/pagos-clinicas'
+import { Route as AdminWhatsappRouteImport } from './routes/admin/whatsapp'
 import { Route as LegalPrivacidadRouteImport } from './routes/legal.privacidad'
 import { Route as LegalTerminosRouteImport } from './routes/legal.terminos'
 import { Route as ComercioFinanciamientosIdRouteImport } from './routes/_comercio/financiamientos_.$id'
@@ -216,6 +217,11 @@ const AdminPagosClinicasRoute = AdminPagosClinicasRouteImport.update({
   path: '/pagos-clinicas',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminWhatsappRoute = AdminWhatsappRouteImport.update({
+  id: '/whatsapp',
+  path: '/whatsapp',
+  getParentRoute: () => AdminRoute,
+} as any)
 const LegalPrivacidadRoute = LegalPrivacidadRouteImport.update({
   id: '/legal/privacidad',
   path: '/legal/privacidad',
@@ -296,6 +302,7 @@ export interface FileRoutesByFullPath {
   '/admin/metricas': typeof AdminMetricasRoute
   '/admin/pacientes': typeof AdminPacientesRoute
   '/admin/pagos-clinicas': typeof AdminPagosClinicasRoute
+  '/admin/whatsapp': typeof AdminWhatsappRoute
   '/legal/privacidad': typeof LegalPrivacidadRoute
   '/legal/terminos': typeof LegalTerminosRoute
   '/admin/': typeof AdminIndexRoute
@@ -338,6 +345,7 @@ export interface FileRoutesByTo {
   '/admin/metricas': typeof AdminMetricasRoute
   '/admin/pacientes': typeof AdminPacientesRoute
   '/admin/pagos-clinicas': typeof AdminPagosClinicasRoute
+  '/admin/whatsapp': typeof AdminWhatsappRoute
   '/legal/privacidad': typeof LegalPrivacidadRoute
   '/legal/terminos': typeof LegalTerminosRoute
   '/admin': typeof AdminIndexRoute
@@ -383,6 +391,7 @@ export interface FileRoutesById {
   '/admin/metricas': typeof AdminMetricasRoute
   '/admin/pacientes': typeof AdminPacientesRoute
   '/admin/pagos-clinicas': typeof AdminPagosClinicasRoute
+  '/admin/whatsapp': typeof AdminWhatsappRoute
   '/legal/privacidad': typeof LegalPrivacidadRoute
   '/legal/terminos': typeof LegalTerminosRoute
   '/admin/': typeof AdminIndexRoute
@@ -428,6 +437,7 @@ export interface FileRouteTypes {
     | '/admin/metricas'
     | '/admin/pacientes'
     | '/admin/pagos-clinicas'
+    | '/admin/whatsapp'
     | '/legal/privacidad'
     | '/legal/terminos'
     | '/admin/'
@@ -470,6 +480,7 @@ export interface FileRouteTypes {
     | '/admin/metricas'
     | '/admin/pacientes'
     | '/admin/pagos-clinicas'
+    | '/admin/whatsapp'
     | '/legal/privacidad'
     | '/legal/terminos'
     | '/admin'
@@ -514,6 +525,7 @@ export interface FileRouteTypes {
     | '/admin/metricas'
     | '/admin/pacientes'
     | '/admin/pagos-clinicas'
+    | '/admin/whatsapp'
     | '/legal/privacidad'
     | '/legal/terminos'
     | '/admin/'
@@ -778,6 +790,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminPagosClinicasRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/whatsapp': {
+      id: '/admin/whatsapp'
+      path: '/whatsapp'
+      fullPath: '/admin/whatsapp'
+      preLoaderRoute: typeof AdminWhatsappRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/legal/privacidad': {
       id: '/legal/privacidad'
       path: '/legal/privacidad'
@@ -882,6 +901,7 @@ interface AdminRouteChildren {
   AdminMetricasRoute: typeof AdminMetricasRoute
   AdminPacientesRoute: typeof AdminPacientesRoute
   AdminPagosClinicasRoute: typeof AdminPagosClinicasRoute
+  AdminWhatsappRoute: typeof AdminWhatsappRoute
   AdminIndexRoute: typeof AdminIndexRoute
   AdminClinicasIdRoute: typeof AdminClinicasIdRoute
   AdminCobrosIdRoute: typeof AdminCobrosIdRoute
@@ -903,6 +923,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminMetricasRoute: AdminMetricasRoute,
   AdminPacientesRoute: AdminPacientesRoute,
   AdminPagosClinicasRoute: AdminPagosClinicasRoute,
+  AdminWhatsappRoute: AdminWhatsappRoute,
   AdminIndexRoute: AdminIndexRoute,
   AdminClinicasIdRoute: AdminClinicasIdRoute,
   AdminCobrosIdRoute: AdminCobrosIdRoute,
