@@ -1077,7 +1077,7 @@ Si se edita un texto en el panel, cambia el WhatsApp dentro de la ventana y el c
 
 Textos aprobados por Javier el 2026-10-19 (20261019000100 y 20261019000200). Lo que cambió:
 
-- **Se nombra al médico, no a la clínica**: «de la consulta con la Dra. Nadia Khabbaze». Sale de `merchants.doctor_display_name` (superadmin › ficha de la clínica › Médico titular › «Nombre para el paciente»); vacío, el nombre de la clínica. `helios_doctor_ref()` le pone el artículo («la Dra.», «el Dr.», «la Lcda.»).
+- **Se nombra al médico, no a la clínica**: «de la consulta con la Dra. Nadia Andi Khabbaze Alfaro». Es el **nombre completo del médico titular** (`owner_name`, con las mayúsculas arregladas) con su **título** delante (`merchants.doctor_title`: Dr., Dra., Lcdo. o Lcda.; superadmin › ficha de la clínica › Médico titular › «Título», que enseña «Sus pacientes leerán: …»). Sin título, el nombre solo; sin titular, el nombre de la clínica. `helios_doctor_ref()` le pone el artículo («la Dra.», «el Dr.»). Decidido por Javier el 2026-10-19 (20261019000300), en vez de un nombre aparte para el paciente.
 - **Los bolívares, solo en el bloque de pago**, junto a las cuentas y con la aclaración de que otro día será la tasa de ese día (`helios_payment_block`). La pregunta ya no dice los Bs del total.
 - **Las cuentas, cada dato en su línea** (Banco, Teléfono, RIF con guiones, Titular: `helios_payment_accounts_block`).
 - **La frase de los niveles** en cada bloque de pago: «⭐ Recuerda pagar a tiempo para subir de nivel y disponer de mayores beneficios.» (`helios_level_reminder`). Javier la pidió aunque los niveles estén apagados; lo de los niveles se resuelve después.

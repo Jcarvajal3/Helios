@@ -88,19 +88,32 @@ begin
   -- =========================================================================
   -- 1. El nombre del médico
   -- =========================================================================
+  if public.helios_person_name_text('jesus francisco VIVAS rodriguez') <> 'Jesus Francisco Vivas Rodriguez'
+     or public.helios_person_name_text('Elizabeth Del valle  ponte Castillo') <> 'Elizabeth del Valle Ponte Castillo'
+     or public.helios_person_name_text('DR. VICTOR GÓMEZ') <> 'Victor Gómez'
+     or public.helios_person_name_text('  ') is not null then
+    raise exception 'El nombre del titular no se arregla como se espera';
+  end if;
+
+  update public.merchants set owner_name = null where id = v_m;
   if public.helios_doctor_ref(v_m) <> 'Consultorio 999' then
-    raise exception 'Sin nombre para el paciente debía usarse el de la clínica: %', public.helios_doctor_ref(v_m);
+    raise exception 'Sin titular debía usarse el nombre de la clínica: %', public.helios_doctor_ref(v_m);
   end if;
 
   set local role authenticated;
   perform set_config('request.jwt.claims', json_build_object('sub', v_admin::text, 'role', 'authenticated', 'aal', 'aal2')::text, true);
-  perform public.admin_set_merchant_owner(v_m, '{"doctor_display_name":"Dra.  Ana   Prueba"}'::jsonb);
-  if public.admin_merchant_detail(v_m)->'profile'->>'doctor_display_name' <> 'Dra. Ana Prueba' then
-    raise exception 'La ficha debía devolver el nombre para el paciente (con los espacios limpios)';
+  perform public.admin_set_merchant_owner(v_m, '{"owner_name":"ANA prueba"}'::jsonb);
+  if public.admin_merchant_detail(v_m)->'profile'->>'doctor_name' <> 'Ana Prueba' then
+    raise exception 'Sin título, el nombre del titular solo: %', public.admin_merchant_detail(v_m)->'profile';
+  end if;
+  perform public.admin_set_merchant_owner(v_m, '{"doctor_title":"Dra."}'::jsonb);
+  if public.admin_merchant_detail(v_m)->'profile'->>'doctor_title' <> 'Dra.'
+     or public.admin_merchant_detail(v_m)->'profile'->>'doctor_name' <> 'Dra. Ana Prueba' then
+    raise exception 'La ficha debía devolver el título y cómo lo leen sus pacientes: %', public.admin_merchant_detail(v_m)->'profile';
   end if;
   begin
-    perform public.admin_set_merchant_owner(v_m, '{"doctor_display_name":"Dr"}'::jsonb);
-    raise exception 'Un nombre de 2 letras debía rechazarse';
+    perform public.admin_set_merchant_owner(v_m, '{"doctor_title":"Doctora"}'::jsonb);
+    raise exception 'Un título fuera de la lista debía rechazarse';
   exception when sqlstate '22023' then null;
   end;
   reset role;
@@ -108,12 +121,12 @@ begin
   if public.helios_doctor_ref(v_m) <> 'la Dra. Ana Prueba' then
     raise exception 'El médico debía ir con su artículo: %', public.helios_doctor_ref(v_m);
   end if;
-  update public.merchants set doctor_display_name = 'Dr. Luis Prueba' where id = v_m;
-  if public.helios_doctor_ref(v_m) <> 'el Dr. Luis Prueba' then
+  update public.merchants set doctor_title = 'Dr.' where id = v_m;
+  if public.helios_doctor_ref(v_m) <> 'el Dr. Ana Prueba' then
     raise exception 'Un Dr. va con «el»: %', public.helios_doctor_ref(v_m);
   end if;
-  update public.merchants set doctor_display_name = 'Dra. Ana Prueba' where id = v_m;
-  raise notice 'TEST MENSAJES 1 OK — el nombre del médico';
+  update public.merchants set doctor_title = 'Dra.' where id = v_m;
+  raise notice 'TEST MENSAJES 1 OK — el nombre del médico titular, con su título';
 
   -- =========================================================================
   -- 2. El bloque de pago

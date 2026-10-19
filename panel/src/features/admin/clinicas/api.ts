@@ -85,7 +85,7 @@ export async function guardarTitular(params: {
     owner_name: string | null
     owner_document: string | null
     college_number: string | null
-    doctor_display_name: string | null
+    doctor_title: string | null
   }
 }): Promise<void> {
   await llamarRpc('admin_set_merchant_owner', { p_merchant_id: params.merchantId, p: params.cambios })

@@ -71,8 +71,9 @@ docs/       plan, contrato, reglas
   comisión. **Al paciente sí** se le enseña el total con la comisión
   (decisión de Javier, 2026-10-06: es lo que paga).
 - **Al paciente se le nombra a su médico, no a la clínica** («de la consulta
-  con la Dra. Nadia Khabbaze»: `helios_doctor_ref`, de
-  `merchants.doctor_display_name`). Y los **bolívares van solo en el bloque
+  con la Dra. Nadia Andi Khabbaze Alfaro»: `helios_doctor_ref`, con el
+  nombre del titular, `owner_name`, y su título, `merchants.doctor_title`).
+  Y los **bolívares van solo en el bloque
   de pago** (`helios_payment_block`), junto a las cuentas, como el
   equivalente de hoy (2026-10-19, docs/00 §15.8).
 - Los montos en los mensajes (WhatsApp, correo) van al estilo venezolano:

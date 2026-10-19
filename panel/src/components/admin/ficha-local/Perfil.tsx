@@ -3,9 +3,21 @@ import { useMutation } from '@tanstack/react-query'
 
 import { LogoPicker } from '@/components/LogoPicker'
 import { useToast } from '@/components/Toast'
-import { Button, Card, Chip, ErrorBox, Input, Seccion } from '@/components/ui'
-import { CATEGORIAS_CLINICA, MERCHANT_CATEGORY_LABEL, cambiosDeDatos, setMerchantProfile } from '@/features/admin/api'
-import type { DatosDeLaClinica, MerchantCategory, MerchantProfile, TitularDeLaClinica } from '@/features/admin/api'
+import { Button, Card, Chip, ErrorBox, Input, Seccion, Select } from '@/components/ui'
+import {
+  CATEGORIAS_CLINICA,
+  MERCHANT_CATEGORY_LABEL,
+  TITULOS_DEL_MEDICO,
+  cambiosDeDatos,
+  setMerchantProfile,
+} from '@/features/admin/api'
+import type {
+  DatosDeLaClinica,
+  MerchantCategory,
+  MerchantProfile,
+  TitularDeLaClinica,
+  TituloDelMedico,
+} from '@/features/admin/api'
 import { guardarTitular } from '@/features/admin/clinicas/api'
 import { pareceCorreo } from '@/features/admin/clinicas/clinicas'
 import { CampoDocumento } from '@/components/CampoDocumento'
@@ -168,11 +180,31 @@ export function Perfil({
 }
 
 
+const MINUSCULAS = new Set(['de', 'del', 'la', 'las', 'los', 'y'])
+
+/**
+ * El nombre del titular como lo leen sus pacientes (lo mismo que
+ * `helios_person_name_text` en la base): cada palabra con mayúscula inicial,
+ * «de», «del» y «la» en minúscula y sin un «Dr.» escrito delante.
+ */
+function nombreComoLoLeen(nombre: string): string {
+  return nombre
+    .trim()
+    .replace(/^(dra|dr|lcda|lcdo|licda|licdo)\.?\s+/i, '')
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w, i) =>
+      i > 0 && MINUSCULAS.has(w.toLowerCase()) ? w.toLowerCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase(),
+    )
+    .join(' ')
+}
+
 /**
  * El médico titular: su nombre, su cédula o pasaporte, su número de Colegio
- * y cómo lo nombran los WhatsApp al paciente. Se guardan aparte del perfil
+ * y su título (Dr., Dra., Lcdo., Lcda.), que va delante de su nombre en los
+ * mensajes a sus pacientes. Se guardan aparte del perfil
  * (`admin_set_merchant_owner`). El nombre no se puede dejar vacío; el
- * Colegio y el nombre para el paciente sí.
+ * Colegio y el título sí.
  */
 function Titular({
   merchantId,
@@ -189,7 +221,8 @@ function Titular({
   const [nombre, setNombre] = useState(titular.ownerName ?? '')
   const [documento, setDocumento] = useState(titular.ownerDocument ?? '')
   const [colegio, setColegio] = useState(titular.collegeNumber ?? '')
-  const [paraElPaciente, setParaElPaciente] = useState(titular.doctorDisplayName ?? '')
+  const [titulo, setTitulo] = useState<TituloDelMedico | ''>(titular.doctorTitle ?? '')
+  const comoLoLeen = [titulo, nombreComoLoLeen(nombre)].filter(Boolean).join(' ')
 
   /** `null` = no tocar; `''` = borrar. */
   const cambio = (antes: string | null, ahora: string) => (ahora.trim() === (antes ?? '').trim() ? null : ahora.trim())
@@ -197,7 +230,7 @@ function Titular({
     owner_name: cambio(titular.ownerName, nombre),
     owner_document: cambio(titular.ownerDocument, documentoParaEnviar(documento, LETRAS_CEDULA)),
     college_number: cambio(titular.collegeNumber, colegio),
-    doctor_display_name: cambio(titular.doctorDisplayName, paraElPaciente),
+    doctor_title: cambio(titular.doctorTitle, titulo),
   }
   const dirty = Object.values(cambios).some((v) => v !== null)
 
@@ -217,25 +250,28 @@ function Titular({
         ? 'Falta el nombre completo del titular.'
         : tieneNumero(documento, LETRAS_CEDULA) && !documentoValido(documento, LETRAS_CEDULA)
           ? 'La cédula o el pasaporte no parecen válidos.'
-          : paraElPaciente.trim() !== '' && (paraElPaciente.trim().length < 3 || paraElPaciente.trim().length > 80)
-            ? 'El nombre para el paciente debe tener entre 3 y 80 caracteres.'
-            : undefined
+          : undefined
 
   return (
-    <Seccion titulo="Médico titular" info="Quién está detrás de la clínica: su nombre, su cédula o pasaporte, su número de Colegio o Federación y cómo lo nombramos ante sus pacientes.">
+    <Seccion titulo="Médico titular" info="Quién está detrás de la clínica: su nombre, su cédula o pasaporte, su número de Colegio o Federación y su título, que va delante de su nombre en los mensajes a sus pacientes.">
       <Card className="flex flex-col gap-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Input id={`owner-name-${merchantId}`} label="Nombre completo" value={nombre} onChange={setNombre} placeholder="Ana María Pérez" />
           <CampoDocumento id={`owner-doc-${merchantId}`} label="Cédula o pasaporte" value={documento} onChange={setDocumento} letras={LETRAS_CEDULA} />
           <Input id={`college-${merchantId}`} label="N.º de Colegio o Federación (opcional)" value={colegio} onChange={setColegio} placeholder="12345" />
-          <Input
-            id={`doctor-name-${merchantId}`}
-            label="Nombre para el paciente (opcional)"
-            value={paraElPaciente}
-            onChange={setParaElPaciente}
-            placeholder="Dra. Ana Pérez"
-            hint="Así lo nombran los WhatsApp al paciente. Con Dr., Dra. o Lcda. delante. Vacío: el nombre de la clínica."
-          />
+          <div>
+            <Select<TituloDelMedico>
+              id={`doctor-title-${merchantId}`}
+              label="Título (opcional)"
+              value={titulo}
+              options={TITULOS_DEL_MEDICO.map((t) => ({ value: t, label: t }))}
+              onChange={setTitulo}
+              placeholder="Sin título"
+            />
+            {comoLoLeen && (
+              <span className="mt-1.5 block type-panel-caption text-panel-muted">Sus pacientes leerán: «{comoLoLeen}»</span>
+            )}
+          </div>
         </div>
 
         {mutation.isError && <ErrorBox title="No se pudo guardar el titular" detail={describeError(mutation.error)} />}

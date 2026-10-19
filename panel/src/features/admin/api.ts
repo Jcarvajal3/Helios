@@ -1199,8 +1199,18 @@ export type TitularDeLaClinica = {
   ownerName: string | null
   ownerDocument: string | null
   collegeNumber: string | null
-  /** Cómo lo nombran los WhatsApp al paciente («Dra. Nadia Khabbaze»). Vacío: el nombre de la clínica. */
-  doctorDisplayName: string | null
+  /** El título delante de su nombre en los mensajes a sus pacientes. */
+  doctorTitle: TituloDelMedico | null
+  /** Cómo lo leen sus pacientes hoy: el título y el nombre del titular («Dra. Nadia Khabbaze Alfaro»). */
+  doctorName: string | null
+}
+
+export type TituloDelMedico = 'Dr.' | 'Dra.' | 'Lcdo.' | 'Lcda.'
+
+export const TITULOS_DEL_MEDICO: TituloDelMedico[] = ['Dr.', 'Dra.', 'Lcdo.', 'Lcda.']
+
+function comoTitulo(v: unknown): TituloDelMedico | null {
+  return TITULOS_DEL_MEDICO.find((t) => t === v) ?? null
 }
 
 export type MerchantDetail = {
@@ -1241,7 +1251,8 @@ export async function fetchMerchantDetail(merchantId: string): Promise<MerchantD
       ownerName: textoONulo(raw.profile.owner_name),
       ownerDocument: textoONulo(raw.profile.owner_document),
       collegeNumber: textoONulo(raw.profile.college_number),
-      doctorDisplayName: textoONulo(raw.profile.doctor_display_name),
+      doctorTitle: comoTitulo(raw.profile.doctor_title),
+      doctorName: textoONulo(raw.profile.doctor_name),
     },
     terms: {
       upfrontPct: Number(raw.terms.upfront_pct),

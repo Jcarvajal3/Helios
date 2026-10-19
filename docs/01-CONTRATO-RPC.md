@@ -1218,14 +1218,18 @@ la pregunta le llega a quien capacita.
 - `admin_reset_demo(p_phone text default null) → jsonb` (super admin; null =
   todos). Devuelve lo mismo que `helios_demo_reset`.
 
-## Los mensajes al paciente, más cercanos (20261019000100 y 20261019000200)
+## Los mensajes al paciente, más cercanos (20261019000100 a 20261019000300)
 
-- `merchants.doctor_display_name` (texto, 3–80): cómo se nombra al médico
-  ante el paciente («Dra. Nadia Khabbaze»). `admin_merchant_detail.profile`
-  lo añade; `admin_set_merchant_owner(p_merchant_id, p)` acepta la clave
-  `doctor_display_name` (null = no tocar, '' = borrar). Internas:
-  `helios_doctor_name(merchant) → text` (vacío: el nombre de la clínica) y
-  `helios_doctor_ref(merchant) → text` («la Dra. …», «el Dr. …»).
+- `merchants.doctor_title` ('Dr.', 'Dra.', 'Lcdo.', 'Lcda.' o null): el
+  título delante del nombre del titular en los mensajes a sus pacientes
+  (20261019000300 sustituye a `doctor_display_name`, que se borró).
+  `admin_merchant_detail.profile` añade `doctor_title` y `doctor_name` (cómo
+  lo leen sus pacientes); `admin_set_merchant_owner(p_merchant_id, p)`
+  acepta la clave `doctor_title` (null = no tocar, '' = borrar; otro valor,
+  `22023`). Internas: `helios_person_name_text(text)` (mayúsculas
+  arregladas, sin un «Dr.» escrito delante), `helios_doctor_name(merchant)
+  → text` («Dra. Nadia Andi Khabbaze Alfaro»; sin titular, el nombre de la
+  clínica) y `helios_doctor_ref(merchant) → text` («la Dra. …», «el Dr. …»).
 - Internas del bloque de pago: `helios_rif_text(text)`,
   `helios_level_reminder()`, `helios_payment_accounts_block()` y
   `helios_payment_block(p_ves, p_equivalente, p_moneda, p_por)`.
