@@ -1,4 +1,4 @@
-import { comoDia, unoDe } from '@/lib/busqueda'
+import { comoDia } from '@/lib/busqueda'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Las claves propias de la pestaña Caja en la URL de `/admin/metricas`.
@@ -10,24 +10,19 @@ import { comoDia, unoDe } from '@/lib/busqueda'
 // enlaza con la fecha del saldo del banco ya puesta, y un enlace guardado la
 // conserva.
 //
-// Cuántas semanas proyectar va en `horizonte` y no en `semanas` (su nombre en
-// Dinero): aquí «semana» ya es la del marco.
+// La proyección es siempre de 15 días, día a día: a la clínica se le paga el
+// día siguiente al vencimiento de cada cuota, no los lunes. Ya no se elige el
+// horizonte (un `?horizonte=` viejo se ignora).
 // ═══════════════════════════════════════════════════════════════════════════
 
-/** Las semanas de proyección que se ofrecen. La base no pasa de doce. */
-export const HORIZONTES = ['4', '8', '12'] as const
-export type Horizonte = (typeof HORIZONTES)[number]
-
 export type BusquedaCaja = {
-  /** Cuántas semanas proyectar. Sin él, cuatro. */
-  horizonte?: Horizonte
   /** La fecha con la que se abre el formulario del saldo del banco. */
   corte?: string
 }
 
 export function validarCaja(raw: Record<string, unknown>): BusquedaCaja {
   return {
-    horizonte: unoDe(HORIZONTES, raw.horizonte),
+
     corte: comoDia(raw.corte),
   }
 }

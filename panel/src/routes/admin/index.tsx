@@ -70,7 +70,7 @@ function InicioPage() {
   // La pregunta ya llega enviada: aquí solo se enseña la conversación.
   useAnfitrionDeCharla(conAsistente ? { mostrar: irALaCharla } : null)
 
-  if (enCharla) return <CharlaDeInicio hoy={hoy} onVolver={volver} />
+  if (enCharla) return <CharlaDeInicio onVolver={volver} />
 
   return (
     <div className="flex flex-1 flex-col gap-7">

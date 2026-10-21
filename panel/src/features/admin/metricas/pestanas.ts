@@ -199,7 +199,7 @@ const REGISTRO = {
       {
         id: 'proyeccion',
         titulo: 'Proyección y banco',
-        descripcion: 'Lo que entrará y saldrá desde hoy, lo proyectado frente a lo que pasó y el saldo del banco.',
+        descripcion: 'Lo que entrará y saldrá día a día hasta que vence lo que hoy está en la calle, y el saldo del banco.',
         carpeta: 'caja',
         periodo: 'hoy',
       },

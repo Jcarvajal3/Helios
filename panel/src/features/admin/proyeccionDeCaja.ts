@@ -1,72 +1,8 @@
 import { comoFila, comoLista, numeroONulo, textoONulo } from '@/lib/json'
 import { supabase } from '@/lib/supabase'
-import { leerProyectadoFrenteAReal } from '@/features/admin/proyectadoFrenteAReal'
-import type { ProyectadoFrenteAReal } from '@/features/admin/proyectadoFrenteAReal'
 
-// Lo que se espera que entre y salga de la caja en las próximas semanas, y el
-// saldo real del banco apuntado a mano frente al del libro. Lo leen el
-// cierre y Dinero.
-
-export type ForecastWeek = {
-  weekStart: string
-  weekEnd: string
-  /** Lo que vence, sin ajustar. */
-  expectedGrossUsd: number
-  /** Lo mismo, multiplicado por el cobro a tiempo histórico. */
-  expectedInUsd: number
-  expectedOutUsd: number
-  netUsd: number
-}
-
-export type CashForecast = {
-  businessDate: string
-  cashNowUsd: number
-  weeks: number
-  /** Null cuando no hay historia suficiente para ajustar. */
-  onTimeFactor: number | null
-  graceDays: number
-  rows: ForecastWeek[]
-}
-
-export async function fetchCashForecast(weeks = 4): Promise<CashForecast> {
-  const { data, error } = await supabase.rpc('admin_cash_forecast', { p_weeks: weeks })
-  if (error) throw error
-
-  const raw = comoFila(data)
-  return {
-    businessDate: String(raw.business_date),
-    cashNowUsd: Number(raw.cash_now_usd),
-    weeks: Number(raw.weeks),
-    onTimeFactor: numeroONulo(raw.on_time_factor),
-    graceDays: Number(raw.grace_days),
-    rows: comoLista(raw.rows).map((semana) => {
-      const r = comoFila(semana)
-      return {
-        weekStart: String(r.week_start),
-        weekEnd: String(r.week_end),
-        expectedGrossUsd: Number(r.expected_gross_usd),
-        expectedInUsd: Number(r.expected_in_usd),
-        expectedOutUsd: Number(r.expected_out_usd),
-        netUsd: Number(r.net_usd),
-      }
-    }),
-  }
-}
-
-/** Las semanas que se comparan con lo que pasó. */
-export const SEMANAS_COMPARADAS = 8
-
-/**
- * Lo proyectado cada lunes frente a lo que pasó, semana a semana. Vacío hasta
- * la primera foto.
- */
-export async function fetchProyectadoFrenteAReal(
-  semanas = SEMANAS_COMPARADAS,
-): Promise<ProyectadoFrenteAReal> {
-  const { data, error } = await supabase.rpc('admin_forecast_vs_actual', { p_weeks: semanas })
-  if (error) throw error
-  return leerProyectadoFrenteAReal(data)
-}
+// El saldo real del banco apuntado a mano frente al del libro. Lo leen el
+// cierre y Métricas › Caja. (La proyección vive en `metricas/caja`.)
 
 /**
  * El saldo real del banco frente al del libro.

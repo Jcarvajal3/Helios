@@ -1,7 +1,7 @@
 import { Seccion } from '@/components/ui'
 import { BalanceDelDinero } from '@/components/admin/caja/BalanceDelDinero'
 import { ProyeccionDeCaja } from '@/components/admin/caja/ProyeccionDeCaja'
-import { ProyectadoFrenteAReal } from '@/components/admin/caja/ProyectadoFrenteAReal'
+
 import { SaldoDelBanco } from '@/components/admin/caja/SaldoDelBanco'
 import { NoSeParte } from '@/components/admin/metricas/kit'
 import type { BusquedaCaja } from '@/features/admin/metricas/caja/busqueda'
@@ -11,8 +11,6 @@ import type { PropsSubpestana } from '@/features/admin/metricas/tipos'
 import { CapitalComprometido } from './CapitalComprometido'
 import { MovimientosDeLaSemana } from './MovimientosDeLaSemana'
 
-/** Las semanas de proyección por defecto. */
-const HORIZONTE_POR_DEFECTO = '4'
 
 /**
  * Métricas › Caja: ¿cuánto dinero hay y cuánto hará falta?
@@ -37,11 +35,9 @@ const HORIZONTE_POR_DEFECTO = '4'
 export function PestanaCaja({
   sub,
   semana,
-  hoy,
   local,
   nombreLocal,
   busqueda,
-  cambiarBusqueda,
 }: PropsSubpestana<BusquedaCaja, IdSubpestana<'caja'>>) {
   return (
     <div className="flex flex-col gap-6">
@@ -55,14 +51,7 @@ export function PestanaCaja({
 
       {sub === 'proyeccion' && (
         <div className="flex flex-col gap-10">
-          <ProyeccionDeCaja
-            semanas={busqueda.horizonte ?? HORIZONTE_POR_DEFECTO}
-            onSemanas={(h) =>
-              cambiarBusqueda({ horizonte: h === HORIZONTE_POR_DEFECTO ? undefined : h }, { reemplazar: true })
-            }
-            local={local}
-          />
-          <ProyectadoFrenteAReal hoy={hoy} local={local} />
+          <ProyeccionDeCaja local={local} />
           {local ? (
             <Seccion titulo="Saldo del banco">
               <NoSeParte variante="bloque" motivo={MOTIVO_BANCO} />

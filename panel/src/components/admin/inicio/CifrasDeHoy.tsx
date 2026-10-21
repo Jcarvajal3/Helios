@@ -73,7 +73,7 @@ function DeudaVencida() {
  * próximo pago es hoy.
  */
 function SaleEnElCierre({ hoy }: { hoy: string }) {
-  const lectura = useCierreDeHoy(hoy)
+  const lectura = useCierreDeHoy()
   const c = datosDe(lectura)
   const p = pantalla('pagos-a-locales')
   const medidor = c ? medidorDelCierre(c.salen, c.caja) : null

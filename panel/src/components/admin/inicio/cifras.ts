@@ -150,16 +150,13 @@ export function globoDeDeudaVencida(
 // ── Caja ───────────────────────────────────────────────────────────────────
 
 /**
- * La pastilla del pago a las clínicas. Solo es roja cuando hay que hacer algo:
- * «en camino» no es un aviso. Con el pago diario casi no sale: el pago que
- * viene es siempre hoy.
+ * La pastilla del pago de hoy a las clínicas: verde si la caja lo cubre, roja
+ * si no.
  */
 export function senalDelCierre(veredicto: VeredictoDelCierre): SenalDeCifra {
   switch (veredicto) {
     case 'cubre':
       return { tone: 'success', texto: 'Cubre' }
-    case 'en_camino':
-      return { tone: 'neutral', texto: 'En camino' }
     case 'urgente':
       return { tone: 'error', texto: 'No cubre' }
   }

@@ -66,11 +66,11 @@ function Pastilla({ pastilla, onVolver }: { pastilla: PastillaDeLaCharla; onVolv
 }
 
 /** Lo pendiente y tres cifras, plegados: las mismas lecturas que la pantalla normal. */
-function TiraDeLaCharla({ hoy, onVolver }: { hoy: string; onVolver: () => void }) {
+function TiraDeLaCharla({ onVolver }: { onVolver: () => void }) {
   const pastillas = pastillasDeLaCharla({
     pendiente: usePendiente(),
     mora: useDeudaVencida(),
-    cierre: useCierreDeHoy(hoy),
+    cierre: useCierreDeHoy(),
     impago: useImpagoPrimeraCuota(),
   })
 
@@ -103,7 +103,7 @@ function BotonConversacionNueva() {
  * «Volver a Inicio», Escape y Atrás del navegador llevan a la pantalla
  * normal; la conversación se queda guardada y el héroe ofrece seguirla.
  */
-export function CharlaDeInicio({ hoy, onVolver }: { hoy: string; onVolver: () => void }) {
+export function CharlaDeInicio({ onVolver }: { onVolver: () => void }) {
   // El último `onVolver`, sin volver a colgar el oyente de Escape.
   const volver = useRef(onVolver)
   useEffect(() => {
@@ -126,7 +126,7 @@ export function CharlaDeInicio({ hoy, onVolver }: { hoy: string; onVolver: () =>
       <Halo donde="charla" />
 
       <header className="-mx-4 flex min-h-15 shrink-0 flex-wrap items-center gap-2 border-b border-panel-hairline px-4 py-2.5 lg:-mx-8 lg:px-8">
-        <TiraDeLaCharla hoy={hoy} onVolver={onVolver} />
+        <TiraDeLaCharla onVolver={onVolver} />
         <div className="ml-auto flex shrink-0 items-center gap-2">
           <BotonConversacionNueva />
           <Button variant="tonal" size="sm" onClick={onVolver}>

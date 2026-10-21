@@ -15,7 +15,7 @@ import {
   bloqueoDeExtracto,
   bloqueoDeTasa,
 } from './bloqueos'
-import { diasAlCierre, horizonteDelCierre, sumarCartera, ultimoMesMaduro, veredictoDelCierre } from './numeros'
+import { ultimoMesMaduro, veredictoDelCierre } from './numeros'
 import {
   diaCortoConNombre,
   horaDeCaracas,
@@ -107,29 +107,9 @@ console.log('\n── Bloquea la operación ────────────
 
 console.log('\n── Caja ─────────────────────────────────────────────────────')
 {
-  comprueba(diasAlCierre('2026-09-24', '2026-09-28') === 4, 'del jueves al lunes, cuatro días')
-  comprueba(diasAlCierre('2026-09-28', '2026-09-28') === 0, 'el mismo lunes, cero')
-  comprueba(diasAlCierre('2026-09-29', '2026-09-28') === -1, 'un cierre pasado es negativo')
-  comprueba(diasAlCierre('2026-09-24', null) === null, 'sin cierre no hay días')
-
-  comprueba(horizonteDelCierre(4) === 3, 'se cuentan las cuotas hasta la víspera')
-  comprueba(horizonteDelCierre(1) === 0, 'con el cierre mañana, solo lo que vence hoy')
-  comprueba(horizonteDelCierre(0) === null && horizonteDelCierre(null) === null, 'con el cierre hoy o sin fecha, la cartera de la semana')
-  comprueba(horizonteDelCierre(45) === 30, 'como mucho, 30 días')
-
-  comprueba(
-    sumarCartera([{ upcomingUsd: 1, overdueUsd: 2 }, { upcomingUsd: 3, overdueUsd: 4 }], 'overdueUsd') === 6,
-    'suma la columna pedida',
-  )
-  comprueba(sumarCartera(undefined, 'upcomingUsd') === 0, 'sin filas, nada que sumar')
-
-  const cierre = { salen: 100, caja: 40, dias: 4, porVencer: 80, vencido: 0 }
-  comprueba(veredictoDelCierre({ ...cierre, caja: 100 }) === 'cubre', 'con la caja justa, cubre')
-  comprueba(veredictoDelCierre(cierre) === 'en_camino', 'no alcanza, pero lo que vence sí y quedan días: en camino')
-  comprueba(veredictoDelCierre({ ...cierre, vencido: 5 }) === 'urgente', 'con cuotas vencidas sin cobrar, urgente')
-  comprueba(veredictoDelCierre({ ...cierre, porVencer: 59 }) === 'urgente', 'si lo que vence no tapa el hueco, urgente')
-  comprueba(veredictoDelCierre({ ...cierre, dias: 1 }) === 'urgente', 'con el cierre mañana ya no basta esperar')
-  comprueba(veredictoDelCierre({ ...cierre, dias: null }) === 'urgente', 'sin fecha de cierre no se da por en camino')
+  comprueba(veredictoDelCierre({ salen: 100, caja: 100 }) === 'cubre', 'con la caja justa, cubre')
+  comprueba(veredictoDelCierre({ salen: 100, caja: 40 }) === 'urgente', 'si no alcanza, no cubre: el pago es hoy')
+  comprueba(veredictoDelCierre({ salen: 0, caja: 0 }) === 'cubre', 'sin nada que pagar, cubre')
 }
 
 console.log('\n── Riesgo ───────────────────────────────────────────────────')

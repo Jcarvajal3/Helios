@@ -202,8 +202,9 @@ igual(url({ vista: 'global', local: 'la-quinta' }), { vista: 'global' }, 'una cl
 igual(url({ vista: 'cobros', semana: '2026-09-10' }), { semana: '2026-09-07', vista: 'cobros' }, 'la semana, a su lunes')
 
 console.log('\n── Cada pestaña, solo con lo suyo ────────────────────────────')
-igual(url({ vista: 'caja', sub: 'proyeccion', horizonte: '8' }), { horizonte: '8', sub: 'proyeccion', vista: 'caja' }, 'Caja se queda su horizonte')
-igual(url({ vista: 'gente', horizonte: '8' }), { vista: 'gente' }, 'lo de otra pestaña se cae')
+igual(url({ vista: 'caja', sub: 'proyeccion', corte: '2026-09-30' }), { corte: '2026-09-30', sub: 'proyeccion', vista: 'caja' }, 'Caja se queda su corte')
+igual(url({ vista: 'caja', sub: 'proyeccion', horizonte: '8' }), { sub: 'proyeccion', vista: 'caja' }, 'el horizonte viejo se cae: la proyección es siempre de 15 días')
+igual(url({ vista: 'gente', corte: '2026-09-30' }), { vista: 'gente' }, 'lo de otra pestaña se cae')
 igual(url({ vista: 'cobros', cuota: '2' }), { cuota: '2', vista: 'cobros' }, 'Cobros › Semanas se queda la cuota de la curva')
 igual(
   url({ vista: 'cobros', sub: 'impago-por-cuota', cuota: 2, dim: 'local' }),

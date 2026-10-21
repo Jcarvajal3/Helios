@@ -4,7 +4,6 @@ import {
   Badge,
   InfoDot,
   Seccion,
-  Segmented,
   SkeletonTable,
   Table,
   Td,
@@ -16,49 +15,35 @@ import {
 } from '@/components/ui'
 import { ErrorConReintento } from '@/components/admin/ErrorConReintento'
 import { Cifra } from '@/components/admin/tableros/CifrasEnFila'
-import { HORIZONTES } from '@/features/admin/metricas/caja/busqueda'
-import type { Horizonte } from '@/features/admin/metricas/caja/busqueda'
-import { consultaDeLaFoto, consultaDeLaProyeccion } from '@/features/admin/metricas/caja/consultas'
+import { DIAS_DE_PROYECCION, consultaDeLaFoto, consultaDeLaProyeccion } from '@/features/admin/metricas/caja/consultas'
 import type { Proyeccion } from '@/features/admin/metricas/caja/lectura'
 import { textoDeDesglose } from '@/features/admin/metricas/formato'
 import type { Desglose } from '@/features/admin/metricas/lectura'
 
-/** Las ventanas que se ofrecen. El servidor no pasa de doce semanas. */
-export const SEMANAS_DE_PROYECCION = HORIZONTES
-export type SemanasDeProyeccion = Horizonte
-
 /**
- * Lo que va a entrar y lo que va a salir las próximas semanas, desde hoy.
+ * Lo que va a entrar y lo que va a salir los próximos 15 días, día a día.
+ *
+ * A la clínica se le paga el día siguiente al vencimiento de cada cuota del
+ * paciente (días 8 y 15 de cada orden), pague o no el paciente; no los lunes.
+ * Con eso, todo lo que hoy está en la calle entra y sale en esos 15 días. Lo
+ * que sale incluye las mitades que todavía no se han devengado.
  *
  * La caja de partida es «Dinero en caja», la misma lectura que el Balance
- * (`admin_cash_position`): el saldo proyectado se acumula aquí, semana a
- * semana, sobre ella. Lo que vence y lo que se espera cobrar son cuotas, así
- * que dicen «(consumo + comisión)» y van con sus dos partes debajo (regla del
- * comisión). Solo lleva color la caja que se queda por debajo de cero.
+ * (`admin_cash_position`): el saldo proyectado se acumula aquí, día a día,
+ * sobre ella. Lo que vence y lo que se espera cobrar son cuotas, así que
+ * dicen «(consulta + comisión)» y van con sus dos partes debajo. Solo lleva
+ * color la caja que se queda por debajo de cero. Los días sin movimiento no
+ * salen.
  *
- * Con un local: lo que vence de sus consumos y lo que sale hacia él; sin
- * caja, que es de todo Ronda.
+ * Con una clínica: lo que vence de sus órdenes y lo que sale hacia ella; sin
+ * caja, que es de todo Helios.
  */
-export function ProyeccionDeCaja({
-  semanas,
-  onSemanas,
-  local,
-}: {
-  semanas: SemanasDeProyeccion
-  onSemanas: (semanas: SemanasDeProyeccion) => void
-  local: string | null
-}) {
+export function ProyeccionDeCaja({ local }: { local: string | null }) {
   const foto = useQuery(consultaDeLaFoto(null))
-  const proyeccion = useQuery(consultaDeLaProyeccion(semanas, local))
+  const proyeccion = useQuery(consultaDeLaProyeccion(local))
   const titulo = local ? 'Proyección de esta clínica' : 'Proyección de caja'
-
   const controles = (
-    <Segmented
-      etiqueta="Semanas"
-      options={SEMANAS_DE_PROYECCION.map((s) => ({ value: s, label: `${s} semanas` }))}
-      value={semanas}
-      onChange={onSemanas}
-    />
+    <span className="type-panel-caption text-panel-muted">Próximos {DIAS_DE_PROYECCION} días</span>
   )
 
   // Con un local no hace falta la caja: no espera por ella.
@@ -110,13 +95,13 @@ function TablaDeProyeccion({ d, caja, local }: { d: Proyeccion; caja: number | n
   const aTiempo =
     d.factorATiempo === null
       ? ': todavía no hay suficiente historia, así que van iguales.'
-      : ` de los últimos 90 días (cuotas con el plazo cerrado, el vencimiento más ${d.diasDeGracia} días de gracia; un pago cuenta el día en que se reportó), que hoy es del ${(d.factorATiempo * 100).toFixed(0)} %${local ? ' (el de toda la cartera: el de una clínica tiene muy pocas cuotas)' : ''}.`
+      : ` de los últimos 90 días (cuotas con el plazo cerrado, el vencimiento más ${d.diasDeGracia} días de gracia; un pago cuenta el día en que se registró), que hoy es del ${(d.factorATiempo * 100).toFixed(0)} %${local ? ' (el de toda la cartera: el de una clínica tiene muy pocas cuotas)' : ''}.`
 
   const cabeceras = [
-    'Semana',
+    'Día',
     {
       label: 'Vence (financiamiento + comisión)',
-      info: 'Calculado de las cuotas sin pagar que vencen esa semana, desde hoy (lo ya vencido no se proyecta: está en el Balance como vencido), sin ajustar: el financiamiento más la Comisión Helios (IVA incluido), con sus dos partes debajo.',
+      info: 'Calculado de las cuotas sin pagar que vencen ese día, desde hoy (lo ya vencido no se proyecta: está en el Balance como vencido), sin ajustar: el financiamiento más la Comisión Helios (IVA incluido), con sus dos partes debajo.',
     },
     {
       label: 'Se espera cobrar (financiamiento + comisión)',
@@ -124,39 +109,49 @@ function TablaDeProyeccion({ d, caja, local }: { d: Proyeccion; caja: number | n
     },
     {
       label: local ? 'A transferir a la clínica' : 'A transferir a clínicas',
-      info: 'Lo que toca pagarles esa semana: las liquidaciones ya devengadas y las mitades de las consultas que se devengarán al vencer cada cuota (a la clínica se le paga pague o no el paciente), más las comisiones del personal. Sin la Comisión Helios. Lo atrasado cae en la primera semana. No incluye órdenes que todavía no se han registrado.',
+      info: 'Lo que toca pagarles ese día: la mitad de cada consulta el día siguiente al vencimiento de su cuota (pague o no el paciente) y las comisiones del personal. Debajo, cuánto ya está devengado y cuánto se devengará al vencer la cuota. Sin la Comisión Helios. Lo atrasado cae hoy. No incluye órdenes que todavía no se han registrado.',
     },
-    { label: 'Neto', info: 'Lo que se espera cobrar menos lo que hay que transferir esa semana.' },
+    { label: 'Neto', info: 'Lo que se espera cobrar menos lo que hay que transferir ese día.' },
     ...(caja === null
       ? []
       : [
           {
             label: 'Caja proyectada al final',
-            info: 'El dinero en caja de hoy (del libro contable) más el neto de cada semana, acumulado.',
+            info: 'El dinero en caja de hoy (del libro contable) más el neto de cada día, acumulado.',
           },
         ]),
   ]
 
   let saldo = caja ?? 0
+  // El neto se acumula sobre todos los días; solo se enseñan los que mueven
+  // algo (y hoy, siempre).
+  const filas = d.filas.map((w) => {
+    saldo += w.netoUsd
+    return { ...w, proyectado: saldo }
+  })
+  const conMovimiento = filas.filter((w, i) => i === 0 || w.vence.payableUsd > 0 || w.saleUsd > 0)
 
   return (
     <Table headers={cabeceras}>
-      {d.filas.map((w) => {
-        saldo += w.netoUsd
-        const proyectado = saldo
+      {conMovimiento.map((w) => {
+        const proyectado = w.proyectado
         return (
-          <Tr key={w.weekStart}>
-            <Td className="whitespace-nowrap">
-              {formatDay(w.weekStart)}
-              <span className="block type-panel-caption text-panel-muted">al {formatDay(w.weekEnd)}</span>
-            </Td>
+          <Tr key={w.dia}>
+            <Td className="whitespace-nowrap">{w.dia === d.businessDate ? 'Hoy' : formatDay(w.dia)}</Td>
             <Td className="tabular-nums text-on-surface-variant">
               <ConDesglose d={w.vence} />
             </Td>
             <Td className="tabular-nums font-semibold text-on-surface">
               <ConDesglose d={w.seEspera} />
             </Td>
-            <Td className="tabular-nums text-on-surface-variant">−{formatUsd(w.saleUsd)}</Td>
+            <Td className="tabular-nums text-on-surface-variant">
+              −{formatUsd(w.saleUsd)}
+              {w.salePorDevengarUsd > 0 && (
+                <span className="block whitespace-nowrap type-panel-caption font-normal text-panel-muted">
+                  {formatUsd(w.saleDevengadoUsd)} devengado · {formatUsd(w.salePorDevengarUsd)} por devengar
+                </span>
+              )}
+            </Td>
             <Td className="tabular-nums text-on-surface">{formatUsd(w.netoUsd)}</Td>
             {caja !== null && (
               <Td className="tabular-nums font-semibold text-on-surface">
@@ -185,14 +180,14 @@ function ConDesglose({ d }: { d: Desglose }) {
 }
 
 /**
- * La caja de una semana: en blanco, o con la pastilla de error si se queda por
- * debajo de cero. La comparte lo proyectado frente a lo real.
+ * La caja de un día: en blanco, o con la pastilla de error si se queda por
+ * debajo de cero.
  *
  * Por qué va en rojo lo dice el globo del kit (`Tooltip`), con el ratón o con
  * el teclado, y no el `title` del navegador; el lector de pantalla lo oye en
  * la misma pastilla.
  */
-export function CajaAlFinal({ valor }: { valor: number }) {
+function CajaAlFinal({ valor }: { valor: number }) {
   if (valor >= 0) return <>{formatUsd(valor)}</>
   return (
     <Tooltip contenido="La caja se queda por debajo de cero">

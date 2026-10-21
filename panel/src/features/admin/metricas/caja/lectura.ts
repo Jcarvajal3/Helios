@@ -6,7 +6,7 @@ import { comoFila, comoLista, filaONula, numero, numeroONulo, textoONulo } from 
 // ═══════════════════════════════════════════════════════════════════════════
 // La lectura de lo que pinta Métricas › Caja: `admin_metricas_caja` (lo que
 // se movió en la semana), `admin_cash_position` (la foto de hoy) y
-// `admin_cash_forecast` (la proyección). Sin aritmética de negocio: todo lo
+// `admin_cash_forecast_days` (la proyección). Sin aritmética de negocio: todo lo
 // calcula la base sobre `metricas.caja_*`; aquí solo se traducen nombres.
 //
 // La regla de la comisión: todo lo que se paga en cuotas (`payable`) llega con su
@@ -218,14 +218,18 @@ export function leerFoto(data: unknown): FotoDeCaja {
 
 // ── La proyección ──────────────────────────────────────────────────────────
 
-export type SemanaProyectada = {
-  weekStart: string
-  weekEnd: string
+export type DiaProyectado = {
+  dia: string
   /** Lo que vence, sin ajustar. */
   vence: Desglose
   /** Lo mismo, por el cobro a tiempo histórico. */
   seEspera: Desglose
+  /** Lo que sale a las clínicas ese día: lo ya devengado más lo que se devengará. */
   saleUsd: number
+  /** De lo que sale, lo que ya está en `settlements` (con lo atrasado, hoy). */
+  saleDevengadoUsd: number
+  /** De lo que sale, las mitades de cuotas que todavía no han vencido. */
+  salePorDevengarUsd: number
   netoUsd: number
 }
 
@@ -234,11 +238,11 @@ export type Proyeccion = {
   merchantId: string | null
   /** La caja de partida. `null` con un local. */
   cajaHoyUsd: number | null
-  semanas: number
+  dias: number
   /** Null cuando no hay historia suficiente: lo esperado es lo que vence. */
   factorATiempo: number | null
   diasDeGracia: number
-  filas: SemanaProyectada[]
+  filas: DiaProyectado[]
 }
 
 export function leerProyeccion(data: unknown): Proyeccion {
@@ -247,14 +251,13 @@ export function leerProyeccion(data: unknown): Proyeccion {
     businessDate: String(raw.business_date),
     merchantId: textoONulo(raw.merchant_id),
     cajaHoyUsd: numeroONulo(raw.cash_now_usd),
-    semanas: numero(raw.weeks),
+    dias: numero(raw.days),
     factorATiempo: numeroONulo(raw.on_time_factor),
     diasDeGracia: numero(raw.grace_days),
     filas: comoLista(raw.rows).map((fila) => {
       const r = comoFila(fila)
       return {
-        weekStart: String(r.week_start),
-        weekEnd: String(r.week_end),
+        dia: String(r.day),
         vence: desglose({
           payable_usd: r.expected_gross_usd,
           financed_usd: r.expected_gross_financed_usd,
@@ -266,6 +269,8 @@ export function leerProyeccion(data: unknown): Proyeccion {
           fee_usd: r.expected_in_fee_usd,
         }),
         saleUsd: numero(r.expected_out_usd),
+        saleDevengadoUsd: numero(r.out_accrued_usd),
+        salePorDevengarUsd: numero(r.out_to_accrue_usd),
         netoUsd: numero(r.net_usd),
       }
     }),

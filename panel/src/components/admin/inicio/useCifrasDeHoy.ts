@@ -2,7 +2,6 @@ import { useQuery } from '@tanstack/react-query'
 
 import { estadoDeConsultas } from '@/components/ui'
 import type { PuntoDeMiniBarras } from '@/components/charts'
-import { consultaCartera, fetchCollections } from '@/features/admin/cobranza/consultas'
 import { payablesTotals } from '@/features/admin/definitions'
 import { elegirSemana } from '@/features/admin/semana'
 import { umbralImpago, umbralMora } from '@/features/admin/umbrales'
@@ -16,7 +15,7 @@ import {
   consultaSemanas,
   consultaSerieDiaria,
 } from './consultas'
-import { diasAlCierre, horizonteDelCierre, sumarCartera, veredictoDelCierre } from './numeros'
+import { veredictoDelCierre } from './numeros'
 import type { VeredictoDelCierre } from './numeros'
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -89,45 +88,24 @@ export type CierreDeHoy = {
 }
 
 /**
- * El próximo pago a las clínicas: lo que sale, la caja y si alcanza.
- *
- * Desde el 2026-10-06 se les paga a diario (cada liquidación, el día
- * siguiente a su vencimiento) y el próximo pago es hoy: se compara la caja de
- * hoy con lo que sale hoy y cuenta la cartera de la semana. Si el servidor
- * mandara un pago futuro, las cuotas que cuentan serían las que vencen hasta
- * su víspera.
+ * El pago de hoy a las clínicas: lo que sale, la caja y si alcanza. Se les
+ * paga a diario (cada liquidación, el día siguiente a su vencimiento): se
+ * compara la caja de hoy con lo que sale hoy.
  */
-export function useCierreDeHoy(hoy: string): LecturaDeCifra<CierreDeHoy> {
+export function useCierreDeHoy(): LecturaDeCifra<CierreDeHoy> {
   const locales = useQuery(consultaDeudaConLocales())
   const caja = useQuery(consultaCaja())
-  const semana = useQuery(consultaCartera())
 
   const totales = payablesTotals(locales.data)
-  const dias = diasAlCierre(hoy, totales.fechaCierre)
-  const horizonte = horizonteDelCierre(dias)
 
-  // Misma clave que la cartera cuando el horizonte coincide: una sola llamada.
-  const antesDelCierre = useQuery({
-    queryKey: ['admin-collections', horizonte],
-    queryFn: () => fetchCollections(horizonte ?? 0),
-    enabled: horizonte !== null,
-  })
-  const cuotas = horizonte !== null ? antesDelCierre : semana
-
-  return leer([locales, caja, cuotas], () => {
-    if (!locales.data || !caja.data || !cuotas.data) return undefined
+  return leer([locales, caja], () => {
+    if (!locales.data || !caja.data) return undefined
     const salen = totales.saleEsteCierre
     return {
       fechaCierre: totales.fechaCierre,
       salen,
       caja: caja.data.cash,
-      veredicto: veredictoDelCierre({
-        salen,
-        caja: caja.data.cash,
-        dias,
-        porVencer: sumarCartera(antesDelCierre.data?.rows, 'upcomingUsd'),
-        vencido: sumarCartera(cuotas.data.rows, 'overdueUsd'),
-      }),
+      veredicto: veredictoDelCierre({ salen, caja: caja.data.cash }),
     }
   })
 }

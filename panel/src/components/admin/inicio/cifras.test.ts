@@ -116,7 +116,7 @@ console.log('── Cobranza ─────────────────
 console.log('\n── Caja ─────────────────────────────────────────────────────')
 {
   comprueba(senalDelCierre('cubre').tone === 'success' && senalDelCierre('cubre').texto === 'Cubre', 'cubre, en verde')
-  comprueba(senalDelCierre('en_camino').tone === 'neutral', 'en camino no es un aviso')
+
   comprueba(senalDelCierre('urgente').tone === 'error' && senalDelCierre('urgente').texto === 'No cubre', 'no cubre, en rojo')
 
   comprueba(diaDelCierre('2026-09-28') === 'lunes 28', 'el día del cierre con su nombre', diaDelCierre('2026-09-28'))
@@ -211,12 +211,12 @@ console.log('\n── La tira de la charla ────────────�
   const conFallos = pastillasDeLaCharla({
     pendiente: { estado: 'con-trabajo', tarjetas: [], total: 1, pendientes: 0, principal: null, urgencia: 'neutral' },
     mora: { estado: 'error', reintentar: () => undefined },
-    cierre: { estado: 'listo', datos: { veredicto: 'en_camino' } },
+    cierre: { estado: 'listo', datos: { veredicto: 'cubre' } },
     impago: { estado: 'error', reintentar: () => undefined },
   })
   comprueba(
     textos(conFallos) ===
-      'Pendiente: no se pudo leer [neutral] · Mora: no se pudo leer [neutral] · Pago de hoy: en camino [neutral] · Impago cuota 1: no se pudo leer [neutral]',
+      'Pendiente: no se pudo leer [neutral] · Mora: no se pudo leer [neutral] · Pago de hoy: cubre [success] · Impago cuota 1: no se pudo leer [neutral]',
     'lo que falló lo dice, nunca con un cero',
     textos(conFallos),
   )

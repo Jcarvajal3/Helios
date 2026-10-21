@@ -2,7 +2,7 @@ import { queryOptions } from '@tanstack/react-query'
 
 import { OPCIONES_METRICAS, argumentosComunes, claveMetricas, llamarRpc } from '@/features/admin/metricas/consulta'
 import { leerCaja, leerFoto, leerProyeccion } from './lectura'
-import type { Horizonte } from './busqueda'
+
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Las lecturas de Métricas › Caja, con la semana y el local globales. La
@@ -35,14 +35,21 @@ export function consultaDeLaFoto(local: string | null) {
   })
 }
 
-/** La proyección desde hoy (`admin_cash_forecast`), con el desglose de lo que vence. */
-export function consultaDeLaProyeccion(horizonte: Horizonte, local: string | null) {
+/**
+ * Los días que se proyectan. A la clínica se le paga el día siguiente al
+ * vencimiento de cada cuota (días 8 y 15 de cada orden), así que lo que hoy
+ * está en la calle entra y sale entero en los próximos 15 días.
+ */
+export const DIAS_DE_PROYECCION = 15
+
+/** La proyección día a día desde hoy (`admin_cash_forecast_days`), con el desglose de lo que vence. */
+export function consultaDeLaProyeccion(local: string | null) {
   return queryOptions({
-    queryKey: claveMetricas('caja', 'admin_cash_forecast', horizonte, local),
+    queryKey: claveMetricas('caja', 'admin_cash_forecast_days', DIAS_DE_PROYECCION, local),
     queryFn: ({ signal }) =>
       llamarRpc(
-        'admin_cash_forecast',
-        { p_weeks: Number(horizonte), p_merchant_id: local },
+        'admin_cash_forecast_days',
+        { p_days: DIAS_DE_PROYECCION, p_merchant_id: local },
         { signal, leer: leerProyeccion },
       ),
     ...OPCIONES_METRICAS,

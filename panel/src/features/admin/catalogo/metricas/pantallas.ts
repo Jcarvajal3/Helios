@@ -283,9 +283,9 @@ export const pantallasDeMetricas = [
     id: 'metricas-caja-proyeccion',
     titulo: 'Métricas › Caja › Proyección y banco',
     descripcion:
-      'Lo que entrará y saldrá desde hoy, lo proyectado frente a lo que pasó y el saldo del banco.',
+      'Lo que entrará y saldrá día a día hasta que vence lo que hoy está en la calle, y el saldo del banco.',
     espacio: 'metricas',
-    sinonimos: ['proyección', 'proyección de caja', 'saldo del banco', 'banco', 'proyectado frente a real', 'flujo de caja'],
+    sinonimos: ['proyección', 'proyección de caja', 'saldo del banco', 'banco', 'flujo de caja'],
     destino: { to: '/admin/metricas', search: { vista: 'caja', sub: 'proyeccion' } },
     icono: ChartLine,
   },
