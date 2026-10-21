@@ -87,8 +87,8 @@ console.log('\n── El menú sale del catálogo ──────────
 
   const orden = superAdminNavGroups.map((g) => g.espacio)
   comprueba(
-    orden.join(' ') === 'inicio cobranza caja directorio ajustes',
-    'el menú va siempre en el mismo orden: Inicio y Métricas, Cobranza y riesgo, Caja y contabilidad, Directorio y Ajustes',
+    orden.join(' ') === 'inicio cobranza caja seguimiento directorio ajustes',
+    'el menú va siempre en el mismo orden: Inicio y Métricas, Cobranza y riesgo, Caja y contabilidad, Seguimiento, Directorio y Ajustes',
     orden.join(' '),
   )
 
@@ -106,8 +106,9 @@ console.log('\n── El menú sale del catálogo ──────────
     .map((g) => `${g.title}: ${g.items.map((i) => i.label).join(', ')}`)
   comprueba(
     bloques.join(' | ') ===
-      'Cobranza y riesgo: Por cobrar, Pagos reportados, Avisos, WhatsApp, Alertas | ' +
+      'Cobranza y riesgo: Por cobrar, Pagos reportados, Avisos, Alertas | ' +
         'Caja y contabilidad: Pagos a clínicas, Libro y cierre de mes | ' +
+        'Seguimiento: Seguimiento, WhatsApp | ' +
         'Directorio: Pacientes, Clínicas, Financiamientos | Ajustes: Ajustes',
     'los bloques del menú, con sus pantallas en orden (CONTRATOS §1)',
     bloques.join(' | '),

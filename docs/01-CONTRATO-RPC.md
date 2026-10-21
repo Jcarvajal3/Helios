@@ -724,6 +724,40 @@ bitácora.
 - Dar de baja a una persona (`merchant_staff_update` → inactiva) revoca su
   número.
 
+### 2.8 Seguimiento de las clínicas (2026-10-21, 20261021100000)
+
+Superadmin › Seguimiento: el contacto del equipo con los médicos y su
+personal. Leer y anotar: `is_platform_admin()` (los dos roles, como una
+gestión de cobranza), con bitácora al anotar.
+
+Tabla `merchant_followups` (solo se añade, sin RLS de lectura: solo por estas
+RPC): `merchant_id, contact_user_id` (null = el consultorio), `channel`
+(`llamada | whatsapp | visita | correo`), `topic` (`seguimiento | opinion |
+soporte | capacitacion`), `note` (3–2000), `next_contact_on`, `actor`.
+
+- `admin_followups_board() → jsonb` (un arreglo, una fila por clínica):
+  `merchant_id, name, status, is_test, city, specialty, phone, email,
+  owner_name, doctor_name, created_at, orders_confirmed, orders_30d,
+  last_order_at, staff[], followups_count, last_followup, next_contact_on`.
+  `staff[]` es el personal activo, quien más órdenes confirmadas tiene
+  primero: `user_id, name, email, phone` (el número activo del bot; si no,
+  el de auth), `role, branch, joined_at, last_sign_in_at,
+  orders_registered, orders_confirmed, orders_30d, orders_whatsapp,
+  last_order_at`. Las órdenes son las de `charges.requested_by`, sin las de
+  pacientes de prueba; 30 días = días operativos con hoy. `last_followup`:
+  `created_at, channel, topic, note, actor_name, contact_name` o null.
+  `next_contact_on` es la del último contacto (una nota nueva sin fecha la
+  quita).
+- `admin_merchant_followups(p_merchant_id uuid, p_limit int default 50) →
+  table(id, created_at, channel, topic, note, next_contact_on,
+  contact_user_id, contact_name, actor_name)`, el último primero (tope 200).
+- `admin_log_merchant_followup(p_merchant_id uuid, p_channel text, p_topic
+  text, p_note text, p_contact_user_id uuid default null, p_next_contact_on
+  date default null) → uuid`. `P0002` si la clínica no existe; `22023` con
+  canal o motivo desconocido, nota de menos de 3 o más de 2000 caracteres,
+  una persona que nunca fue de esa clínica o una fecha anterior al día
+  operativo. Bitácora `merchant.followup` (target: la clínica).
+
 ---
 
 ## 3. Parámetros nuevos (`business_parameters`)

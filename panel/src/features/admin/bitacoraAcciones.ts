@@ -68,6 +68,8 @@ export const ACCION_VERBO: Record<string, string | undefined> = {
   'merchant.staff_whatsapp_welcome': 'mandó la bienvenida por WhatsApp a un médico',
   'merchant.staff_updated': 'cambió los datos de alguien del personal de una clínica',
   'merchant.staff_removed': 'dio de baja a alguien del personal de una clínica',
+  // Seguimiento (20261021100000).
+  'merchant.followup': 'anotó un contacto de seguimiento con una clínica',
   'merchant.staff_password_reset': 'reinició la contraseña de alguien del personal de una clínica',
 
   // ── Pagos a locales ──────────────────────────────────────────────────────
@@ -189,6 +191,7 @@ export const FILTROS_BITACORA: ReadonlyArray<TemaBitacora> = [
       'merchant.staff_updated',
       'merchant.staff_removed',
       'merchant.staff_password_reset',
+      'merchant.followup',
     ],
   },
   {

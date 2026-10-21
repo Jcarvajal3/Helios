@@ -7,6 +7,7 @@ import { glosario } from './glosario'
 import { inicio } from './inicio'
 import { metricas } from './metricas'
 import { riesgo } from './riesgo'
+import { seguimiento } from './seguimiento'
 import type { Accion, Cifra, Entrada, Pantalla, Termino } from './tipos'
 
 export type {
@@ -46,6 +47,7 @@ const TODAS = [
   ...caja,
   ...riesgo,
   ...gerencia,
+  ...seguimiento,
   ...directorio,
   ...ajustes,
   ...glosario,

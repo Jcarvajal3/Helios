@@ -31,11 +31,12 @@ export type Destino = {
 
 /**
  * Dónde vive una entrada. Los cuatro espacios de trabajo, más los sitios fijos
- * que no son de ningún equipo: Inicio y Métricas arriba, Directorio y Ajustes
- * al final. Métricas es de todos: cada pestaña lleva el tono de su área, pero
+ * que no son de ningún equipo: Inicio y Métricas arriba, Seguimiento (el
+ * contacto con las clínicas y el inbox de WhatsApp), Directorio y Ajustes al
+ * final. Métricas es de todos: cada pestaña lleva el tono de su área, pero
  * la pantalla es neutra.
  */
-export type Ambito = Espacio | 'inicio' | 'metricas' | 'directorio' | 'ajustes'
+export type Ambito = Espacio | 'inicio' | 'metricas' | 'seguimiento' | 'directorio' | 'ajustes'
 
 /** Lo que llevan todas las entradas del catálogo. */
 type Comun = {

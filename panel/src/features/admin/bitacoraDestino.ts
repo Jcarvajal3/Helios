@@ -79,6 +79,7 @@ const FICHA_DEL_TARGET: Record<string, FichaDeBitacora | undefined> = {
   'merchant.staff_updated': 'local',
   'merchant.staff_removed': 'local',
   'merchant.staff_password_reset': 'local',
+  'merchant.followup': 'local',
   'vault.configured': 'local',
   'vault.topup': 'local',
   'waitlist.released_batch': 'local',

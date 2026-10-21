@@ -30,6 +30,8 @@ espera('/admin/pagos-clinicas', 'caja')
 espera('/admin/alertas', 'riesgo')
 espera('/admin/metricas', 'metricas')
 espera('/admin/pacientes', 'directorio')
+espera('/admin/seguimiento', 'seguimiento')
+espera('/admin/whatsapp', 'seguimiento')
 espera('/admin/ajustes', 'ajustes')
 
 console.log('── Las rutas viejas de análisis: solo redirigen ──────────────')

@@ -138,7 +138,8 @@ export function merchantNavGroupsFor(role: MerchantRole): NavGroup[] {
  * hoy) y Métricas (cómo va el negocio; todas las cifras en una pantalla).
  * Debajo, el trabajo de cada día en dos bloques: «Cobranza y riesgo» (a quién
  * cobrar, qué pagó, qué avisos mandar y qué alerta mirar) y «Caja y
- * contabilidad». Al final, Directorio y Ajustes. Gerencia y Riesgo ya no son
+ * contabilidad». Después, «Seguimiento»: el contacto con los médicos y su
+ * personal, y el inbox de WhatsApp. Al final, Directorio y Ajustes. Gerencia y Riesgo ya no son
  * bloques: su análisis vive en Métricas y su trabajo diario en «Cobranza y
  * riesgo». Los tonos siguen siendo los de cada pantalla (Alertas, en el de
  * Riesgo); el punto del bloque es el de su `espacio`.
@@ -167,13 +168,16 @@ const MENU_ADMIN: ReadonlyArray<{
   {
     espacio: 'cobranza',
     titulo: 'Cobranza y riesgo',
-    pantallas: ['cartera-vencida', 'pagos-reportados', 'avisos', 'whatsapp', 'alertas'],
+    pantallas: ['cartera-vencida', 'pagos-reportados', 'avisos', 'alertas'],
   },
   {
     espacio: 'caja',
     titulo: 'Caja y contabilidad',
     pantallas: ['pagos-a-locales', 'libro-y-cierre'],
   },
+  // El contacto con los médicos y su personal: a quién llamar y qué se habló
+  // (Seguimiento), y el inbox donde se les contesta (WhatsApp).
+  { espacio: 'seguimiento', titulo: 'Seguimiento', pantallas: ['seguimiento', 'whatsapp'] },
   // Lo que se busca: un directorio. Se entra con un nombre o un teléfono en
   // la cabeza, no con una tarea.
   { espacio: 'directorio', titulo: 'Directorio', pantallas: ['personas', 'locales', 'consumos'] },
