@@ -15,7 +15,7 @@ import {
 } from '@/components/ui'
 import { RegistrarTransferencia } from '@/components/admin/caja/RegistrarTransferencia'
 import { SeccionSinLeer } from '@/components/admin/directorio/SeccionSinLeer'
-import { fetchMerchantSettlements } from '@/features/admin/api'
+import { fetchMerchantSettlements, fetchMerchantUpcomingSettlements } from '@/features/admin/api'
 import type { Settlement } from '@/features/admin/api'
 import { partirPorMotivo } from '@/features/admin/clinicas/clinicas'
 import { MOTIVO_DE_LIQUIDACION } from '@/features/admin/liquidaciones'
@@ -52,6 +52,11 @@ type Grupo = {
  * Si se llega desde un día de pago concreto (`cierre`), se enseña ese y nada
  * más, con TODAS sus líneas: también las ya pagadas. Un pago saldado tiene que
  * poder contar qué se pagó, no decir que no queda nada.
+ *
+ * Los días que vienen llevan también las mitades de la consulta por vencer
+ * (`porVencer`): todavía no son liquidaciones, pero sin ellas un día futuro
+ * salía solo con la comisión de la secretaria. Suman en su día y no se pueden
+ * marcar: se pagan cuando el cron las crea, no antes.
  */
 export function LiquidacionesDelLocal({
   merchantId,
@@ -72,6 +77,10 @@ export function LiquidacionesDelLocal({
     // Con el día de pago, el servidor trae las de ese día en cualquier estado.
     queryFn: () => fetchMerchantSettlements(merchantId, cierre ?? undefined),
   })
+  const porVencer = useQuery({
+    queryKey: ['settlements', merchantId, 'por-vencer'],
+    queryFn: () => fetchMerchantUpcomingSettlements(merchantId),
+  })
 
   const [abiertos, setAbiertos] = useState<Set<string> | null>(null)
   const [completos, setCompletos] = useState<Set<string>>(new Set())
@@ -80,10 +89,13 @@ export function LiquidacionesDelLocal({
 
   const lineas = useMemo(
     () =>
-      (settlements.data ?? []).filter((s) => (cierre ? s.runDate === cierre : s.pendingUsd > SALDADA)),
-    [settlements.data, cierre],
+      [...(settlements.data ?? []), ...(porVencer.data ?? [])].filter((s) =>
+        cierre ? s.runDate === cierre : s.pendingUsd > SALDADA,
+      ),
+    [settlements.data, porVencer.data, cierre],
   )
-  const abiertas = useMemo(() => lineas.filter((s) => s.pendingUsd > SALDADA), [lineas])
+  // Lo que se puede marcar y pagar: lo que ya es liquidación.
+  const abiertas = useMemo(() => lineas.filter((s) => !s.porVencer && s.pendingUsd > SALDADA), [lineas])
 
   const grupos = useMemo<Grupo[]>(() => {
     const porCierre = new Map<string, Settlement[]>()
@@ -105,7 +117,7 @@ export function LiquidacionesDelLocal({
       new Set(
         grupos
           .filter((g) => g.atrasado || g.esteCierre)
-          .flatMap((g) => g.lineas.filter((s) => s.pendingUsd > SALDADA).map((s) => s.id)),
+          .flatMap((g) => g.lineas.filter((s) => !s.porVencer && s.pendingUsd > SALDADA).map((s) => s.id)),
       ),
     [grupos],
   )
@@ -168,7 +180,8 @@ export function LiquidacionesDelLocal({
     )
   }
 
-  const saldado = abiertas.length === 0
+  // Un día que solo trae mitades por vencer no está saldado: todavía no toca.
+  const saldado = abiertas.length === 0 && !lineas.some((s) => s.porVencer)
 
   return (
     <Seccion
@@ -185,7 +198,7 @@ export function LiquidacionesDelLocal({
 
       <div className="flex flex-col gap-2">
         {grupos.map((grupo) => {
-          const pendientesDelGrupo = grupo.lineas.filter((s) => s.pendingUsd > SALDADA)
+          const pendientesDelGrupo = grupo.lineas.filter((s) => !s.porVencer && s.pendingUsd > SALDADA)
           const idsPendientes = pendientesDelGrupo.map((s) => s.id)
           const marcadasDelGrupo = idsPendientes.filter((id) => marcadas.has(id)).length
           const todas = idsPendientes.length > 0 && marcadasDelGrupo === idsPendientes.length
@@ -266,7 +279,7 @@ export function LiquidacionesDelLocal({
                     <LineaLiquidacion
                       key={s.id}
                       settlement={s}
-                      checked={marcadas.has(s.id)}
+                      checked={!s.porVencer && marcadas.has(s.id)}
                       onToggle={() => alternar([s.id], !marcadas.has(s.id))}
                     />
                   ))}
@@ -287,7 +300,7 @@ export function LiquidacionesDelLocal({
         })}
       </div>
 
-      {!saldado && (
+      {abiertas.length > 0 && (
         <RegistrarTransferencia
           merchantId={merchantId}
           merchantName={merchantName}
@@ -355,8 +368,8 @@ function EstadoDelGrupo({ grupo }: { grupo: Grupo }) {
 /**
  * Una liquidación dentro de su día de pago: qué se devengó, de qué orden y cuánto
  * falta. En una pagada a medias, el monto original va al lado en pequeño; en
- * una de una orden en euros, lo que es en euros. Una ya pagada no se puede
- * marcar.
+ * una de una orden en euros, lo que es en euros. Ni una ya pagada ni una mitad
+ * por vencer se pueden marcar.
  */
 function LineaLiquidacion({
   settlement,
@@ -369,19 +382,22 @@ function LineaLiquidacion({
 }) {
   const pagada = settlement.pendingUsd <= SALDADA
   const aMedias = !pagada && settlement.paidUsd > SALDADA
+  const porVencer = settlement.porVencer === true
+  const bloqueada = pagada || porVencer
 
   return (
     <label
       className={`flex items-center gap-3 rounded-panel-control px-2 py-2 ${
-        pagada ? '' : 'cursor-pointer hover:bg-panel-raised'
+        bloqueada ? '' : 'cursor-pointer hover:bg-panel-raised'
       }`}
     >
       {/* Cruda porque la fila entera es su rótulo, con el monto a la derecha:
           el `Checkbox` del kit pone su propio rótulo al lado. */}
       <input
         type="checkbox"
-        checked={!pagada && checked}
-        disabled={pagada}
+        checked={!bloqueada && checked}
+        disabled={bloqueada}
+        title={porVencer ? 'Se podrá pagar cuando venza la cuota del paciente' : undefined}
         onChange={onToggle}
         className="size-4 shrink-0 accent-on-surface disabled:opacity-30"
       />
@@ -400,6 +416,7 @@ function LineaLiquidacion({
         </Badge>
       )}
       {aMedias && <Badge>A medias</Badge>}
+      {porVencer && <Badge>Por vencer</Badge>}
       <span className="shrink-0 text-right">
         <span className="font-semibold tabular-nums text-on-surface">
           {formatUsd(pagada ? settlement.amountUsd : settlement.pendingUsd)}

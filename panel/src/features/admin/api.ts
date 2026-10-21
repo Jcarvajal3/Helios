@@ -563,6 +563,50 @@ export type Settlement = {
   inNextRun: boolean
   /** El día concreto en que se paga esta liquidación: el siguiente a su vencimiento. */
   runDate: string
+  /**
+   * Una mitad de la consulta que todavía no es liquidación: su cuota no ha
+   * vencido y el cron la creará ese día. Se enseña en su día de pago, pero no
+   * se puede pagar antes (`fetchMerchantUpcomingSettlements`).
+   */
+  porVencer?: boolean
+}
+
+/**
+ * Las mitades de la consulta por vencer de una clínica: las que el cron creará
+ * el día de cada cuota y que hoy solo cuentan en «Por pagar en los próximos
+ * días». Mismo cálculo que esa cifra (20261021220000), una línea por mitad,
+ * con la forma de una liquidación para ponerla en su día de pago. No tienen
+ * id en la base: el suyo es inventado y no se puede meter en una transferencia.
+ */
+export async function fetchMerchantUpcomingSettlements(merchantId: string): Promise<Settlement[]> {
+  const { data, error } = await supabase.rpc('admin_merchant_upcoming_settlements', {
+    p_merchant_id: merchantId,
+  })
+  if (error) throw error
+
+  return (data as Array<Record<string, unknown>>).map((row) => {
+    const amountUsd = Number(row.amount_usd)
+    const amountCur = Number(row.amount_cur ?? row.amount_usd)
+    return {
+      id: `por-vencer:${String(row.charge_id)}:${String(row.due_date)}`,
+      reason: row.reason as SettlementReason,
+      status: 'pending' as const,
+      amountUsd,
+      paidUsd: 0,
+      pendingUsd: amountUsd,
+      currency: leerMoneda(row.currency),
+      amountCur,
+      paidCur: 0,
+      pendingCur: amountCur,
+      pendingVesHoy: row.pending_ves_hoy == null ? null : Number(row.pending_ves_hoy),
+      orderNumber: row.order_number == null ? null : Number(row.order_number),
+      dueDate: String(row.due_date),
+      isDue: false,
+      inNextRun: false,
+      runDate: String(row.run_date),
+      porVencer: true,
+    }
+  })
 }
 
 /**

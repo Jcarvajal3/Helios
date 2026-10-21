@@ -51,6 +51,7 @@ SUITES=(
   patient_confirmation_smoke
   eligibility_smoke
   staff_commission_smoke
+  proximos_pagos_smoke
   metricas_cimientos
   metricas_general
   metricas_semana
