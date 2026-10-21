@@ -1,7 +1,9 @@
 # Helios — El lector de comprobantes por WhatsApp
 
-> Diseño del 2026-10-21. **Nada de esto está programado.** Javier decidió
-> el 2026-10-21 todo lo de §10 (D1 con Sonnet 5.5, D8 y D9 con sus cambios).
+> Diseño del 2026-10-21. Javier decidió el 2026-10-21 todo lo de §10 (D1 con
+> Sonnet 5.5, D8 y D9 con sus cambios). **Programado el mismo día, con el
+> interruptor APAGADO** (§11): la base está aplicada; las Edge Functions
+> esperan a desplegarse.
 
 ## 1. El problema
 
@@ -388,3 +390,42 @@ Cada paso es un cambio de parámetro, no un despliegue.
 | **D7** | ¿La política de privacidad nombra a Anthropic como proveedor? | ✅ Sí, junto a 360dialog y Resend (cuando el abogado la escriba) |
 | **D8** | ¿Vale reportar sin captura? | ✅ Sí, como alternativa a la captura, pero **no la referencia sola**: banco, teléfono desde el que pagó y referencia completa (Javier, 2026-10-21; §4.5) |
 | **D9** | En los datos escritos, ¿se pide también el **monto en Bs**? | ✅ No: menos pasos y nada de montos mal tecleados. El monto lo da el aviso del BNC que encaja por referencia, teléfono y día (Javier, 2026-10-21; §4.5) |
+
+## 11. Lo programado y cómo se enciende
+
+**En la base (aplicado en Helios el 2026-10-21, modo `apagado`):**
+`20261021200000_el_bot_lee_los_comprobantes.sql` (todo §4 y §7),
+`20261021200100_el_webhook_despierta_al_lector.sql` y
+`20261021200200_la_lectura_ya_registrada_no_se_ofrece.sql`. Suite:
+`supabase/tests/lector_comprobantes_smoke.sql`.
+
+**Edge Functions:** `lector-comprobantes` (nueva) y `whatsapp-webhook`
+(el bot del paciente: `paciente.ts`, `datos_pago.ts`, `textos_paciente.ts`,
+`logica.ts`, `index.ts`). Pruebas: `lector-comprobantes/logica.test.ts`,
+`whatsapp-webhook/datos_pago.test.ts` y `paciente.test.ts` (con `npx tsx`).
+
+**Panel:** Pagos reportados › **Comprobantes** (las lecturas, el modo del
+lector y su insignia de «para el equipo»), la ficha del pago dice si lo
+registró el bot, y «Registrar pago» ofrece **Usar lo que leyó** (y guarda la
+captura del bot si no se sube otra). El Inicio no lleva contador todavía.
+
+**D4 ya existía:** desde el 2026-10-19 `notify_payment_result` manda el
+«Pago confirmado» también por WhatsApp cuando la ventana de 24 h está
+abierta. No hubo que tocarlo.
+
+**Para pasar a sombra** (en este orden; los tres primeros son despliegues y
+secretos de producción):
+
+1. Secretos de la función: `supabase secrets set ANTHROPIC_API_KEY=… LECTOR_CLAVE=… --project-ref ahyfbnfsbyzdoyjzjvfb`.
+2. En el vault: `lector_url` = `https://ahyfbnfsbyzdoyjzjvfb.supabase.co/functions/v1/lector-comprobantes`
+   y `lector_clave` = la misma `LECTOR_CLAVE`. Sin ellos el cron y el
+   webhook no despiertan al lector (no falla nada: las capturas esperan).
+3. Desplegar las dos funciones con los comandos de su `index.ts`
+   (`--no-verify-jwt --use-api`).
+4. Pagos reportados › Comprobantes › Modo del lector: **Sombra** (super
+   admin, con motivo).
+
+Con 2 semanas o 50 comprobantes en sombra (D3), se compara «Habría
+registrado» con lo que registró el equipo y se pasa a **Activo**. El aviso
+del BNC tiene su propio interruptor (Avisos del BNC): hasta que esté en
+activo, los pagos que registra el bot los sigue aprobando el equipo.

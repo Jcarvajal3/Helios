@@ -4,6 +4,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { ArrowRight, HandCoins, Search } from 'lucide-react'
 
 import { AdjuntarComprobante } from '@/components/admin/caja/AdjuntarComprobante'
+import { VerCaptura } from '@/components/admin/caja/VerCaptura'
 import { consultaPagosPorAprobar } from '@/components/admin/inicio/consultas'
 import {
   Badge,
@@ -21,6 +22,7 @@ import {
   diaOperativo,
   formatBcvRate,
   formatBcvRateDe,
+  formatDateTime,
   formatDay,
   formatDocument,
   formatPhone,
@@ -30,6 +32,9 @@ import {
 } from '@/components/ui'
 import { reconcilePayment } from '@/features/admin/api'
 import { BANKS } from '@/features/admin/banks'
+import { motivoDeLaLectura, paraElFormulario } from '@/features/admin/lectorComprobantes'
+import type { Lectura, LoQueLeyo } from '@/features/admin/lectorComprobantes'
+import { fetchUltimaLectura } from '@/features/admin/lectorComprobantesApi'
 import { fetchPaymentReport } from '@/features/admin/pagosReportados'
 import { useIsSuperAdmin } from '@/features/admin/role'
 import { consultaCargosPorAtraso } from '@/features/admin/cobranza/consultas'
@@ -220,6 +225,24 @@ function FormularioDelPago({
   const [archivo, setArchivo] = useState<File | null>(null)
   const [nota, setNota] = useState('')
 
+  // Lo que leyó el bot de la última captura de este paciente que no
+  // registró solo (docs/03): se ofrece para no teclearlo, y su captura vale
+  // como la del pago.
+  const leida = useQuery({
+    queryKey: ['receipt-read-latest', paciente.userId],
+    queryFn: () => fetchUltimaLectura(paciente.userId),
+    staleTime: 60_000,
+  })
+  const [usada, setUsada] = useState<LoQueLeyo | null>(null)
+  function usarLoLeido(l: LoQueLeyo) {
+    if (l.metodo) setMetodo(l.metodo)
+    if (l.banco) setBanco(l.banco)
+    if (l.referencia) setReferencia(l.referencia)
+    if (l.fecha && l.fecha <= hoy) setPagadoEl(l.fecha)
+    if (l.montoBs) setMontoBs(l.montoBs)
+    setUsada(l)
+  }
+
   const total = totalDeLaSeleccion(seleccion, cuotas, cargosSueltosUsd)
   const idsMarcados = cuotas.filter((c) => seleccion.has(c.id)).map((c) => c.id)
   const fechaValida = pagadoEl !== '' && pagadoEl <= hoy
@@ -250,7 +273,9 @@ function FormularioDelPago({
 
   const mutation = useMutation({
     mutationFn: async () => {
-      const ruta = archivo ? await subirComprobanteDePago({ userId: paciente.userId, file: archivo }) : null
+      const ruta = archivo
+        ? await subirComprobanteDePago({ userId: paciente.userId, file: archivo })
+        : (usada?.rutaCaptura ?? null)
       return registrarPago({
         userId: paciente.userId,
         installmentIds: idsMarcados,
@@ -322,6 +347,8 @@ function FormularioDelPago({
         </div>
       )}
 
+      {leida.data && !usada && <LoQueLeyoElBot lectura={leida.data} onUsar={usarLoLeido} />}
+
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Select
           id="registrar-pago-metodo"
@@ -370,7 +397,14 @@ function FormularioDelPago({
           }
           error={diferencia !== null && !diferencia.cuadra}
         />
-        <AdjuntarComprobante id="registrar-pago-captura" file={archivo} onChange={setArchivo} />
+        <div className="flex flex-col gap-1">
+          <AdjuntarComprobante id="registrar-pago-captura" file={archivo} onChange={setArchivo} />
+          {usada?.rutaCaptura && !archivo && (
+            <p className="type-panel-caption text-on-surface-variant">
+              Sin otra captura, se guarda la que mandó por WhatsApp.
+            </p>
+          )}
+        </div>
       </div>
 
       <Textarea
@@ -400,6 +434,41 @@ function FormularioDelPago({
         {mutation.isPending ? 'Registrando…' : `Registrar el pago de ${formatUsd(total.totalUsd)}`}
       </Button>
     </div>
+  )
+}
+
+/**
+ * La última captura de este paciente que leyó el bot y no registró sola
+ * (fue al equipo, o el lector está en sombra): lo que leyó, para no
+ * teclearlo. Las cuotas las sigue eligiendo el equipo.
+ */
+function LoQueLeyoElBot({ lectura, onUsar }: { lectura: Lectura; onUsar: (l: LoQueLeyo) => void }) {
+  const motivo = motivoDeLaLectura(lectura.motivo)
+  const resumen = [
+    lectura.montoVes === null ? null : formatVes(lectura.montoVes),
+    lectura.referencia ? `ref. ${lectura.referencia}` : null,
+    lectura.banco,
+    lectura.pagadoEl ? formatDay(lectura.pagadoEl) : null,
+  ]
+    .filter(Boolean)
+    .join(' · ')
+
+  return (
+    <Callout
+      tone="info"
+      titulo={`El bot leyó ${lectura.tipo === 'captura' ? 'una captura' : 'los datos de un pago'} del ${formatDateTime(lectura.llego)}`}
+      accion={
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant="tonal" onClick={() => onUsar(paraElFormulario(lectura))}>
+            Usar lo que leyó
+          </Button>
+          {lectura.rutaCaptura && <VerCaptura ruta={lectura.rutaCaptura} rotulo="Ver la captura" />}
+        </div>
+      }
+      detalles={motivo ? `No lo registró solo: ${motivo.charAt(0).toLowerCase()}${motivo.slice(1)}.` : undefined}
+    >
+      {resumen || 'No se leyó ningún dato.'}
+    </Callout>
   )
 }
 

@@ -10,6 +10,7 @@ import { BotonRegistrarPago } from '@/components/admin/pagos/RegistrarPago'
 import { abrirEnCola } from '@/components/admin/ModoCola'
 import { AvisoExtracto } from '@/components/admin/caja/AvisoExtracto'
 import { PestanaAvisos } from '@/components/admin/caja/PestanaAvisos'
+import { CLAVE_LECTURAS, PestanaComprobantes, haceUnaSemana } from '@/components/admin/caja/PestanaComprobantes'
 import { PestanaAbonos, VALORES_ESTADO_ABONOS } from '@/components/admin/caja/PestanaAbonos'
 import type { EstadoAbonos } from '@/components/admin/caja/PestanaAbonos'
 import { consultaAbonosSinDueno, consultaPagosPorAprobar } from '@/components/admin/inicio/consultas'
@@ -38,6 +39,7 @@ import {
   hoyCaracas,
 } from '@/components/ui'
 import { fetchPaymentQueue } from '@/features/admin/api'
+import { fetchRevisionLector } from '@/features/admin/lectorComprobantesApi'
 import type { QueueItem } from '@/features/admin/api'
 import { BANKS } from '@/features/admin/banks'
 import {
@@ -57,13 +59,14 @@ import { csvDinero, csvInstante } from '@/lib/csv'
 import { describeError } from '@/lib/supabase'
 
 /**
- * Las tres pestañas: lo que registró el equipo (pagos reportados), lo que
- * dice el banco (abonos sin dueño) y lo que hizo el bot con los SMS del BNC
- * (avisos). Sin `vista`, los reportados.
+ * Las cuatro pestañas: lo que registró el equipo (pagos reportados), lo que
+ * dice el banco (abonos sin dueño), lo que hizo el bot con los SMS del BNC
+ * (avisos) y con las capturas que mandan los pacientes (comprobantes,
+ * docs/03). Sin `vista`, los reportados.
  */
-type Vista = 'reportados' | 'abonos' | 'avisos'
+type Vista = 'reportados' | 'abonos' | 'avisos' | 'comprobantes'
 
-const VALORES_VISTA: readonly Vista[] = ['reportados', 'abonos', 'avisos']
+const VALORES_VISTA: readonly Vista[] = ['reportados', 'abonos', 'avisos', 'comprobantes']
 
 /**
  * Pestañas que ya no existen y se aceptan solo para redirigir: `sin-dueno` es
@@ -90,6 +93,7 @@ const TABS_VALIDAS: ReadonlyArray<EstadoCola | TabVieja> = [
  *   abonos      `abonos` (sin él, los pendientes) y `asignar`, el abono que
  *               se está asignando.
  *   avisos      `avisosDesde` y `avisosHasta`, el día en que llegó el SMS.
+ *   comprobantes `lecturasDesde` y `lecturasHasta`, el día en que llegó la captura.
  *
  * `importar` abre la ventana de importar el extracto, en las dos.
  */
@@ -100,6 +104,8 @@ type CobrosSearch = Omit<FiltrosPagos, 'tab'> & {
   asignar?: string
   avisosDesde?: string
   avisosHasta?: string
+  lecturasDesde?: string
+  lecturasHasta?: string
   importar?: true
 }
 
@@ -122,6 +128,8 @@ export const Route = createFileRoute('/admin/cobros')({
     asignar: comoId(search.asignar),
     avisosDesde: comoDia(search.avisosDesde),
     avisosHasta: comoDia(search.avisosHasta),
+    lecturasDesde: comoDia(search.lecturasDesde),
+    lecturasHasta: comoDia(search.lecturasHasta),
     importar: comoBooleano(search.importar),
   }),
 })
@@ -148,6 +156,14 @@ function CobrosPage() {
   // menú y que las colas de Inicio, así que no cuestan otra llamada.
   const porAprobar = useQuery({ ...consultaPagosPorAprobar(), select: (d) => d.length })
   const sinDueno = useQuery({ ...consultaAbonosSinDueno(), select: (d) => d.length })
+  // Los comprobantes que el lector dejó al equipo: la misma consulta que la
+  // pestaña sin fechas (los últimos 7 días).
+  const semana = { desde: haceUnaSemana(), hasta: hoyCaracas() }
+  const paraElEquipo = useQuery({
+    queryKey: [CLAVE_LECTURAS, semana.desde, semana.hasta],
+    queryFn: () => fetchRevisionLector(semana.desde, semana.hasta),
+    select: (d) => d.paraRevisar,
+  })
 
   const importar = (
     <Button size="sm" variant="tonal" onClick={() => cambiar({ importar: true })}>
@@ -162,6 +178,7 @@ function CobrosPage() {
           { value: 'reportados', label: 'Pagos reportados', insignia: porAprobar.data },
           { value: 'abonos', label: 'Abonos sin dueño', insignia: sinDueno.data },
           { value: 'avisos', label: 'Avisos del BNC' },
+          { value: 'comprobantes', label: 'Comprobantes', insignia: paraElEquipo.data },
         ]}
         value={vista}
         // El abono abierto no sobrevive al cambio de pestaña; los filtros de
@@ -189,6 +206,12 @@ function CobrosPage() {
           desde={search.avisosDesde}
           hasta={search.avisosHasta}
           onFechas={(r) => cambiar({ avisosDesde: r.desde, avisosHasta: r.hasta }, true)}
+        />
+      ) : vista === 'comprobantes' ? (
+        <PestanaComprobantes
+          desde={search.lecturasDesde}
+          hasta={search.lecturasHasta}
+          onFechas={(r) => cambiar({ lecturasDesde: r.desde, lecturasHasta: r.hasta }, true)}
         />
       ) : (
         <PestanaAbonos

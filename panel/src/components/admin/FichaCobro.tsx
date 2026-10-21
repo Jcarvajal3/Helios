@@ -6,7 +6,6 @@ import { Banknote } from 'lucide-react'
 import { usePageTitle } from '@/components/layouts/PageAction'
 import { useToast } from '@/components/Toast'
 import {
-  Button,
   Callout,
   Card,
   DataLabel,
@@ -38,10 +37,12 @@ import { DecisionDelPago, cuotaMasVieja } from '@/components/admin/caja/Decision
 import { AvisoDelBnc } from '@/components/admin/caja/AvisoDelBnc'
 import { DesgloseDelPago } from '@/components/admin/caja/DesgloseDelPago'
 import { LigarDesdeElPago } from '@/components/admin/caja/LigarMovimiento'
+import { VerCaptura } from '@/components/admin/caja/VerCaptura'
 import type { QueueItem, StatementMatch } from '@/features/admin/api'
 import { avisoQueRespalda, fetchAvisosDelPago, motivoConElAviso } from '@/features/admin/avisoDelPago'
 import type { FiltrosPagos } from '@/features/admin/colaDePagos'
-import { enlaceDelComprobanteDePago } from '@/features/admin/pagosRegistrados/api'
+import type { Lectura } from '@/features/admin/lectorComprobantes'
+import { fetchLecturaDelPago } from '@/features/admin/lectorComprobantesApi'
 import { nombreDelMedio } from '@/features/admin/liquidaciones'
 import { fetchPaymentReport } from '@/features/admin/pagosReportados'
 import { lineaDeSumandos, sumandosDelPago } from '@/features/admin/sumandosDelPago'
@@ -192,6 +193,14 @@ function FichaDelPago({
     staleTime: 60_000,
   })
   const respaldo = avisos.data ? avisoQueRespalda(avisos.data) : null
+  // Si lo registró el lector de comprobantes (docs/03), y desde qué. Solo
+  // los pagos del bot no traen quién los registró.
+  const lectura = useQuery({
+    queryKey: ['payment-report', item.reportId, 'lectura'],
+    queryFn: () => fetchLecturaDelPago(item.reportId),
+    enabled: item.registeredByName === null,
+    staleTime: 5 * 60_000,
+  })
 
   return (
     <MarcoDeFicha
@@ -209,7 +218,7 @@ function FichaDelPago({
         />
       }
     >
-      <FrenteAFrente item={item} />
+      <FrenteAFrente item={item} lectura={lectura.data ?? null} />
 
       {!resuelto && (
         <CotejoBanco cotejo={cotejo} elegido={elegido} onElegir={setElegido} onImportar={onImportar} />
@@ -272,7 +281,7 @@ function CabeceraDelPago({ item }: { item: QueueItem }) {
  * sus sumandos: antes se enseñaba solo la cuota más antigua, que frente a un
  * pago de cuatro cuotas parecía un pago de más.
  */
-function FrenteAFrente({ item }: { item: QueueItem }) {
+function FrenteAFrente({ item, lectura }: { item: QueueItem; lectura: Lectura | null }) {
   const cuota = cuotaMasVieja(item)
   const sumandos = sumandosDelPago(item)
   const linea = lineaDeSumandos(sumandos, formatUsd)
@@ -291,6 +300,12 @@ function FrenteAFrente({ item }: { item: QueueItem }) {
             <Dato label="Cédula del pagador" value={formatDocument(item.payerDocument)} />
             <Dato label="Teléfono del pagador" value={formatPhone(item.payerPhone)} />
             {item.registeredByName && <Dato label="Lo registró" value={item.registeredByName} />}
+            {lectura && (
+              <Dato
+                label="Lo registró"
+                value={lectura.tipo === 'captura' ? 'El bot, leyendo la captura' : 'El bot, con los datos que escribió el paciente'}
+              />
+            )}
           </dl>
           {item.receiptPath && <VerCaptura ruta={item.receiptPath} />}
         </Card>
@@ -415,34 +430,6 @@ function porQueSinCotejo(cotejo: Cotejo, movimiento: StatementMatch | null): str
     case 'error':
       return 'No se pudo cotejar con el extracto.'
   }
-}
-
-/**
- * La captura que mandó el paciente por WhatsApp, del bucket privado
- * `payment-receipts`: el enlace se firma al pulsar y caduca en diez minutos.
- */
-function VerCaptura({ ruta }: { ruta: string }) {
-  const avisar = useToast()
-  const [abriendo, setAbriendo] = useState(false)
-
-  async function abrir() {
-    setAbriendo(true)
-    try {
-      window.open(await enlaceDelComprobanteDePago(ruta), '_blank', 'noopener,noreferrer')
-    } catch {
-      avisar('No se pudo abrir la captura')
-    } finally {
-      setAbriendo(false)
-    }
-  }
-
-  return (
-    <div>
-      <Button size="sm" variant="tonal" disabled={abriendo} onClick={() => void abrir()}>
-        {abriendo ? 'Abriendo…' : 'Ver la captura del pago'}
-      </Button>
-    </div>
-  )
 }
 
 function Dato({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
