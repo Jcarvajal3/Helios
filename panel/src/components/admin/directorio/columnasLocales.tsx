@@ -104,8 +104,8 @@ export function columnasLocales(porPagar: PorPagar): Array<Column<MerchantRow>> 
 
     {
       key: 'ventas',
-      header: 'Financiado (sin fee, 30 días)',
-      info: 'Sin el service fee: lo financiado en la clínica en financiamientos confirmados de los últimos 30 días operativos (hoy incluido), sin los de prueba; debajo, cuántos financiamientos y cuántos desde el alta.',
+      header: 'Financiado (sin comisión, 30 días)',
+      info: 'Sin la Comisión Helios: lo financiado en la clínica en financiamientos confirmados de los últimos 30 días operativos (hoy incluido), sin los de prueba; debajo, cuántos financiamientos y cuántos desde el alta.',
       type: 'number',
       // En consumo, sin el service fee: `merchant_directory.financed_30d`
       // suma `coalesce(base_usd, amount_usd)`.

@@ -321,6 +321,7 @@ export function ConfirmDialog({
   confirmWord,
   reasonLabel,
   reasonPlaceholder,
+  reasonInicial = '',
   motivoMinimo = MOTIVO_MINIMO,
   bloqueo,
   danger = false,
@@ -343,6 +344,8 @@ export function ConfirmDialog({
    *  `critico` se pide siempre, y esto solo cambia el rótulo. */
   reasonLabel?: string
   reasonPlaceholder?: string
+  /** El motivo ya escrito al abrir, cuando la pantalla sabe cuál es (se puede cambiar). */
+  reasonInicial?: string
   /**
    * Cuántos caracteres pide el motivo, cuando la acción exige más que los
    * tres de siempre. Tiene que ser lo mismo que exige el servidor: si pide
@@ -366,7 +369,7 @@ export function ConfirmDialog({
   onClose: () => void
 }) {
   const [typed, setTyped] = useState('')
-  const [reason, setReason] = useState('')
+  const [reason, setReason] = useState(reasonInicial)
   const idMotivo = useId()
   const idPalabra = useId()
 

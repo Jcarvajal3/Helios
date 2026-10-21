@@ -35,9 +35,11 @@ import {
 } from '@/components/admin/caja/CotejoBanco'
 import type { Cotejo } from '@/components/admin/caja/CotejoBanco'
 import { DecisionDelPago, cuotaMasVieja } from '@/components/admin/caja/DecisionDelPago'
+import { AvisoDelBnc } from '@/components/admin/caja/AvisoDelBnc'
 import { DesgloseDelPago } from '@/components/admin/caja/DesgloseDelPago'
 import { LigarDesdeElPago } from '@/components/admin/caja/LigarMovimiento'
 import type { QueueItem, StatementMatch } from '@/features/admin/api'
+import { avisoQueRespalda, fetchAvisosDelPago, motivoConElAviso } from '@/features/admin/avisoDelPago'
 import type { FiltrosPagos } from '@/features/admin/colaDePagos'
 import { enlaceDelComprobanteDePago } from '@/features/admin/pagosRegistrados/api'
 import { nombreDelMedio } from '@/features/admin/liquidaciones'
@@ -181,6 +183,15 @@ function FichaDelPago({
   const [elegido, setElegido] = useState<string | null>(null)
   const movimiento = movimientoQueRespalda(cotejo, elegido)
   const [ligando, setLigando] = useState(false)
+  // El SMS del BNC de este pago, si llegó: respalda la aprobación mientras el
+  // extracto de ese día no esté importado.
+  const avisos = useQuery({
+    queryKey: ['payment-report', item.reportId, 'avisos-bnc'],
+    queryFn: () => fetchAvisosDelPago(item.reportId),
+    enabled: !resuelto,
+    staleTime: 60_000,
+  })
+  const respaldo = avisos.data ? avisoQueRespalda(avisos.data) : null
 
   return (
     <MarcoDeFicha
@@ -193,6 +204,7 @@ function FichaDelPago({
           resuelto={resuelto}
           movimiento={movimiento}
           sinCotejo={porQueSinCotejo(cotejo, movimiento)}
+          motivoConAviso={respaldo ? motivoConElAviso(respaldo) : null}
           onResuelto={onResuelto}
         />
       }
@@ -202,6 +214,7 @@ function FichaDelPago({
       {!resuelto && (
         <CotejoBanco cotejo={cotejo} elegido={elegido} onElegir={setElegido} onImportar={onImportar} />
       )}
+      {!resuelto && <AvisoDelBnc avisos={avisos.data} cargando={avisos.isPending} error={avisos.isError} />}
       {item.status === 'reconciled' && (
         <MovimientoQueLoRespaldo movimiento={item.statementLine} onLigar={() => setLigando(true)} />
       )}
@@ -283,7 +296,7 @@ function FrenteAFrente({ item }: { item: QueueItem }) {
         </Card>
 
         <Card className="flex flex-col gap-3">
-          <DataLabel>Lo que debía pagar (cuotas con fee + cargos por atraso)</DataLabel>
+          <DataLabel>Lo que debía pagar (cuotas con comisión + cargos por atraso)</DataLabel>
           {saldaAlgo ? (
             <>
               <p className="type-panel-figure text-on-surface">{formatUsd(sumandos.totalUsd)}</p>
@@ -324,12 +337,14 @@ function Decision({
   resuelto,
   movimiento,
   sinCotejo,
+  motivoConAviso,
   onResuelto,
 }: {
   item: QueueItem
   resuelto: boolean
   movimiento: StatementMatch | null
   sinCotejo: string | null
+  motivoConAviso: string | null
   onResuelto: (aviso: string) => void
 }) {
   const espera = formatWaiting((Date.now() - new Date(item.createdAt).getTime()) / 1000)
@@ -337,7 +352,7 @@ function Decision({
   return (
     <Card as="section" className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
-        <DataLabel>Reportó (con fee)</DataLabel>
+        <DataLabel>Reportó (con comisión)</DataLabel>
         <p className="type-panel-figure text-on-surface">{formatUsd(item.amountUsd)}</p>
         <p className="type-panel-caption text-panel-muted">
           {formatVes(item.amountVes)} a {item.fxRate.toLocaleString('es-VE')} Bs/$, la tasa BCV del día de
@@ -371,6 +386,7 @@ function Decision({
             item={item}
             movimiento={movimiento}
             sinCotejo={sinCotejo}
+            motivoConAviso={motivoConAviso}
             onResuelto={onResuelto}
           />
         </div>

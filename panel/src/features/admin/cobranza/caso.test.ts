@@ -196,10 +196,10 @@ console.log('\n── El mensaje de WhatsApp ───────────�
     lostFinancedUsd: 0,
     senales: SIN_HECHOS,
   }
-  // Los cortes de hoy: gracia 3, intervalo 7, baja 30, expulsión 60. Con 4
-  // días de atraso, la persona está en t2.
-  const cortes: CortesDeTramo = { gracia: 3, intervalo: 7, baja: 30, expulsion: 60 }
-  const plantilla = { bucket: 't2', label: 'Con cargo por atraso', body: 'Hola {nombre}, debes {monto_usd} desde hace {dias_atraso}. Paga a {banco} {telefono_pago}.' }
+  // Los cortes de hoy: intervalo 7, baja 30, expulsión 60. Con 4 días de
+  // atraso, la persona está en t1 (la gracia ya no corta tramos).
+  const cortes: CortesDeTramo = { intervalo: 7, baja: 30, expulsion: 60 }
+  const plantilla = { bucket: 't1', label: 'Cuota vencida', body: 'Hola {nombre}, debes {monto_usd} desde hace {dias_atraso}. Paga a {banco} {telefono_pago}.' }
   const cuenta = { isActive: true, bankName: 'Banco X', rif: 'J-1', phone: '584120000000' }
   const listo = <T,>(valor: T) => ({ estado: 'listo' as const, valor })
 
@@ -213,7 +213,7 @@ console.log('\n── El mensaje de WhatsApp ───────────�
   comprueba(ok.listo && ok.href.startsWith('https://wa.me/584141234567?text='), 'abre el chat con el número')
   comprueba(ok.listo && decodeURIComponent(ok.href).includes('Hola ANA, debes $5,00'), 'rellena el nombre y lo vencido')
   comprueba(ok.listo && decodeURIComponent(ok.href).includes('desde hace 4 días'), 'rellena los días de atraso')
-  comprueba(ok.listo && ok.plantilla === 'Con cargo por atraso', 'elige la plantilla por el tramo, no por el bucket viejo')
+  comprueba(ok.listo && ok.plantilla === 'Cuota vencida', 'elige la plantilla por el tramo, no por el bucket viejo')
 
   const viejaSola = whatsAppDeCobro({
     persona: listo(persona),
@@ -233,16 +233,25 @@ console.log('\n── El mensaje de WhatsApp ───────────�
   })
   comprueba(!sinCortes.listo && sinCortes.motivo.includes('Parámetros'), 'sin los días de los tramos, dicho y sin inventarlos')
 
-  const tramo = (dias: number, bucket = 'congelado') => claveDePlantilla({ daysOverdue: dias, bucket }, cortes)
-  comprueba(tramo(0, 'por_vencer') === 'por_vencer' && tramo(0, 'vence_hoy') === 'vence_hoy', 'sin atraso, la de antes de vencer o la del día')
+  const alDia = whatsAppDeCobro({
+    persona: listo({ ...persona, daysOverdue: 0, overdueUsd: 0, bucket: 'por_vencer' }),
+    plantillas: listo([plantilla]),
+    cuentas: listo([cuenta]),
+    tasa: listo(900),
+    cortes: listo<CortesDeTramo | null>(cortes),
+  })
+  comprueba(!alDia.listo && alDia.motivo.includes('recordatorios'), 'sin nada vencido no hay mensaje de cobranza: sus recordatorios salen solos')
+
+  const tramo = (dias: number) => claveDePlantilla({ daysOverdue: dias }, cortes)
+  comprueba(tramo(0) === null && tramo(-3) === null, 'sin atraso, ninguna plantilla')
   comprueba(
-    [1, 3, 4, 7, 8, 29, 30, 60, 61].map((d) => tramo(d)).join(' ') === 't1 t1 t2 t2 t3 t3 t4 t4 t5',
+    [1, 3, 4, 7, 8, 29, 30, 60, 61].map((d) => tramo(d)).join(' ') === 't1 t1 t1 t1 t2 t2 t3 t3 t4',
     'cada día de atraso cae en su tramo',
     [1, 3, 4, 7, 8, 29, 30, 60, 61].map((d) => tramo(d)).join(' '),
   )
-  comprueba(CLAVES_PLANTILLA.join(' ') === 'por_vencer vence_hoy t1 t2 t3 t4 t5', 'las siete, en orden')
-  comprueba(cuandoSeUsa('t1', cortes) === '1–3 días de atraso' && cuandoSeUsa('t5', cortes) === 'Más de 60 días de atraso', 'rótulo de días de cada tramo')
-  comprueba(cuandoSeUsa('t4', null) === null && cuandoSeUsa('vence_hoy', null) === 'El día del vencimiento', 'sin cortes no se inventa el rótulo')
+  comprueba(CLAVES_PLANTILLA.join(' ') === 't1 t2 t3 t4', 'las cuatro, una por tramo, en orden')
+  comprueba(cuandoSeUsa('t1', cortes) === '1–7 días de atraso' && cuandoSeUsa('t4', cortes) === 'Más de 60 días de atraso', 'rótulo de días de cada tramo')
+  comprueba(cuandoSeUsa('t4', null) === null, 'sin cortes no se inventa el rótulo')
   comprueba(diasDeAtraso(1) === '1 día' && diasDeAtraso(12) === '12 días', 'un día en singular')
 
   const sinPlantillas = whatsAppDeCobro({
@@ -334,7 +343,7 @@ console.log('\n── El rendimiento ──────────────�
     recovery_pct: null,
     tramos,
   })
-  comprueba(r.porTramo.length === 5 && r.porTramo[2].usd === 2.395, 'siempre los cinco tramos, en orden')
+  comprueba(r.porTramo.length === 4 && r.porTramo[2].usd === 2.395, 'siempre los cuatro tramos, en orden')
   comprueba(r.pctRecuperacion === null, 'sin nada vencido al empezar, no hay porcentaje')
   comprueba(r.cortes?.baja === 30, 'lee los cortes de la base')
   comprueba(r.cargosPorAtraso.usd === 2 && r.recuperado.usd === 2.395, 'el cargo por atraso va aparte')
@@ -345,7 +354,7 @@ console.log('\n── El rendimiento ──────────────�
   })
   comprueba(cura.semanas[0].porTramo.t1.pct === 0, 'una cura del 0 % con gente es un cero de verdad')
   comprueba(cura.semanas[0].porTramo.t2.pct === null, 'sin gente en el tramo, sin porcentaje')
-  comprueba(cura.semanas[0].porTramo.t5.pct === null, 'un tramo que no vino no es un cero')
+  comprueba(cura.semanas[0].porTramo.t4.pct === null, 'un tramo que no vino no es un cero')
 
   // La semana de la cura se rotula por su lunes y su cierre, no por el corte
   // (el lunes SIGUIENTE): la del 14 al 20 sep no puede decir «semana del 21».

@@ -29,7 +29,7 @@ export type ContextoColumnas = {
    * las filas en el orden que se ven, como la fila.
    */
   alAbrirCaso: (enPantalla: CollectionRow[]) => void
-  /** Para las señales: el instante de ahora y los días de atraso de la baja de nivel. */
+  /** Para las señales: el instante de ahora y los días de atraso de la suspensión. */
   ahora: Date
   diasBaja: number
   /** Hasta cuántos días mira la cola. Por defecto, `HORIZONTE_CARTERA`; con `HORIZONTE_TODO`, todo. */
@@ -137,10 +137,10 @@ export function columnasCartera(ctx: ContextoColumnas): Array<Column<CollectionR
 
     {
       key: 'vencido',
-      header: 'Vencido (financiamiento + fee)',
+      header: 'Vencido (financiamiento + comisión)',
       type: 'number',
       sortDir: 'desc',
-      info: 'Las cuotas de este paciente vencidos y sin pagar, incluida la deuda dada por perdida: lo que tiene que transferir, financiamiento + service fee, con sus dos partes y su equivalente en bolívares debajo.',
+      info: 'Las cuotas de este paciente vencidos y sin pagar, incluida la deuda dada por perdida: lo que tiene que transferir, financiamiento + Comisión Helios, con sus dos partes y su equivalente en bolívares debajo.',
       // Quien no debe nada vencido no es quien menos debe: va al final.
       sort: (r) => (r.overdueUsd > 0 ? r.overdueUsd : null),
       csv: (r) => csvDinero(r.overdueUsd),
@@ -166,10 +166,10 @@ export function columnasCartera(ctx: ContextoColumnas): Array<Column<CollectionR
 
     {
       key: 'porVencer',
-      header: 'Por vencer (financiamiento + fee)',
+      header: 'Por vencer (financiamiento + comisión)',
       type: 'number',
       sortDir: 'desc',
-      info: `Las cuotas de este paciente sin pagar que vencen ${hastaElDia ? `de hoy al ${hastaElDia}` : 'de hoy en adelante'}: financiamiento + service fee, con sus dos partes y el día de la primera debajo.`,
+      info: `Las cuotas de este paciente sin pagar que vencen ${hastaElDia ? `de hoy al ${hastaElDia}` : 'de hoy en adelante'}: financiamiento + Comisión Helios, con sus dos partes y el día de la primera debajo.`,
       sort: (r) => (r.upcomingUsd > 0 ? r.upcomingUsd : null),
       csv: (r) => csvDinero(r.upcomingUsd),
       cell: (r) =>

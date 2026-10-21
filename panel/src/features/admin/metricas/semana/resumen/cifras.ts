@@ -7,17 +7,17 @@ import type { CifrasDelTramo, RespuestaResumen, SemanaDeLaChispa } from './tipos
 // ═══════════════════════════════════════════════════════════════════════════
 // Las cinco cifras de Semana › Resumen, con las palabras de Javier:
 //
-//   Total facturado (sin fee) + Service fee + IVA = Total a cobrar
+//   Total facturado (sin comisión) + Comisión Helios + IVA = Total a cobrar
 //
 // (los nombres del vocabulario del super admin, AUDITORIA §2: «Total
-// facturado (sin fee)» es el mismo número y el mismo nombre que la fila
+// facturado (sin comisión)» es el mismo número y el mismo nombre que la fila
 // «Total facturado» de Semana › Rendimiento, y «Usuarios que consumieron»,
 // el de su fila de usuarios).
 //   Consumos · Usuarios que consumieron
 //
 // Las tres primeras son un desglose que suma, no tres cifras sueltas: el
-// total a cobrar lleva el fee dentro y por eso solo se enseña al lado de sus
-// dos sumandos (la regla del fee). Cada una va frente a la semana anterior
+// total a cobrar lleva la comisión dentro y por eso solo se enseña al lado de sus
+// dos sumandos (la regla de la comisión). Cada una va frente a la semana anterior
 // (hasta el mismo momento si la elegida está en curso) y con su chispa de
 // las ocho últimas semanas.
 //
@@ -29,19 +29,19 @@ import type { CifrasDelTramo, RespuestaResumen, SemanaDeLaChispa } from './tipos
 
 export type IdCifraResumen = 'facturado' | 'fee' | 'total' | 'consumos' | 'usuarios'
 
-/** Los tres sumandos del desglose, en su orden: facturado + fee = total. */
+/** Los tres sumandos del desglose, en su orden: facturado + comisión = total. */
 export const CIFRAS_DEL_DESGLOSE = ['facturado', 'fee', 'total'] as const satisfies ReadonlyArray<IdCifraResumen>
 
 /** Las dos que cuentan: consumos y gente. */
 export const CIFRAS_QUE_CUENTAN = ['consumos', 'usuarios'] as const satisfies ReadonlyArray<IdCifraResumen>
 
 /**
- * El título de cada tarjeta. Lo que es consumo dice si lleva el fee, y el fee
- * se llama por su nombre: «service fee», nunca «servicio».
+ * El título de cada tarjeta. Lo que es consumo dice si lleva la comisión, y la comisión
+ * se llama por su nombre: «Comisión Helios», nunca «servicio».
  */
 export const TITULOS_DEL_RESUMEN: Record<IdCifraResumen, string> = {
-  facturado: 'Total financiado (sin fee)',
-  fee: 'Service fee + IVA',
+  facturado: 'Total financiado (sin comisión)',
+  fee: 'Comisión Helios + IVA',
   // El desglose está a su izquierda, con sus signos: «+» y «=».
   total: 'Total a cobrar',
   consumos: 'Financiamientos',
@@ -51,10 +51,10 @@ export const TITULOS_DEL_RESUMEN: Record<IdCifraResumen, string> = {
 /** Qué es cada cifra, en el `InfoDot` de su título. */
 export const AYUDAS_DEL_RESUMEN: Record<IdCifraResumen, string> = {
   facturado:
-    'Sin el service fee: lo que se financió en las clínicas en la semana (la en curso, hasta ahora), por día operativo. Solo financiamientos confirmados y sin los de prueba.',
-  fee: 'El service fee de esos financiamientos, con su IVA dentro: el total a cobrar menos el total financiado. El pie lo parte en el service fee sin IVA (el ingreso de Helios) y el IVA, que no es de Helios.',
+    'Sin la Comisión Helios: lo que se financió en las clínicas en la semana (la en curso, hasta ahora), por día operativo. Solo financiamientos confirmados y sin los de prueba.',
+  fee: 'La Comisión Helios de esos financiamientos, con su IVA dentro: el total a cobrar menos el total financiado. El pie lo parte en la Comisión Helios sin IVA (el ingreso de Helios) y el IVA, que no es de Helios.',
   total:
-    'Lo que los pacientes pagan en sus dos cuotas por los financiamientos de la semana: el total financiado (sin fee) más el service fee y su IVA. Siempre con sus dos partes a la vista.',
+    'Lo que los pacientes pagan en sus dos cuotas por los financiamientos de la semana: el total financiado (sin comisión) más la Comisión Helios y su IVA. Siempre con sus dos partes a la vista.',
   consumos: 'Financiamientos confirmados de la semana, sin los de prueba.',
   usuarios:
     'Los pacientes distintos con cuota en los financiamientos de la semana. Quien vino dos días o a dos clínicas cuenta una vez. El pie: cuántos se financiaban por primera vez en alguna clínica (o en la elegida).',
@@ -131,7 +131,7 @@ export function nuevosEnElLocal(nuevas: number, conLocal: boolean): string {
 
 /** «Ticket medio $26,26 (sin fee)». */
 export function pieDeConsumos(c: Pick<CifrasDelTramo, 'ticketMedioUsd'>): string {
-  return c.ticketMedioUsd === null ? 'Sin financiamientos, sin ticket medio' : `Ticket medio ${formatUsd(c.ticketMedioUsd)} (sin fee)`
+  return c.ticketMedioUsd === null ? 'Sin financiamientos, sin ticket medio' : `Ticket medio ${formatUsd(c.ticketMedioUsd)} (sin comisión)`
 }
 
 /**

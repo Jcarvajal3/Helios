@@ -6,11 +6,11 @@ import type { Desglose } from '@/features/admin/metricas/lectura'
  * Un importe que se cobra (payable: una cuota, lo que hay que cobrar de una
  * semana, lo cobrado, lo vencido…), SIEMPRE con su desglose visible debajo,
  * en pequeño. Es la condición de la excepción que aprobó Javier para
- * Cohortes: el total lleva el fee dentro, pero sus dos sumandos se ven.
+ * Cohortes: el total lleva la comisión dentro, pero sus dos sumandos se ven.
  *
- * `linea`: la cifra y debajo «Facturado $X (sin fee) · service fee + IVA $Y»
- * (una tarjeta). `compacta`: la cifra y debajo «facturado $X · fee + IVA $Y»
- * (una fila con sitio). `celda`: la cifra y debajo «facturado $X» y «fee +
+ * `linea`: la cifra y debajo «Facturado $X (sin comisión) · Comisión Helios + IVA $Y»
+ * (una tarjeta). `compacta`: la cifra y debajo «facturado $X · comisión + IVA $Y»
+ * (una fila con sitio). `celda`: la cifra y debajo «facturado $X» y «comisión +
  * IVA $Y» en dos líneas (una tabla ancha: la columna mide lo que la cifra, no
  * la frase).
  */
@@ -46,7 +46,7 @@ export function ImporteDeCuota({
           financiado {formatUsd(importe.financedUsd)}
         </span>
         <span className="type-panel-caption whitespace-nowrap tabular-nums text-panel-muted">
-          fee + IVA {formatUsd(importe.feeUsd)}
+          comisión + IVA {formatUsd(importe.feeUsd)}
         </span>
       </span>
     )
@@ -79,9 +79,9 @@ export function ImporteDeCuota({
 export function LineaDelDesglose({ d }: { d: Pick<Desglose, 'financedUsd' | 'feeUsd'> }) {
   return (
     <>
-      <span className="whitespace-nowrap">Financiado {formatUsd(d.financedUsd)} (sin fee)</span>
+      <span className="whitespace-nowrap">Financiado {formatUsd(d.financedUsd)} (sin comisión)</span>
       {' · '}
-      <span className="whitespace-nowrap">service fee + IVA {formatUsd(d.feeUsd)}</span>
+      <span className="whitespace-nowrap">Comisión Helios + IVA {formatUsd(d.feeUsd)}</span>
     </>
   )
 }

@@ -9,9 +9,9 @@ import { comoFila, comoLista, filaONula, numero, numeroONulo, textoONulo } from 
 // `admin_cash_forecast` (la proyección). Sin aritmética de negocio: todo lo
 // calcula la base sobre `metricas.caja_*`; aquí solo se traducen nombres.
 //
-// La regla del fee: todo lo que se paga en cuotas (`payable`) llega con su
-// consumo y su service fee con IVA (`Desglose`), y la pantalla nunca lo enseña sin
-// sus dos partes. El service fee de Helios (sin IVA) y los cargos por atraso son
+// La regla de la comisión: todo lo que se paga en cuotas (`payable`) llega con su
+// consumo y su Comisión Helios con IVA (`Desglose`), y la pantalla nunca lo enseña sin
+// sus dos partes. La Comisión Helios de Helios (sin IVA) y los cargos por atraso son
 // cifras aparte.
 //
 // Puro: se prueba en `lectura.test.ts`.
@@ -29,15 +29,15 @@ function desglose(v: unknown): Desglose {
 export type Movimientos = {
   /** Lo que entró de cuotas: su pago se aprobó esos días. Con su desglose. */
   cobrado: Desglose & { cuotas: number; personas: number }
-  /** La parte de service fee SIN IVA que había dentro de lo cobrado. */
+  /** La parte de Comisión Helios SIN IVA que había dentro de lo cobrado. */
   servicioCobradoUsd: number
   /** Cargos por atraso cobrados: aparte, nunca dentro de las cuotas. */
   cargosCobrados: { usd: number; n: number }
   /** Transferido a los locales (merchant_payouts). */
   transferido: { usd: number; n: number }
-  /** El consumo de esos días (sin fee) y cuántos consumos. */
+  /** El consumo de esos días (sin comisión) y cuántos consumos. */
   consumo: { financedUsd: number; consumos: number }
-  /** El service fee SIN IVA de los consumos de esos días: lo ganado. */
+  /** La Comisión Helios SIN IVA de los consumos de esos días: lo ganado. */
   servicioGanadoUsd: number
   cargosDevengadosUsd: number
   /** Lo que dice el libro de caja. `null` con un local: el libro no sabe de locales. */
@@ -165,7 +165,7 @@ export function leerCaja(data: unknown): CajaDeLaSemana {
 // ── La foto de hoy ─────────────────────────────────────────────────────────
 
 /**
- * `admin_cash_position`: lo que se debe, lo perdido y el service fee, partidos.
+ * `admin_cash_position`: lo que se debe, lo perdido y la Comisión Helios, partidos.
  * Con un local, lo del libro (caja, provisión, ingreso) es `null`.
  */
 export type FotoDeCaja = {

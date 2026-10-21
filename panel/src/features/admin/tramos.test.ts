@@ -4,7 +4,7 @@
  *   npx tsx src/features/admin/tramos.test.ts
  *
  * Lo que se comprueba aquí es lo que la base da por hecho en
- * `admin_collection_flow`: los mismos cortes, en los mismos días. Si alguien
+ * `helios_tramo_de_atraso`: los mismos cortes, en los mismos días. Si alguien
  * cambia un `<` por un `<=`, una persona salta de tramo sin haber pagado nada
  * y solo se nota comparando el panel con la base.
  */
@@ -42,22 +42,22 @@ function parametros(valores: Record<string, number | null>): Parametros {
   }
 }
 
-const hoy: CortesDeTramo = { gracia: 3, intervalo: 7, baja: 30, expulsion: 60 }
+const hoy: CortesDeTramo = { intervalo: 7, baja: 30, expulsion: 60 }
 
-console.log('── Cada día cae en su tramo (gracia 3, intervalo 7, baja 30, expulsión 60) ──')
+console.log('── Cada día cae en su tramo (intervalo 7, baja 30, expulsión 60) ──')
 const esperado: Array<[number, string]> = [
   [-2, 'al_dia'],
   [0, 'al_dia'],
   [1, 't1'],
   [3, 't1'],
-  [4, 't2'],
-  [7, 't2'],
-  [8, 't3'],
-  [29, 't3'],
-  [30, 't4'],
-  [60, 't4'],
-  [61, 't5'],
-  [400, 't5'],
+  [4, 't1'],
+  [7, 't1'],
+  [8, 't2'],
+  [29, 't2'],
+  [30, 't3'],
+  [60, 't3'],
+  [61, 't4'],
+  [400, 't4'],
 ]
 for (const [dias, tramo] of esperado) {
   const real = tramoDe(dias, hoy)
@@ -67,15 +67,16 @@ for (const [dias, tramo] of esperado) {
 console.log('\n── Rótulos ─────────────────────────────────────────────────')
 const rotulos = tramosConRotulo(hoy).map((t) => t.rotulo)
 comprueba(
-  rotulos.join(' | ') === '1–3 días | 4–7 días | 8–29 días | 30–60 días | Más de 60 días',
-  'los cinco rótulos',
+  rotulos.join(' | ') === '1–7 días | 8–29 días | 30–60 días | Más de 60 días',
+  'los cuatro rótulos',
   rotulos.join(' | '),
 )
-comprueba(rotuloDeTramo('t1', { ...hoy, gracia: 1 }) === '1 día', 'un tramo de un día dice «1 día»')
+comprueba(rotuloDeTramo('t1', { ...hoy, intervalo: 1 }) === '1 día', 'un tramo de un día dice «1 día»')
+comprueba(rotuloDeTramo('t2', { ...hoy, baja: 9 }) === '8 días', 'y si no empieza en 1, «8 días»')
 
 console.log('\n── Parámetros cruzados ─────────────────────────────────────')
-const cruzados: CortesDeTramo = { gracia: 7, intervalo: 7, baja: 30, expulsion: 60 }
-comprueba(tramoVacio('t2', cruzados), 'con gracia = intervalo, t2 queda vacío')
+const cruzados: CortesDeTramo = { intervalo: 7, baja: 8, expulsion: 60 }
+comprueba(tramoVacio('t2', cruzados), 'con la baja el día después del intervalo, t2 queda vacío')
 comprueba(
   tramosConRotulo(cruzados).every((t) => t.tramo !== 't2'),
   'y no se ofrece como filtro',
@@ -89,12 +90,16 @@ const completos = parametros({
   mora_expulsion_days: 60,
 })
 const c = cortesDeTramo(completos)
-comprueba(c !== null && c.gracia === 3 && c.expulsion === 60, 'con los cuatro, hay cortes')
+comprueba(c !== null && c.intervalo === 7 && c.expulsion === 60, 'con los tres, hay cortes')
 comprueba(
-  cortesDeTramo(parametros({ late_fee_grace_days: 3 })) === null,
+  cortesDeTramo(parametros({ installment_interval_days: 7, mora_demotion_days: 30 })) === null,
   'si falta alguno, no hay cortes (nunca un número inventado)',
 )
 comprueba(cortesDeTramo(undefined) === null, 'sin parámetros todavía, tampoco')
+comprueba(
+  cortesDeTramo(parametros({ installment_interval_days: 7, mora_demotion_days: 30, mora_expulsion_days: 60 })) !== null,
+  'la gracia ya no hace falta: no corta tramos',
+)
 
 console.log('\n── Umbrales ────────────────────────────────────────────────')
 const umbrales = parametros({

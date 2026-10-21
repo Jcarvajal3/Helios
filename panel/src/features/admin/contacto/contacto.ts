@@ -132,6 +132,10 @@ export type EstadoDeConfiguracion = {
   cuentasDeCobro: number
   resend: boolean
   remitente: boolean
+  /** La API de WhatsApp (360dialog) tiene su clave: sin ella, todo WhatsApp va a la cola manual. */
+  whatsappApi: boolean
+  /** La API apunta al sandbox de 360dialog: los mensajes no les llegan a los pacientes. */
+  whatsappSandbox: boolean
 }
 
 export function leerEstadoDeConfiguracion(raw: unknown): EstadoDeConfiguracion {
@@ -141,11 +145,14 @@ export function leerEstadoDeConfiguracion(raw: unknown): EstadoDeConfiguracion {
     cuentasDeCobro: numero(r.cuentas_de_cobro),
     resend: booleano(r.resend),
     remitente: booleano(r.remitente),
+    // Una base vieja que no lo manda no se da por rota.
+    whatsappApi: r.whatsapp_api === undefined ? true : booleano(r.whatsapp_api),
+    whatsappSandbox: booleano(r.whatsapp_sandbox),
   }
 }
 
 export type Faltante = {
-  id: 'whatsapp' | 'cuentas' | 'resend' | 'remitente'
+  id: 'whatsapp' | 'cuentas' | 'resend' | 'remitente' | 'whatsapp_api' | 'whatsapp_sandbox'
   /** Qué falta, en una frase. */
   texto: string
   /** Qué pasa mientras falte. */
@@ -177,6 +184,23 @@ export function faltantesDeConfiguracion(e: EstadoDeConfiguracion): Faltante[] {
       texto: 'Falta el WhatsApp de Helios.',
       efecto: 'El comprobante dice «Helios te escribirá por WhatsApp» y la clínica no tiene a qué número remitir al paciente.',
       arreglo: { rotulo: 'Poner el WhatsApp', destino: A_CONTACTO },
+    })
+  }
+  if (!e.whatsappApi) {
+    faltan.push({
+      id: 'whatsapp_api',
+      texto: 'La API de WhatsApp no está configurada.',
+      efecto:
+        'Ningún WhatsApp sale solo: la confirmación del paciente, los recordatorios y el bot pasan a la cola de Avisos de hoy para mandarlos a mano. La clave va en el Vault de Supabase, no en el panel.',
+      arreglo: { rotulo: 'Ver los avisos de hoy', destino: { to: '/admin/avisos' } },
+    })
+  } else if (e.whatsappSandbox) {
+    faltan.push({
+      id: 'whatsapp_sandbox',
+      texto: 'La API de WhatsApp está en modo de pruebas (sandbox).',
+      efecto:
+        'Los mensajes salen hacia el sandbox de 360dialog y no les llegan a los pacientes ni a los médicos. La dirección va en el Vault de Supabase, no en el panel.',
+      arreglo: null,
     })
   }
   if (!e.remitente) {

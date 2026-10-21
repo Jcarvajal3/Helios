@@ -46,7 +46,7 @@ export type SemanaDeFlujo = {
   porTramo: Record<Tramo, number>
   /** Deuda vencida y sin pagar en el corte (payable). */
   deudaVencida: Record<TramoVencido, number>
-  /** Su desglose: el consumo y el service fee (con su IVA), por tramo. */
+  /** Su desglose: el consumo y la Comisión Helios (con su IVA), por tramo. */
   deudaFinanciada: Record<TramoVencido, number>
   deudaServicio: Record<TramoVencido, number>
   pasos: Paso[]
@@ -71,7 +71,7 @@ function esOrigen(v: unknown): v is OrigenDelPaso {
 
 function porTramoVencido<T>(raw: unknown, leer: (v: unknown) => T): Record<TramoVencido, T> {
   const f = comoFila(raw)
-  return { t1: leer(f.t1), t2: leer(f.t2), t3: leer(f.t3), t4: leer(f.t4), t5: leer(f.t5) }
+  return { t1: leer(f.t1), t2: leer(f.t2), t3: leer(f.t3), t4: leer(f.t4) }
 }
 
 function porTramo<T>(raw: unknown, leer: (v: unknown) => T): Record<Tramo, T> {
@@ -120,7 +120,6 @@ export function leerFlujo(raw: unknown): FlujoEntreTramos {
   return {
     businessDate: textoONulo(f.business_date) ?? '',
     cortes: {
-      gracia: Number(t.grace_days),
       intervalo: Number(t.interval_days),
       baja: Number(t.demotion_days),
       expulsion: Number(t.expulsion_days),
@@ -131,7 +130,7 @@ export function leerFlujo(raw: unknown): FlujoEntreTramos {
 
 // ── La matriz ──────────────────────────────────────────────────────────────
 
-/** «Al día», «1–3 días», «Nuevos». */
+/** «Al día», «1–7 días», «Nuevos». */
 export function rotuloDeOrigen(o: OrigenDelPaso, c: CortesDeTramo): string {
   if (o === 'nuevo') return 'Nuevos'
   if (o === 'al_dia') return 'Al día'
@@ -167,7 +166,7 @@ const ORIGENES: readonly OrigenDelPaso[] = [...TRAMOS, 'nuevo']
  */
 export function matrizDeFlujo(semana: SemanaDeFlujo): FilaDeFlujo[] {
   return ORIGENES.map((desde) => {
-    const hacia: Record<Tramo, number> = { al_dia: 0, t1: 0, t2: 0, t3: 0, t4: 0, t5: 0 }
+    const hacia: Record<Tramo, number> = { al_dia: 0, t1: 0, t2: 0, t3: 0, t4: 0 }
     for (const p of semana.pasos) if (p.desde === desde) hacia[p.hacia] += p.personas
     const total = TRAMOS.reduce((s, t) => s + hacia[t], 0)
     return { desde, hacia, total }
@@ -214,7 +213,6 @@ export function deudaPorTramo(
     t2: { personas: 0, vencido: 0 },
     t3: { personas: 0, vencido: 0 },
     t4: { personas: 0, vencido: 0 },
-    t5: { personas: 0, vencido: 0 },
   }
   for (const p of personas) {
     const tramo = tramoDe(p.diasDeAtraso, cortes)

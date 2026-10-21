@@ -4,8 +4,8 @@
  *   npx tsx src/features/admin/metricas/cohortes/frases.test.ts
  *
  * Lo que se vigila: que las frases hablen en lo que hay que COBRAR (la cuota
- * 1 + la 2, con el service fee dentro), que todo importe que se cobra lleve
- * su desglose al lado (consumo sin fee + service fee) y que ninguna diga
+ * 1 + la 2, con la Comisión Helios dentro), que todo importe que se cobra lleve
+ * su desglose al lado (consumo sin comisión + Comisión Helios) y que ninguna diga
  * «servicio». Y que cada frase cambie con los datos (nada cobrado, una cuota
  * que no vence, una curva sin días cerrados, nada vencido).
  */
@@ -44,7 +44,7 @@ const s21 = leerCohorte(SEMANA_21)
 
 /** Todo importe de la frase va seguido de su desglose entre paréntesis. */
 function importesConDesglose(f: string): boolean {
-  const importes = f.match(/\$[\d.]+,\d\d(?! \+ service fee)(?!\))/g) ?? []
+  const importes = f.match(/\$[\d.]+,\d\d(?! \+ Comisión Helios)(?!\))/g) ?? []
   return importes.every((imp) => f.includes(`${imp} (financiado $`))
 }
 
@@ -90,7 +90,7 @@ igual(
 console.log('\n── Un importe que se cobra, siempre con su desglose ───────────')
 igual(
   textoPlano(importeConDesglose({ payableUsd: 45.2, financedUsd: 36.7, feeUsd: 8.5 })),
-  '$45,20 (financiado $36,70 + service fee + IVA $8,50)',
+  '$45,20 (financiado $36,70 + Comisión Helios + IVA $8,50)',
   'lo que se cobra y de qué está hecho',
 )
 
@@ -131,7 +131,7 @@ console.log('\n── Comparar todas ──────────────�
   const g = textoPlano(fraseDelGrafico(todas))
   igual(
     g,
-    'La semana con más vencido es la del 14 al 20 de septiembre: $151,70 (financiado $123,13 + service fee + IVA $28,57), el 11 % de lo que hay que cobrar de ella.',
+    'La semana con más vencido es la del 14 al 20 de septiembre: $151,70 (financiado $123,13 + Comisión Helios + IVA $28,57), el 11 % de lo que hay que cobrar de ella.',
     'el gráfico: la semana con más vencido, con su desglose',
   )
   cierto(importesConDesglose(g), 'todo importe del gráfico lleva su desglose', g)
@@ -149,13 +149,13 @@ console.log('\n── Comparar todas ──────────────�
   const lee = textoPlano(comoSeLee(s7, HOY))
   igual(
     lee,
-    'cada fila es el total a cobrar de los financiamientos de una semana: la cuota 1 más la cuota 2, cada una con su service fee + IVA. En la del 7 al 13 de septiembre hay que cobrar $704,60 (financiado $572,00 + service fee + IVA $132,60) y ya se cobró el 84 % (el 97 % de la cuota 1 y el 71 % de la cuota 2).',
+    'cada fila es el total a cobrar de los financiamientos de una semana: la cuota 1 más la cuota 2, cada una con su Comisión Helios + IVA. En la del 7 al 13 de septiembre hay que cobrar $704,60 (financiado $572,00 + Comisión Helios + IVA $132,60) y ya se cobró el 84 % (el 97 % de la cuota 1 y el 71 % de la cuota 2).',
     'cómo se lee, con los números de una semana',
   )
   cierto(lee.includes(`${formatUsd(s7.aCobrar.importe.payableUsd)} (financiado`), 'el total a cobrar, con su desglose', lee)
   igual(
     textoPlano(comoSeLee(s14, HOY)),
-    'cada fila es el total a cobrar de los financiamientos de una semana: la cuota 1 más la cuota 2, cada una con su service fee + IVA. En la del 14 al 20 de septiembre hay que cobrar $1.419,26 (financiado $1.152,00 + service fee + IVA $267,26) y ya se cobró el 43 % (el 58 % de la cuota 1 y el 28 % de la cuota 2).',
+    'cada fila es el total a cobrar de los financiamientos de una semana: la cuota 1 más la cuota 2, cada una con su Comisión Helios + IVA. En la del 14 al 20 de septiembre hay que cobrar $1.419,26 (financiado $1.152,00 + Comisión Helios + IVA $267,26) y ya se cobró el 43 % (el 58 % de la cuota 1 y el 28 % de la cuota 2).',
     'la cuota 2 sin vencer, pero con pagos adelantados',
   )
   const soloVence = leerCohorte(
@@ -166,12 +166,12 @@ console.log('\n── Comparar todas ──────────────�
   )
   igual(
     textoPlano(comoSeLee(soloVence, HOY)),
-    'cada fila es el total a cobrar de los financiamientos de una semana: la cuota 1 más la cuota 2, cada una con su service fee + IVA. En la del 14 al 20 de septiembre hay que cobrar $200,00 (financiado $162,00 + service fee + IVA $38,00) y ya se cobró el 50 % (el 100 % de la cuota 1 y la cuota 2 vence del 28 sep al 4 oct).',
+    'cada fila es el total a cobrar de los financiamientos de una semana: la cuota 1 más la cuota 2, cada una con su Comisión Helios + IVA. En la del 14 al 20 de septiembre hay que cobrar $200,00 (financiado $162,00 + Comisión Helios + IVA $38,00) y ya se cobró el 50 % (el 100 % de la cuota 1 y la cuota 2 vence del 28 sep al 4 oct).',
     'la cuota 2 sin vencer ni pagos: cuándo vence',
   )
   igual(
     textoPlano(comoSeLee(null, HOY)),
-    'cada fila es el total a cobrar de los financiamientos de una semana: la cuota 1 más la cuota 2, cada una con su service fee + IVA.',
+    'cada fila es el total a cobrar de los financiamientos de una semana: la cuota 1 más la cuota 2, cada una con su Comisión Helios + IVA.',
     'sin semana de ejemplo, solo la regla',
   )
 }

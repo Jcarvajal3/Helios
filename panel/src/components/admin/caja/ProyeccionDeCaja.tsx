@@ -33,8 +33,8 @@ export type SemanasDeProyeccion = Horizonte
  * La caja de partida es «Dinero en caja», la misma lectura que el Balance
  * (`admin_cash_position`): el saldo proyectado se acumula aquí, semana a
  * semana, sobre ella. Lo que vence y lo que se espera cobrar son cuotas, así
- * que dicen «(consumo + fee)» y van con sus dos partes debajo (regla del
- * fee). Solo lleva color la caja que se queda por debajo de cero.
+ * que dicen «(consumo + comisión)» y van con sus dos partes debajo (regla del
+ * comisión). Solo lleva color la caja que se queda por debajo de cero.
  *
  * Con un local: lo que vence de sus consumos y lo que sale hacia él; sin
  * caja, que es de todo Ronda.
@@ -115,16 +115,16 @@ function TablaDeProyeccion({ d, caja, local }: { d: Proyeccion; caja: number | n
   const cabeceras = [
     'Semana',
     {
-      label: 'Vence (financiamiento + fee)',
-      info: 'Calculado de las cuotas sin pagar que vencen esa semana, desde hoy (lo ya vencido no se proyecta: está en el Balance como vencido), sin ajustar: el financiamiento más el service fee (IVA incluido), con sus dos partes debajo.',
+      label: 'Vence (financiamiento + comisión)',
+      info: 'Calculado de las cuotas sin pagar que vencen esa semana, desde hoy (lo ya vencido no se proyecta: está en el Balance como vencido), sin ajustar: el financiamiento más la Comisión Helios (IVA incluido), con sus dos partes debajo.',
     },
     {
-      label: 'Se espera cobrar (financiamiento + fee)',
+      label: 'Se espera cobrar (financiamiento + comisión)',
       info: `Lo que vence multiplicado por el cobrado a tiempo${aTiempo} No es una predicción: es lo que ha pasado hasta ahora aplicado a lo que viene.`,
     },
     {
       label: local ? 'A transferir a la clínica' : 'A transferir a clínicas',
-      info: 'Las liquidaciones ya generadas que toca pagar esa semana (cada una, el día siguiente a su vencimiento): el neto de la clínica, sin el service fee. Lo atrasado cae en la primera. No incluye lo que todavía no se ha financiado.',
+      info: 'Lo que toca pagarles esa semana: las liquidaciones ya devengadas y las mitades de las consultas que se devengarán al vencer cada cuota (a la clínica se le paga pague o no el paciente), más las comisiones del personal. Sin la Comisión Helios. Lo atrasado cae en la primera semana. No incluye órdenes que todavía no se han registrado.',
     },
     { label: 'Neto', info: 'Lo que se espera cobrar menos lo que hay que transferir esa semana.' },
     ...(caja === null

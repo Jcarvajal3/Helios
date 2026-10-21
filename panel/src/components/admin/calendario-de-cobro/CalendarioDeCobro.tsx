@@ -16,7 +16,7 @@ const OPCIONES_VER: Array<{ value: VerPorCobrar; label: string }> = [
 
 /**
  * Por cobrar › Calendario: cuánto hay que cobrar cada día de una semana,
- * partido en consumo y service fee, y qué parte corresponde a cada local.
+ * partido en consumo y Comisión Helios, y qué parte corresponde a cada local.
  *
  * Es «Por cobrar a usuarios» del Balance de Dinero puesto en calendario, y
  * vive en Cobranza porque es el orden en que entra el dinero que se persigue. La semana, lo

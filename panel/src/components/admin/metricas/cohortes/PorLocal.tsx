@@ -6,7 +6,7 @@ import { CABECERA, CabecerasDelCobro, CeldasDelCobro } from './CeldasDelCobro'
 
 /**
  * La semana partida por local, en lo que hay que COBRAR: el total a cobrar
- * de cada local (la cuota 1 + la 2, con el service fee dentro), qué parte se
+ * de cada local (la cuota 1 + la 2, con la Comisión Helios dentro), qué parte se
  * cobró, lo cobrado, lo vencido y lo por vencer, cada importe con su desglose
  * debajo, y cómo va cada cuota. Con un local elegido arriba, es su fila. Los
  * locales suman el total de la semana.
@@ -20,7 +20,7 @@ export function PorLocal({ filas, hoy }: { filas: ReadonlyArray<CohorteDeLocal>;
   return (
     <SeccionMetricas
       titulo="Total a cobrar por clínica"
-      info="Total a cobrar (cuota 1 + cuota 2, con fee) de los financiamientos de esta semana en cada clínica, con lo cobrado, lo vencido y lo por vencer; las clínicas suman el total de la semana."
+      info="Total a cobrar (cuota 1 + cuota 2, con comisión) de los financiamientos de esta semana en cada clínica, con lo cobrado, lo vencido y lo por vencer; las clínicas suman el total de la semana."
     >
       <div className="-mx-3 overflow-x-auto overscroll-x-contain">
         <table className="w-full min-w-max border-collapse tabular-nums">

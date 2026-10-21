@@ -2,7 +2,7 @@ import { useMemo, useSyncExternalStore } from 'react'
 
 import { abrirEnCola, useCola } from '@/components/admin/ModoCola'
 import type { Cola } from '@/components/admin/ModoCola'
-import { FILTROS_CARTERA, idsSinRepetir } from '@/features/admin/cobranza/cartera'
+import { filtroDeCartera, idsSinRepetir } from '@/features/admin/cobranza/cartera'
 import type { FiltroCartera } from '@/features/admin/cobranza/cartera'
 import { comoFila } from '@/lib/json'
 import { unoDe } from '@/lib/busqueda'
@@ -50,7 +50,7 @@ function leerOrigen(crudo: string | null): OrigenDelCaso | null {
       return estado ? { lista: 'promesas', estado } : null
     }
     if (o.lista === 'morosos') return { lista: 'morosos' }
-    if (o.lista === 'cobranza') return { lista: 'cobranza', tramo: unoDe(FILTROS_CARTERA, o.tramo) ?? 'todos' }
+    if (o.lista === 'cobranza') return { lista: 'cobranza', tramo: filtroDeCartera(o.tramo) ?? 'todos' }
     return null
   } catch {
     return null

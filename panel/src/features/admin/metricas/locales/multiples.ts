@@ -22,7 +22,7 @@ export const SEMANAS_DE_MULTIPLOS = 8
 
 export type BarraDeMultiplo = {
   semana: string
-  /** El consumo de esa semana, sin el service fee. */
+  /** El consumo de esa semana, sin la Comisión Helios. */
   valor: number
   /** Consumos y personas de esa semana: van en el globo de la barra. */
   consumos: number

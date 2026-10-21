@@ -88,17 +88,9 @@ igual(validarGente({ ventana: 4 }).ventana, '4', 'llega como número y vale')
 igual(validarGente({ ventana: '7' }).ventana, undefined, 'una que no existe se cae')
 igual(
   validarGente({ sub: 'retencion', cubo: 'mes', cuantos: '12', ver: 'todas', medida: 'gasto', cohorte: '2026-09-01' }),
-  {
-    ventana: undefined,
-    cubo: 'mes',
-    cuantos: 12,
-    ver: 'todas',
-    medida: 'gasto',
-    cohorte: '2026-09-01',
-  },
-  'las claves de la Retención, con los nombres de Crecimiento',
+  { ventana: undefined },
+  'las claves de la antigua Retención se caen',
 )
-igual(validarGente({ cohorte: '2026-02-30' }).cohorte, undefined, 'un día que no existe se cae')
 
 if (fallos > 0) {
   console.error(`\n${fallos} ${fallos === 1 ? 'prueba falló' : 'pruebas fallaron'}`)

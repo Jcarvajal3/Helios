@@ -3,10 +3,10 @@
  *
  *   npx tsx src/features/admin/metricas/semana/resumen/cifras.test.ts
  *
- * Lo que se vigila: las palabras de Javier en su orden (facturado + fee =
+ * Lo que se vigila: las palabras de Javier en su orden (facturado + comisión =
  * total a cobrar, consumos, usuarios), que el total a cobrar lleve SIEMPRE sus
  * dos partes (las tarjetas de al lado y el globo de la chispa), que ningún rótulo llame
- * «servicio» al fee, que lo que es consumo diga si lleva el fee, y que el
+ * «servicio» a la comisión, que lo que es consumo diga si lleva la comisión, y que el
  * cambio se mida contra la anterior hasta el mismo momento.
  */
 import { formatUsd } from '@/components/ui'
@@ -49,13 +49,13 @@ console.log('── Las cinco, en su orden ────────────�
 igual(
   cifras.map((c) => c.id),
   [...CIFRAS_DEL_DESGLOSE, ...CIFRAS_QUE_CUENTAN],
-  'financiado, fee, total, financiamientos, pacientes',
+  'financiado, comisión, total, financiamientos, pacientes',
 )
 igual(
   cifras.map((c) => c.titulo),
   [
-    'Total financiado (sin fee)',
-    'Service fee + IVA',
+    'Total financiado (sin comisión)',
+    'Comisión Helios + IVA',
     'Total a cobrar',
     'Financiamientos',
     'Pacientes que se financiaron',
@@ -68,14 +68,14 @@ igual(
   'los valores, escritos',
 )
 
-console.log('── La regla del fee ──────────────────────────────────────────')
+console.log('── La regla de la comisión ──────────────────────────────────────────')
 igual(de('total')?.pie, undefined, 'el total a cobrar no repite en el pie sus dos sumandos: son las tarjetas de al lado')
 cierto(
-  (de('total')?.chispa.etiquetas ?? []).every((e) => e.includes('financiamiento $') && e.includes('service fee $')),
+  (de('total')?.chispa.etiquetas ?? []).every((e) => e.includes('financiamiento $') && e.includes('Comisión Helios $')),
   'y en el globo de cada barra de su chispa',
   JSON.stringify(de('total')?.chispa.etiquetas),
 )
-igual(de('fee')?.pie, partesDelFee({ servicioUsd: 225.8, ivaUsd: 36.12 }), 'el fee, partido en sin IVA + IVA')
+igual(de('fee')?.pie, partesDelFee({ servicioUsd: 225.8, ivaUsd: 36.12 }), 'la comisión, partido en sin IVA + IVA')
 igual(partesDelFee({ servicioUsd: 225.8, ivaUsd: 36.12 }), `${formatUsd(225.8)} sin IVA + ${formatUsd(36.12)} de IVA`, 'con sus palabras')
 {
   const leido = [
@@ -85,15 +85,15 @@ igual(partesDelFee({ servicioUsd: 225.8, ivaUsd: 36.12 }), `${formatUsd(225.8)} 
     ...cifras.flatMap((c) => c.chispa.etiquetas),
   ].join(' ')
   cierto(!/servicio/i.test(leido), 'nada de lo que se lee dice «servicio»', leido.match(/.{20}servicio.{20}/i)?.[0] ?? '')
-  cierto(!/comisi[oó]n/i.test(leido), 'ni «comisión»')
+  cierto(!/\bfee\b/i.test(leido), 'ni «fee»: es la Comisión Helios', leido.match(/.{20}\bfee\b.{20}/i)?.[0] ?? '')
 }
-cierto(TITULOS_DEL_RESUMEN.facturado.includes('sin fee'), 'el financiado dice que va sin fee')
+cierto(TITULOS_DEL_RESUMEN.facturado.includes('sin comisión'), 'el financiado dice que va sin comisión')
 cierto(
   TITULOS_DEL_RESUMEN.total === 'Total a cobrar' && CIFRAS_DEL_DESGLOSE.at(-1) === 'total',
   'el total a cobrar se llama como dice Javier y va detrás de sus dos sumandos',
 )
-cierto(AYUDAS_DEL_RESUMEN.facturado.startsWith('Sin el service fee'), 'la ayuda del financiado empieza por «Sin el service fee»')
-cierto(pieDeConsumos({ ticketMedioUsd: 26.26 }).includes('(sin fee)'), 'el ticket medio dice que va sin fee')
+cierto(AYUDAS_DEL_RESUMEN.facturado.startsWith('Sin la Comisión Helios'), 'la ayuda del financiado empieza por «Sin la Comisión Helios»')
+cierto(pieDeConsumos({ ticketMedioUsd: 26.26 }).includes('(sin comisión)'), 'el ticket medio dice que va sin comisión')
 
 console.log('── Frente a la anterior ──────────────────────────────────────')
 igual(de('facturado')?.delta?.texto, '11 % más', 'financiado: 1.129 frente a 1.015,50')
@@ -112,10 +112,10 @@ igual(de('facturado')?.chispa.valores.length, 8, 'ocho barras')
 igual(de('facturado')?.chispa.valores.at(-1), 1129, 'la última es la semana elegida')
 igual(de('facturado')?.chispa.etiquetas.at(-1), '21–27 sep', 'nombrada por su semana')
 igual(de('usuarios')?.chispa.serie, 'Pacientes que se financiaron', 'el globo dice qué cifra es')
-igual(de('facturado')?.chispa.rotulo, 'Total financiado (sin fee), de las últimas 8 semanas', 'el rótulo accesible')
+igual(de('facturado')?.chispa.rotulo, 'Total financiado (sin comisión), de las últimas 8 semanas', 'el rótulo accesible')
 igual(
   etiquetaConDesglose({ ...r.semanas[7], financedUsd: 10, feeUsd: 2.46 }),
-  `21–27 sep (financiamiento ${formatUsd(10)} + service fee ${formatUsd(2.46)})`,
+  `21–27 sep (financiamiento ${formatUsd(10)} + Comisión Helios ${formatUsd(2.46)})`,
   'la etiqueta con desglose',
 )
 

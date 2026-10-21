@@ -15,7 +15,7 @@ import type { FilaLocal, LocalesDeLaSemana } from './tipos'
 // y la de un local elegido. Una frase con los números vale más que un
 // párrafo, y se lee antes que la tabla. Solo dice lo que dicen los datos:
 // con un empate arriba no se corona a nadie. Todo importe de consumo dice
-// que va sin el service fee.
+// que va sin la Comisión Helios.
 //
 // Puro: se prueba en `frase.test.ts`.
 // ═══════════════════════════════════════════════════════════════════════════
@@ -53,7 +53,7 @@ export function fraseDeLaSemana(d: LocalesDeLaSemana): ParteDeFrase[] {
 
   if (vendieron.length === 1) {
     const [unico] = vendieron
-    partes.push(`, ${unico.nombre}: `, { cifra: formatUsd(unico.consumoUsd) }, ` sin fee en ${contar(unico.consumos, 'financiamiento', 'financiamientos')}`)
+    partes.push(`, ${unico.nombre}: `, { cifra: formatUsd(unico.consumoUsd) }, ` sin comisión en ${contar(unico.consumos, 'financiamiento', 'financiamientos')}`)
     if (crecio) partes.push(', un ', { cifra: pctEntero(crecio.pct) }, ` más que ${ref}`)
     partes.push('.')
     return partes
@@ -77,7 +77,7 @@ export function fraseDeLaSemana(d: LocalesDeLaSemana): ParteDeFrase[] {
   // Empate arriba: se nombra a todos los que empatan.
   const arriba = vendieron.reduce((max, l) => Math.max(max, l.consumoUsd), 0)
   const empatados = vendieron.filter((l) => l.consumoUsd === arriba)
-  partes.push(`Empatan ${enumerar(empatados.map((l) => l.nombre))}, con `, { cifra: formatUsd(arriba) }, ' sin fee cada una')
+  partes.push(`Empatan ${enumerar(empatados.map((l) => l.nombre))}, con `, { cifra: formatUsd(arriba) }, ' sin comisión cada una')
   if (crecio) partes.push(`, y ${crecio.local.nombre} crece un `, { cifra: pctEntero(crecio.pct) }, ` frente a ${ref}`)
   partes.push('.')
   return partes
@@ -93,14 +93,14 @@ export function fraseDelLocal(d: LocalesDeLaSemana, l: FilaLocal): ParteDeFrase[
       `${l.nombre} ${d.semana.enCurso ? 'todavía no ha financiado nada' : 'no financió nada'} ${cuando}.`,
     ]
     if (l.consumoAnteriorUsd > 0) {
-      partes.push(` En ${ref} llevaba `, { cifra: formatUsd(l.consumoAnteriorUsd) }, ' sin fee.')
+      partes.push(` En ${ref} llevaba `, { cifra: formatUsd(l.consumoAnteriorUsd) }, ' sin comisión.')
     }
     return partes
   }
 
   const partes: ParteDeFrase[] = [
     `${l.nombre} lleva ${cuando} `,
-    { cifra: `${formatUsd(l.consumoUsd)} financiado sin fee` },
+    { cifra: `${formatUsd(l.consumoUsd)} financiado sin comisión` },
     ` en ${contar(l.consumos, 'financiamiento', 'financiamientos')} de `,
     { cifra: contar(l.personas, 'paciente', 'pacientes') },
   ]

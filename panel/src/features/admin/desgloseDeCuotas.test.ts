@@ -3,7 +3,7 @@
  *
  *   npx tsx src/features/admin/desgloseDeCuotas.test.ts
  *
- * Lo que se vigila: que el fee sea lo que se paga menos el consumo, que la
+ * Lo que se vigila: que la comisión sea lo que se paga menos el consumo, que la
  * suma no deje colas de coma flotante, y que un desglose que no cuadra con el
  * total que se enseña no salga nunca.
  */
@@ -27,7 +27,7 @@ const cuotas = [
 ]
 
 console.log('── El desglose ───────────────────────────────────────────────')
-igual(desgloseDeCuotas(cuotas), { payableUsd: 12.62, financedUsd: 10.3, feeUsd: 2.32 }, 'financiamiento + fee = lo que se paga')
+igual(desgloseDeCuotas(cuotas), { payableUsd: 12.62, financedUsd: 10.3, feeUsd: 2.32 }, 'financiamiento + comisión = lo que se paga')
 igual(desgloseDeCuotas([]), { payableUsd: 0, financedUsd: 0, feeUsd: 0 }, 'sin cuotas, todo a cero')
 igual(desgloseDeCuotas([{ amountUsd: 0.1, financedUsd: 0 }, { amountUsd: 0.2, financedUsd: 0 }]).payableUsd, 0.3, 'sin colas de coma flotante')
 

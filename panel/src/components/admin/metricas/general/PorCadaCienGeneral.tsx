@@ -7,7 +7,7 @@ import type { LecturaGeneral } from './lectura'
 
 /**
  * «Por cada $100 financiados», desde el primer día: lo que entra por el
- * service fee y por los cargos por atraso y el margen que queda después del
+ * Comisión Helios y por los cargos por atraso y el margen que queda después del
  * impago (lo perdido no lleva línea: es el «Impago (%)» del bloque Riesgo).
  * Los cien dólares son el denominador, no una línea.
  *

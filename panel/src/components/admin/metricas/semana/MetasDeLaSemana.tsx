@@ -8,7 +8,7 @@ import { busquedaDeDestino } from '@/features/admin/metricas/semana/filas'
 import type { MetaDeLaSemana } from '@/features/admin/metricas/semana/metas'
 
 const INFO =
-  'Cada meta del negocio (Ajustes › Parámetros) con la cifra de la semana elegida, la misma de su fila en la tabla; la marca del medidor es la meta. El total financiado se mide sin el service fee. Una meta de las que se alcanzan (financiado, pacientes, clínicas) no se pinta de aviso mientras la semana está en curso.'
+  'Cada meta del negocio (Ajustes › Parámetros) con la cifra de la semana elegida, la misma de su fila en la tabla; la marca del medidor es la meta. El total financiado se mide sin la Comisión Helios. Una meta de las que se alcanzan (financiado, pacientes, clínicas) no se pinta de aviso mientras la semana está en curso.'
 
 const MOTIVO_LOCAL = 'Las metas son de todo Helios, no de una clínica. Quita la clínica de arriba para verlas.'
 

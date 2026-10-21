@@ -5,8 +5,8 @@ import type { Desglose } from '@/features/admin/metricas/lectura'
 //
 // Lo global del negocio desde el primer día. Cada importe lleva su clase en
 // el tipo: un `Desglose` es lo que se paga en cuotas (payable) y trae SIEMPRE
-// su consumo y su service fee (IVA incluido); lo demás (`…Usd` suelto) es
-// consumo sin fee, o el service fee de Helios sin IVA (`servicioUsd`), o un
+// su consumo y su Comisión Helios (IVA incluido); lo demás (`…Usd` suelto) es
+// consumo sin comisión, o la Comisión Helios de Helios sin IVA (`servicioUsd`), o un
 // cargo por atraso, y ninguno se suma con otro.
 //
 // `null` es «no se parte por el local elegido» (registros, caja…) o «no hay
@@ -39,7 +39,7 @@ export type GenteGeneral = {
 }
 
 export type ConsumoGeneral = {
-  /** Consumo, sin el service fee. */
+  /** Consumo, sin la Comisión Helios. */
   financedUsd: number
   consumos: number
   /** Consumo ÷ consumos. `null` sin consumos. */
@@ -68,7 +68,7 @@ export type DineroGeneral = {
   vencido: CuotasConDesglose
   /** Las cuotas pagadas desde el primer día. */
   cobrado: Desglose & { cuotas: number }
-  /** El service fee de Helios SIN IVA: su ingreso. Nunca sumado al consumo. */
+  /** La Comisión Helios de Helios SIN IVA: su ingreso. Nunca sumado al consumo. */
   servicioUsd: number
   /** Los cargos por atraso: ingreso aparte, sin IVA. */
   cargos: { devengadoUsd: number; cobradoUsd: number; cargos: number }
@@ -109,10 +109,18 @@ export type PorCadaCien = {
   financedMaduroUsd: number
   servicioUsd: number
   cargosUsd: number
+  /** Lo que Helios le paga al personal de las clínicas por esas órdenes: un coste. */
+  personalUsd: number
   /** Consumo perdido y sin pagar. */
   perdidoUsd: number
   /** Cada cifra por cada $100 financiados. `null` sin financiamientos. */
-  por100: { servicioUsd: number; cargosUsd: number; perdidoUsd: number; margenUsd: number } | null
+  por100: {
+    servicioUsd: number
+    cargosUsd: number
+    personalUsd: number
+    perdidoUsd: number
+    margenUsd: number
+  } | null
 }
 
 /** Una semana de la curva: lo de esa semana y lo acumulado hasta ella. */

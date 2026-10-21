@@ -149,7 +149,7 @@ export function useImpagoPrimeraCuota(): LecturaDeCifra<ImpagoPrimeraCuota> {
 // ── Gerencia ───────────────────────────────────────────────────────────────
 
 export type FinanciadoDeLaSemana = {
-  /** Lo facturado en la semana: el consumo en los locales, sin el service fee. */
+  /** Lo facturado en la semana: el consumo en los locales, sin la Comisión Helios. */
   financiado: number
   consumos: number
   lunes: string
@@ -158,7 +158,7 @@ export type FinanciadoDeLaSemana = {
 }
 
 /**
- * Lo facturado esta semana (sin fee), de lunes a hoy por día operativo, con
+ * Lo facturado esta semana (sin comisión), de lunes a hoy por día operativo, con
  * los consumos de cada día. `null` si el servidor no devolvió ninguna semana.
  */
 export function useFinanciadoDeLaSemana(): LecturaDeCifra<FinanciadoDeLaSemana | null> {

@@ -30,7 +30,7 @@ const SEMANAS_DE_RITMO = 4
 const TITULO = 'Capital'
 
 const QUE_ES =
-  'Cuánto del capital disponible está comprometido: el financiamiento que los pacientes todavía no han devuelto, sin el service fee. La parte de la clínica es la misma esté transferida o por transferir, así que no se suma aparte; si hay caja para el lunes lo dice el semáforo del cierre. Las semanas suponen que no vuelve nada. Es rojo si lo que queda no cubre un ciclo de cobro (las dos cuotas) y ámbar si no cubre dos: son las marcas del medidor.'
+  'Cuánto del capital disponible está comprometido: el financiamiento que los pacientes todavía no han devuelto, sin la Comisión Helios. La parte de la clínica es la misma esté transferida o por transferir, así que no se suma aparte; si hay caja para el lunes lo dice el semáforo del cierre. Las semanas suponen que no vuelve nada. Es rojo si lo que queda no cubre un ciclo de cobro (las dos cuotas) y ámbar si no cubre dos: son las marcas del medidor.'
 
 const ENLACE = 'text-on-surface underline decoration-panel-hairline-strong underline-offset-2 hover:decoration-on-surface'
 
@@ -111,7 +111,7 @@ export function SemaforoDeCapital({
     `Comprometido: el financiamiento sin saldar, ${formatUsd(c.comprometido)}.`,
     `Usado: ${formatUsd(c.comprometido)} ÷ ${formatUsd(capital)} de capital.`,
     ritmo
-      ? `Semanas: lo que queda, ${formatUsd(Math.max(c.queda, 0))}, ÷ ${formatUsd(ritmo.media)} facturados (sin fee) de media por semana.`
+      ? `Semanas: lo que queda, ${formatUsd(Math.max(c.queda, 0))}, ÷ ${formatUsd(ritmo.media)} facturados (sin comisión) de media por semana.`
       : 'Sin semanas cerradas no hay ritmo con el que contar las semanas.',
   ].join(' ')
 
@@ -149,8 +149,8 @@ export function SemaforoDeCapital({
           <CifrasEnFila
             cifras={[
               {
-                rotulo: 'Financiamiento por cobrar (sin fee)',
-                info: 'Calculado de las cuotas sin pagar ni dadas por perdidas: su financiamiento, sin el service fee. Es la parte «Financiamiento» de «Por cobrar a pacientes» del Balance.',
+                rotulo: 'Financiamiento por cobrar (sin comisión)',
+                info: 'Calculado de las cuotas sin pagar ni dadas por perdidas: su financiamiento, sin la Comisión Helios. Es la parte «Financiamiento» de «Por cobrar a pacientes» del Balance.',
                 valor: (
                   <Link to="/admin/metricas" search={{ vista: 'caja', sub: 'balance' }} className="hover:underline">
                     {formatUsd(consumoSinSaldar)}
@@ -172,7 +172,7 @@ export function SemaforoDeCapital({
                   ? `A ${formatUsd(ritmo.media)} facturados por semana`
                   : 'Todavía no hay una semana cerrada',
                 info: ritmo
-                  ? `El capital sin comprometer entre el financiado (sin fee) medio de ${ritmo.semanas === 1 ? 'la última semana cerrada' : `las últimas ${ritmo.semanas} semanas cerradas`}, suponiendo que no vuelve nada.`
+                  ? `El capital sin comprometer entre el financiado (sin comisión) medio de ${ritmo.semanas === 1 ? 'la última semana cerrada' : `las últimas ${ritmo.semanas} semanas cerradas`}, suponiendo que no vuelve nada.`
                   : undefined,
               },
             ]}

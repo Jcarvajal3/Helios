@@ -9,19 +9,12 @@
  * el de calendario) y que el diálogo de la gestión pida lo mismo que la base.
  */
 import {
-  CUALQUIER_TRAMO,
   FILTROS_CARTERA,
-  FILTROS_DE_PLAZO,
-  FILTRO_SIN_LA_ETIQUETA,
-  filtroDeTramo,
+  filtroDeCartera,
   idsSinRepetir,
   leerCartera,
-  opcionesDeTramo,
-  opcionesDePlazo,
-  partirFiltro,
   pasaElFiltro,
   proximaAccion,
-  queEsElFiltro,
   recuentoPorFiltro,
   rotuloDeFiltro,
   desgloseCorto,
@@ -46,7 +39,7 @@ function comprueba(ok: boolean, titulo: string, detalle = '') {
   console.log(`${ok ? '  ok  ' : ' FALLA'}  ${titulo}${ok ? '' : ` — ${detalle}`}`)
 }
 
-const CORTES: CortesDeTramo = { gracia: 3, intervalo: 7, baja: 30, expulsion: 60 }
+const CORTES: CortesDeTramo = { intervalo: 7, baja: 30, expulsion: 60 }
 const HOY = '2026-09-24'
 
 function fila(parte: Partial<FilaCartera>): FilaCartera {
@@ -77,29 +70,30 @@ console.log('\n── Los filtros ───────────────�
   const pasado = fila({ nextDueDate: '2026-09-27' })
   const hoy = fila({ bucket: 'vence_hoy', nextDueDate: HOY })
   const t1 = fila({ bucket: 'congelado', overdueUsd: 5, daysOverdue: 2, nextDueDate: '2026-09-22' })
-  const t3Contactado = fila({ bucket: 'congelado', overdueUsd: 8, daysOverdue: 13, contactedSinceDue: true })
-  const t5 = fila({ bucket: 'expulsion', overdueUsd: 20, daysOverdue: 70 })
+  const t2Contactado = fila({ bucket: 'congelado', overdueUsd: 8, daysOverdue: 13, contactedSinceDue: true })
+  const t4 = fila({ bucket: 'expulsion', overdueUsd: 20, daysOverdue: 70 })
 
   comprueba(pasaElFiltro(manana, 'recordar_hoy', ctx), 'vence mañana: «Vence mañana»')
   comprueba(!pasaElFiltro(pasado, 'recordar_hoy', ctx), 'vence pasado mañana: no es «Vence mañana»')
   comprueba(pasaElFiltro(manana, 'por_vencer', ctx), '«Vence mañana» también está en Plazo vigente')
   comprueba(pasaElFiltro(hoy, 'vence_hoy', ctx) && !pasaElFiltro(hoy, 'por_vencer', ctx), 'vence hoy no está en Plazo vigente')
   comprueba(!pasaElFiltro(hoy, 'plazo_vencido', ctx), 'vence hoy no está en Plazo vencido')
-  comprueba(pasaElFiltro(t1, 'plazo_vencido', ctx) && pasaElFiltro(t5, 'plazo_vencido', ctx), 'cualquier tramo está en Plazo vencido')
+  comprueba(pasaElFiltro(t1, 'plazo_vencido', ctx) && pasaElFiltro(t4, 'plazo_vencido', ctx), 'cualquier tramo está en Plazo vencido')
   comprueba(!pasaElFiltro(manana, 'plazo_vencido', ctx), 'sin nada vencido no está en Plazo vencido')
   comprueba(pasaElFiltro(t1, 't1', ctx) && !pasaElFiltro(t1, 't2', ctx), '2 días de atraso: primer tramo')
-  comprueba(pasaElFiltro(t3Contactado, 't3', ctx), '13 días: tercer tramo')
-  comprueba(pasaElFiltro(t5, 't5', ctx), '70 días: último tramo')
+  comprueba(pasaElFiltro(t2Contactado, 't2', ctx), '13 días: segundo tramo')
+  comprueba(pasaElFiltro(fila({ overdueUsd: 5, daysOverdue: 7 }), 't1', ctx), '7 días: todavía el primer tramo (la gracia ya no corta)')
+  comprueba(pasaElFiltro(t4, 't4', ctx), '70 días: último tramo')
   comprueba(pasaElFiltro(t1, 'sin_contactar', ctx), 'atrasado sin gestión: sin contactar')
-  comprueba(!pasaElFiltro(t3Contactado, 'sin_contactar', ctx), 'con gestión desde el vencimiento: ya contactado')
+  comprueba(!pasaElFiltro(t2Contactado, 'sin_contactar', ctx), 'con gestión desde el vencimiento: ya contactado')
   comprueba(!pasaElFiltro(manana, 'sin_contactar', ctx), 'sin nada vencido no es «sin contactar»')
   comprueba(!pasaElFiltro(t1, 't1', { hoy: HOY, cortes: null }), 'sin cortes, ningún tramo')
 
-  const filas = [manana, pasado, hoy, t1, t3Contactado, t5]
+  const filas = [manana, pasado, hoy, t1, t2Contactado, t4]
   const r = recuentoPorFiltro(filas, ctx)
   comprueba(r.todos === 6, 'todos cuenta todas las filas', String(r.todos))
   comprueba(r.recordar_hoy === 1 && r.por_vencer === 2 && r.vence_hoy === 1, 'recuentos fijos', JSON.stringify(r))
-  comprueba(r.t1 === 1 && r.t3 === 1 && r.t5 === 1 && r.t2 === 0, 'recuentos por tramo', JSON.stringify(r))
+  comprueba(r.t1 === 1 && r.t2 === 1 && r.t4 === 1 && r.t3 === 0, 'recuentos por tramo', JSON.stringify(r))
   comprueba(r.sin_contactar === 2, 'sin contactar', String(r.sin_contactar))
   comprueba(r.plazo_vencido === 3, 'plazo vencido', String(r.plazo_vencido))
   comprueba(
@@ -108,7 +102,7 @@ console.log('\n── Los filtros ───────────────�
     JSON.stringify(r),
   )
   comprueba(
-    r.t1 + r.t2 + r.t3 + r.t4 + r.t5 === r.plazo_vencido,
+    r.t1 + r.t2 + r.t3 + r.t4 === r.plazo_vencido,
     'la suma de los tramos es Plazo vencido',
     JSON.stringify(r),
   )
@@ -122,17 +116,6 @@ console.log('\n── Los filtros ───────────────�
     if (pasaElFiltro(f, 'sin_contactar', ctx)) comprueba(pasaElFiltro(f, 'plazo_vencido', ctx), 'sin contactar ⊂ plazo vencido')
     if (pasaElFiltro(f, 'recordar_hoy', ctx)) comprueba(pasaElFiltro(f, 'por_vencer', ctx), 'vence mañana ⊂ plazo vigente')
   }
-
-  const conTramos = opcionesDeTramo(r, CORTES).map((o) => o.label)
-  comprueba(conTramos.includes('1–3 días · 1'), 'la opción del tramo lleva el rótulo y el recuento', conTramos.join(' | '))
-  comprueba(conTramos[0] === 'Todos los tramos', 'el tramo empieza por «Todos los tramos»', conTramos.join(' | '))
-  comprueba(opcionesDeTramo(r, null).length === 1, 'sin cortes no se ofrecen tramos')
-  const plazos = opcionesDePlazo(r).map((o) => o.label)
-  comprueba(
-    plazos.join(' | ') === 'Todos · 6 | Plazo vigente · 2 | Vence mañana · 1 | Vence hoy · 1 | Plazo vencido · 3',
-    '«Vencimiento»: los cinco de Javier, en su orden y con su recuento',
-    plazos.join(' | '),
-  )
 
   const s = sumasDeCartera([
     { overdueUsd: 5, upcomingUsd: 2 },
@@ -157,45 +140,23 @@ console.log('\n── Los filtros ───────────────�
     JSON.stringify(conPartes.porVencerDesglose),
   )
   comprueba(
-    desgloseCorto({ financedUsd: 37, feeUsd: 8.2 }) === 'financiamiento $37,00 · fee $8,20',
-    'el desglose corto dice «financiamiento» y «fee»',
+    desgloseCorto({ financedUsd: 37, feeUsd: 8.2 }) === 'financiamiento $37,00 · comisión $8,20',
+    'el desglose corto dice «financiamiento» y «comisión»',
     desgloseCorto({ financedUsd: 37, feeUsd: 8.2 }),
   )
 }
 
-console.log('\n── Un solo filtro en la URL, tres cosas en pantalla ─────────')
+console.log('\n── El filtro de la URL ───────────────────────────────────────')
 {
-  // Cada valor que acepta la URL cae en lo que se ve y vuelve igual: los
-  // enlaces viejos (`?tramo=t3`, `?tramo=recordar_hoy`, `?tramo=sin_contactar`)
-  // siguen llegando.
-  for (const f of FILTROS_CARTERA) {
-    const { plazo, tramo, sinContactar } = partirFiltro(f)
-    const vuelta = sinContactar ? 'sin_contactar' : tramo === CUALQUIER_TRAMO ? plazo : filtroDeTramo(tramo)
-    comprueba(vuelta === f, `«${f}» ida y vuelta`, `${plazo} / ${tramo} / ${sinContactar} → ${vuelta}`)
-    // Un tramo y la etiqueta son partes de Plazo vencido: el Segmented lo marca.
-    if (tramo !== CUALQUIER_TRAMO || sinContactar) comprueba(plazo === 'plazo_vencido', `«${f}» marca Plazo vencido`, plazo)
-  }
-  const sin = partirFiltro('sin_contactar')
-  comprueba(sin.sinContactar && sin.tramo === CUALQUIER_TRAMO, '«sin_contactar» se pinta como etiqueta, no como botón')
-  comprueba(!FILTROS_DE_PLAZO.some((p) => (p as string) === 'sin_contactar'), '«sin_contactar» ya no es un botón')
-  comprueba(FILTRO_SIN_LA_ETIQUETA === 'plazo_vencido', 'quitar la etiqueta deja Plazo vencido')
-  comprueba(filtroDeTramo(CUALQUIER_TRAMO) === 'plazo_vencido', '«Todos los tramos» vuelve a Plazo vencido')
-  comprueba(FILTROS_DE_PLAZO.every((q) => FILTROS_CARTERA.includes(q)), 'cada botón de «Vencimiento» lo acepta la URL')
+  // Cada valor que acepta la URL vuelve igual: los enlaces guardados
+  // (`?tramo=t3`, `?tramo=recordar_hoy`, `?tramo=sin_contactar`) siguen llegando.
+  for (const f of FILTROS_CARTERA) comprueba(filtroDeCartera(f) === f, `«${f}» se lee tal cual`, String(filtroDeCartera(f)))
+  comprueba(filtroDeCartera('t5') === 't4', 'el quinto tramo de antes cae en el último de ahora', String(filtroDeCartera('t5')))
+  comprueba(filtroDeCartera('t6') === undefined && filtroDeCartera(5) === undefined, 'lo que no es un filtro no pasa')
+  comprueba(filtroDeCartera('toString') === undefined, 'ni una clave de Object')
   comprueba(rotuloDeFiltro('recordar_hoy', CORTES) === 'Vence mañana', 'la clave vieja lleva el rótulo nuevo')
-  comprueba(rotuloDeFiltro('t2', CORTES) === 'Plazo vencido, 4–7 días de atraso', 'un tramo se nombra dentro de Plazo vencido', rotuloDeFiltro('t2', CORTES))
-}
-
-console.log('\n── Las ayudas dicen qué cuentan ──────────────────────────────')
-{
-  for (const f of FILTROS_CARTERA) {
-    const ayuda = queEsElFiltro(f, CORTES)
-    comprueba(ayuda.startsWith('Pacientes '), `la ayuda de «${f}» dice a quién cuenta`, ayuda)
-    comprueba(!/persona/i.test(ayuda), `la ayuda de «${f}» dice «pacientes»`, ayuda)
-  }
-  comprueba(queEsElFiltro('todos', CORTES).includes('7 días'), 'Todos dice el horizonte de la cola', queEsElFiltro('todos', CORTES))
-  comprueba(queEsElFiltro('plazo_vencido', CORTES).includes('perdida'), 'Plazo vencido dice que lleva lo perdido')
-  comprueba(queEsElFiltro('t1', CORTES).includes('1–3 días'), 'un tramo dice sus días', queEsElFiltro('t1', CORTES))
-  comprueba(queEsElFiltro('t1', null).includes('los días de este tramo'), 'sin cortes no se inventan los días')
+  comprueba(rotuloDeFiltro('t2', CORTES) === 'Plazo vencido, 8–29 días de atraso', 'un tramo se nombra dentro de Plazo vencido', rotuloDeFiltro('t2', CORTES))
+  comprueba(rotuloDeFiltro('t1', null) === 'Tramo de atraso', 'sin cortes no se inventan los días')
 }
 
 console.log('\n── La próxima acción y la cola ──────────────────────────────')

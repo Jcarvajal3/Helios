@@ -10,8 +10,8 @@ import { filas, numero, numeroONulo, texto, textoONulo } from '@/lib/json'
 //   · La persona está en un consumo si tiene cuotas en él, no solo si lo puso.
 //     Un consumo de grupo es UN cargo con una cuota por integrante, y leerlo
 //     por `charges.user_id` deja fuera a todos menos a quien abrió el consumo.
-//   · El importe que se enseña es el consumo, sin el service fee. El
-//     fee solo se ve repartido en las cuotas.
+//   · El importe que se enseña es el consumo, sin la Comisión Helios. El
+//     comisión solo se ve repartido en las cuotas.
 //
 // Módulo puro: se prueba en Node (`consumosDePersona.test.ts`).
 // ═══════════════════════════════════════════════════════════════════════════
@@ -26,7 +26,7 @@ export type ConsumoDePersona = {
   merchantId: string
   /** Null si el local no tiene nombre: la celda dice «Local sin nombre». */
   merchantName: string | null
-  /** FINANCED: el consumo entero en el local, sin fee. */
+  /** FINANCED: el consumo entero en el local, sin comisión. */
   cuentaUsd: number
   /**
    * FINANCED: lo que le tocó a esta persona, la suma de lo financiado en sus

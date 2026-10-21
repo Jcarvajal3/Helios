@@ -53,7 +53,7 @@ const DE_LA_COLA = ['persona', 'estado', 'vencido', 'atraso', 'contacto', 'prome
  * consulta que la Lista (`admin_collections` con la cola entera), así que no
  * cuesta otra llamada y las cifras no pueden discrepar.
  *
- * Es cobranza: lo vencido lleva el fee dentro, siempre con sus dos partes a
+ * Es cobranza: lo vencido lleva la comisión dentro, siempre con sus dos partes a
  * la vista. Lo dado por perdido sigue en la lista —se sigue cobrando— y se
  * cuenta aparte.
  */
@@ -281,7 +281,7 @@ function CifrasDeMorosos({ filas }: { filas: ReadonlyArray<CollectionRow> }) {
             rotulo: 'Vencido por cobrar',
             valor: formatUsd(cobrable.usd),
             pie: cobrable.partes && cobrable.usd > 0 ? desgloseCorto(cobrable.partes) : undefined,
-            info: 'Las cuotas vencidas sin pagar, sin lo dado por perdido: lo que hay que transferir, financiamiento + service fee.',
+            info: 'Las cuotas vencidas sin pagar, sin lo dado por perdido: lo que hay que transferir, financiamiento + Comisión Helios.',
           },
           {
             rotulo: 'Dado por perdido',

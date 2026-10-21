@@ -16,7 +16,7 @@ export type ChispaProps = {
   formato?: (n: number) => string
   /**
    * El nombre corto de la serie en el globo, junto a la cifra: «Consumo (sin
-   * fee)». Sin él, solo la cifra: el título de la tarjeta ya dice qué es.
+   * comisión)». Sin él, solo la cifra: el título de la tarjeta ya dice qué es.
    */
   serie?: string
   /** La barra que va en el tono del área. Por defecto, la última: la semana elegida. */

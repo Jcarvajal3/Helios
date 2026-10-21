@@ -89,7 +89,7 @@ const grupos = agruparParametros([
   fila('rara', null),
 ])
 comprueba(
-  grupos.map((g) => g.titulo).join(',') === 'Reglas del crédito,Umbrales de color,Metas,Otros',
+  grupos.map((g) => g.titulo).join(',') === 'Reglas del pago en cuotas,Umbrales de color,Metas,Otros',
   'los grupos en su orden y sin los vacíos',
   grupos.map((g) => g.titulo).join(','),
 )

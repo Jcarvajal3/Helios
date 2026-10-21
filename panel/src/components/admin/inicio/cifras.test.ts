@@ -74,7 +74,7 @@ console.log('── Cobranza ─────────────────
   const sinUmbral = deudaVencida({ overdueDebtUsd: 20, openDebtUsd: 100, overduePct: 20 }, null)
   comprueba(sinUmbral.senal?.tone === 'neutral', 'sin umbrales leídos, ningún color inventado')
 
-  // El desglose: consumo + service fee, solo si la base lo manda y suma.
+  // El desglose: consumo + Comisión Helios, solo si la base lo manda y suma.
   const conDesglose = deudaVencida(
     {
       overdueDebtUsd: 777.73,
@@ -97,7 +97,7 @@ console.log('── Cobranza ─────────────────
   comprueba(desgloseQueSuma(10, 2.004, 12) !== null, 'a un céntimo, sí')
 
   const pie = pieDeDeudaVencida(conDesglose, 12)
-  comprueba(pie === 'financiamiento $631,17 · fee $146,56 · 12 pacientes', 'el pie: las dos partes de lo vencido y los pacientes', String(pie))
+  comprueba(pie === 'financiamiento $631,17 · comisión $146,56 · 12 pacientes', 'el pie: las dos partes de lo vencido y los pacientes', String(pie))
   comprueba(!pie?.includes('2.715'), 'el pie no lleva lo que se debe en total sin sus partes', String(pie))
   comprueba(pieDeDeudaVencida(d, null) === null, 'sin desglose ni gente, no hay pie')
   comprueba(pieDeDeudaVencida(d, 1) === '1 paciente', 'sin desglose, los pacientes solos')
@@ -106,8 +106,8 @@ console.log('── Cobranza ─────────────────
   comprueba(
     globo.filas.length === 2 &&
       globo.filas[0].valor === '$777,73' &&
-      globo.filas[0].rotulo === 'vencido · financiamiento $631,17 · fee $146,56' &&
-      globo.filas[1].rotulo === 'vencido + por vencer · financiamiento $2.204,17 · fee $511,44',
+      globo.filas[0].rotulo === 'vencido · financiamiento $631,17 · comisión $146,56' &&
+      globo.filas[1].rotulo === 'vencido + por vencer · financiamiento $2.204,17 · comisión $511,44',
     'el globo: lo vencido y lo que queda por cobrar, cada uno con sus partes',
     JSON.stringify(globo.filas.map((f) => [f.valor, f.rotulo])),
   )

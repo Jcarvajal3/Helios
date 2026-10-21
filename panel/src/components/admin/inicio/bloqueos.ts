@@ -14,7 +14,7 @@ import type { PaymentDestination } from '@/features/admin/ops'
 // donde se arregla: si algo sale en rojo, hay un botón que lo apaga.
 // ═══════════════════════════════════════════════════════════════════════════
 
-export type IdBloqueo = 'tasa' | 'cuenta' | 'extracto'
+export type IdBloqueo = 'tasa' | 'tasa-eur' | 'cuenta' | 'extracto'
 
 export type Bloqueo = {
   id: IdBloqueo
@@ -27,24 +27,39 @@ export type Bloqueo = {
 
 const A_LA_TASA: Destino = { to: '/admin/ajustes', search: { tab: 'tasa' } }
 
-/** Sin tasa no se cotiza; con una de más de 48 h se cotiza mal. */
-export function bloqueoDeTasa(fx: Pick<FxStatus, 'rate' | 'isStale' | 'ageHours'>): Bloqueo | null {
+/**
+ * Sin tasa no se cotiza; con una de más de 48 h se cotiza mal. Vale para las
+ * dos tasas: la del dólar cotiza todo, y la del euro, las órdenes en euros
+ * (el paciente paga cada cuota a la tasa BCV del euro del día).
+ */
+export function bloqueoDeTasa(
+  fx: Pick<FxStatus, 'rate' | 'isStale' | 'ageHours'>,
+  moneda: 'USD' | 'EUR' = 'USD',
+): Bloqueo | null {
+  const id: IdBloqueo = moneda === 'USD' ? 'tasa' : 'tasa-eur'
+  const cual = moneda === 'USD' ? 'La tasa BCV' : 'La tasa BCV del euro'
   if (fx.rate === null) {
     return {
-      id: 'tasa',
-      texto: 'No hay ninguna tasa BCV cargada.',
-      detalle: 'Sin tasa no se puede cotizar un pago, y nadie puede pagar.',
+      id,
+      texto: moneda === 'USD' ? 'No hay ninguna tasa BCV cargada.' : 'No hay ninguna tasa BCV del euro cargada.',
+      detalle:
+        moneda === 'USD'
+          ? 'Sin tasa no se puede cotizar un pago, y nadie puede pagar.'
+          : 'Sin ella no se puede cotizar el pago de una orden en euros.',
       arreglo: { rotulo: 'Cargar la tasa', destino: A_LA_TASA },
     }
   }
   if (!fx.isStale) return null
   return {
-    id: 'tasa',
+    id,
     texto:
       fx.ageHours === null
-        ? 'La tasa BCV lleva más de dos días sin actualizarse.'
-        : `La tasa BCV no se actualiza desde hace ${formatWaitingHours(fx.ageHours)}.`,
-    detalle: 'La búsqueda automática dejó de traerla y los pagos se cotizan a una tasa vieja.',
+        ? `${cual} lleva más de dos días sin actualizarse.`
+        : `${cual} no se actualiza desde hace ${formatWaitingHours(fx.ageHours)}.`,
+    detalle:
+      moneda === 'USD'
+        ? 'La búsqueda automática dejó de traerla y los pagos se cotizan a una tasa vieja.'
+        : 'La búsqueda automática dejó de traerla y los pagos de las órdenes en euros se cotizan a una tasa vieja.',
     arreglo: { rotulo: 'Revisar la tasa', destino: A_LA_TASA },
   }
 }

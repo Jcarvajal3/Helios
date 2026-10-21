@@ -31,7 +31,7 @@ export const CLASE_ELEGIDA = 'bg-panel-raised'
  *
  * Toda la fila se pulsa; el nombre es además un enlace de verdad, para el
  * teclado y para abrirlo en otra pestaña. Un sumando (el consumo o el
- * service fee de lo que se paga en cuotas) va más pequeño, sangrado y sin
+ * Comisión Helios de lo que se paga en cuotas) va más pequeño, sangrado y sin
  * cambio propio. Con un local elegido, lo que no se parte por local ocupa la
  * fila entera con `NoSeParte`.
  *

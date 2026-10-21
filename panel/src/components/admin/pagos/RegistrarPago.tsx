@@ -28,7 +28,10 @@ import {
   formatUsd,
   formatVes,
 } from '@/components/ui'
+import { reconcilePayment } from '@/features/admin/api'
 import { BANKS } from '@/features/admin/banks'
+import { fetchPaymentReport } from '@/features/admin/pagosReportados'
+import { useIsSuperAdmin } from '@/features/admin/role'
 import { consultaCargosPorAtraso } from '@/features/admin/cobranza/consultas'
 import { valorDe } from '@/features/admin/parametros'
 import { useParametros } from '@/features/admin/useParametros'
@@ -161,7 +164,7 @@ function ElegirPaciente({ onElegir }: { onElegir: (u: UserRow) => void }) {
               <span className="block type-panel-body text-on-surface">{u.fullName ?? 'Sin nombre'}</span>
               <span className="block type-panel-caption text-on-surface-variant">
                 {formatPhone(u.phone)}
-                {u.document && ` · ${formatDocument(u.document)}`} · debe {formatUsd(u.openDebtUsd)} con fee
+                {u.document && ` · ${formatDocument(u.document)}`} · debe {formatUsd(u.openDebtUsd)} con comisión
                 {u.overdueUsd > 0 && `, ${formatUsd(u.overdueUsd)} vencido`}
               </span>
             </span>
@@ -306,7 +309,7 @@ function FormularioDelPago({
 
       {seleccion.size > 0 && (
         <div className="flex flex-col gap-1 rounded-panel-control border border-panel-hairline p-4">
-          <Fila rotulo={`${seleccion.size} ${seleccion.size === 1 ? 'cuota' : 'cuotas'}, con fee`} valor={formatUsd(total.cuotasUsd)} />
+          <Fila rotulo={`${seleccion.size} ${seleccion.size === 1 ? 'cuota' : 'cuotas'}, con comisión`} valor={formatUsd(total.cuotasUsd)} />
           {total.cargosUsd > 0 && <Fila rotulo="Cargos por atraso que viajan con ellas" valor={formatUsd(total.cargosUsd)} />}
           <Fila rotulo="Total a pagar" valor={formatUsd(total.totalUsd)} fuerte />
           <LoQueDiceElComprobante
@@ -525,8 +528,43 @@ function ListaDeCuotas({
 
 // ── 3. Hecho ───────────────────────────────────────────────────────────────
 
+/**
+ * El pago, registrado. Tres finales posibles, de más corto a más largo:
+ *
+ *   - el aviso del BNC (SMS) ya lo encontró y lo aprobó solo (bot en modo
+ *     activo, `helios_bank_sms_on_report`): no queda nada que hacer;
+ *   - hay un único movimiento del extracto que encaja: se aprueba aquí mismo
+ *     con él, sin ir a Pagos reportados (si el doble control no lo impide);
+ *   - si no, queda en Pagos reportados para aprobarlo allí.
+ */
 function PagoHecho({ pago, nombre, onClose }: { pago: PagoRegistrado; nombre: string | null; onClose: () => void }) {
   const extracto = fraseDelExtracto(pago.candidatosExtracto)
+  const queryClient = useQueryClient()
+  const parametros = useParametros()
+  const esSuperAdmin = useIsSuperAdmin()
+  // Con el doble control, quien registra no aprueba (salvo un super admin).
+  const puedeAprobar = valorDe(parametros.data, 'payment_four_eyes') !== 1 || esSuperAdmin
+
+  // Cómo quedó: el bot de avisos del BNC lo puede haber aprobado ya.
+  const estado = useQuery({
+    queryKey: ['payment-report', pago.reportId],
+    queryFn: () => fetchPaymentReport(pago.reportId),
+  })
+  const aprobadoYa = estado.data?.status === 'reconciled'
+
+  const aprobar = useMutation({
+    // Sin movimiento: la base liga el único candidato libre del extracto.
+    mutationFn: () => reconcilePayment({ reportId: pago.reportId, approve: true }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['payment-report', pago.reportId] })
+      void queryClient.invalidateQueries({ queryKey: ['payment-queue'] })
+      void queryClient.invalidateQueries({ queryKey: ['reconciliation-health'] })
+    },
+  })
+  const aprobadoAqui = aprobar.isSuccess
+  const ofrecerAprobar =
+    !aprobadoYa && !aprobadoAqui && estado.data?.status === 'reported' && pago.candidatosExtracto === 1 && puedeAprobar
+
   return (
     <div className="flex flex-col gap-4">
       <Callout tone="success" titulo={`Pago de ${formatUsd(pago.amountUsd)} registrado${nombre ? ` a ${nombre}` : ''}`}>
@@ -538,13 +576,32 @@ function PagoHecho({ pago, nombre, onClose }: { pago: PagoRegistrado; nombre: st
             }. `
           : ''}
         {pago.lateFeeUsd > 0 ? `Incluye ${formatUsd(pago.lateFeeUsd)} de cargos por atraso. ` : ''}
-        Queda en Pagos reportados para aprobarlo.
+        {aprobadoYa && !aprobadoAqui
+          ? 'Lo aprobó al momento el aviso (SMS) del BNC: las cuotas ya están saldadas.'
+          : aprobadoAqui
+            ? 'Aprobado con el movimiento del extracto: las cuotas ya están saldadas.'
+            : 'Queda en Pagos reportados para aprobarlo.'}
       </Callout>
-      <Callout tone={extracto.tono} titulo="Candidatos en el extracto">
-        {extracto.texto}
-      </Callout>
+      {!aprobadoYa && !aprobadoAqui && (
+        <Callout tone={extracto.tono} titulo="Candidatos en el extracto">
+          {extracto.texto}
+          {pago.candidatosExtracto === 1 && !puedeAprobar &&
+            ' El doble control está activo: lo aprueba otra persona del equipo.'}
+        </Callout>
+      )}
+      {aprobar.isError && <ErrorBox title="No se pudo aprobar" detail={describeError(aprobar.error)} />}
       <div className="flex flex-wrap gap-3">
-        <Link to="/admin/cobros/$id" params={{ id: pago.reportId }} search={{}} className={claseDeBoton('filled', 'md')}>
+        {ofrecerAprobar ? (
+          <Button size="md" disabled={aprobar.isPending} onClick={() => aprobar.mutate()}>
+            {aprobar.isPending ? 'Aprobando…' : `Aprobar ahora ${formatUsd(pago.amountUsd)}`}
+          </Button>
+        ) : null}
+        <Link
+          to="/admin/cobros/$id"
+          params={{ id: pago.reportId }}
+          search={{}}
+          className={claseDeBoton(ofrecerAprobar ? 'tonal' : 'filled', 'md')}
+        >
           Abrir en Pagos reportados <ArrowRight size={14} aria-hidden />
         </Link>
         <Button size="md" variant="text" onClick={onClose}>

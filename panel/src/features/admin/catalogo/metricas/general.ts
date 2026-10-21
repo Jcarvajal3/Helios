@@ -58,8 +58,8 @@ export const metricasGeneral = [
   {
     tipo: 'cifra',
     id: 'consumo-desde-el-inicio',
-    titulo: 'Total financiado desde el inicio (sin fee)',
-    descripcion: 'Todo lo financiado en las clínicas desde el primer día, sin el service fee, con los financiamientos, el ticket medio y los pacientes.',
+    titulo: 'Total financiado desde el inicio (sin comisión)',
+    descripcion: 'Todo lo financiado en las clínicas desde el primer día, sin la Comisión Helios, con los financiamientos, el ticket medio y los pacientes.',
     espacio: 'metricas',
     sinonimos: ['financiamientos totales', 'gmv total', 'volumen total', 'financiamiento total', 'total financiado', 'financiado total'],
     destino: { to: '/admin/metricas', search: { vista: 'global' } },
@@ -80,8 +80,8 @@ export const metricasGeneral = [
   {
     tipo: 'cifra',
     id: 'por-cobrar-en-cuotas',
-    titulo: 'Por cobrar hoy (financiado + fee)',
-    descripcion: 'Las cuotas que siguen sin pagarse hoy: el financiado más el service fee + IVA, con las dos partes por separado, y cuánto de ello ya venció.',
+    titulo: 'Por cobrar hoy (financiado + comisión)',
+    descripcion: 'Las cuotas que siguen sin pagarse hoy: el financiado más la Comisión Helios + IVA, con las dos partes por separado, y cuánto de ello ya venció.',
     espacio: 'metricas',
     sinonimos: ['total por cobrar', 'deuda viva', 'cartera viva', 'cuánto nos deben', 'cuotas pendientes'],
     destino: { to: '/admin/metricas', search: { vista: 'global' } },
@@ -91,8 +91,8 @@ export const metricasGeneral = [
   {
     tipo: 'cifra',
     id: 'total-movido-desde-el-inicio',
-    titulo: 'Total movido desde el inicio (financiado + fee)',
-    descripcion: 'Todo lo que ha pasado por Helios desde el primer día, cobrado o no: el importe de todas las cuotas, el financiado más el service fee + IVA, con las dos partes por separado.',
+    titulo: 'Total movido desde el inicio (financiado + comisión)',
+    descripcion: 'Todo lo que ha pasado por Helios desde el primer día, cobrado o no: el importe de todas las cuotas, el financiado más la Comisión Helios + IVA, con las dos partes por separado.',
     espacio: 'metricas',
     sinonimos: ['monto total movido', 'volumen total', 'total transado', 'gmv', 'todo lo movido', 'volumen histórico'],
     destino: { to: '/admin/metricas', search: { vista: 'global' } },
@@ -102,8 +102,8 @@ export const metricasGeneral = [
   {
     tipo: 'cifra',
     id: 'cobrado-en-cuotas',
-    titulo: 'Cobrado desde el inicio (financiado + fee)',
-    descripcion: 'Todo lo cobrado en cuotas desde el primer día: el financiado más el service fee + IVA, con las dos partes por separado.',
+    titulo: 'Cobrado desde el inicio (financiado + comisión)',
+    descripcion: 'Todo lo cobrado en cuotas desde el primer día: el financiado más la Comisión Helios + IVA, con las dos partes por separado.',
     espacio: 'metricas',
     sinonimos: ['total cobrado', 'cuánto hemos cobrado', 'recaudado', 'cobros totales'],
     destino: { to: '/admin/metricas', search: { vista: 'global' } },
@@ -113,8 +113,8 @@ export const metricasGeneral = [
   {
     tipo: 'cifra',
     id: 'servicio-ganado-desde-el-inicio',
-    titulo: 'Service fee sin IVA desde el inicio',
-    descripcion: 'Lo que Helios ha ganado con el service fee de los financiamientos, sin IVA, desde el primer día.',
+    titulo: 'Comisión Helios sin IVA desde el inicio',
+    descripcion: 'Lo que Helios ha ganado con la Comisión Helios de los financiamientos, sin IVA, desde el primer día.',
     espacio: 'metricas',
     // Los nombres viejos, para que quien los teclee lo siga encontrando.
     sinonimos: [
@@ -123,7 +123,7 @@ export const metricasGeneral = [
       'cuánto hemos ganado',
       'ganancia',
       'revenue total',
-      'fee total',
+      'comisión total',
       'servicio',
       'servicio de helios',
       'comisión',
@@ -159,7 +159,7 @@ export const metricasGeneral = [
     tipo: 'cifra',
     id: 'registros-y-consumo-acumulados',
     titulo: 'Registros y financiado acumulados',
-    descripcion: 'Los registros y el total financiado (sin fee) acumulados, semana a semana desde la primera.',
+    descripcion: 'Los registros y el total financiado (sin comisión) acumulados, semana a semana desde la primera.',
     espacio: 'metricas',
     sinonimos: ['crecimiento acumulado', 'curva de crecimiento', 'evolución', 'acumulado semanal', 'cómo hemos crecido'],
     destino: { to: '/admin/metricas', search: { vista: 'global' } },

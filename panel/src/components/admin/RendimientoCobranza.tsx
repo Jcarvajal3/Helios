@@ -108,7 +108,7 @@ export function CuerpoDelRendimiento({
       <Seccion titulo={titulo} controles={controles}>
         <StatGrid cols={4}>
           <Stat
-            label="Cobrado de cuotas vencidas (con fee)"
+            label="Cobrado de cuotas vencidas (con comisión)"
             value={r ? formatUsd(r.recuperado.usd) : ''}
             visual={
               desglose &&
@@ -122,7 +122,7 @@ export function CuerpoDelRendimiento({
                 ? `${r.recuperado.cuotas} ${r.recuperado.cuotas === 1 ? 'cuota' : 'cuotas'} de ${r.recuperado.personas} ${r.recuperado.personas === 1 ? 'paciente' : 'pacientes'}`
                 : undefined
             }
-            info="Cuotas con el pago reportado en el periodo después de su día de vencimiento (también las pagadas dentro de la gracia, que cuentan además como a tiempo), en dólares con fee y su desglose; el cargo por atraso va aparte."
+            info="Cuotas con el pago reportado en el periodo después de su día de vencimiento (también las pagadas dentro de la gracia, que cuentan además como a tiempo), en dólares con comisión y su desglose; el cargo por atraso va aparte."
             estado={estadoR}
             onReintentar={() => void recuperado.refetch()}
           />
@@ -134,7 +134,7 @@ export function CuerpoDelRendimiento({
                 ? `${r.recuperadoDeLoVencido.cuotas} de ${r.vencidoAlEmpezar.cuotas} cuotas vencidas al empezar`
                 : 'No había nada vencido al empezar'
             }
-            info="De las cuotas vencidas y sin pagar al empezar el periodo (lo perdido incluido), lo cobrado dentro del periodo ÷ lo que se debía, en dólares con fee; debajo, en número de cuotas."
+            info="De las cuotas vencidas y sin pagar al empezar el periodo (lo perdido incluido), lo cobrado dentro del periodo ÷ lo que se debía, en dólares con comisión; debajo, en número de cuotas."
             lateral={
               <Ring
                 tamano="sm"
@@ -180,7 +180,7 @@ export function CuerpoDelRendimiento({
           <BarChart
             title="Cobrado de cuotas vencidas, por tramo de atraso al pagar"
             summary={`Por días de atraso el día del reporte del pago, ${describirPeriodo(r.desde, r.hasta)}`}
-            series={[{ key: 'usd', label: 'Cobrado de cuotas vencidas (con fee)' }]}
+            series={[{ key: 'usd', label: 'Cobrado de cuotas vencidas (con comisión)' }]}
             points={r.porTramo.map((t) => {
               const d = desgloseDeBolsa(t)
               const cuotas = `${t.cuotas} ${t.cuotas === 1 ? 'cuota' : 'cuotas'}`
@@ -195,7 +195,7 @@ export function CuerpoDelRendimiento({
             formatShort={formatUsdShort}
             ejeLabel="Tramo"
             unidadLabel="Cuotas y desglose"
-            footnote="En dólares con fee; el desglose financiado + service fee + IVA de cada tramo está en su globo y en su tabla."
+            footnote="En dólares con comisión; el desglose financiado + Comisión Helios + IVA de cada tramo está en su globo y en su tabla."
             empty="No se recuperó nada vencido en este periodo."
           />
         )}

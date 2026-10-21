@@ -4,7 +4,7 @@ import { fraseDelCotejo } from '@/features/admin/porCobrar'
 import type { CifrasPorCobrar, PorCobrar, VerPorCobrar } from '@/features/admin/porCobrar'
 import { Sumandos } from './Sumandos'
 
-/** Una cifra con el fee dentro: el total con sus sumandos debajo, o un cero limpio. */
+/** Una cifra con la comisión dentro: el total con sus sumandos debajo, o un cero limpio. */
 function sumandosSiHay(c: CifrasPorCobrar) {
   return c.totalUsd > 0 ? <Sumandos cifras={c} /> : undefined
 }
@@ -14,7 +14,7 @@ function sumandosSiHay(c: CifrasPorCobrar) {
  * desglose debajo, y a su lado lo que ya entró, lo vencido de antes y a
  * cuántas cuotas y personas corresponde.
  *
- * Cada cifra con el service fee dentro lleva sus sumandos a la vista: un
+ * Cada cifra con la Comisión Helios dentro lleva sus sumandos a la vista: un
  * total suelto se leería como si el local hubiera cobrado de más.
  */
 export function CifrasDeLaSemana({
@@ -52,15 +52,15 @@ export function CifrasDeLaSemana({
       variant="hero"
       label={
         ver === 'todo'
-          ? `Total a cobrar ${esta} (financiado + service fee + IVA)`
-          : `Por cobrar ${esta} (financiado + service fee + IVA)`
+          ? `Total a cobrar ${esta} (financiado + Comisión Helios + IVA)`
+          : `Por cobrar ${esta} (financiado + Comisión Helios + IVA)`
       }
       value={formatUsd(periodo.totalUsd)}
       info={`${
         ver === 'todo'
           ? 'Todas las cuotas que vencen de lunes a domingo, pagadas o no.'
           : 'Las cuotas que vencen de lunes a domingo y siguen sin pagar.'
-      } Es el financiado (sin fee) más el service fee + IVA (y los cargos por atraso de esas cuotas, si hay), con sus sumandos debajo. Cuenta por la fecha de vencimiento, sin lo dado por perdido ni las cuentas de prueba. ${fraseDelCotejo(datos.cotejo)}`}
+      } Es el financiado (sin comisión) más la Comisión Helios + IVA (y los cargos por atraso de esas cuotas, si hay), con sus sumandos debajo. Cuenta por la fecha de vencimiento, sin lo dado por perdido ni las cuentas de prueba. ${fraseDelCotejo(datos.cotejo)}`}
       visual={<Sumandos cifras={periodo} grande />}
     />
   )
@@ -69,7 +69,7 @@ export function CifrasDeLaSemana({
     <Stat
       label={`Cobrado de lo que vence ${esta}`}
       value={formatUsd(pagado.totalUsd)}
-      info="De las cuotas que vencen en la semana, las ya pagadas: financiado + service fee + IVA, con sus cargos por atraso pagados y los sumandos debajo. Una cuota pagada antes de tiempo cuenta aquí."
+      info="De las cuotas que vencen en la semana, las ya pagadas: financiado + Comisión Helios + IVA, con sus cargos por atraso pagados y los sumandos debajo. Una cuota pagada antes de tiempo cuenta aquí."
       hint={pagado.cuotas > 0 ? contar(pagado.cuotas, 'cuota pagada', 'cuotas pagadas') : 'Nada pagado todavía'}
       visual={sumandosSiHay(pagado)}
     />
@@ -79,7 +79,7 @@ export function CifrasDeLaSemana({
     <Stat
       label="Vencido de semanas anteriores"
       value={formatUsd(vencidoAntes.totalUsd)}
-      info="Las cuotas que vencieron antes del lunes de la semana, y antes de hoy, y siguen sin pagar: financiado + service fee + IVA, con sus cargos por atraso y los sumandos debajo. Lo vencido lo decide el día operativo, como el motor de mora. Es lo que trabaja Cartera vencida."
+      info="Las cuotas que vencieron antes del lunes de la semana, y antes de hoy, y siguen sin pagar: financiado + Comisión Helios + IVA, con sus cargos por atraso y los sumandos debajo. Lo vencido lo decide el día operativo, como el motor de mora. Es lo que trabaja Cartera vencida."
       hint={
         vencidoAntes.cuotas > 0
           ? `${contar(vencidoAntes.cuotas, 'cuota', 'cuotas')} de ${contar(vencidoAntes.personas, 'paciente', 'pacientes')}`
@@ -120,7 +120,7 @@ export function CifrasDeLaSemana({
             <Stat
               label="Pacientes"
               value={String(periodo.personas)}
-              info="Pacientes distintos con alguna de esas cuotas. Sale de las cuotas: en un financiamiento de grupo cuenta cada paciente con su cuota."
+              info="Pacientes distintos con alguna de esas cuotas."
             />
           </StatGrid>
         </div>

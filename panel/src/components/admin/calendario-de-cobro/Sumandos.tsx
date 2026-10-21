@@ -3,27 +3,27 @@ import type { CifrasPorCobrar } from '@/features/admin/porCobrar'
 
 /**
  * Los rótulos de los tres sumandos. La clave `comision` es el nombre de la
- * base (`comisionUsd`); en pantalla es el service fee + IVA. No
+ * base (`comisionUsd`); en pantalla es la Comisión Helios + IVA. No
  * es la comisión del local, que Ronda cobra al local y aquí no sale.
  */
 export const ROTULOS = {
-  consumo: 'Financiado (sin fee)',
-  comision: 'Service fee + IVA',
+  consumo: 'Financiado (sin comisión)',
+  comision: 'Comisión Helios + IVA',
   cargos: 'Cargos por atraso',
 } as const
 
 export const QUE_ES = {
-  consumo: 'Lo financiado en la clínica, sin el service fee: la suma del financiado de esas cuotas. Es lo que descuenta cupo y lo que se pierde entero si la cuota no se paga.',
+  consumo: 'Lo financiado en la clínica, sin la Comisión Helios: la suma del financiado de esas cuotas. Es lo que descuenta cupo y lo que se pierde entero si la cuota no se paga.',
   comision:
-    'El service fee de Helios con el IVA que lo grava. El IVA no es de Helios: se cobra al paciente y se remite.',
+    'La Comisión Helios de Helios con el IVA que lo grava. El IVA no es de Helios: se cobra al paciente y se remite.',
   cargos:
-    'Los cargos por atraso de esas mismas cuotas. Van siempre aparte: no son financiamiento ni service fee.',
+    'Los cargos por atraso de esas mismas cuotas. Van siempre aparte: no son financiamiento ni Comisión Helios.',
 } as const
 
 /**
  * Las partes de una cifra de Por cobrar, dentro de su tarjeta: el consumo, el
- * service fee y, si hay, los cargos por atraso. Es lo que deja enseñar el
- * total encima: una cifra con el fee dentro solo se pinta con sus sumandos a
+ * Comisión Helios y, si hay, los cargos por atraso. Es lo que deja enseñar el
+ * total encima: una cifra con la comisión dentro solo se pinta con sus sumandos a
  * la vista.
  *
  * Va por encima del enlace de la tarjeta (`relative z-10`), para que los

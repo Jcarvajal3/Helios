@@ -26,7 +26,7 @@ import type { ClaseEntidad, Reciente } from './recientes'
 // elegirlo.
 //
 // Sin React, para poder probarlo: que una acción del super admin salga
-// apagada con su motivo, que un consumo no enseñe un monto con el service fee
+// apagada con su motivo, que un consumo no enseñe un monto con la Comisión Helios
 // dentro, que lo guardado en Recientes no arrastre cifras que caducan.
 // ═══════════════════════════════════════════════════════════════════════════
 

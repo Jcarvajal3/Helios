@@ -70,6 +70,7 @@ SUITES=(
   sin_mora_smoke
   afiliacion_smoke
   bienvenida_personal_smoke
+  aviso_transferencia_smoke
   bienvenida_medico_whatsapp_smoke
   pago_masivo_smoke
   registro_pago_masivo_smoke

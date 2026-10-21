@@ -109,6 +109,12 @@ igual('las cuentas se arreglan en Ajustes › Cuentas de cobro', faltan[0]?.arre
 igual('el WhatsApp, en Contacto', faltan[1]?.arreglo?.destino, { to: '/admin/ajustes', search: { tab: 'contacto' } })
 igual('la clave de Resend no se arregla desde el panel', faltan[3]?.arreglo, null)
 igual('un «true» en texto no es verdad', nada.resend, false)
+igual('una base que no manda la API no se da por rota', nada.whatsappApi, true)
+
+const sinApi = leerEstadoDeConfiguracion({ whatsapp: true, cuentas_de_cobro: 1, resend: true, remitente: true, whatsapp_api: false, whatsapp_sandbox: true })
+igual('sin la API de WhatsApp, avisa (y el sandbox no se suma)', faltantesDeConfiguracion(sinApi).map((f) => f.id), ['whatsapp_api'])
+const enSandbox = leerEstadoDeConfiguracion({ whatsapp: true, cuentas_de_cobro: 1, resend: true, remitente: true, whatsapp_api: true, whatsapp_sandbox: true })
+igual('en sandbox, avisa', faltantesDeConfiguracion(enSandbox).map((f) => f.id), ['whatsapp_sandbox'])
 
 // ── Cuentas de cobro ───────────────────────────────────────────────────────
 

@@ -19,7 +19,7 @@ const CENTIMO = 0.005
 
 /**
  * La frase de arriba de la pestaña, con los números dentro. Lo que entró de
- * cuotas va SIEMPRE con su desglose (regla del fee); los cargos por atraso
+ * cuotas va SIEMPRE con su desglose (regla de la comisión); los cargos por atraso
  * no entran en la frase.
  *
  * Sin local: lo que entró, lo que salió a los locales y la caja. Con local:

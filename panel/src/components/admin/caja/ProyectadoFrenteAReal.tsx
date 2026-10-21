@@ -36,8 +36,8 @@ const QUE_ES =
  * La proyección de cada lunes frente a lo que pasó: el cobro en barras (lo
  * cobrado dentro de lo esperado) y la tabla entera debajo.
  *
- * Lo esperado y lo cobrado son cuotas (con el service fee dentro), así que
- * dicen «(consumo + fee)» y cada uno lleva sus partes en la tabla: lo
+ * Lo esperado y lo cobrado son cuotas (con la Comisión Helios dentro), así que
+ * dicen «(consumo + comisión)» y cada uno lleva sus partes en la tabla: lo
  * cobrado, las que dicen las cuotas de esa semana (y los cargos por atraso
  * aparte); lo esperado, repartido como lo que vencía esa semana, porque la
  * foto del lunes solo guarda el total. Cada barra enseña el globo del kit al
@@ -116,7 +116,7 @@ function FrenteAReal({ hoy }: { hoy: string }) {
           )
         }
         series={[
-          { key: 'esperado', label: 'Se esperaba cobrar (financiamiento + fee)' },
+          { key: 'esperado', label: 'Se esperaba cobrar (financiamiento + comisión)' },
           { key: 'cobrado', label: 'Cobrado según el libro (cuotas + cargos)' },
         ]}
         points={d.semanas.map((s) => ({
@@ -129,19 +129,19 @@ function FrenteAReal({ hoy }: { hoy: string }) {
         formatShort={formatUsdShort}
         ejeLabel="Semana"
         unidadLabel="Detalle"
-        footnote="Lo esperado son cuotas: el financiamiento más el service fee. Lo cobrado es lo que el libro contable apunta por pagos de cuotas, con los cargos por atraso dentro. Las partes de lo cobrado salen en el globo de cada barra, y las de las dos en la tabla de abajo. Lo cobrado va dentro de lo esperado; lo que asoma por encima es lo que faltó."
+        footnote="Lo esperado son cuotas: el financiamiento más la Comisión Helios. Lo cobrado es lo que el libro contable apunta por pagos de cuotas, con los cargos por atraso dentro. Las partes de lo cobrado salen en el globo de cada barra, y las de las dos en la tabla de abajo. Lo cobrado va dentro de lo esperado; lo que asoma por encima es lo que faltó."
       />
 
       <Table
         headers={[
           'Semana',
           {
-            label: 'Se esperaba cobrar (financiamiento + fee)',
+            label: 'Se esperaba cobrar (financiamiento + comisión)',
             info: 'Lo que vencía esa semana multiplicado por el cobro a tiempo, según la proyección guardada el lunes. Sus partes se reparten como las de lo que vencía esa semana.',
           },
           {
             label: 'Cobrado según el libro (cuotas + cargos)',
-            info: 'Del libro contable: lo que entró a la caja por pagos de cuotas esa semana, con los cargos por atraso dentro. Debajo, calculado de las cuotas: el financiamiento, el service fee y, aparte, los cargos por atraso.',
+            info: 'Del libro contable: lo que entró a la caja por pagos de cuotas esa semana, con los cargos por atraso dentro. Debajo, calculado de las cuotas: el financiamiento, la Comisión Helios y, aparte, los cargos por atraso.',
           },
           {
             label: 'Transferencia prevista a clínicas',

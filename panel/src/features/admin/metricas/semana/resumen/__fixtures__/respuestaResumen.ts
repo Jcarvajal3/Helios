@@ -1,6 +1,6 @@
 // Una respuesta cruda de `admin_metricas_semana_resumen`, con la forma y el
 // orden de magnitud de dev (semana del 21-09 en curso, hoy 26-09, seis días).
-// Cuadra como cuadra la base: payable = financed + fee, fee = servicio + iva,
+// Cuadra como cuadra la base: payable = financed + comisión, comisión = servicio + iva,
 // y la suma de las noches no es la semana entera (hay más noches que estas).
 
 type Tramo = {

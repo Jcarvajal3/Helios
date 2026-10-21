@@ -105,10 +105,10 @@ export function columnasPromesas(
 
     {
       key: 'deuda',
-      header: 'Vencido hoy (financiado + service fee + IVA)',
+      header: 'Vencido hoy (financiado + Comisión Helios + IVA)',
       type: 'number',
       sortDir: 'desc',
-      info: 'Cuotas del paciente sin pagar con vencimiento anterior a hoy (día operativo): financiado (sin fee) más service fee + IVA, que se ven debajo por separado. Sin cargos por atraso.',
+      info: 'Cuotas del paciente sin pagar con vencimiento anterior a hoy (día operativo): financiado (sin comisión) más Comisión Helios + IVA, que se ven debajo por separado. Sin cargos por atraso.',
       sort: (p) => p.vencidoHoyUsd,
       csv: (p) => csvDinero(p.vencidoHoyUsd),
       cell: (p) =>
@@ -116,7 +116,7 @@ export function columnasPromesas(
           <>
             <span className="font-semibold">{formatUsd(p.vencidoHoyUsd)}</span>
             <span className="mt-0.5 block type-panel-caption text-on-surface-variant">
-              Financiado {formatUsd(p.vencidoHoyFinancedUsd)} + service fee + IVA {formatUsd(p.vencidoHoyFeeUsd)}
+              Financiado {formatUsd(p.vencidoHoyFinancedUsd)} + Comisión Helios + IVA {formatUsd(p.vencidoHoyFeeUsd)}
             </span>
             <span className="block type-panel-caption text-on-surface-variant">
               {p.diasDeAtraso} d de atraso
@@ -129,8 +129,8 @@ export function columnasPromesas(
 
     {
       key: 'pago',
-      header: 'Último pago reportado (con fee)',
-      info: 'El último pago que el paciente reportó después de la gestión, en cualquier estado: sus cuotas con service fee + IVA y los cargos por atraso que saldaba.',
+      header: 'Último pago reportado (con comisión)',
+      info: 'El último pago que el paciente reportó después de la gestión, en cualquier estado: sus cuotas con Comisión Helios + IVA y los cargos por atraso que saldaba.',
       sortDir: 'desc',
       sort: (p) => p.ultimoPago?.creadoEl ?? null,
       csv: (p) =>

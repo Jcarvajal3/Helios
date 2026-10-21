@@ -348,7 +348,7 @@ export function describirAlerta(d: DetalleAlerta): string {
         : 'Comparte datos con otra cuenta.'
     case 'consumo_sobre_cupo': {
       // Su parte es financiamiento (financed): lo dice, para no leerse como una cuota.
-      const consumo = `Se financió ${formatUsd(d.monto)} (sin fee)${d.local ? ` en ${d.local}` : ''} el ${formatDay(d.dia)}`
+      const consumo = `Se financió ${formatUsd(d.monto)} (sin comisión)${d.local ? ` en ${d.local}` : ''} el ${formatDay(d.dia)}`
       const cupo =
         d.limite === null
           ? 'por encima de su cupo'

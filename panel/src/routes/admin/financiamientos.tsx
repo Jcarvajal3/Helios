@@ -195,7 +195,7 @@ function Lista({
 }
 
 /**
- * Las cifras de lo que se ve, sin el service fee. Las órdenes son las filas
+ * Las cifras de lo que se ve, sin la Comisión Helios. Las órdenes son las filas
  * en cualquier estado; los consumos, solo las confirmadas. Los consumos de
  * prueba se ven en la tabla con su etiqueta pero no suman: si sumaran, esta
  * pantalla contradiría a Inicio. Con la lista en su tope, las cifras son de
@@ -210,8 +210,8 @@ function ResumenConsumos({ filas, alTope }: { filas: Array<ChargeRow>; alTope: b
     <>
       {alTope ? `en estas ${filas.length} órdenes: ` : ''}
       {confirmados.length} {confirmados.length === 1 ? 'financiamiento confirmado' : 'financiamientos confirmados'} ·{' '}
-      {formatUsd(consumo)} financiado (sin fee)
-      {ticket !== null && ` · ticket medio (sin fee) ${formatUsd(ticket)}`}
+      {formatUsd(consumo)} financiado (sin comisión)
+      {ticket !== null && ` · ticket medio (sin comisión) ${formatUsd(ticket)}`}
     </>
   )
 }

@@ -29,8 +29,8 @@ export function ConsumoPorSemana({ d }: { d: LocalesDeLaSemana }) {
 
   return (
     <ChartCard
-      titulo="Financiado por semana y clínica (sin fee)"
-      info="Sin el service fee: el financiado de cada clínica en las ocho últimas semanas. Todas las clínicas comparten la escala, así que las alturas se comparan entre sí. Si la semana elegida está en curso, su barra va a medias y la nota la compara con la anterior a la misma altura."
+      titulo="Financiado por semana y clínica (sin comisión)"
+      info="Sin la Comisión Helios: el financiado de cada clínica en las ocho últimas semanas. Todas las clínicas comparten la escala, así que las alturas se comparan entre sí. Si la semana elegida está en curso, su barra va a medias y la nota la compara con la anterior a la misma altura."
       resumen={
         m.filas.length > 0
           ? `Misma escala para todos, de $0 a ${formatUsdShort(m.escala.tope)}, ${m.rango}.`
@@ -59,7 +59,7 @@ function filasDeLaBarra(b: BarraDeMultiplo): FilaDelGlobo[] {
   return [
     {
       key: 'consumo',
-      rotulo: 'financiado, sin fee',
+      rotulo: 'financiado, sin comisión',
       valor: formatUsd(b.valor),
       color: b.valor > 0 && b.destacada ? SERIE.principal : SERIE.tenue,
       forma: 'punto',
@@ -88,7 +88,7 @@ function FilaDeMultiplos({ f, d }: { f: FilaDeMultiplo; d: LocalesDeLaSemana }) 
 
       <div
         role="img"
-        aria-label={`Financiado por semana de ${f.nombre}, sin fee. Las flechas recorren las semanas. ${lectura}`}
+        aria-label={`Financiado por semana de ${f.nombre}, sin comisión. Las flechas recorren las semanas. ${lectura}`}
         {...lienzo}
         // Al entrar con el tabulador, el globo sale ya en la semana elegida.
         onFocus={() => {

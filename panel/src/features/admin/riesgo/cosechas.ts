@@ -9,7 +9,7 @@ import { comoFila, comoLista, numeroONulo, textoONulo } from '@/lib/json'
 // va cada cosecha HOY; las curvas (`admin_cohort_curves`) dicen cómo iba a la
 // misma edad, que es lo único que permite comparar un mes joven con uno viejo.
 //
-// Todos los montos son consumo (financed), sin el service fee. La tasa
+// Todos los montos son consumo (financed), sin la Comisión Helios. La tasa
 // de mora es deuda sobre deuda y la de impago, consumo sobre consumo: ninguna
 // mezcla clases (20260925121000).
 // ═══════════════════════════════════════════════════════════════════════════

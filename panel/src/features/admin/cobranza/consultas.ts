@@ -163,6 +163,11 @@ export function consultaTasa() {
   return queryOptions({ queryKey: ['fx-status'], queryFn: () => fetchFxStatus() })
 }
 
+/** La tasa BCV del euro: la de las órdenes en euros. Misma clave que Ajustes › Tasa BCV. */
+export function consultaTasaEuro() {
+  return queryOptions({ queryKey: ['fx-status', 'EUR'], queryFn: () => fetchFxStatus('EUR') })
+}
+
 export function consultaCuentasDeCobro() {
   return queryOptions({ queryKey: ['payment-destinations'], queryFn: fetchPaymentDestinations })
 }

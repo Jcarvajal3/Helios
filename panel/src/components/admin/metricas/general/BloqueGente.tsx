@@ -35,7 +35,7 @@ export function BloqueGente({ lectura }: { lectura: LecturaGeneral }) {
           valor={g?.gente.registros == null ? '' : entero(g.gente.registros)}
           pie={PIE_REGISTROS}
           noSeParte={partido && SIN_LOCAL}
-          link={{ to: '/admin/metricas', search: { vista: 'gente', sub: 'resumen' } }}
+          link={{ to: '/admin/metricas', search: { vista: 'gente' } }}
           estado={estado}
           onReintentar={reintentar}
         />
@@ -45,7 +45,7 @@ export function BloqueGente({ lectura }: { lectura: LecturaGeneral }) {
           valor={g ? pctOGuion(g.gente.hanCompradoPct) : ''}
           pie={g && pieHanComprado(g)}
           noSeParte={partido && 'Es una parte de los registros, que no son de ninguna clínica. Los de esta clínica están en «Pacientes que se financiaron».'}
-          link={{ to: '/admin/metricas', search: { vista: 'gente', sub: 'resumen' } }}
+          link={{ to: '/admin/metricas', search: { vista: 'gente' } }}
           estado={estado}
           onReintentar={reintentar}
         />
@@ -54,7 +54,7 @@ export function BloqueGente({ lectura }: { lectura: LecturaGeneral }) {
           info={T.activos.que}
           valor={g ? entero(g.gente.activos) : ''}
           pie={g && pieDeQuienesConsumieron(g.gente.activos, g)}
-          link={{ to: '/admin/metricas', search: { vista: 'gente', sub: 'uso', local: conLocal } }}
+          link={{ to: '/admin/metricas', search: { vista: 'gente', local: conLocal } }}
           estado={estado}
           onReintentar={reintentar}
         />
@@ -63,7 +63,7 @@ export function BloqueGente({ lectura }: { lectura: LecturaGeneral }) {
           info={T.repiten.que}
           valor={g ? entero(g.gente.repiten) : ''}
           pie={g && pieDeQuienesConsumieron(g.gente.repiten, g)}
-          link={{ to: '/admin/metricas', search: { vista: 'gente', sub: 'uso', local: conLocal } }}
+          link={{ to: '/admin/metricas', search: { vista: 'gente', local: conLocal } }}
           estado={estado}
           onReintentar={reintentar}
         />

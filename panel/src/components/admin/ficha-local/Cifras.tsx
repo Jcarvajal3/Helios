@@ -104,7 +104,7 @@ export function cifrasDelCarril({
     {
       label: 'Mora de sus pacientes (%)',
       value: c && hayMora ? formatPct(c.arrearsPct) : '—',
-      info: 'Vencido ÷ (vencido + por vencer) de las cuotas de los financiamientos hechos en esta clínica, en financiamiento + fee y de toda su historia; lo perdido no entra. Mismos umbrales de Ajustes que la mora de toda la cartera.',
+      info: 'Vencido ÷ (vencido + por vencer) de las cuotas de los financiamientos hechos en esta clínica, en financiamiento + comisión y de toda su historia; lo perdido no entra. Mismos umbrales de Ajustes que la mora de toda la cartera.',
       senal: c && hayMora ? senalPorUmbral(c.arrearsPct, umbralMora(parametros), pctEntero) : undefined,
       hint:
         c && hayMora
@@ -114,9 +114,9 @@ export function cifrasDelCarril({
       onReintentar: reintentar,
     },
     {
-      label: 'Por cobrar a sus pacientes (financiamiento + fee)',
+      label: 'Por cobrar a sus pacientes (financiamiento + comisión)',
       value: c ? formatUsd(deudaViva(c)) : '',
-      info: `Vencido + por vencer de las cuotas de los financiamientos hechos en esta clínica, en financiamiento + service fee (IVA incluido), de toda su historia; debajo, sus dos partes. Lo perdido no entra${c ? ` (${formatPct(c.badDebtPct)} de lo financiado sin fee)` : ''}.`,
+      info: `Vencido + por vencer de las cuotas de los financiamientos hechos en esta clínica, en financiamiento + Comisión Helios (IVA incluido), de toda su historia; debajo, sus dos partes. Lo perdido no entra${c ? ` (${formatPct(c.badDebtPct)} de lo financiado sin comisión)` : ''}.`,
       hint: c ? (desgloseSiLoHay(c.openFinancedUsd, c.openFeeUsd) ?? undefined) : undefined,
       estado,
       onReintentar: reintentar,
@@ -181,30 +181,28 @@ export function LoVendido({
 
 function CifrasListas({ d, parametros }: { d: CifrasDelLocal; parametros: Parametros | undefined }) {
   const c = d.portfolio
-  const b = d.breakEven
-  // El cobro a tiempo solo se mide cuando alguna cuota ya cerró su plazo; la
-  // mora y la pérdida máxima, mientras sus usuarios deban algo.
+  // El cobro a tiempo solo se mide cuando alguna cuota ya cerró su plazo.
+  // Sin «pérdida máxima que aguanta»: todas las clínicas cobran igual (100 %,
+  // por fecha) y salía la misma cifra para todas.
   const hayVeredicto = c.dueCount > 0
-  const hayMora = hayDeudaViva(c)
-  const cols: ColumnasDeCifras = hayVeredicto && hayMora ? 4 : hayVeredicto || hayMora ? 3 : 2
-  const politica = b.policy === 'on_collection' ? 'por cobranza' : 'por fecha'
+  const cols: ColumnasDeCifras = hayVeredicto ? 3 : 2
 
   return (
     <StatGrid cols={cols}>
-      {/* Vendido y ticket medio van en consumo, sin el service fee: la base
+      {/* Vendido y ticket medio van en consumo, sin la Comisión Helios: la base
           los suma de las cuotas (`metricas.consumos`). */}
       <Stat
-        label={`Financiado (sin fee), últimos ${d.windowDays} días`}
+        label={`Financiado (sin comisión), últimos ${d.windowDays} días`}
         value={formatUsd(d.financedUsd)}
-        info="Suma del financiamiento sin service fee de los financiamientos confirmados en la clínica en los días operativos de la ventana; pacientes: todos los que tienen cuota en esos financiamientos (en un grupo cuenta cada uno, no solo quien lo abrió)."
+        info="Suma de la consulta, sin la Comisión Helios, de las órdenes confirmadas en la clínica en los días operativos de la ventana; pacientes: los que tienen cuota en esas órdenes."
         hint={`${d.chargeCount} ${d.chargeCount === 1 ? 'financiamiento' : 'financiamientos'} · ${d.distinctUsers} ${
           d.distinctUsers === 1 ? 'paciente' : 'pacientes'
         }`}
       />
       <Stat
-        label="Ticket medio (sin fee)"
+        label="Ticket medio (sin comisión)"
         value={formatUsd(d.avgTicketUsd)}
-        info="Financiado (sin fee) de la ventana ÷ número de financiamientos de la ventana."
+        info="Financiado (sin comisión) de la ventana ÷ número de financiamientos de la ventana."
         hint="Por financiamiento, en la misma ventana"
       />
 
@@ -218,29 +216,7 @@ function CifrasListas({ d, parametros }: { d: CifrasDelLocal; parametros: Parame
         />
       )}
 
-      {hayMora && (
-        <Stat
-          label="Pérdida máxima que aguanta (%)"
-          value={b.breakEvenPct === null ? '—' : formatPct(b.breakEvenPct)}
-          info={
-            b.policy === 'on_collection'
-              ? 'Se le paga por cobranza: no se le adelanta nada y en un impago solo se pierde el service fee, así que aguanta cualquier pérdida.'
-              : `Service fee sin IVA ÷ (service fee sin IVA + lo que se le paga a la clínica) de todo lo financiado: con ${formatUsd(b.feeUsd)} de service fee sin IVA sobre ${formatUsd(b.atRiskUsd)} adelantados, es la parte de lo financiado (sin fee) que se puede perder antes de que deje de convenir.`
-          }
-          senal={
-            // Se compara con lo PERDIDO, no con la mora: casi todo lo vencido
-            // se acaba cobrando (AUD-OPERACION C6).
-            b.breakEvenPct !== null && c.badDebtPct >= b.breakEvenPct
-              ? { tone: 'error', texto: 'Ya no conviene' }
-              : undefined
-          }
-          hint={
-            b.breakEvenPct === null
-              ? 'Todavía no hay volumen suficiente'
-              : `Liquidación ${politica} · hoy ha perdido el ${formatPct(c.badDebtPct)}`
-          }
-        />
-      )}
+
     </StatGrid>
   )
 }

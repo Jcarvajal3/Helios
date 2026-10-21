@@ -4,16 +4,16 @@ import { formatUsd } from '@/components/ui'
  * Las cifras del padrón (Directorio › Usuarios) que el panel compone a partir
  * de las filas de `admin_user_directory`.
  *
- * La deuda y lo vencido son PAYABLE (con el service fee + IVA dentro): por la
- * regla del fee nunca se enseñan sin sus dos sumandos, facturado (sin fee) y
- * service fee + IVA, que la base manda en `*_financed_usd` y `*_fee_usd`.
+ * La deuda y lo vencido son PAYABLE (con la Comisión Helios + IVA dentro): por la
+ * regla de la comisión nunca se enseñan sin sus dos sumandos, facturado (sin comisión) y
+ * Comisión Helios + IVA, que la base manda en `*_financed_usd` y `*_fee_usd`.
  */
 
 export type PartesDeImporte = { financedUsd: number; feeUsd: number }
 
-/** «€37,00 facturado + €8,20 service fee + IVA»: los sumandos de un importe con fee. */
+/** «€37,00 facturado + €8,20 Comisión Helios + IVA»: los sumandos de un importe con comisión. */
 export function sumandosDeDeuda(p: PartesDeImporte): string {
-  return `${formatUsd(p.financedUsd)} financiado + ${formatUsd(p.feeUsd)} service fee + IVA`
+  return `${formatUsd(p.financedUsd)} financiado + ${formatUsd(p.feeUsd)} Comisión Helios + IVA`
 }
 
 type FilaDelPadron = {

@@ -41,7 +41,7 @@ export function useAccionesDelConsumo(
     mutationFn: (reason: string) => reverseCharge(detail.chargeId, reason),
     onSuccess: () => {
       setAbierto(null)
-      avisar(`Revertido: ${formatUsd(detail.financedUsd)} (sin fee) en ${detail.merchant.name}. Las cuotas se borraron y el cupo volvió`)
+      avisar(`Revertido: ${formatUsd(detail.financedUsd)} (sin comisión) en ${detail.merchant.name}. Las cuotas se borraron y el cupo volvió`)
       for (const clave of [
         ['admin-charges'],
         ['charge-detail', detail.chargeId],
@@ -109,7 +109,7 @@ export function useAccionesDelConsumo(
     dialogo = (
       <ConfirmDialog
         title="Revertir el financiamiento"
-        summary={`Vas a deshacer un financiamiento de ${formatUsd(detail.financedUsd)} (sin fee) en ${detail.merchant.name}.`}
+        summary={`Vas a deshacer un financiamiento de ${formatUsd(detail.financedUsd)} (sin comisión) en ${detail.merchant.name}.`}
         detail={
           <p className="type-panel-body text-on-surface-variant">
             Se escribe el asiento contrario y el original se queda en el libro. Se borran sus{' '}

@@ -15,7 +15,7 @@ import type { Moneda } from '@/components/ui'
  * LA FACTURA DE UN CONSUMO, tal y como la lee el cliente en su teléfono.
  *
  * Las mismas piezas y el mismo orden que el recibo de la app: el consumo en
- * el local, el service fee, las líneas, el reparto por persona y las cuotas de
+ * el local, la Comisión Helios, las líneas, el reparto por persona y las cuotas de
  * cada quien. Cuando el equipo y el cliente miran el mismo consumo
  * tienen que leer las mismas cifras — si no, una llamada de soporte empieza
  * discutiendo cuál de las dos pantallas miente.
@@ -23,12 +23,12 @@ import type { Moneda } from '@/components/ui'
  * ---------------------------------------------------------------------------
  * Las dos clases de cifra, que NUNCA se suman entre sí
  * ---------------------------------------------------------------------------
- *   `financedUsd`  lo que ocupó cupo: el consumo en el local, sin fee.
- *   `amountUsd`    lo que se debe, con el service fee y su IVA ya dentro.
+ *   `financedUsd`  lo que ocupó cupo: el consumo en el local, sin comisión.
+ *   `amountUsd`    lo que se debe, con la Comisión Helios y su IVA ya dentro.
  *
- * `amountUsd` no se enseña suelto como total: un total con el fee sumado
+ * `amountUsd` no se enseña suelto como total: un total con la comisión sumado
  * al lado del consumo en el local se lee como que el bar cobró de más. El
- * fee va en su línea del desglose y repartido en las cuotas.
+ * comisión va en su línea del desglose y repartido en las cuotas.
  */
 
 /** Una línea del local: lo que el cajero tecleó. */
@@ -45,7 +45,7 @@ export type ChargeInstallment = {
   userId: string | null
   fullName: string | null
   sequence: number
-  /** Lo que se paga, fee dentro. */
+  /** Lo que se paga, comisión dentro. */
   amountUsd: number
   /** La parte de esa cuota que era consumo. */
   financedUsd: number
@@ -67,7 +67,7 @@ export type ChargeDetail = {
   createdAt: string
   confirmedAt: string | null
   voidReason: string | null
-  /** Con el service fee y su IVA dentro. No se enseña como total suelto. */
+  /** Con la Comisión Helios y su IVA dentro. No se enseña como total suelto. */
   amountUsd: number
   /** El consumo en el local: lo que ocupó cupo. */
   financedUsd: number
@@ -121,7 +121,7 @@ export async function fetchChargeDetail(chargeId: string): Promise<ChargeDetail>
     amountUsd,
     /**
      * Sin `financed_usd` el consumo ES el total: o el cobro es anterior al
-     * desglose del fee, o la base todavía no tiene aplicada la migración
+     * desglose de la comisión, o la base todavía no tiene aplicada la migración
      * 20260917130000. En los dos casos la pantalla enseña una sola cifra en
      * vez de inventarse un desglose que no cuadraría.
      */

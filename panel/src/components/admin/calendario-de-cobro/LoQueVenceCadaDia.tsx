@@ -9,7 +9,7 @@ import { ROTULOS } from './Sumandos'
 
 /**
  * «Lo que vence cada día»: siete columnas, de lunes a domingo, con el consumo
- * abajo y el service fee encima (y los cargos por atraso arriba, si los
+ * abajo y la Comisión Helios encima (y los cargos por atraso arriba, si los
  * hay). El total va escrito encima de cada columna, porque la columna misma
  * enseña los sumandos.
  *
@@ -50,7 +50,7 @@ export function LoQueVenceCadaDia({
   return (
     <ColumnasApiladas
       titulo="Lo que vence cada día"
-      info={`Cada columna es un día, por la fecha de vencimiento de la cuota: abajo el financiado (sin fee) y encima el service fee + IVA${
+      info={`Cada columna es un día, por la fecha de vencimiento de la cuota: abajo el financiado (sin comisión) y encima la Comisión Helios + IVA${
         conCargos ? ', y arriba los cargos por atraso' : ''
       }. El número de encima es la suma. Un día ya pasado con cuotas sin pagar lleva la marca de vencido.`}
       resumen="Pulsa un día para ver lo que corresponde a cada clínica."

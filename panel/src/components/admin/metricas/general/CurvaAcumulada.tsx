@@ -21,7 +21,7 @@ import type { LecturaGeneral } from './lectura'
  * cada una escribe su última cifra, que es la más alta. La tabla está a un
  * clic, en la cabecera de cada gráfico, y cada semana enseña el globo del
  * kit al señalarla (ratón, dedo o flechas): el acumulado y lo de esa semana.
- * El consumo va sin el service fee, y lo dicen el título, la serie y el globo.
+ * El consumo va sin la Comisión Helios, y lo dicen el título, la serie y el globo.
  */
 export function CurvaAcumulada({ lectura }: { lectura: LecturaGeneral }) {
   const g = lectura.datos
@@ -60,9 +60,9 @@ export function CurvaAcumulada({ lectura }: { lectura: LecturaGeneral }) {
                 />
               )}
               <LineChart
-                title="Total financiado acumulado (sin fee)"
+                title="Total financiado acumulado (sin comisión)"
                 summary={resumenDeConsumo(g)}
-                series={[{ key: 'consumo', label: 'Financiado (sin fee)' }]}
+                series={[{ key: 'consumo', label: 'Financiado (sin comisión)' }]}
                 points={puntosDeConsumo(g.curva, g.hoy)}
                 escalon
                 area
@@ -70,7 +70,7 @@ export function CurvaAcumulada({ lectura }: { lectura: LecturaGeneral }) {
                 formatShort={formatUsdShort}
                 ejeLabel="Semana"
                 unidadLabel="Esa semana"
-                footnote="Sin el service fee. Cada semana va de lunes a domingo por día operativo."
+                footnote="Sin la Comisión Helios. Cada semana va de lunes a domingo por día operativo."
                 empty="Todavía no hay financiamientos."
               />
             </>

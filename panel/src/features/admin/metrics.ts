@@ -1,4 +1,4 @@
-import { comoFila, comoLista, numeroONulo, textoONulo } from '@/lib/json'
+import { comoFila, comoLista, numeroONulo } from '@/lib/json'
 import { supabase } from '@/lib/supabase'
 
 /**
@@ -24,17 +24,17 @@ export type CashPosition = {
   userReceivable: number
   overdueReceivable: number
   /**
-   * El principal que sigue fuera, sin el service fee.
+   * El principal que sigue fuera, sin la Comisión Helios.
    *
    * Sale de `installments.financed_usd`, que es la única columna que sabe
-   * repartir una cuota entre lo que descuenta cupo y lo que es fee. El libro
-   * no puede darlo: lleva el service fee en una sola cuenta.
+   * repartir una cuota entre lo que descuenta cupo y lo que es comisión. El libro
+   * no puede darlo: lleva la Comisión Helios en una sola cuenta.
    */
   principalOutstanding: number
   merchantPayable: number
   /** Ganada al confirmarse el consumo. */
   platformRevenue: number
-  /** La parte de ese service fee que los usuarios ya pagaron de verdad. */
+  /** La parte de ese Comisión Helios que los usuarios ya pagaron de verdad. */
   commissionCollected: number
   writtenOff: number
   fxDifference: number
@@ -100,33 +100,6 @@ export type OnTimeCollection = {
   installments: OnTimeRate[]
 }
 
-export async function fetchOnTimeCollection(days = 30): Promise<OnTimeCollection> {
-  const { data, error } = await supabase.rpc('admin_on_time_collection', { p_days: days })
-  if (error) throw error
-
-  const raw = comoFila(data)
-
-  return {
-    businessDate: String(raw.business_date),
-    windowDays: Number(raw.window_days),
-    from: textoONulo(raw.from),
-    to: textoONulo(raw.to),
-    graceDays: Number(raw.grace_days),
-    installments: Object.values(comoFila(raw.installments))
-      .map((cuota) => {
-        const r = comoFila(cuota)
-        return {
-          sequence: Number(r.sequence),
-          dueCount: Number(r.due_count),
-          onTimeCount: Number(r.on_time_count),
-          dueUsd: Number(r.due_usd),
-          onTimeUsd: Number(r.on_time_usd),
-          ratePct: numeroONulo(r.rate_pct),
-        }
-      })
-      .sort((a, b) => a.sequence - b.sequence),
-  }
-}
 
 // ── Resumen ────────────────────────────────────────────────────────────────
 
@@ -135,28 +108,28 @@ export type Overview = {
   windowDays: number
   /**
    * Desde 20260925120000 hay dos clases de cifra aquí. Las de consumo, sin el
-   * service fee, son `financedVolumeUsd`, `previousFinancedVolumeUsd`,
+   * Comisión Helios, son `financedVolumeUsd`, `previousFinancedVolumeUsd`,
    * `avgTicketFinancedUsd` y `activePeople`. Las de siempre —`financedUsd`,
    * `previousUsd`, `avgTicketUsd`— suman `charges.amount_usd`, que lleva el
-   * service fee y su IVA dentro: no se enseñan como consumo ni como volumen.
+   * Comisión Helios y su IVA dentro: no se enseñan como consumo ni como volumen.
    */
   volume: {
-    /** Lleva el service fee dentro: no es consumo. Usar `financedVolumeUsd`. */
+    /** Lleva la Comisión Helios dentro: no es consumo. Usar `financedVolumeUsd`. */
     financedUsd: number
-    /** Lleva el service fee dentro. Usar `previousFinancedVolumeUsd`. */
+    /** Lleva la Comisión Helios dentro. Usar `previousFinancedVolumeUsd`. */
     previousUsd: number
     chargeCount: number
     /** Cuenta a quien abrió el consumo, no a cada persona de un grupo. Usar `activePeople`. */
     activeUsers: number
-    /** Lleva el service fee dentro. Usar `avgTicketFinancedUsd`. */
+    /** Lleva la Comisión Helios dentro. Usar `avgTicketFinancedUsd`. */
     avgTicketUsd: number
-    /** Consumo de la ventana, sin el service fee. */
+    /** Consumo de la ventana, sin la Comisión Helios. */
     financedVolumeUsd: number
     /** Lo mismo en la ventana anterior, del mismo largo. */
     previousFinancedVolumeUsd: number
     /** `null` si la ventana anterior no tuvo consumo. */
     financedChangePct: number | null
-    /** Gasto medio por consumo, sin el service fee. `null` sin consumos. */
+    /** Gasto medio por consumo, sin la Comisión Helios. `null` sin consumos. */
     avgTicketFinancedUsd: number | null
     /** Personas con cuota en un consumo de la ventana: en un grupo, cada una. */
     activePeople: number
@@ -172,7 +145,7 @@ export type Overview = {
     overdueFeeUsd: number
     overdueUsers: number
     dueTodayUsd: number
-    /** Deuda vencida sobre deuda viva: las dos llevan el service fee y está bien así. */
+    /** Deuda vencida sobre deuda viva: las dos llevan la Comisión Helios y está bien así. */
     ratePct: number
     /**
      * Los tramos de la escalera, y los umbrales que los definen.
@@ -199,15 +172,15 @@ export type Overview = {
    * la deuda castigada seguía en `pending` y la mora del panel no podía bajar
    * nunca.
    *
-   * Las cifras de siempre son deuda, con el service fee dentro; las `…Financed…`
+   * Las cifras de siempre son deuda, con la Comisión Helios dentro; las `…Financed…`
    * (desde 20260925120000) son consumo, y la tasa de impago que se enseña es
    * `rateFinancedPct`: el principal que no vuelve sobre lo consumido.
    */
   badDebt: {
-    /** Deuda dada por perdida, con el service fee dentro. */
+    /** Deuda dada por perdida, con la Comisión Helios dentro. */
     writtenOffUsd: number
     writtenOffUsers: number
-    /** Deuda de toda la historia, con el service fee dentro. Usar `lifetimeFinancedUsd`. */
+    /** Deuda de toda la historia, con la Comisión Helios dentro. Usar `lifetimeFinancedUsd`. */
     financedUsd: number
     /** Deuda castigada dentro de la ventana elegida. */
     windowUsd: number
@@ -224,8 +197,8 @@ export type Overview = {
     /**
      * La tasa de impago a la que el negocio deja de ganar dinero.
      *
-     * Sale del fee y del neto que se le adelanta al comercio, calculada en la
-     * base: el fee subió del 10% al 20% este mes y un umbral escrito a mano en
+     * Sale de la comisión y del neto que se le adelanta al comercio, calculada en la
+     * base: la comisión subió del 10% al 20% este mes y un umbral escrito a mano en
      * el panel habría quedado mintiendo el mismo día. Null si todavía no hay
      * ventas con las que calcularla.
      */
@@ -386,20 +359,20 @@ export async function fetchOverview(days = 30): Promise<Overview> {
 /**
  * Un día operativo del negocio (`admin_daily_series`).
  *
- * Desde 20260925115000 `financedUsd` es consumo de verdad, sin el service fee
- * (antes sumaba `charges.amount_usd`, con el fee dentro). Hay una fila por
+ * Desde 20260925115000 `financedUsd` es consumo de verdad, sin la Comisión Helios
+ * (antes sumaba `charges.amount_usd`, con la comisión dentro). Hay una fila por
  * día, también los días sin nada: aquí un cero sí es un dato. El último día
  * es hoy y va a medias.
  */
 export type DayPoint = {
   businessDate: string
-  /** Consumo del día, sin el service fee. */
+  /** Consumo del día, sin la Comisión Helios. */
   financedUsd: number
   chargeCount: number
-  /** Cuotas cobradas ese día, con el service fee dentro: es lo que se pagó. */
+  /** Cuotas cobradas ese día, con la Comisión Helios dentro: es lo que se pagó. */
   collectedUsd: number
   settledUsd: number
-  /** El service fee de los consumos del día, sin IVA. Nunca se suma al consumo. */
+  /** La Comisión Helios de los consumos del día, sin IVA. Nunca se suma al consumo. */
   serviceFeeUsd: number
   /** Cargos por atraso que cayeron ese día, sin los condonados. */
   lateFeeUsd: number
@@ -454,18 +427,3 @@ export type DueVsCollected = {
   collectedCount: number
 }
 
-export async function fetchDueVsCollected(days = 30): Promise<DueVsCollected[]> {
-  const { data, error } = await supabase.rpc('admin_due_vs_collected', { p_days: days })
-  if (error) throw error
-
-  return comoLista(data).map((fila) => {
-    const row = comoFila(fila)
-    return {
-      businessDate: String(row.business_date),
-      dueUsd: Number(row.due_usd),
-      dueCount: Number(row.due_count),
-      collectedUsd: Number(row.collected_usd),
-      collectedCount: Number(row.collected_count),
-    }
-  })
-}

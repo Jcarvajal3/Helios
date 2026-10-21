@@ -24,7 +24,7 @@ export function consultaDeLaSemana(semana: string, local: string | null) {
 
 /**
  * La foto de hoy (`admin_cash_position`): lo que se debe, lo perdido y el
- * service fee, con su desglose. No sigue a la semana: es de hoy.
+ * Comisión Helios, con su desglose. No sigue a la semana: es de hoy.
  */
 export function consultaDeLaFoto(local: string | null) {
   return queryOptions({

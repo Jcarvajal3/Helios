@@ -120,7 +120,7 @@ export function porcentaje(parte: number, total: number): number | null {
  * El service fee va con su IVA dentro (`fee_usd` = payable − financed).
  */
 export function textoDeDesglose({ financedUsd, feeUsd }: { financedUsd: number; feeUsd: number }): string {
-  return `Financiamiento ${formatUsd(financedUsd)} + service fee ${formatUsd(feeUsd)}`
+  return `Financiamiento ${formatUsd(financedUsd)} + Comisión Helios ${formatUsd(feeUsd)}`
 }
 
 /**
@@ -129,5 +129,5 @@ export function textoDeDesglose({ financedUsd, feeUsd }: { financedUsd: number; 
  * cortas que pide Javier para cuando «service fee» no cabe.
  */
 export function textoDeDesgloseCorto({ financedUsd, feeUsd }: { financedUsd: number; feeUsd: number }): string {
-  return `financiamiento ${formatUsd(financedUsd)} · fee ${formatUsd(feeUsd)}`
+  return `financiamiento ${formatUsd(financedUsd)} · comisión ${formatUsd(feeUsd)}`
 }

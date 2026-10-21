@@ -26,7 +26,7 @@ type PagosSearch = {
 }
 
 const MEDIOS: readonly PayoutMethod[] = METODOS_DE_PAGO.map((m) => m.value)
-const SOLOS: readonly SoloLocales[] = ['atrasados', 'este-cierre']
+const SOLOS: readonly SoloLocales[] = ['atrasados', 'este-cierre', 'todos']
 
 export const Route = createFileRoute('/admin/pagos-clinicas')({
   staticData: { title: 'Pagos a clínicas', width: 'wide' },
@@ -128,8 +128,8 @@ function PorPagar({
           <Filtro label="Clínicas">
             <Segmented
               options={[...OPCIONES_SOLO]}
-              value={solo ?? ''}
-              onChange={(value) => onCambiar({ solo: value || undefined })}
+              value={solo ?? 'este-cierre'}
+              onChange={(value) => onCambiar({ solo: value === 'este-cierre' ? undefined : value })}
             />
           </Filtro>
         )}

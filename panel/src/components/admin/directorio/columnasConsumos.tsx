@@ -17,8 +17,8 @@ import { csvDinero, csvInstante } from '@/lib/csv'
  * Las columnas de la lista de consumos.
  *
  * La ancla es el número de orden: es lo que identifica la fila y lo único que
- * el local dice por teléfono. El importe es el consumo sin el service fee;
- * el fee va en las cuotas y en la factura de cada consumo.
+ * el local dice por teléfono. El importe es el consumo sin la Comisión Helios;
+ * la comisión va en las cuotas y en la factura de cada consumo.
  */
 export const COLUMNAS_CONSUMOS: Array<Column<ChargeRow>> = [
   {
@@ -63,8 +63,8 @@ export const COLUMNAS_CONSUMOS: Array<Column<ChargeRow>> = [
 
   {
     key: 'persona',
-    header: 'Abrió la cuenta',
-    info: 'El paciente que abrió la cuenta; en un financiamiento de grupo pagan también otros pacientes, cada uno su parte, y se ven al abrir el financiamiento (el buscador los encuentra a todos).',
+    header: 'Paciente',
+    info: 'El paciente que paga la consulta en cuotas.',
     sort: (c) => c.fullName,
     csv: (c) => c.fullName,
     cell: (c) =>
@@ -111,8 +111,8 @@ export const COLUMNAS_CONSUMOS: Array<Column<ChargeRow>> = [
 
   {
     key: 'consumo',
-    header: 'Financiado (sin fee)',
-    info: 'Sin el service fee: lo que se financió en la clínica, que es lo que ocupó cupo; el service fee + IVA va repartido en las cuotas.',
+    header: 'Financiado (sin comisión)',
+    info: 'Sin la Comisión Helios: lo que se financió en la clínica, que es lo que ocupó cupo; la Comisión Helios + IVA va repartido en las cuotas.',
     type: 'number',
     sortDir: 'desc',
     sort: (c) => c.financedUsd,

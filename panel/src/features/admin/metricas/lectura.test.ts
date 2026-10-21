@@ -44,7 +44,7 @@ igual(
 igual(
   leerDesglose({ payable_usd: '12.32', financed_usd: '10' }),
   { payableUsd: 12.32, financedUsd: 10, feeUsd: 12.32 - 10 },
-  'sin el fee, se deduce; los numeric que llegan como texto se leen',
+  'sin la comisión, se deduce; los numeric que llegan como texto se leen',
 )
 igual(leerDesglose({ payable_usd: 12.32 }), null, 'sin el financiamiento no hay desglose')
 igual(leerDesglose({ financed_usd: 10, fee_usd: 2.32 }), null, 'sin lo que se paga, tampoco')

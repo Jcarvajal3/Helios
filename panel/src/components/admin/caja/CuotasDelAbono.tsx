@@ -197,7 +197,7 @@ export function CuotasDelAbono({
         <div className="flex flex-col gap-1 rounded-panel-control border border-panel-hairline p-4">
           <div className="flex items-baseline justify-between gap-3">
             <span className="type-panel-body text-on-surface-variant">
-              {marcadas.size} {marcadas.size === 1 ? 'cuota marcada' : 'cuotas marcadas'}, con fee
+              {marcadas.size} {marcadas.size === 1 ? 'cuota marcada' : 'cuotas marcadas'}, con comisión
             </span>
             <span className="type-panel-section tabular-nums text-on-surface">
               {formatUsd(cuotasUsd)}

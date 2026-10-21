@@ -178,20 +178,21 @@ function conSigno(valor: number): string {
 }
 
 /**
- * Las líneas de «por cada $100»: el service fee y los cargos suman y el
- * margen cierra. Lo perdido no va en su línea: es la misma cifra que
- * «Impago (%)» del bloque Riesgo, y el margen dice que ya lo resta. El fee se
- * ve como sumando, nunca sumado al consumo. `null` sin consumo: no hay nada
- * que repartir.
+ * Las líneas de «por cada $100»: la Comisión Helios y los cargos suman, la
+ * comisión del personal de la clínica resta (la paga Helios) y el margen
+ * cierra. Lo perdido no va en su línea: es la misma cifra que «Impago (%)»
+ * del bloque Riesgo, y el margen dice que ya lo resta. La comisión se ve como
+ * sumando, nunca sumada a la consulta. `null` sin consumo: no hay nada que
+ * repartir.
  */
 export function lineasPorCadaCien(p: PorCadaCien): LineaPorCadaCien[] | null {
   const c = p.por100
   if (c === null) return null
   return [
     {
-      rotulo: 'Service fee sin IVA',
+      rotulo: 'Comisión Helios sin IVA',
       valor: conSigno(c.servicioUsd),
-      info: `El service fee sin IVA: ${formatUsd(p.servicioUsd)} desde el primer día. Se gana al confirmar el financiamiento.`,
+      info: `La Comisión Helios sin IVA: ${formatUsd(p.servicioUsd)} desde el primer día. Se gana al confirmar el financiamiento.`,
     },
     {
       rotulo: 'Cargos por atraso',
@@ -199,9 +200,14 @@ export function lineasPorCadaCien(p: PorCadaCien): LineaPorCadaCien[] | null {
       info: `Los cargos por atraso sin los condonados: ${formatUsd(p.cargosUsd)} desde el primer día.`,
     },
     {
+      rotulo: 'Comisiones del personal',
+      valor: conSigno(-c.personalUsd),
+      info: `Lo que Helios le paga al personal de las clínicas por cada orden confirmada (Ajustes › Parámetros, o la de cada clínica): ${formatUsd(p.personalUsd)} desde el primer día. Es un coste de cada orden.`,
+    },
+    {
       rotulo: 'Margen, menos el impago',
       valor: formatUsd(c.margenUsd),
-      info: `Las dos líneas de arriba menos lo perdido, antes de costes: ${formatUsd(c.perdidoUsd)} por cada $100, que es el «Impago (%)» del bloque Riesgo (${formatUsd(p.perdidoUsd)} facturados que se dieron por perdidos). Cuenta el service fee devengado, también el de las cuotas perdidas, que nunca se cobra.`,
+      info: `Las líneas de arriba, con su signo, menos lo perdido, antes del resto de costes: ${formatUsd(c.perdidoUsd)} por cada $100, que es el «Impago (%)» del bloque Riesgo (${formatUsd(p.perdidoUsd)} facturados que se dieron por perdidos). Cuenta la Comisión Helios devengada, también la de las cuotas perdidas, que nunca se cobra.`,
       total: true,
     },
   ]
@@ -210,7 +216,7 @@ export function lineasPorCadaCien(p: PorCadaCien): LineaPorCadaCien[] | null {
 /** «318 financiamientos con $7.373,00 financiados (sin fee)». */
 export function resumenPorCadaCien(p: PorCadaCien): string {
   if (p.consumos === 0) return 'Todavía no hay financiamientos.'
-  return `${contar(p.consumos, 'financiamiento', 'financiamientos')} con ${formatUsd(p.financedUsd)} financiados (sin fee)`
+  return `${contar(p.consumos, 'financiamiento', 'financiamientos')} con ${formatUsd(p.financedUsd)} financiados (sin comisión)`
 }
 
 /**
@@ -265,5 +271,5 @@ export function resumenDeRegistros(g: General): string | undefined {
 /** «$7.373,00 en 12 semanas, sin el service fee». */
 export function resumenDeConsumo(g: General): string | undefined {
   if (g.curva.length === 0) return undefined
-  return `${formatUsd(g.consumo.financedUsd)} en ${contar(g.curva.length, 'semana', 'semanas')}, sin el service fee`
+  return `${formatUsd(g.consumo.financedUsd)} en ${contar(g.curva.length, 'semana', 'semanas')}, sin la Comisión Helios`
 }

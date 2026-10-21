@@ -131,9 +131,10 @@ export type CollectionTemplate = {
 }
 
 /**
- * Las plantillas por tramos (`p_tramos`): Por vencer, Vence hoy y `t1`…`t5`,
- * con `{dias_atraso}` entre las variables. Las cinco viejas se quedan en la
- * base para el panel de `main` y aquí no se piden.
+ * Las plantillas por tramos (`p_tramos`): `t1`…`t4`, una por tramo de atraso
+ * (20261019220000), con `{dias_atraso}` entre las variables. Las de antes
+ * (Por vencer, Vence hoy, las cinco por bucket y `t5`) se quedan en la base
+ * sin uso y aquí no se piden.
  */
 export async function fetchCollectionTemplates(): Promise<{
   variables: string[]

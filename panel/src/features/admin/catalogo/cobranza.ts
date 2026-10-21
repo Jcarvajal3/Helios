@@ -39,7 +39,7 @@ export const cobranza = [
     id: 'por-cobrar-por-semana',
     titulo: 'Por cobrar › Cohortes',
     descripcion:
-      'Cada cohorte (lo financiado una semana: A1, A2…), seguida hasta cobrar sus dos cuotas: total a cobrar, cobrado, vencido y por vencer (financiamiento + fee), la cuota 1 y la 2, y quién debe de esa semana con sus señales.',
+      'Cada cohorte (lo financiado una semana: A1, A2…), seguida hasta cobrar sus dos cuotas: total a cobrar, cobrado, vencido y por vencer (financiamiento + comisión), la cuota 1 y la 2, y quién debe de esa semana con sus señales.',
     espacio: 'cobranza',
     sinonimos: [
       'cohortes',
@@ -269,23 +269,23 @@ export const cobranza = [
   {
     tipo: 'cifra',
     id: 'cobranza-vencido',
-    titulo: 'Vencido de la cola de cobro (financiamiento + fee)',
+    titulo: 'Vencido de la cola de cobro (financiamiento + comisión)',
     descripcion: 'Lo vencido y sin pagar de los pacientes de la cola de Por cobrar, con lo dado por perdido, y cuántos pacientes lo deben.',
     espacio: 'cobranza',
     sinonimos: ['mora', 'vencido', 'atrasado', 'morosidad', 'cuánto nos deben', 'deuda vencida'],
     destino: { to: '/admin/cobranza' },
-    que: 'La suma de las cuotas vencidas sin pagar de los pacientes de la cola de Por cobrar, incluida la deuda dada por perdida que sigue en la cola (por eso no es el «Vencido» de Métricas › Riesgo), en financiamiento + service fee con su desglose, y cuántos pacientes la deben; sin los cargos por atraso.',
+    que: 'La suma de las cuotas vencidas sin pagar de los pacientes de la cola de Por cobrar, incluida la deuda dada por perdida que sigue en la cola (por eso no es el «Vencido» de Métricas › Riesgo), en financiamiento + Comisión Helios con su desglose, y cuántos pacientes la deben; sin los cargos por atraso.',
     rpc: 'admin_collections',
   },
   {
     tipo: 'cifra',
     id: 'cobranza-vence-pronto',
-    titulo: 'Por vencer en la cola de cobro (financiamiento + fee)',
+    titulo: 'Por vencer en la cola de cobro (financiamiento + comisión)',
     descripcion: 'Lo que vence en los próximos días y todavía no se ha pagado, de todos los pacientes de la cola.',
     espacio: 'cobranza',
     sinonimos: ['por vencer', 'próximos vencimientos', 'vence en 7 días', 'por vencer esta semana'],
     destino: { to: '/admin/cobranza' },
-    que: 'La suma de las cuotas sin pagar que vencen de hoy al último día que mira la cola (día operativo) de todos los pacientes de la cola de Por cobrar, en financiamiento + service fee con su desglose.',
+    que: 'La suma de las cuotas sin pagar que vencen de hoy al último día que mira la cola (día operativo) de todos los pacientes de la cola de Por cobrar, en financiamiento + Comisión Helios con su desglose.',
     rpc: 'admin_collections',
   },
   {
@@ -357,12 +357,12 @@ export const cobranza = [
   {
     tipo: 'cifra',
     id: 'cobranza-recuperado',
-    titulo: 'Recuperado (financiamiento + fee)',
+    titulo: 'Recuperado (financiamiento + comisión)',
     descripcion: 'Lo cobrado en el periodo que ya estaba vencido al pagarse.',
     espacio: 'cobranza',
     sinonimos: ['cobrado', 'recuperación', 'lo recuperado', 'cobranza efectiva'],
     destino: { to: '/admin/metricas', search: { vista: 'mora', sub: 'rendimiento' } },
-    que: 'La suma de las cuotas pagadas en el periodo que ya estaban vencidas cuando se pagaron, en financiamiento + service fee con su desglose; los cargos por atraso cobrados van aparte.',
+    que: 'La suma de las cuotas pagadas en el periodo que ya estaban vencidas cuando se pagaron, en financiamiento + Comisión Helios con su desglose; los cargos por atraso cobrados van aparte.',
     rpc: 'admin_collection_recovered',
   },
   {
@@ -373,7 +373,7 @@ export const cobranza = [
     espacio: 'cobranza',
     sinonimos: ['tasa de recuperación', 'porcentaje recuperado'],
     destino: { to: '/admin/metricas', search: { vista: 'mora', sub: 'rendimiento' } },
-    que: 'De lo que ya estaba vencido el primer día del periodo (financiamiento + fee), la parte en dólares que se cobró antes de que terminara; sin nada vencido al empezar, no hay porcentaje.',
+    que: 'De lo que ya estaba vencido el primer día del periodo (financiamiento + comisión), la parte en dólares que se cobró antes de que terminara; sin nada vencido al empezar, no hay porcentaje.',
     rpc: 'admin_collection_recovered',
   },
   {
@@ -438,7 +438,7 @@ export const cobranza = [
     id: 'por-cobrar-por-dia',
     titulo: 'Calendario de cobro',
     descripcion:
-      'Lo que vence cada día de la semana, partido en financiamiento y service fee, y lo que corresponde a cada clínica.',
+      'Lo que vence cada día de la semana, partido en financiamiento y Comisión Helios, y lo que corresponde a cada clínica.',
     espacio: 'cobranza',
     sinonimos: [
       'por cobrar por día',
@@ -452,7 +452,7 @@ export const cobranza = [
       'cobro por clínica',
     ],
     destino: { to: '/admin/cobranza', search: { vista: 'calendario' } },
-    que: 'Por cada día de una semana, lo que vence en cuotas y sigue sin pagar (o, si se pide, también lo ya cobrado), partido en financiado (sin fee) y service fee + IVA, con los cargos por atraso aparte y lo de cada clínica; sin lo dado por perdido ni las cuentas de prueba.',
+    que: 'Por cada día de una semana, lo que vence en cuotas y sigue sin pagar (o, si se pide, también lo ya cobrado), partido en financiado (sin comisión) y Comisión Helios + IVA, con los cargos por atraso aparte y lo de cada clínica; sin lo dado por perdido ni las cuentas de prueba.',
     rpc: 'admin_receivables_by_day',
   },
   {
@@ -486,7 +486,7 @@ export const cobranza = [
     sinonimos: ['tramo', 'bucket', 'antigüedad'],
     destino: { to: '/admin/cobranza' },
     definicion:
-      'Los días de atraso de la cuota sin pagar más antigua de un paciente se parten en cinco tramos, con los cortes de los parámetros del negocio: hasta los días de gracia (cupo congelado, sin cargo), hasta el intervalo de cuotas (ya con cargo por atraso), hasta el día de la baja (la segunda cuota también vencida), hasta la expulsión (baja de nivel y cuenta suspendida) y después (expulsión y deuda dada por perdida).',
+      'Los días de atraso de la cuota sin pagar más antigua de un paciente se parten en cuatro tramos, con los cortes de los parámetros del negocio: hasta el intervalo de cuotas (la cuota 1 vencida, cuenta congelada), hasta el día antes de la baja (las dos cuotas vencidas), hasta la expulsión (cuenta suspendida, y baja un nivel si tiene más de uno) y después (expulsado, la deuda se da por perdida).',
   },
   {
     tipo: 'termino',

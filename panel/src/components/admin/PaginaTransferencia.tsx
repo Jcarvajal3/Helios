@@ -117,7 +117,7 @@ export function PaginaTransferencia({
                   {
                     label: 'Transferido',
                     value: formatUsd(payout.amountUsd),
-                    info: 'Sus consultas (financiado sin fee, menos la comisión de la clínica) más las comisiones de su personal, que la clínica le entrega a quien registró cada financiamiento.',
+                    info: 'Sus consultas enteras (sin la Comisión Helios, que paga el paciente) más las comisiones de su personal, que la clínica le entrega a quien registró cada orden.',
                     hint: [
                       payout.desglose
                         ? `Consultas ${formatUsd(payout.desglose.consultasUsd)} + Comisiones del personal ${formatUsd(payout.desglose.comisionesUsd)}`

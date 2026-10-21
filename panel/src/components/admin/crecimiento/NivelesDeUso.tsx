@@ -22,17 +22,17 @@ export function NivelesDeUso({ niveles }: { niveles: UserBehavior['levels'] }) {
         { label: 'Registros', info: 'Los registros con ese nivel hoy (el nivel fija el cupo).' },
         { label: 'Pacientes que se financiaron', info: 'Cuántos de ese nivel se financiaron en la ventana.' },
         { label: 'Se financiaron (%)', info: 'Los que se financiaron en la ventana entre los registros del nivel.' },
-        { label: 'Financiado (sin fee)', info: 'Sin el service fee: lo financiado en la ventana a los pacientes de ese nivel.' },
+        { label: 'Financiado (sin comisión)', info: 'Sin la Comisión Helios: lo financiado en la ventana a los pacientes de ese nivel.' },
         {
-          label: 'Financiado por paciente (sin fee)',
-          info: 'Sin el service fee: el financiado del nivel entre los pacientes que se financiaron. La columna que dice si la escalera sirve: si un nivel 3 se financia lo mismo por paciente que un nivel 1, el cupo extra no lo está usando nadie.',
+          label: 'Financiado por paciente (sin comisión)',
+          info: 'Sin la Comisión Helios: el financiado del nivel entre los pacientes que se financiaron. La columna que dice si la escalera sirve: si un nivel 3 se financia lo mismo por paciente que un nivel 1, el cupo extra no lo está usando nadie.',
         },
       ]
     : [
         'Nivel',
         { label: 'Pacientes que se financiaron', info: 'Cuántos pacientes de ese nivel (el de hoy) se financiaron en esta clínica en la ventana.' },
-        { label: 'Financiado (sin fee)', info: 'Sin el service fee: lo financiado en esta clínica en la ventana a los pacientes de ese nivel.' },
-        { label: 'Financiado por paciente (sin fee)', info: 'Sin el service fee: el financiado del nivel entre los pacientes que se financiaron.' },
+        { label: 'Financiado (sin comisión)', info: 'Sin la Comisión Helios: lo financiado en esta clínica en la ventana a los pacientes de ese nivel.' },
+        { label: 'Financiado por paciente (sin comisión)', info: 'Sin la Comisión Helios: el financiado del nivel entre los pacientes que se financiaron.' },
       ]
 
   return (

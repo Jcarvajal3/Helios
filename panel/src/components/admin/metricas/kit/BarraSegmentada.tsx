@@ -24,8 +24,8 @@ export type SegmentoDeBarra = {
  * tabla con cada parte en un `<details>`.
  *
  * No escribe ningún total, y es a propósito: si los segmentos son cuotas
- * (lo que se paga, con el service fee dentro), su suma sería un «total por
- * cobrar» sin sus sumandos, que es justo lo que la regla del fee prohíbe. El
+ * (lo que se paga, con la Comisión Helios dentro), su suma sería un «total por
+ * cobrar» sin sus sumandos, que es justo lo que la regla de la comisión prohíbe. El
  * total, si hace falta, lo escribe la pestaña al lado y con su desglose.
  */
 export function BarraSegmentada({

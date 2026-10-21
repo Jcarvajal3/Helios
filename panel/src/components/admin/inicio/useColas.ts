@@ -19,6 +19,7 @@ import {
   resumirCambiosPropuestos,
   resumirCartera,
   resumirCorreosRebotados,
+  resumirPagoDeHoy,
   resumirPagosALocales,
   resumirPagosReportados,
   resumirPromesasDeHoy,
@@ -118,8 +119,17 @@ function useColasDeCaja(): ColaDeInicio[] {
   const locales = useQuery(consultaDeudaConLocales())
 
   const aLocales: Destino = { to: '/admin/pagos-clinicas', search: { solo: 'atrasados' } }
+  const aHoy: Destino = { to: '/admin/pagos-clinicas', search: {} }
 
   return [
+    {
+      id: 'pago-de-hoy',
+      nombre: 'Pago de hoy a clínicas',
+      pantalla: 'pagos-a-locales',
+      lista: aHoy,
+      lectura: leer(locales, resumirPagoDeHoy),
+      empezar: () => irA(aHoy),
+    },
     {
       id: 'pagos-a-locales',
       nombre: 'Pagos a clínicas atrasadas',
@@ -142,7 +152,9 @@ function useColasDeCobranza(): ColaDeInicio[] {
 
   const ahora = Date.now()
 
-  // Se recalcula en cada pintura, como en la cartera: «Vence mañana» cambia solo a las 10:00.
+  // Se recalcula en cada pintura, como en la cartera: el día cambia solo a medianoche.
+  // (No hay cola de «Vence mañana»: los recordatorios antes del vencimiento
+  // salen solos por WhatsApp y correo.)
   const hoy = hoyOperativo()
 
   /** El caso de la primera persona, con la barra para pasar a la siguiente. */
@@ -169,14 +181,6 @@ function useColasDeCobranza(): ColaDeInicio[] {
       lista: { to: '/admin/cobranza', search: { tramo: 'sin_contactar' } },
       lectura: leer(cartera, (d) => resumirCartera(d.rows, 'sin_contactar', hoy)),
       empezar: ({ ids }) => abrirCaso({ lista: 'cobranza', tramo: 'sin_contactar' }, ids),
-    },
-    {
-      id: 'recordar-hoy',
-      nombre: 'Vence mañana',
-      pantalla: 'cartera-vencida',
-      lista: { to: '/admin/cobranza', search: { tramo: 'recordar_hoy' } },
-      lectura: leer(cartera, (d) => resumirCartera(d.rows, 'recordar_hoy', hoy)),
-      empezar: ({ ids }) => abrirCaso({ lista: 'cobranza', tramo: 'recordar_hoy' }, ids),
     },
     {
       id: 'pagos-reportados',

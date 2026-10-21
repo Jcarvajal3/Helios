@@ -162,7 +162,7 @@ const COLUMNAS: Array<Column<RunPayable>> = [
     key: 'generado',
     header: 'Se generó',
     type: 'number',
-    info: 'Lo que tocaba pagarle ese día (sus liquidaciones vencieron el día anterior): la parte de la clínica (financiado sin fee) menos su comisión, más las comisiones de su personal.',
+    info: 'Lo que tocaba pagarle ese día (sus liquidaciones vencieron el día anterior): la parte de la clínica (financiado sin comisión) menos su comisión, más las comisiones de su personal.',
     sort: (m) => m.generadoUsd,
     sortDir: 'desc',
     csv: (m) => csvDinero(m.generadoUsd),

@@ -58,8 +58,9 @@ export function respuestaDeMuestra(): Record<string, unknown> {
       financed_maduro_usd: 2400,
       servicio_usd: 1473.85,
       cargos_usd: 254,
+      personal_usd: 159,
       perdido_usd: 59.17,
-      por_100: { servicio_usd: 19.99, cargos_usd: 3.45, perdido_usd: 0.8, margen_usd: 22.63 },
+      por_100: { servicio_usd: 19.99, cargos_usd: 3.45, personal_usd: 2.16, perdido_usd: 0.8, margen_usd: 20.48 },
     },
     curva: [
       { semana: '2026-09-07', registros: 150, registros_acum: 150, consumos: 200, financed_usd: 4500, financed_acum_usd: 4500 },

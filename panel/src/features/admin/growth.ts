@@ -15,7 +15,7 @@ import { comoFila, comoLista, numero, numeroONulo, textoONulo } from '@/lib/json
  *
  * ── Lo que hay que saber para leer estos tipos ─────────────────────────────
  *
- * **`financedUsd` es el consumo sin el fee.** Lo que se lleva Ronda va en
+ * **`financedUsd` es el consumo sin la comisión.** Lo que se lleva Ronda va en
  * `revenueUsd`, aparte y nunca sumado.
  *
  * **Todo lo que es «por persona» sale de las cuotas, no de los cargos.** En
@@ -96,7 +96,7 @@ export type GrowthOverview = ConRango & {
   spend: {
     financedUsd: number
     previousUsd: number
-    /** El service fee SIN IVA de ese consumo. Va aparte, nunca sumado. */
+    /** La Comisión Helios SIN IVA de ese consumo. Va aparte, nunca sumado. */
     revenueUsd: number
     perUserUsd: number
     perOrderUsd: number
@@ -169,113 +169,6 @@ export function leerGrowthOverview(data: unknown): GrowthOverview {
         activeUsers: numero(row.active_users),
         orders: numero(row.orders),
         financedUsd: numero(row.financed_usd),
-      }
-    }),
-  }
-}
-
-// ── Cohortes de gente (Retención) ──────────────────────────────────────────
-
-export type CohortGrain = 'day' | 'week' | 'month'
-
-const GRANOS: ReadonlyArray<CohortGrain> = ['day', 'week', 'month']
-
-/**
- * De qué sale cada cohorte: el día en que la gente se registró (se aprobó su
- * verificación) o, con un local, el de su primera visita a ese local.
- */
-export type CohortBase = 'registro' | 'primera_visita'
-
-export type CohortCell = {
-  /** Cuántos cubos después de entrar. 0 es el cubo en que entró. */
-  k: number
-  active: number
-  orders: number
-  financedUsd: number
-  /**
-   * Cuánta gente de la cohorte había consumido YA al llegar a este periodo.
-   * No es la suma de `active`: es gente distinta, y la curva nunca baja.
-   */
-  cumActive: number
-  cumFinancedUsd: number
-}
-
-export type CohortRow = {
-  /** Primer día del cubo: el día, el lunes, o el día 1 del mes. */
-  start: string
-  /** Cuánta gente entró en ese cubo. El denominador de toda la fila. */
-  size: number
-  /**
-   * Hasta qué columna llega esta cohorte. La fila no tiene celdas más allá:
-   * un periodo que no ha ocurrido no es un cero.
-   */
-  maxPeriod: number
-  /** Cuánta gente de la cohorte ha consumido alguna vez. Personas distintas. */
-  everActive: number
-  /** Lo que lleva gastado la cohorte entera desde que entró. */
-  everFinancedUsd: number
-  cells: CohortCell[]
-}
-
-export type CohortTotal = {
-  k: number
-  /** Solo la gente de cohortes que YA llegaron a esta columna. */
-  size: number
-  active: number
-  financedUsd: number
-}
-
-export type UserCohorts = {
-  businessDate: string
-  grain: CohortGrain
-  periods: number
-  /** El cubo en curso. El último de cada fila cae aquí y está a medias. */
-  currentStart: string
-  base: CohortBase
-  merchantId: string | null
-  rows: CohortRow[]
-  totals: CohortTotal[]
-}
-
-export function leerUserCohorts(data: unknown, grain: CohortGrain, periods: number): UserCohorts {
-  const raw = comoFila(data)
-
-  return {
-    businessDate: String(raw.business_date),
-    // El que usó el servidor; si no se reconoce, el que se pidió.
-    grain: GRANOS.find((g) => g === raw.grain) ?? grain,
-    periods: numeroONulo(raw.periods) ?? periods,
-    currentStart: String(raw.current_start),
-    base: raw.base === 'primera_visita' ? 'primera_visita' : 'registro',
-    merchantId: textoONulo(raw.merchant_id),
-    rows: comoLista(raw.rows).map((fila) => {
-      const row = comoFila(fila)
-      return {
-        start: String(row.start),
-        size: numero(row.size),
-        maxPeriod: numero(row.max_period),
-        everActive: numero(row.ever_active),
-        everFinancedUsd: numero(row.ever_financed_usd),
-        cells: comoLista(row.cells).map((celda) => {
-          const c = comoFila(celda)
-          return {
-            k: numero(c.k),
-            active: numero(c.active),
-            orders: numero(c.orders),
-            financedUsd: numero(c.financed_usd),
-            cumActive: numero(c.cum_active),
-            cumFinancedUsd: numero(c.cum_financed_usd),
-          }
-        }),
-      }
-    }),
-    totals: comoLista(raw.totals).map((total) => {
-      const t = comoFila(total)
-      return {
-        k: numero(t.k),
-        size: numero(t.size),
-        active: numero(t.active),
-        financedUsd: numero(t.financed_usd),
       }
     }),
   }

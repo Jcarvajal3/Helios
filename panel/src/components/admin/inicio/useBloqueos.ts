@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import type { UseQueryResult } from '@tanstack/react-query'
 
-import { consultaCuentasDeCobro, consultaTasa } from '@/features/admin/cobranza/consultas'
+import { consultaCuentasDeCobro, consultaTasa, consultaTasaEuro } from '@/features/admin/cobranza/consultas'
 import { bloqueoDeCuenta, bloqueoDeExtracto, bloqueoDeTasa } from './bloqueos'
 import type { Bloqueo } from './bloqueos'
 import { consultaUltimoExtracto } from './consultas'
@@ -16,12 +16,13 @@ export type Bloqueos = {
 }
 
 /**
- * «Bloquea la operación»: las tres comprobaciones de lo que, si está mal,
+ * «Bloquea la operación»: las comprobaciones de lo que, si está mal,
  * impide que la gente pague o que el equipo apruebe lo que paga. Cada
  * bloqueo lleva el sitio donde se arregla.
  */
 export function useBloqueos(): Bloqueos {
   const tasa = useQuery(consultaTasa())
+  const tasaEuro = useQuery(consultaTasaEuro())
   const cuentas = useQuery(consultaCuentasDeCobro())
   const extracto = useQuery(consultaUltimoExtracto())
 
@@ -36,11 +37,12 @@ export function useBloqueos(): Bloqueos {
     }
   }
 
-  mirar(tasa, 'La tasa BCV', bloqueoDeTasa)
+  mirar(tasa, 'La tasa BCV', (fx) => bloqueoDeTasa(fx, 'USD'))
+  mirar(tasaEuro, 'La tasa BCV del euro', (fx) => bloqueoDeTasa(fx, 'EUR'))
   mirar(cuentas, 'La cuenta de cobro', bloqueoDeCuenta)
   mirar(extracto, 'La última importación del extracto', (d) => bloqueoDeExtracto(d.daysSinceLast))
 
-  const comprobando = [tasa, cuentas, extracto].some((q) => q.isPending)
+  const comprobando = [tasa, tasaEuro, cuentas, extracto].some((q) => q.isPending)
 
   return { bloqueos, sinComprobar, comprobando }
 }

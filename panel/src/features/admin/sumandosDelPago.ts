@@ -2,8 +2,8 @@ import type { QueueItem } from './api'
 
 /**
  * Las partes de un pago reportado. Sus cuotas son payable (llevan el service
- * fee + IVA dentro), así que el pago solo se enseña con sus sumandos a la
- * vista: facturado (sin fee), service fee + IVA y, si hay, cargos por atraso.
+ * comisión + IVA dentro), así que el pago solo se enseña con sus sumandos a la
+ * vista: facturado (sin comisión), Comisión Helios + IVA y, si hay, cargos por atraso.
  *
  * `totalUsd` es lo que debía pagar: sus cuotas cotizadas más los cargos que
  * viajaban en la cotización. Es lo mismo que reportó, porque el reporte se
@@ -55,12 +55,12 @@ export function sumandosDeLosPagos(items: ReadonlyArray<PagoConDesglose>): Suman
 
 /**
  * La línea de los sumandos, con el formato de dinero que se le pase:
- * «facturado €30,00 + service fee + IVA €6,96 + cargos por atraso €8,00».
+ * «facturado €30,00 + Comisión Helios + IVA €6,96 + cargos por atraso €8,00».
  * `null` sin desglose. Los cargos solo si los hay.
  */
 export function lineaDeSumandos(s: SumandosDelPago, dinero: (n: number) => string): string | null {
   if (s.facturadoUsd === null || s.feeUsd === null) return null
-  const partes = [`financiado ${dinero(s.facturadoUsd)}`, `service fee + IVA ${dinero(s.feeUsd)}`]
+  const partes = [`financiado ${dinero(s.facturadoUsd)}`, `Comisión Helios + IVA ${dinero(s.feeUsd)}`]
   if (s.cargosUsd > 0.005) partes.push(`cargos por atraso ${dinero(s.cargosUsd)}`)
   return partes.join(' + ')
 }

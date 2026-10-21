@@ -19,22 +19,29 @@ export const MOTIVO_DE_LIQUIDACION: Record<SettlementReason, string> = {
 
 export type PayoutMethod = 'pago_movil' | 'transferencia' | 'zelle' | 'usdt' | 'efectivo'
 
+/** El nombre de cada medio, también de los que ya no se ofrecen: un pago viejo se sigue leyendo. */
+const NOMBRE_DEL_MEDIO: Record<PayoutMethod, string> = {
+  pago_movil: 'Pago Móvil',
+  transferencia: 'Transferencia',
+  zelle: 'Zelle',
+  usdt: 'USDT',
+  efectivo: 'Efectivo',
+}
+
 /**
- * Los medios por los que se le paga a una clínica, con su nombre. NO son los
- * del paciente: desde el 2026-10-07 el paciente solo paga en bolívares
+ * Los medios por los que se le paga a una clínica: a la clínica se le paga en
+ * bolívares, por Pago Móvil o transferencia, como el archivo del pago masivo.
+ * Zelle, USDT y efectivo eran de Ronda: siguen en el enum de la base para leer
+ * lo viejo, pero no se ofrecen. NO son los del paciente
  * (`METODOS_DEL_PACIENTE`, en `pagosRegistrados/registrarPago.ts`).
  */
-export const METODOS_DE_PAGO: Array<{ value: PayoutMethod; label: string }> = [
-  { value: 'pago_movil', label: 'Pago Móvil' },
-  { value: 'transferencia', label: 'Transferencia' },
-  { value: 'zelle', label: 'Zelle' },
-  { value: 'usdt', label: 'USDT' },
-  { value: 'efectivo', label: 'Efectivo' },
-]
+export const METODOS_DE_PAGO: Array<{ value: PayoutMethod; label: string }> = (
+  ['pago_movil', 'transferencia'] as const
+).map((value) => ({ value, label: NOMBRE_DEL_MEDIO[value] }))
 
 /** El nombre de un medio. Uno que no está en la lista sale tal cual, no en blanco. */
 export function nombreDelMedio(metodo: string): string {
-  return METODOS_DE_PAGO.find((m) => m.value === metodo)?.label ?? metodo
+  return (NOMBRE_DEL_MEDIO as Partial<Record<string, string>>)[metodo] ?? metodo
 }
 
 /** Si el medio sale en el extracto en bolívares y lleva referencia. */

@@ -8,7 +8,7 @@ import { PestanaPromesas } from '@/components/admin/PestanaPromesas'
 import { PorSemana } from '@/components/admin/cartera/semana/PorSemana'
 import { resumirPromesasDeHoy } from '@/components/admin/inicio/colas'
 import { Tabs, hoyCaracas } from '@/components/ui'
-import { FILTROS_CARTERA } from '@/features/admin/cobranza/cartera'
+import { filtroDeCartera } from '@/features/admin/cobranza/cartera'
 import type { FiltroCartera } from '@/features/admin/cobranza/cartera'
 import { consultaPromesas } from '@/features/admin/cobranza/consultas'
 import { PERFILES_DEUDOR } from '@/features/admin/metricas/cobranza/perfiles'
@@ -66,7 +66,8 @@ export const Route = createFileRoute('/admin/cobranza')({
     const cohorte = comoDia(search.cohorte)
     return {
       vista: unoDe(VALORES_VISTA, search.vista),
-      tramo: unoDe(FILTROS_CARTERA, search.tramo),
+      // Un enlace al tramo de antes (`t5`) cae en el que lo sustituye.
+      tramo: filtroDeCartera(search.tramo),
       perfil: unoDe(PERFILES_DEUDOR, search.perfil),
       orden: unoDe(['prioridad'] as const, search.orden),
       cohorte: cohorte ? lunesDe(cohorte) : undefined,

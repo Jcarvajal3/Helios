@@ -101,7 +101,7 @@ export function CrecimientoGente({
           valor={String(o.activeUsers.count)}
           delta={cambio(o.activeUsers)}
           info="Pacientes distintos con un financiamiento en la ventana."
-          pie={`${o.orders.count} ${o.orders.count === 1 ? 'financiamiento' : 'financiamientos'} · ${formatUsd(o.spend.financedUsd)} financiado (sin fee)`}
+          pie={`${o.orders.count} ${o.orders.count === 1 ? 'financiamiento' : 'financiamientos'} · ${formatUsd(o.spend.financedUsd)} financiado (sin comisión)`}
           link={{
             to: '/admin/financiamientos',
             search: { desde: o.from, hasta: o.to, local: o.merchantId ?? undefined },
@@ -116,7 +116,7 @@ export function CrecimientoGente({
         summary={
           <>
             <Cifra>{o.activeUsers.count}</Cifra> pacientes distintos en la ventana · {o.orders.count} financiamientos ·{' '}
-            {formatUsd(o.spend.financedUsd)} financiado (sin fee)
+            {formatUsd(o.spend.financedUsd)} financiado (sin comisión)
           </>
         }
         enteros
@@ -125,13 +125,13 @@ export function CrecimientoGente({
           key: d.day,
           label: formatDayShort(d.day),
           values: [d.activeUsers],
-          note: d.orders > 0 ? `${d.orders} ${d.orders === 1 ? 'financiamiento' : 'financiamientos'} · ${formatUsdShort(d.financedUsd)} sin fee` : undefined,
+          note: d.orders > 0 ? `${d.orders} ${d.orders === 1 ? 'financiamiento' : 'financiamientos'} · ${formatUsdShort(d.financedUsd)} sin comisión` : undefined,
         }))}
         format={cuenta}
         formatShort={cuenta}
         ejeLabel="Día"
-        unidadLabel="Financiamientos y financiado sin fee"
-        footnote="Una barra por día: los pacientes de un día no se suman entre días, porque el mismo paciente cuenta en cada día que vino. El financiado va sin el service fee."
+        unidadLabel="Financiamientos y financiado sin comisión"
+        footnote="Una barra por día: los pacientes de un día no se suman entre días, porque el mismo paciente cuenta en cada día que vino. El financiado va sin la Comisión Helios."
         empty="No hubo financiamiento en esta ventana."
       />
 

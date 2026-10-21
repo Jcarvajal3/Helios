@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { CircleAlert, Landmark } from 'lucide-react'
 
 import { ArchivoDelBanco } from '@/components/admin/caja/ArchivoDelBanco'
-import { RegistrarPagoMasivo } from '@/components/admin/caja/RegistrarPagoMasivo'
+import { AvisoDeLotePendiente, RegistrarPagoMasivo } from '@/components/admin/caja/RegistrarPagoMasivo'
 import { DataTable, ENLACE_EN_CELDA } from '@/components/DataTable'
 import type { Column } from '@/components/DataTable'
 import {
@@ -22,13 +22,16 @@ import type { MerchantPayable } from '@/features/admin/api'
 import { comprometidoFuturoDe, payablesTotals } from '@/features/admin/definitions'
 import { describeError } from '@/lib/supabase'
 
-/** Qué locales se ven: todos, los que tienen algo atrasado o los que cobran hoy. */
-export type SoloLocales = 'atrasados' | 'este-cierre'
+/**
+ * Qué clínicas se ven: las que cobran hoy, las que tienen algo atrasado o
+ * todas. Sin elegir, las que cobran hoy: es la tarea del día.
+ */
+export type SoloLocales = 'atrasados' | 'este-cierre' | 'todos'
 
-export const OPCIONES_SOLO: ReadonlyArray<{ value: SoloLocales | ''; label: string }> = [
-  { value: '', label: 'Todos' },
-  { value: 'atrasados', label: 'Con atraso' },
+export const OPCIONES_SOLO: ReadonlyArray<{ value: SoloLocales; label: string }> = [
   { value: 'este-cierre', label: 'Cobran hoy' },
+  { value: 'atrasados', label: 'Con atraso' },
+  { value: 'todos', label: 'Todas' },
 ]
 
 function futuroDe(m: MerchantPayable): number {
@@ -84,37 +87,43 @@ export function LoQueSeDebeHoy({
   const totals = payablesTotals(todos)
   const prueba = todos.filter((m) => m.isTest).reduce((sum, m) => sum + m.totalPendingUsd, 0)
 
+  // Sin elegir: lo de hoy, que es la tarea del día.
+  const vista: SoloLocales = solo ?? 'este-cierre'
+
   const rows = todos.filter((m) =>
-    solo === 'atrasados' ? m.overdueUsd > 0.005 : solo === 'este-cierre' ? m.nextRunUsd > 0.005 : true,
+    vista === 'atrasados' ? m.overdueUsd > 0.005 : vista === 'este-cierre' ? m.nextRunUsd > 0.005 : true,
   )
 
   const resumen = (
     <>
-      <Puerta activa={solo === 'este-cierre'} onClick={() => onSolo('este-cierre')}>
+      <Puerta activa={vista === 'este-cierre'} onClick={() => onSolo('este-cierre')}>
         {formatUsd(totals.saleEsteCierre - totals.atrasado)} que toca pagar hoy
       </Puerta>
       {' · '}
-      <Puerta activa={solo === 'atrasados'} onClick={() => onSolo('atrasados')} alerta={totals.atrasado > 0}>
+      <Puerta activa={vista === 'atrasados'} onClick={() => onSolo('atrasados')} alerta={totals.atrasado > 0}>
         {formatUsd(totals.atrasado)} atrasados de días anteriores
       </Puerta>
       {' · '}
-      {formatUsd(totals.comprometidoFuturo)} por pagar en los próximos días
+      <Puerta activa={vista === 'todos'} onClick={() => onSolo('todos')}>
+        {formatUsd(totals.comprometidoFuturo)} por pagar en los próximos días
+      </Puerta>
       {prueba > 0 && ` · ${formatUsd(prueba)} en clínicas de prueba, aparte`}{' '}
       <InfoDot
         title="Lo que se debe hoy"
-        what="Lo que se le transfiere a cada clínica: el financiado (sin fee) de sus pacientes menos la comisión de la clínica, más las comisiones de su personal. Se paga a diario: cada liquidación, el día siguiente a su vencimiento (la consulta, a los 8 y a los 15 días; la comisión de la secretaria, el día siguiente a la confirmación). El panel no mueve dinero: la transferencia se hace en el banco y aquí se registra."
+        what="Lo que se le transfiere a cada clínica: sus consultas enteras (sin la Comisión Helios, que paga el paciente) más las comisiones de su personal. Se paga a diario: cada liquidación, el día siguiente a su vencimiento (la consulta, a los 8 y a los 15 días; la comisión de la secretaria, el día siguiente a la confirmación). El panel no mueve dinero: la transferencia se hace en el banco y aquí se registra."
       />
     </>
   )
 
   return (
     <>
+      <AvisoDeLotePendiente />
       {rows.length === 0 ? (
         <EmptyState
           icon={<Landmark size={40} />}
-          title={solo === 'atrasados' ? 'Ninguna clínica tiene pagos atrasados' : 'Ninguna clínica cobra hoy'}
+          title={vista === 'atrasados' ? 'Ninguna clínica tiene pagos atrasados' : 'Ninguna clínica cobra hoy'}
           action={
-            <Button size="md" variant="tonal" onClick={() => onSolo(undefined)}>
+            <Button size="md" variant="tonal" onClick={() => onSolo('todos')}>
               Ver todas las clínicas
             </Button>
           }
@@ -205,7 +214,7 @@ const COLUMNAS: Array<Column<MerchantPayable>> = [
     key: 'este-lunes',
     header: 'Sale hoy (con lo atrasado)',
     type: 'number',
-    info: 'Lo que hay que transferirle hoy: lo que venció ayer más lo atrasado de días anteriores. Arriba, «que toca pagar hoy» no lleva lo atrasado. Son sus consultas (financiado sin fee, menos su comisión) más las comisiones de su personal; debajo, partido.',
+    info: 'Lo que hay que transferirle hoy: lo que venció ayer más lo atrasado de días anteriores. Arriba, «que toca pagar hoy» no lleva lo atrasado. Son sus consultas (financiado sin comisión, menos su comisión) más las comisiones de su personal; debajo, partido.',
     sort: (m) => m.nextRunUsd,
     sortDir: 'desc',
     cell: (m) => (

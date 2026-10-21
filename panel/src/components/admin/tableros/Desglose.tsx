@@ -14,7 +14,7 @@ export type LineaDeDesglose = {
  *
  * Es la forma de lo que no se suma en una cifra (lo devengado y lo cobrado del
  * mes) o de lo que sí cierra con su suma (lo que deja cada €100). Solo lleva
- * total cuando quien llama lo pide: sumar el service fee con el consumo en una
+ * total cuando quien llama lo pide: sumar la Comisión Helios con el consumo en una
  * línea final es justo lo que no se hace.
  */
 export function Desglose({ lineas }: { lineas: ReadonlyArray<LineaDeDesglose> }) {

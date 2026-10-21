@@ -16,7 +16,7 @@ import { desgloseDelPago } from './desgloseDelPago'
 // ── 5. Pagos ───────────────────────────────────────────────────────────────
 
 /**
- * Los pagos que reportó desde la app. Cada fila abre la ficha del pago, que
+ * Los pagos que se le registraron. Cada fila abre la ficha del pago, que
  * es donde se aprueba, se rechaza o se ve contra qué abono del banco cuadró.
  */
 export function PestanaPagos({ user }: { user: UserDetail }) {
@@ -41,7 +41,7 @@ export function PestanaPagos({ user }: { user: UserDetail }) {
           'Referencia',
           {
             label: 'Monto reportado',
-            info: 'Lo que transfirió: sus cuotas (financiamiento + service fee) más los cargos por atraso que llevaba el pago.',
+            info: 'Lo que transfirió: sus cuotas (financiamiento + Comisión Helios) más los cargos por atraso que llevaba el pago.',
           },
           'Estado',
         ]}

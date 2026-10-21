@@ -13,8 +13,8 @@ export const metricasLocales = [
   {
     tipo: 'cifra',
     id: 'consumo-por-semana-de-cada-local',
-    titulo: 'Financiado por semana y clínica (sin fee)',
-    descripcion: 'El financiado de cada clínica semana a semana, sin el service fee, todos con la misma escala.',
+    titulo: 'Financiado por semana y clínica (sin comisión)',
+    descripcion: 'El financiado de cada clínica semana a semana, sin la Comisión Helios, todos con la misma escala.',
     espacio: 'metricas',
     sinonimos: [
       'financiamiento por semana de cada clínica',
@@ -26,7 +26,7 @@ export const metricasLocales = [
       'crecimiento por clínica',
     ],
     destino: { to: '/admin/metricas', search: { vista: 'locales' } },
-    que: 'Sin el service fee: el financiado de cada clínica en las ocho últimas semanas hasta la elegida, con una escala común para que las alturas se comparen. La nota dice cuándo empezó a financiar una clínica nueva o cómo va frente a la semana anterior a la misma altura.',
+    que: 'Sin la Comisión Helios: el financiado de cada clínica en las ocho últimas semanas hasta la elegida, con una escala común para que las alturas se comparen. La nota dice cuándo empezó a financiar una clínica nueva o cómo va frente a la semana anterior a la misma altura.',
     rpc: 'admin_metricas_locales',
   },
   {
@@ -51,12 +51,12 @@ export const metricasLocales = [
   {
     tipo: 'cifra',
     id: 'vencido-de-la-gente-de-un-local',
-    titulo: 'Vencido por clínica (financiamiento + fee)',
-    descripcion: 'Las cuotas vencidas y sin pagar de los financiamientos en cada clínica (financiamiento + fee), con su financiamiento y su service fee por separado.',
+    titulo: 'Vencido por clínica (financiamiento + comisión)',
+    descripcion: 'Las cuotas vencidas y sin pagar de los financiamientos en cada clínica (financiamiento + comisión), con su financiamiento y su Comisión Helios por separado.',
     espacio: 'metricas',
     sinonimos: ['vencido de los pacientes de una clínica', 'vencido de sus pacientes', 'deuda por clínica', 'vencido por clínica', 'cartera por clínica', 'impago de una clínica'],
     destino: { to: '/admin/metricas', search: { vista: 'locales' } },
-    que: 'Las cuotas vencidas y sin pagar de lo financiado en cada clínica, al cierre de la semana elegida (hoy, si está en curso), en financiamiento + fee: su financiamiento y el service fee (IVA incluido), siempre por separado. Lo dado por perdido no entra. La suma de las clínicas es el vencido de toda la cartera.',
+    que: 'Las cuotas vencidas y sin pagar de lo financiado en cada clínica, al cierre de la semana elegida (hoy, si está en curso), en financiamiento + comisión: su financiamiento y la Comisión Helios (IVA incluido), siempre por separado. Lo dado por perdido no entra. La suma de las clínicas es el vencido de toda la cartera.',
     rpc: 'admin_metricas_locales',
   },
   {

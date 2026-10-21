@@ -10,9 +10,9 @@ import type { Entrada } from './tipos'
  *
  * El vocabulario de las cifras (Javier, 27-09) está aquí entero, con el
  * nombre que se usa en pantalla: Pacientes, Registros, Financiamientos,
- * Financiado (sin fee), Service fee + IVA, Service fee sin IVA,
+ * Financiado (sin comisión), Comisión Helios + IVA, Comisión Helios sin IVA,
  * Total a cobrar, Cuota 1 / Cuota 2, Cobrado (a tiempo, con atraso), Vencido,
- * Por vencer, Perdido, Mora (%), Ticket medio (sin fee) y Días de gracia. Los
+ * Por vencer, Perdido, Mora (%), Ticket medio (sin comisión) y Días de gracia. Los
  * ids viejos se quedan (los Recientes guardados apuntan a ellos).
  */
 export const glosario = [
@@ -51,17 +51,6 @@ export const glosario = [
     definicion:
       'Un paciente cuenta como registro cuando una clínica lo da de alta, y su día de registro es el día operativo de esa alta. La secretaria o el administrador lo registra en el mismo paso que su primer financiamiento, así que nace activo y con nivel 1: no hay app, ni código, ni verificación de identidad que esperar.',
   },
-  {
-    tipo: 'termino',
-    id: 'cohorte-de-registro',
-    titulo: 'Cohorte de registro',
-    descripcion: 'Los pacientes registrados en el mismo periodo, seguidos en el tiempo.',
-    espacio: 'gerencia',
-    sinonimos: ['retención', 'cohortes de registro', 'vuelven'],
-    destino: { to: '/admin/metricas', search: { vista: 'gente', sub: 'retencion' } },
-    definicion:
-      'Los pacientes que las clínicas registraron en el mismo día, semana o mes, seguidos en el tiempo. Todas las cifras de una cohorte de registro son sobre esos mismos pacientes, por muchos que entren después. Se ven en Métricas › Pacientes › Retención.',
-  },
 
   // ── El financiamiento y su dinero ──────────────────────────────────────
   {
@@ -78,31 +67,31 @@ export const glosario = [
   {
     tipo: 'termino',
     id: 'consumo',
-    titulo: 'Financiado (sin fee)',
-    descripcion: 'Lo financiado en las clínicas, sin el service fee: lo que ve la secretaria y lo que ocupa cupo.',
+    titulo: 'Financiado (sin comisión)',
+    descripcion: 'Lo financiado en las clínicas, sin la Comisión Helios: lo que ve la secretaria y lo que ocupa cupo.',
     espacio: 'directorio',
     sinonimos: [
       'financiado',
       'total financiado',
       'financiamiento',
-      'financiamiento (sin fee)',
+      'financiamiento (sin comisión)',
       'financed',
       'financiamiento sin servicio',
-      'sin fee',
+      'sin comisión',
     ],
     destino: { to: '/admin/financiamientos' },
     definicion:
-      'La suma de lo financiado en las clínicas en financiamientos confirmados, sin el service fee: lo que ve la secretaria en su comprobante y lo que ocupa cupo (la suma de financed_usd de sus cuotas). «Total financiado (sin fee)» es el de todo un periodo. Toda cifra de financiamiento dice si lleva el fee o no: sin él, «Financiado (sin fee)» o «Financiamiento (sin fee)»; con él, «Total a cobrar (financiamiento + fee)», y siempre con sus dos partes a la vista, porque un total con el fee dentro nunca va solo.',
+      'La suma de lo financiado en las clínicas en financiamientos confirmados, sin la Comisión Helios: lo que ve la secretaria en su comprobante y lo que ocupa cupo (la suma de financed_usd de sus cuotas). «Total financiado (sin comisión)» es el de todo un periodo. Toda cifra de financiamiento dice si lleva la comisión o no: sin él, «Financiado (sin comisión)» o «Financiamiento (sin comisión)»; con él, «Total a cobrar (financiamiento + comisión)», y siempre con sus dos partes a la vista, porque un total con la comisión dentro nunca va solo.',
   },
   {
     tipo: 'termino',
     // El id se queda (Recientes guardados); el nombre es el que usa Javier.
     id: 'servicio-ronda',
-    titulo: 'Service fee + IVA',
-    descripcion: 'Lo que el paciente paga a Helios por financiarle la consulta, con su IVA. Donde no cabe, «fee».',
+    titulo: 'Comisión Helios + IVA',
+    descripcion: 'Lo que el paciente paga a Helios por financiarle la consulta, con su IVA. Donde no cabe, «comisión».',
     espacio: 'caja',
     sinonimos: [
-      'service fee',
+      'Comisión Helios',
       'fee',
       'comisión',
       'comisión del paciente',
@@ -112,44 +101,44 @@ export const glosario = [
       'servicio tecnológico',
       'servicio e iva',
       'tarifa',
-      'iva del service fee',
+      'IVA de la Comisión Helios',
     ],
     destino: { to: '/admin/metricas', search: { vista: 'caja' } },
     definicion:
-      'Lo que el paciente paga a Helios por financiarle la consulta: un porcentaje sobre el financiado, fijado en los parámetros del negocio, más el IVA que lo grava; en cada cuota es la cuota menos su parte de financiamiento (payable − financed). Va dentro de las cuotas y nunca se suma al financiado en un total suelto: se enseña como línea aparte de un desglose («financiamiento $X · fee $Y») o repartido en las cuotas. «Service fee + IVA» lleva el IVA dentro; lo que gana Helios es el «Service fee sin IVA», y el IVA solo es el «IVA del service fee». No es la comisión de la clínica, que es lo que Helios le cobra a la clínica.',
+      'Lo que el paciente paga a Helios por financiarle la consulta: un porcentaje sobre el financiado, fijado en los parámetros del negocio, más el IVA que lo grava; en cada cuota es la cuota menos su parte de financiamiento (payable − financed). Va dentro de las cuotas y nunca se suma al financiado en un total suelto: se enseña como línea aparte de un desglose («financiamiento $X · comisión $Y») o repartido en las cuotas. «Comisión Helios + IVA» lleva el IVA dentro; lo que gana Helios es la «Comisión Helios sin IVA», y el IVA solo es el «IVA de la Comisión Helios». A la clínica no le cuesta nada: recibe la consulta entera.',
   },
   {
     tipo: 'termino',
-    id: 'service-fee-sin-iva',
-    titulo: 'Service fee sin IVA',
-    descripcion: 'El ingreso de Helios: el service fee de los financiamientos confirmados, sin su IVA.',
+    id: 'service-comisión-sin-iva',
+    titulo: 'Comisión Helios sin IVA',
+    descripcion: 'El ingreso de Helios: la Comisión Helios de los financiamientos confirmados, sin su IVA.',
     espacio: 'caja',
-    sinonimos: ['ingreso de helios', 'ingresos', 'service fee ganado', 'servicio ganado', 'revenue', 'comisión devengada'],
+    sinonimos: ['ingreso de helios', 'ingresos', 'Comisión Helios ganada', 'servicio ganado', 'revenue', 'comisión devengada'],
     destino: { to: '/admin/metricas', search: { vista: 'caja' } },
     definicion:
-      'El service fee de los financiamientos confirmados sin el IVA que lo grava: lo que gana Helios. Se gana al confirmar el financiamiento y se cobra con las cuotas («Service fee sin IVA cobrado» es la parte ya pagada). Los cargos por atraso son otro ingreso y van aparte, y nunca se suma al financiado.',
+      'La Comisión Helios de los financiamientos confirmados sin el IVA que lo grava: lo que gana Helios. Se gana al confirmar el financiamiento y se cobra con las cuotas («Comisión Helios sin IVA cobrado» es la parte ya pagada). Los cargos por atraso son otro ingreso y van aparte, y nunca se suma al financiado.',
   },
   {
     tipo: 'termino',
     id: 'total-a-cobrar',
     titulo: 'Total a cobrar',
-    descripcion: 'Lo que hay que cobrar de un periodo o de una semana de financiamiento: financiado + service fee + IVA.',
+    descripcion: 'Lo que hay que cobrar de un periodo o de una semana de financiamiento: financiado + Comisión Helios + IVA.',
     espacio: 'cobranza',
-    sinonimos: ['a cobrar', 'financiamiento + fee', 'payable', 'deuda', 'lo que se cobra'],
+    sinonimos: ['a cobrar', 'financiamiento + comisión', 'payable', 'deuda', 'lo que se cobra'],
     destino: { to: '/admin/metricas', search: { vista: 'cobros' } },
     definicion:
-      'La suma de las cuotas (payable) de los financiamientos de un periodo o de una semana de financiamiento: el financiado (sin fee) más el service fee + IVA, que es lo que los pacientes tienen que transferir. Se enseña siempre con su desglose a la vista («financiado $X · service fee $Y»), nunca como un total suelto. Los cargos por atraso no entran.',
+      'La suma de las cuotas (payable) de los financiamientos de un periodo o de una semana de financiamiento: el financiado (sin comisión) más la Comisión Helios + IVA, que es lo que los pacientes tienen que transferir. Se enseña siempre con su desglose a la vista («financiado $X · Comisión Helios $Y»), nunca como un total suelto. Los cargos por atraso no entran.',
   },
   {
     tipo: 'termino',
-    id: 'ticket-medio-sin-fee',
-    titulo: 'Ticket medio (sin fee)',
-    descripcion: 'Lo financiado de media en cada financiamiento, sin el service fee.',
+    id: 'ticket-medio-sin-comisión',
+    titulo: 'Ticket medio (sin comisión)',
+    descripcion: 'Lo financiado de media en cada financiamiento, sin la Comisión Helios.',
     espacio: 'gerencia',
     sinonimos: ['ticket', 'ticket medio', 'ticket promedio', 'gasto por financiamiento'],
     destino: { to: '/admin/metricas', search: { vista: 'semana' } },
     definicion:
-      'El financiado (sin fee) de un periodo ÷ el número de financiamientos confirmados de ese periodo.',
+      'El financiado (sin comisión) de un periodo ÷ el número de financiamientos confirmados de ese periodo.',
   },
   {
     tipo: 'termino',
@@ -166,12 +155,12 @@ export const glosario = [
     tipo: 'termino',
     id: 'cupo',
     titulo: 'Cupo',
-    descripcion: 'El financiado máximo (sin fee) que un paciente puede tener sin pagar a la vez.',
+    descripcion: 'El financiado máximo (sin comisión) que un paciente puede tener sin pagar a la vez.',
     espacio: 'riesgo',
     sinonimos: ['límite', 'crédito disponible', 'disponible'],
     destino: { to: '/admin/ajustes', search: { tab: 'niveles' } },
     definicion:
-      'El financiado máximo (sin fee) que un paciente puede tener sin pagar a la vez. Lo fija su nivel y se va gastando con cada financiamiento. No vuelve cuota a cuota: lo de cada financiamiento se libera cuando están pagadas todas sus cuotas, y con una cuota vencida el disponible es cero. El service fee y los cargos por atraso no ocupan cupo.',
+      'El financiado máximo (sin comisión) que un paciente puede tener sin pagar a la vez. Lo fija su nivel y se va gastando con cada financiamiento. No vuelve cuota a cuota: lo de cada financiamiento se libera cuando están pagadas todas sus cuotas, y con una cuota vencida el disponible es cero. La Comisión Helios y los cargos por atraso no ocupan cupo.',
   },
   {
     tipo: 'termino',
@@ -195,7 +184,7 @@ export const glosario = [
     sinonimos: ['cuota', 'cuotas', 'plazo', 'vencimiento', 'pago en cuotas', 'primera cuota', 'segunda cuota'],
     destino: { to: '/admin/cobranza' },
     definicion:
-      'Cada financiamiento se paga en dos cuotas. La cuota 1 vence un intervalo de cuotas después del financiamiento y la cuota 2, otro intervalo después de la 1; el intervalo es un parámetro del negocio. El monto de cada cuota es financiamiento + service fee (su parte de financiado más su parte del fee con su IVA) y se enseña con ese desglose.',
+      'Cada financiamiento se paga en dos cuotas. La cuota 1 vence un intervalo de cuotas después del financiamiento y la cuota 2, otro intervalo después de la 1; el intervalo es un parámetro del negocio. El monto de cada cuota es financiamiento + Comisión Helios (su parte de financiado más su parte de la comisión con su IVA) y se enseña con ese desglose.',
   },
   {
     tipo: 'termino',
@@ -206,7 +195,7 @@ export const glosario = [
     sinonimos: ['vencida', 'vencidas', 'cuotas vencidas', 'deuda vencida', 'atrasado', 'plazo vencido'],
     destino: { to: '/admin/metricas', search: { vista: 'mora' } },
     definicion:
-      'Las cuotas pendientes cuyo día de vencimiento es anterior a hoy (día operativo), sin las dadas por perdidas: financiamiento + service fee, con su desglose. «Pacientes con deuda vencida» son los que tienen alguna. Ojo: la cola de Por cobrar enseña además la deuda dada por perdida, que se sigue cobrando; su «vencido» lo dice.',
+      'Las cuotas pendientes cuyo día de vencimiento es anterior a hoy (día operativo), sin las dadas por perdidas: financiamiento + Comisión Helios, con su desglose. «Pacientes con deuda vencida» son los que tienen alguna. Ojo: la cola de Por cobrar enseña además la deuda dada por perdida, que se sigue cobrando; su «vencido» lo dice.',
   },
   {
     tipo: 'termino',
@@ -217,7 +206,7 @@ export const glosario = [
     sinonimos: ['por vencer', 'sin vencer', 'plazo vigente', 'próximos vencimientos'],
     destino: { to: '/admin/cobranza' },
     definicion:
-      'Las cuotas pendientes cuyo día de vencimiento es hoy (día operativo) o posterior, sin las dadas por perdidas: financiamiento + service fee, con su desglose. Vencido + por vencer es la deuda viva.',
+      'Las cuotas pendientes cuyo día de vencimiento es hoy (día operativo) o posterior, sin las dadas por perdidas: financiamiento + Comisión Helios, con su desglose. Vencido + por vencer es la deuda viva.',
   },
   {
     tipo: 'termino',
@@ -228,7 +217,7 @@ export const glosario = [
     sinonimos: ['pagado', 'cobrado a tiempo', 'cobrado con atraso', 'cobrado tarde', 'pagada a tiempo', 'a tiempo'],
     destino: { to: '/admin/metricas', search: { vista: 'cobros' } },
     definicion:
-      'Las cuotas pagadas, en financiamiento + service fee con su desglose. «Cobrado a tiempo» son las pagadas como tarde el último día de gracia (vencimiento + días de gracia) y «Cobrado con atraso», las pagadas después. El día del pago es el día operativo en que se REGISTRÓ el pago, no el de su aprobación. «Cobrado a tiempo (%)» es la parte a tiempo de las cuotas cuyo plazo ya terminó.',
+      'Las cuotas pagadas, en financiamiento + Comisión Helios con su desglose. «Cobrado a tiempo» son las pagadas como tarde el último día de gracia (vencimiento + días de gracia) y «Cobrado con atraso», las pagadas después. El día del pago es el día operativo en que se REGISTRÓ el pago, no el de su aprobación. «Cobrado a tiempo (%)» es la parte a tiempo de las cuotas cuyo plazo ya terminó.',
   },
   {
     tipo: 'termino',
@@ -239,7 +228,7 @@ export const glosario = [
     sinonimos: ['dado por perdido', 'castigado', 'castigo', 'incobrable', 'write off'],
     destino: { to: '/admin/metricas', search: { vista: 'caja' } },
     definicion:
-      'La deuda que se declara incobrable cuando el atraso llega al plazo de expulsión. Deja de contar en lo vencido, en lo por vencer y en lo que se espera cobrar, y pasa a pérdida; se enseña aparte, sin fee o con su service fee + IVA según la cifra. En la cola de Por cobrar sigue, porque se sigue llamando.',
+      'La deuda que se declara incobrable cuando el atraso llega al plazo de expulsión. Deja de contar en lo vencido, en lo por vencer y en lo que se espera cobrar, y pasa a pérdida; se enseña aparte, sin comisión o con su Comisión Helios + IVA según la cifra. En la cola de Por cobrar sigue, porque se sigue llamando.',
   },
   {
     tipo: 'termino',
@@ -250,7 +239,7 @@ export const glosario = [
     sinonimos: ['mora', 'tasa de mora', 'morosidad', 'atraso'],
     destino: { to: '/admin/metricas', search: { vista: 'mora' } },
     definicion:
-      'Vencido ÷ (vencido + por vencer), en financiamiento + fee y sin lo dado por perdido, a una fecha (hoy, o el cierre de una semana). Estar «en mora» es tener algo vencido: desde el primer día de atraso la cuenta queda congelada, tras los días de gracia cae el cargo por atraso, al llegar a los días de la baja pierde un nivel y queda suspendida, y pasado el plazo de expulsión se la expulsa y su deuda se da por perdida.',
+      'Vencido ÷ (vencido + por vencer), en financiamiento + comisión y sin lo dado por perdido, a una fecha (hoy, o el cierre de una semana). Estar «en mora» es tener algo vencido: desde el primer día de atraso la cuenta queda congelada, tras los días de gracia cae el cargo por atraso, al llegar a los días de la baja pierde un nivel y queda suspendida, y pasado el plazo de expulsión se la expulsa y su deuda se da por perdida.',
   },
   {
     tipo: 'termino',
@@ -269,10 +258,10 @@ export const glosario = [
     titulo: 'Cargo por atraso',
     descripcion: 'El monto que se suma a la deuda de una cuota que sigue sin pagarse tras los días de gracia.',
     espacio: 'cobranza',
-    sinonimos: ['multa', 'recargo', 'penalización', 'late fee'],
+    sinonimos: ['multa', 'recargo', 'penalización', 'late comisión'],
     destino: { to: '/admin/cobranza' },
     definicion:
-      'Un monto fijo, fijado en los parámetros del negocio, que el estado automático suma a la deuda cuando una cuota sigue sin pagarse tras los días de gracia, una sola vez por cuota. Es ingreso de Helios, va aparte de las cuotas y no se suma al service fee. Se puede condonar desde la ficha del paciente si no correspondía.',
+      'Un monto fijo, fijado en los parámetros del negocio, que el estado automático suma a la deuda cuando una cuota sigue sin pagarse tras los días de gracia, una sola vez por cuota. Es ingreso de Helios, va aparte de las cuotas y no se suma a la Comisión Helios. Se puede condonar desde la ficha del paciente si no correspondía.',
   },
   {
     tipo: 'termino',
@@ -364,7 +353,7 @@ export const glosario = [
     sinonimos: ['settlement', 'deuda con la clínica', 'pago a la clínica'],
     destino: { to: '/admin/pagos-clinicas' },
     definicion:
-      'Lo que Helios le debe a una clínica por el financiamiento de sus pacientes: su parte del financiado (sin fee) menos la comisión de la clínica, según sus condiciones. A la clínica se le liquida por la fecha de vencimiento, pague o no el paciente a tiempo, y cada liquidación se transfiere el día siguiente a su vencimiento: cada mitad de la consulta, el día siguiente a su cuota; lo que gana la secretaria, el día siguiente a la confirmación. Puede quedar pagada en parte.',
+      'Lo que Helios le debe a una clínica por el financiamiento de sus pacientes: la consulta entera (sin la Comisión Helios, que paga el paciente) más lo que gana su personal. A la clínica se le liquida por la fecha de vencimiento, pague o no el paciente a tiempo, y cada liquidación se transfiere el día siguiente a su vencimiento: cada mitad de la consulta, el día siguiente a su cuota; lo que gana la secretaria, el día siguiente a la confirmación. Puede quedar pagada en parte.',
   },
   {
     tipo: 'termino',

@@ -5,9 +5,9 @@ import type { UserDetail } from '@/features/admin/users'
 // ═══════════════════════════════════════════════════════════════════════════
 // Los sumandos de un pago reportado.
 //
-// El monto que transfirió es sus cuotas (payable: consumo + service fee) más
-// los cargos por atraso que llevaba. La regla del fee no deja enseñarlo sin
-// sus partes: «consumo €28,25 · fee €6,55 + cargos por atraso €8,00».
+// El monto que transfirió es sus cuotas (payable: consumo + Comisión Helios) más
+// los cargos por atraso que llevaba. La regla de la comisión no deja enseñarlo sin
+// sus partes: «consumo €28,25 · comisión €6,55 + cargos por atraso €8,00».
 //
 // Puro: se prueba en `desgloseDelPago.test.ts`.
 // ═══════════════════════════════════════════════════════════════════════════

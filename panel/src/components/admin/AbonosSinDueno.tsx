@@ -83,8 +83,13 @@ export function AbonosSinDueno({
     )
   }
 
-  const conTasa = rows.filter((d) => d.amountUsd !== null)
-  const sinTasa = rows.length - conTasa.length
+  // Helios y Ronda cobran en la misma cuenta del BNC: los abonos cuyo pagador
+  // no es de Helios van aparte, plegados, para no asignarle a un paciente el
+  // pago de un usuario de Ronda.
+  const deHelios = rows.filter((d) => d.deHelios)
+  const ajenos = rows.filter((d) => !d.deHelios)
+  const conTasa = deHelios.filter((d) => d.amountUsd !== null)
+  const sinTasa = deHelios.length - conTasa.length
   const total = conTasa.reduce((s, d) => s + (d.amountUsd ?? 0), 0)
 
   const columnas = construirColumnas({
@@ -95,15 +100,15 @@ export function AbonosSinDueno({
 
   return (
     <>
-      {rows.length === 0 ? (
+      {deHelios.length === 0 ? (
         <EmptyState
           icon={<Inbox size={48} />}
-          title="Todo el dinero que entró tiene dueño"
-          description="Todos los abonos del extracto importado respaldan un pago aprobado o se descartaron."
+          title="Todo el dinero de Helios que entró tiene dueño"
+          description="Todos los abonos de pacientes de Helios del extracto importado respaldan un pago aprobado o se descartaron."
         />
       ) : (
         <DataTable
-          rows={rows}
+          rows={deHelios}
           rowKey={(d) => d.id}
           columns={columnas}
           noun={['abono sin dueño', 'abonos sin dueño']}
@@ -116,6 +121,26 @@ export function AbonosSinDueno({
           exportar={{ archivo: `abonos-sin-dueno-${hoyCaracas()}` }}
           onRowClick={(d) => onAsignar(d.id)}
         />
+      )}
+
+      {ajenos.length > 0 && (
+        <details className="mt-8">
+          <summary className="cursor-pointer type-panel-section text-on-surface">
+            Ajenos a Helios, probablemente de Ronda ({ajenos.length})
+          </summary>
+          <p className="mt-2 mb-3 type-panel-caption text-on-surface-variant">
+            Helios y Ronda cobran en la misma cuenta del BNC. Quien pagó estos abonos (la cédula o el teléfono que
+            escribe el banco) no es paciente de Helios ni el pagador de ningún pago registrado aquí. No cuentan en
+            Inicio; si alguno sí es de Helios, ábrelo y confirma antes de asignarlo.
+          </p>
+          <DataTable
+            rows={ajenos}
+            rowKey={(d) => d.id}
+            columns={columnas}
+            noun={['abono ajeno', 'abonos ajenos']}
+            onRowClick={(d) => onAsignar(d.id)}
+          />
+        </details>
       )}
 
       {enCurso && (

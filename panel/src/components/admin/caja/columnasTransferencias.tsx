@@ -61,7 +61,7 @@ export function columnasDeTransferencias({ conLocal }: { conLocal: boolean }): A
       key: 'monto',
       header: 'Monto',
       type: 'number',
-      info: 'Lo transferido a la clínica: sus consultas (financiado sin fee, menos la comisión de la clínica) más las comisiones de su personal. Debajo, partido y en bolívares; si llevaba liquidaciones de órdenes cobradas en euros, cuánto era en euros (pagado a la tasa del euro).',
+      info: 'Lo transferido a la clínica: sus consultas enteras (sin la Comisión Helios, que paga el paciente) más las comisiones de su personal. Debajo, partido y en bolívares; si llevaba liquidaciones de órdenes cobradas en euros, cuánto era en euros (pagado a la tasa del euro).',
       sort: (p) => p.amountUsd,
       sortDir: 'desc',
       csv: (p) => csvDinero(p.amountUsd),

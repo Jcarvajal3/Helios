@@ -34,8 +34,8 @@ const de = (id: string) => cifras.find((c) => c.id === id)
 console.log('── Las cinco ─────────────────────────────────────────────────')
 igual(
   cifras.map((c) => c.titulo),
-  ['Total financiado (sin fee)', 'Service fee sin IVA', 'Pacientes que se financiaron', 'Cobrado a tiempo', 'Mora'],
-  'las cinco de la maqueta, en su orden, con el fee por su nombre y el financiamiento sin él',
+  ['Total financiado (sin comisión)', 'Comisión Helios sin IVA', 'Pacientes que se financiaron', 'Cobrado a tiempo', 'Mora'],
+  'las cinco de la maqueta, en su orden, con la comisión por su nombre y el financiamiento sin él',
 )
 igual(
   cifras.map((c) => c.valor),
@@ -55,7 +55,7 @@ igual(de('consumo')?.chispa.valores.length, 8, 'ocho semanas aunque la tabla ten
 igual(de('consumo')?.chispa.valores.at(-1), 912.4, 'la última es la elegida')
 igual(de('consumo')?.chispa.etiquetas.at(-1), '21–27 sep', 'con su nombre')
 igual(de('consumo')?.chispa.formato(1234.5), '$1.234,50', 'y sus números escritos como en la tabla')
-igual(de('consumo')?.chispa.serie, 'Total financiado (sin fee)', 'el globo de cada barra dice que el financiamiento va sin fee')
+igual(de('consumo')?.chispa.serie, 'Total financiado (sin comisión)', 'el globo de cada barra dice que el financiamiento va sin comisión')
 
 console.log('── Metas y umbrales ──────────────────────────────────────────')
 igual(de('consumo')?.pie, 'Meta semanal $1.000,00 · va al 91 %', 'el financiamiento frente a su meta semanal')
@@ -97,7 +97,7 @@ igual(
   ['financiado', 'mora', 'cobroATiempo', 'personas', 'locales'],
   'las cinco metas del Resumen',
 )
-igual(metas[0]?.rotulo, 'Total financiado (sin fee)', 'con el nombre de la fila que mide, y sin el fee')
+igual(metas[0]?.rotulo, 'Total financiado (sin comisión)', 'con el nombre de la fila que mide, y sin la comisión')
 igual(metas[1]?.rotulo.includes('fee'), false, 'la aclaración solo va en la meta del financiamiento')
 igual(metas[0]?.valor, 912.4, 'la meta de financiamiento mide la fila de financiamiento')
 igual(metas[0]?.veredicto, { tono: 'neutral', texto: 'Faltan $87,60' }, 'en curso, lo que falta no es un aviso')

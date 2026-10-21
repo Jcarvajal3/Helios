@@ -8,8 +8,8 @@ import type { Desglose, SemanaUsada } from '@/features/admin/metricas/lectura'
 // y la comparación no se pueden contar de dos maneras.
 //
 // Dinero: `Desglose` es lo que se paga en cuotas (payable) y lleva siempre su
-// consumo y su service fee al lado. Lo demás lleva la clase en el nombre:
-// `consumoUsd` sin fee, `servicioUsd` (el service fee) sin IVA,
+// consumo y su Comisión Helios al lado. Lo demás lleva la clase en el nombre:
+// `consumoUsd` sin comisión, `servicioUsd` (la Comisión Helios) sin IVA,
 // `cargosPorAtrasoUsd` aparte. `null` es «no se parte por local» o «no hay con qué medirlo»; nunca
 // un cero.
 // ═══════════════════════════════════════════════════════════════════════════
@@ -26,7 +26,7 @@ export type TasaATiempo = {
 /** Todas las cifras de un tramo de días: una semana, o sus primeros días. */
 export type CifrasDePeriodo = {
   consumo: {
-    /** Consumo, sin el service fee (financed). */
+    /** Consumo, sin la Comisión Helios (financed). */
     consumoUsd: number
     consumos: number
     /** `null` sin consumos. */
@@ -36,7 +36,7 @@ export type CifrasDePeriodo = {
     locales: number
   }
   ingreso: {
-    /** El service fee de Helios SIN IVA. Nunca se suma al consumo. */
+    /** La Comisión Helios de Helios SIN IVA. Nunca se suma al consumo. */
     servicioUsd: number
     /** Cargos por atraso devengados, sin IVA y sin los condonados. */
     cargosPorAtrasoUsd: number

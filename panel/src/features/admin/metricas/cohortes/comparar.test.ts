@@ -5,7 +5,7 @@
  *
  * Lo que se vigila: que las columnas del gráfico vayan de la más vieja a la
  * más nueva (las doce más recientes) y sumen su total a cobrar; que el CSV
- * lleve cada importe con sus dos partes (consumo sin fee y service fee),
+ * lleve cada importe con sus dos partes (consumo sin comisión y Comisión Helios),
  * nunca un total sin sus sumandos; que no diga «servicio»; y que un dato que
  * no hay salga en blanco.
  */
@@ -59,7 +59,7 @@ console.log('\n── El CSV ─────────────────
   igual(cabeceras.length, 30 + 24 * 2, 'la semana, lo que hay que cobrar y un bloque por cuota')
   igual(
     cabeceras.filter((h) => h.startsWith('Total a cobrar')),
-    ['Total a cobrar ($)', 'Total a cobrar: financiado, sin fee ($)', 'Total a cobrar: service fee + IVA ($)'],
+    ['Total a cobrar ($)', 'Total a cobrar: financiado, sin comisión ($)', 'Total a cobrar: Comisión Helios + IVA ($)'],
     'el total a cobrar, con su desglose',
   )
   // Todo importe (una cabecera en $ que no es ya una parte) trae sus dos partes.
@@ -67,22 +67,22 @@ console.log('\n── El CSV ─────────────────
     .filter((h) => h.endsWith(' ($)') && !h.includes(':'))
     .filter((h) => {
       const base = h.slice(0, -' ($)'.length)
-      return !cabeceras.includes(`${base}: financiado, sin fee ($)`) || !cabeceras.includes(`${base}: service fee + IVA ($)`)
+      return !cabeceras.includes(`${base}: financiado, sin comisión ($)`) || !cabeceras.includes(`${base}: Comisión Helios + IVA ($)`)
     })
-  igual(sinPartes, [], 'ningún importe sin su financiamiento y su service fee')
+  igual(sinPartes, [], 'ningún importe sin su financiamiento y su Comisión Helios')
   igual(cabeceras.filter((h) => /servicio/i.test(h)), [], 'ninguna cabecera dice «servicio»')
 
   const csv = construirCsv(columnas, [s14])
   const [cabecera = '', fila = ''] = csv.replace(/^\uFEFF/, '').split('\r\n')
   const valores = Object.fromEntries(cabecera.split(';').map((h, i) => [h, fila.split(';')[i]]))
   igual(valores['Total a cobrar ($)'], '1419,26', 'lo que hay que cobrar, con coma decimal')
-  igual(valores['Total a cobrar: financiado, sin fee ($)'], '1152,00', 'su financiamiento, sin fee')
-  igual(valores['Total a cobrar: service fee + IVA ($)'], '267,26', 'su service fee')
+  igual(valores['Total a cobrar: financiado, sin comisión ($)'], '1152,00', 'su financiamiento, sin comisión')
+  igual(valores['Total a cobrar: Comisión Helios + IVA ($)'], '267,26', 'su Comisión Helios')
   igual(valores['Cobrado ($)'], '609,85', 'lo cobrado de las dos cuotas')
   igual(valores['Cobrado (%)'], '42,97', 'qué parte del total se cobró')
-  igual(valores['Vencido: service fee + IVA ($)'], '28,57', 'el service fee de lo vencido')
+  igual(valores['Vencido: Comisión Helios + IVA ($)'], '28,57', 'la Comisión Helios de lo vencido')
   igual(valores['Cuota 1 · total de la cuota ($)'], '709,75', 'lo que se cobra en la cuota 1')
-  igual(valores['Cuota 1 · vencido: service fee + IVA ($)'], '28,57', 'y el service fee de lo vencido en ella')
+  igual(valores['Cuota 1 · vencido: Comisión Helios + IVA ($)'], '28,57', 'y la Comisión Helios de lo vencido en ella')
   igual(valores['Cuota 2 · cobrado (%)'], '27,97', 'un porcentaje, con coma')
   const sinCuota2 = leerCohorte(cohorteCruda('2026-09-07', [SEMANA_7.cuotas[0]]))
   const filaSin = construirCsv(columnas, [sinCuota2]).split('\r\n')[1] ?? ''

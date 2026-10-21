@@ -29,7 +29,7 @@ function comprueba(ok: boolean, titulo: string, detalle = '') {
   console.log(`${ok ? '  ok  ' : ' FALLA'}  ${titulo}${ok ? '' : ` — ${detalle}`}`)
 }
 
-const CORTES: CortesDeTramo = { gracia: 3, intervalo: 7, baja: 30, expulsion: 60 }
+const CORTES: CortesDeTramo = { intervalo: 7, baja: 30, expulsion: 60 }
 
 console.log('── El paso entre tramos ─────────────────────────────────────')
 {
@@ -42,8 +42,8 @@ console.log('── El paso entre tramos ─────────────
       {
         cut_date: '2026-09-14',
         people_total: 6,
-        people: { al_dia: 2, t1: 2, t2: 1, t3: 1, t4: 0, t5: 0 },
-        overdue_usd: { t1: 4.785, t2: 15, t3: 20, t4: 0, t5: 0 },
+        people: { al_dia: 2, t1: 2, t2: 1, t3: 1, t4: 0 },
+        overdue_usd: { t1: 4.785, t2: 15, t3: 20, t4: 0 },
         transitions: [
           { from: 'al_dia', to: 'al_dia', people: 1 },
           { from: 'al_dia', to: 't1', people: 2 },
@@ -62,7 +62,7 @@ console.log('── El paso entre tramos ─────────────
   })
 
   comprueba(
-    flujo.cortes.gracia === 3 && flujo.cortes.expulsion === 60,
+    flujo.cortes.intervalo === 7 && flujo.cortes.expulsion === 60,
     'los cortes salen de la respuesta, no de números escritos aquí',
   )
   const semana = flujo.semanas[0]
@@ -79,7 +79,7 @@ console.log('── El paso entre tramos ─────────────
   )
   const alDia = matriz.find((f) => f.desde === 'al_dia')
   comprueba(
-    alDia?.hacia.t1 === 2 && alDia.hacia.t5 === 0 && alDia.total === 4,
+    alDia?.hacia.t1 === 2 && alDia.hacia.t4 === 0 && alDia.total === 4,
     'cada celda cae en su columna y lo que falta vale cero',
   )
 
@@ -103,18 +103,20 @@ console.log('\n── La mora de hoy por tramo ───────────
       { diasDeAtraso: 0, vencido: 0 },
       { diasDeAtraso: 2, vencido: 10 },
       { diasDeAtraso: 3, vencido: 5 },
-      { diasDeAtraso: 4, vencido: 7 },
+      { diasDeAtraso: 7, vencido: 7 },
+      { diasDeAtraso: 8, vencido: 3 },
       { diasDeAtraso: 30, vencido: 20 },
       { diasDeAtraso: 61, vencido: 50 },
       { diasDeAtraso: 5, vencido: 0 },
     ],
     CORTES,
   )
-  comprueba(d.t1.personas === 2 && d.t1.vencido === 15, 'el día de la gracia sigue en t1')
-  comprueba(d.t2.personas === 1, 'el día siguiente a la gracia ya es t2 (y sin deuda no cuenta)')
-  comprueba(d.t4.vencido === 20, 'el día de la baja ya es t4')
-  comprueba(d.t5.vencido === 50, 'pasada la expulsión es t5')
-  comprueba(d.t3.personas === 0, 'nadie inventado en un tramo vacío')
+  comprueba(d.t1.personas === 3 && d.t1.vencido === 22, 'hasta el intervalo es t1 (la gracia ya no corta, y sin deuda no cuenta)')
+  comprueba(d.t2.personas === 1 && d.t2.vencido === 3, 'el día siguiente al intervalo ya es t2')
+  comprueba(d.t3.vencido === 20, 'el día de la baja ya es t3')
+  comprueba(d.t4.vencido === 50, 'pasada la expulsión es t4')
+  const vacio = deudaPorTramo([{ diasDeAtraso: 2, vencido: 1 }], CORTES)
+  comprueba(vacio.t3.personas === 0 && vacio.t4.personas === 0, 'nadie inventado en un tramo vacío')
 }
 
 console.log('\n── Las cosechas ─────────────────────────────────────────────')
@@ -151,7 +153,7 @@ console.log('\n── Las cosechas ───────────────
       },
     ],
   })
-  comprueba(nuevas.filas[0].financiado === 7.5, 'el financiado es el financiamiento sin fee')
+  comprueba(nuevas.filas[0].financiado === 7.5, 'el financiado es el financiamiento sin comisión')
   comprueba(nuevas.filas[0].impagoPct === 0, 'un 0 % que la base manda es un 0 %')
 
   const sinVencido = leerCosechas({
@@ -319,13 +321,13 @@ console.log('\n── Primera cuota, cupo y clínicas ────────�
     { merchant_id: 'a', merchant_name: 'Chico', charge_count: 1, financed_volume_usd: 5 },
     { merchant_id: 'b', merchant_name: 'Grande', charge_count: 4, financed_volume_usd: 50, overdue_debt_pct: null },
   ])
-  comprueba(locales[0].nombre === 'Grande', 'las clínicas se ordenan por financiamiento sin fee')
+  comprueba(locales[0].nombre === 'Grande', 'las clínicas se ordenan por financiamiento sin comisión')
   comprueba(locales[0].moraPct === null, 'una mora sin deuda es «sin dato»')
 }
 
 console.log('\n── El volumen de la ventana ─────────────────────────────────')
 {
-  // La forma de admin_overview en dev (CONTRATOS-D3 §1): 63,78 lleva el service fee.
+  // La forma de admin_overview en dev (CONTRATOS-D3 §1): 63,78 lleva la Comisión Helios.
   const volumen = {
     financedUsd: 63.78,
     previousUsd: 0,
@@ -339,7 +341,7 @@ console.log('\n── El volumen de la ventana ───────────
     activePeople: 2,
   }
   const v = volumenDeLaVentana({ businessDate: '2026-09-24', windowDays: 30, volume: volumen })
-  comprueba(v.financiado === 51.5 && v.ticket === 6.44, 'el financiado y el ticket van sin el service fee', JSON.stringify(v))
+  comprueba(v.financiado === 51.5 && v.ticket === 6.44, 'el financiado y el ticket van sin la Comisión Helios', JSON.stringify(v))
   comprueba(v.personas === 2, 'los pacientes salen de las cuotas, no de quien abrió el financiamiento', String(v.personas))
   comprueba(
     v.desde === '2026-08-26' && v.hasta === '2026-09-24',
@@ -408,7 +410,7 @@ console.log('\n── Las alertas ───────────────�
   )
   comprueba(
     describirAlerta(cupo.detalle) ===
-      'Se financió $6,00 (sin fee) en Bar Nocturno el 24/09/26 con $28,00 ya ocupados de un cupo de $30,00.',
+      'Se financió $6,00 (sin comisión) en Bar Nocturno el 24/09/26 con $28,00 ya ocupados de un cupo de $30,00.',
     'la alerta se describe en una frase',
     describirAlerta(cupo.detalle),
   )

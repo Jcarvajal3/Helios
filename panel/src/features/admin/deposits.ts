@@ -20,6 +20,12 @@ export type UnmatchedDeposit = {
   amountUsd: number | null
   description: string | null
   importedAt: string
+  /**
+   * El pagador (la cédula o el teléfono de la descripción) es un paciente de
+   * Helios o el pagador de un pago registrado aquí. Si no, casi seguro es un
+   * pago de Ronda, que cobra en la misma cuenta del BNC: no se mezcla.
+   */
+  deHelios: boolean
 }
 
 export async function fetchUnmatchedDeposits(limit = 100): Promise<UnmatchedDeposit[]> {
@@ -37,6 +43,8 @@ export async function fetchUnmatchedDeposits(limit = 100): Promise<UnmatchedDepo
     amountUsd: row.amount_usd == null ? null : Number(row.amount_usd),
     description: (row.description as string | null) ?? null,
     importedAt: String(row.imported_at),
+    // Una base que no lo manda no aparta nada: se ve todo, como antes.
+    deHelios: row.de_helios !== false,
   }))
 }
 
@@ -72,7 +80,7 @@ export async function discardDeposit(lineId: string, reason: string): Promise<vo
 }
 
 /** Un abono que alguien sacó de la lista porque no era de un usuario. */
-export type DiscardedDeposit = UnmatchedDeposit & {
+export type DiscardedDeposit = Omit<UnmatchedDeposit, 'deHelios'> & {
   importedByName: string
   discardedAt: string
   discardedByName: string

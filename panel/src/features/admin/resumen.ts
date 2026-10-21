@@ -1,5 +1,4 @@
 import { comoFila, comoLista, numeroONulo } from '@/lib/json'
-import type { Rango } from '@/components/ui'
 import { supabase } from '@/lib/supabase'
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -12,8 +11,8 @@ import { supabase } from '@/lib/supabase'
 // nombres.
 //
 // Cada importe lleva su clase en el nombre: `financedUsd` es consumo sin el
-// service fee; `serviceFeeUsd` es el service fee sin IVA y va siempre
-// aparte; `…DebtUsd` es deuda por cobrar, con el service fee dentro, y no se
+// Comisión Helios; `serviceFeeUsd` es la Comisión Helios sin IVA y va siempre
+// aparte; `…DebtUsd` es deuda por cobrar, con la Comisión Helios dentro, y no se
 // mezcla con el consumo.
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -29,10 +28,10 @@ export type SemanaResumen = {
   complete: boolean
   /** 7, o los días que lleva la semana en curso (hoy incluido). */
   daysElapsed: number
-  /** Consumo, sin el service fee. */
+  /** Consumo, sin la Comisión Helios. */
   financedUsd: number
   chargeCount: number
-  /** Service fee sin IVA. Nunca se suma al consumo. */
+  /** Comisión Helios sin IVA. Nunca se suma al consumo. */
   serviceFeeUsd: number
   /** Cargos por atraso caídos en la semana, sin los condonados. */
   lateFeeUsd: number
@@ -43,13 +42,13 @@ export type SemanaResumen = {
   newUsers: number
   firstTimeBuyers: number
   writtenOffFinancedUsd: number
-  /** Lo mismo en deuda, con el service fee dentro. No se mezcla con lo anterior. */
+  /** Lo mismo en deuda, con la Comisión Helios dentro. No se mezcla con lo anterior. */
   writtenOffDebtUsd: number
   /** Deuda viva al cierre del domingo (o ahora, en la semana en curso). */
   openDebtUsd: number
   overdueDebtUsd: number
   /**
-   * El desglose de las dos deudas: consumo (sin fee) y service fee (con su
+   * El desglose de las dos deudas: consumo (sin comisión) y Comisión Helios (con su
    * IVA), que suman la deuda. `null` si la base todavía no lo manda: no se
    * inventa. Opcionales para no obligar a quien arma una semana a mano.
    */
@@ -116,78 +115,5 @@ export async function fetchWeeklySummary(semanas: number): Promise<ResumenSemana
     weeks: Number(raw.weeks ?? semanas),
     from: String(raw.from),
     rows: comoLista(raw.rows).map(leerSemana),
-  }
-}
-
-// ── Por cada cien euros financiados ────────────────────────────────────────
-
-/**
- * Lo que dejaron los consumos de un rango, por cosecha
- * (`admin_unit_economics`).
- *
- * Todo sigue a los consumos del rango: su service fee, sus cargos por atraso y lo
- * que de ellos se dio por perdido después. Mientras `matured` sea falso, lo
- * perdido todavía puede subir.
- */
-export type EconomiaUnitaria = {
-  businessDate: string
-  /** El rango que usó el servidor, que recorta un «hasta» futuro a hoy. */
-  from: string
-  to: string
-  windowDays: number
-  /** Lo que tarda una cosecha en tener su número final. */
-  seasonDays: number
-  matured: boolean
-  financedUsd: number
-  chargeCount: number
-  /** Service fee sin IVA, devengado. */
-  serviceFeeUsd: number
-  /** Cargos por atraso de esas cuotas, sin los condonados. */
-  lateFeeUsd: number
-  lateFeeCollectedUsd: number
-  writtenOffFinancedUsd: number
-  writtenOffPct: number | null
-  /** El impago al que Ronda deja de ganar dinero con esos consumos. */
-  breakEvenPct: number | null
-  /** `null` si no hubo consumo en el rango. */
-  per100: {
-    serviceFeeUsd: number
-    lateFeeUsd: number
-    writtenOffFinancedUsd: number
-  } | null
-}
-
-export async function fetchUnitEconomics(rango: Rango): Promise<EconomiaUnitaria> {
-  const { data, error } = await supabase.rpc('admin_unit_economics', {
-    p_from: rango.from,
-    p_to: rango.to,
-  })
-  if (error) throw error
-
-  const raw = comoFila(data)
-  const per100 = raw.per_100 == null ? null : comoFila(raw.per_100)
-
-  return {
-    businessDate: String(raw.business_date),
-    from: String(raw.from),
-    to: String(raw.to),
-    windowDays: Number(raw.window_days ?? 0),
-    seasonDays: Number(raw.season_days ?? 0),
-    matured: raw.matured === true,
-    financedUsd: Number(raw.financed_usd ?? 0),
-    chargeCount: Number(raw.charge_count ?? 0),
-    serviceFeeUsd: Number(raw.service_fee_usd ?? 0),
-    lateFeeUsd: Number(raw.late_fee_usd ?? 0),
-    lateFeeCollectedUsd: Number(raw.late_fee_collected_usd ?? 0),
-    writtenOffFinancedUsd: Number(raw.written_off_financed_usd ?? 0),
-    writtenOffPct: numeroONulo(raw.written_off_pct),
-    breakEvenPct: numeroONulo(raw.break_even_pct),
-    per100: per100
-      ? {
-          serviceFeeUsd: Number(per100.service_fee_usd ?? 0),
-          lateFeeUsd: Number(per100.late_fee_usd ?? 0),
-          writtenOffFinancedUsd: Number(per100.written_off_financed_usd ?? 0),
-        }
-      : null,
   }
 }

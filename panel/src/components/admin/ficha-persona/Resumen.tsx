@@ -98,7 +98,7 @@ function SiguienteNivel({ user, siguiente }: { user: UserDetail; siguiente: Leve
   return (
     <Seccion
       titulo="Siguiente nivel"
-      info="Lo que pide el nivel siguiente: un financiamiento pagado (sin fee, la suma del financiamiento de sus cuotas pagadas) y unos meses desde que pidió el código."
+      info="Lo que pide el nivel siguiente: un financiamiento pagado (sin comisión, la suma del financiamiento de sus cuotas pagadas) y unos meses desde que pidió el código."
     >
       <Card className="flex flex-col gap-4">
         <p className="type-panel-body text-on-surface">
@@ -106,7 +106,7 @@ function SiguienteNivel({ user, siguiente }: { user: UserDetail; siguiente: Leve
         </p>
         {siguiente.requiredSpendUsd > 0 && (
           <Progreso
-            rotulo="Financiamiento pagado (sin fee)"
+            rotulo="Financiamiento pagado (sin comisión)"
             cifra={`${formatUsd(pagado)} de ${formatUsd(siguiente.requiredSpendUsd)}`}
             valor={pagado}
             max={siguiente.requiredSpendUsd}

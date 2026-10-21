@@ -48,12 +48,12 @@ igual(
 )
 igual(
   texto(fraseDeLaSemana({ ...d, locales: [{ ...lq, consumoUsd: 100 }, { ...em, consumoUsd: 100 }] })),
-  'Esta semana se financió en **2 clínicas**. Empatan La Quinta Bar y El Marchante, con **$100,00** sin fee cada una.',
+  'Esta semana se financió en **2 clínicas**. Empatan La Quinta Bar y El Marchante, con **$100,00** sin comisión cada una.',
   'un empate arriba se dice como empate',
 )
 igual(
   texto(fraseDeLaSemana({ ...d, locales: [nl, sv] })),
-  'Esta semana se financió en **1 clínica**, Nueva Clínica: **$88,00** sin fee en 3 financiamientos.',
+  'Esta semana se financió en **1 clínica**, Nueva Clínica: **$88,00** sin comisión en 3 financiamientos.',
   'un solo clínica no «se lleva el 100 %»',
 )
 igual(texto(fraseDeLaSemana({ ...d, locales: [sv] })), 'Esta semana todavía no se ha financiado en ninguna clínica.', 'sin financiamientos, en curso')
@@ -62,17 +62,17 @@ igual(texto(fraseDeLaSemana({ ...cerrada, locales: [] })), 'La semana del 14 al 
 console.log('── Una clínica ──────────────────────────────────────────────────')
 igual(
   texto(fraseDelLocal(d, em)),
-  'El Marchante lleva esta semana **$364,00 financiado sin fee** en 13 financiamientos de **19 pacientes**, **20 % más** que la semana pasada a la misma altura. **9 pacientes** eran nuevos en la clínica.',
+  'El Marchante lleva esta semana **$364,00 financiado sin comisión** en 13 financiamientos de **19 pacientes**, **20 % más** que la semana pasada a la misma altura. **9 pacientes** eran nuevos en la clínica.',
   'lo que lleva, contra qué y cuánta gente nueva',
 )
 igual(
   texto(fraseDelLocal(cerrada, { ...lq, nuevas: 0 })),
-  'La Quinta Bar registró la semana del 14 al 20 sep **$548,40 financiado sin fee** en 17 financiamientos de **27 pacientes**, **7 % más** que la semana anterior.',
+  'La Quinta Bar registró la semana del 14 al 20 sep **$548,40 financiado sin comisión** en 17 financiamientos de **27 pacientes**, **7 % más** que la semana anterior.',
   'una semana cerrada, sin gente nueva',
 )
 igual(
   texto(fraseDelLocal(d, { ...sv, consumoAnteriorUsd: 45 })),
-  'Sin Financiamientos todavía no ha financiado nada esta semana. En la semana pasada a la misma altura llevaba **$45,00** sin fee.',
+  'Sin Financiamientos todavía no ha financiado nada esta semana. En la semana pasada a la misma altura llevaba **$45,00** sin comisión.',
   'sin financiamientos, con lo que llevaba la anterior',
 )
 

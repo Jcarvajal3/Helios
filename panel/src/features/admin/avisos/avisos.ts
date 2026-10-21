@@ -47,16 +47,17 @@ export const PLANTILLAS: ReadonlyArray<{
   cuando: string
 }> = [
   { clave: 'comprobante_financiamiento', rotulo: 'Comprobante del financiamiento', canal: 'Correo', cuando: 'Al confirmar el financiamiento, y al reenviarlo' },
-  { clave: 'confirmar_financiamiento', rotulo: 'Confirma tu financiamiento', canal: 'WhatsApp automático (plantilla de Meta)', cuando: 'Al registrar el financiamiento: el paciente acepta con Sí' },
+  { clave: 'confirmar_financiamiento', rotulo: 'Confirma tu pago en cuotas', canal: 'WhatsApp automático (plantilla de Meta)', cuando: 'Al registrar el financiamiento: el paciente acepta con Sí' },
   { clave: 'bienvenida', rotulo: 'Bienvenida', canal: 'WhatsApp (automático si el paciente aceptó por WhatsApp)', cuando: 'Al confirmar el financiamiento' },
   { clave: 'cuota_en_3_dias', rotulo: 'La cuota vence en 3 días', canal: 'WhatsApp automático y correo', cuando: 'Tres días antes del vencimiento, a las 12:00' },
   { clave: 'cuota_manana', rotulo: 'La cuota vence mañana', canal: 'WhatsApp automático y correo', cuando: 'La víspera del vencimiento, a las 19:00' },
   { clave: 'cuota_hoy', rotulo: 'La cuota vence hoy', canal: 'WhatsApp automático y correo', cuando: 'El día del vencimiento, a las 08:00' },
   { clave: 'cuota_vencida_d1', rotulo: 'Cuota vencida', canal: 'WhatsApp automático y correo', cuando: 'Un día después del vencimiento' },
-  { clave: 'cargo_por_atraso_d4', rotulo: 'Cargo por atraso', canal: 'WhatsApp automático y correo', cuando: 'Cuatro días después del vencimiento, con el cargo ya cobrado' },
+  { clave: 'cargo_por_atraso_d4', rotulo: 'Cargo por atraso', canal: 'WhatsApp automático y correo (sin efecto: el cargo por atraso está en $0)', cuando: 'Cuatro días después del vencimiento, solo si se cobró un cargo' },
   { clave: 'pago_recibido', rotulo: 'Pago recibido', canal: 'Correo', cuando: 'Al aprobar un pago' },
   { clave: 'pago_rechazado', rotulo: 'Pago rechazado', canal: 'Correo', cuando: 'Al rechazar un pago' },
   { clave: 'cuenta_congelada', rotulo: 'Cuenta congelada', canal: 'WhatsApp automático y correo (apagado)', cuando: 'Al congelarse la cuenta por una cuota vencida' },
+  { clave: 'pago_a_clinica', rotulo: 'Transferencia a la clínica', canal: 'Correo a los administradores de la clínica', cuando: 'Al registrar una transferencia a la clínica (una a una o del pago masivo)' },
 ]
 
 /**

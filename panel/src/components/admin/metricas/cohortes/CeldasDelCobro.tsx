@@ -10,8 +10,8 @@ import { ImporteDeCuota } from './ImporteDeCuota'
 // ═══════════════════════════════════════════════════════════════════════════
 // Las columnas de lo que hay que cobrar, las mismas en «Todas las semanas de
 // consumo» y en «Por local»: total a cobrar → cobrado → lo que falta (vencido
-// y por vencer), cada importe con su desglose debajo (consumo · fee), y cómo
-// va cada cuota. El consumo sin fee queda en el desglose del total.
+// y por vencer), cada importe con su desglose debajo (consumo · comisión), y cómo
+// va cada cuota. El consumo sin comisión queda en el desglose del total.
 //
 // El desglose va en dos líneas bajo la cifra (`celda`): en una sola, cada
 // columna medía lo que la frase y la tabla no cabía ni en un monitor ancho.
@@ -36,13 +36,13 @@ export function CabecerasDelCobro() {
       <th scope="col" className={`${SEPARADOR} ${CABECERA} text-right`}>
         <ConAyuda
           texto="Total a cobrar"
-          ayuda="Cuota 1 + cuota 2 de esos financiamientos, con su desglose debajo: financiado (sin fee) y service fee + IVA."
+          ayuda="Cuota 1 + cuota 2 de esos financiamientos, con su desglose debajo: financiado (sin comisión) y Comisión Helios + IVA."
         />
       </th>
       <th scope="col" className={`${CABECERA} text-left`}>
         <ConAyuda
           texto="Cobrado (%)"
-          ayuda="Cobrado (a tiempo o con atraso) ÷ total a cobrar, en dólares con fee; la barra reparte el total por estado."
+          ayuda="Cobrado (a tiempo o con atraso) ÷ total a cobrar, en dólares con comisión; la barra reparte el total por estado."
         />
       </th>
       <th scope="col" className={`${CABECERA} text-right`}>
@@ -51,7 +51,7 @@ export function CabecerasDelCobro() {
       <th scope="col" className={`${CABECERA} text-right`}>
         <ConAyuda
           texto="Vencido"
-          ayuda="Cuotas sin pagar con el vencimiento ya pasado (también dentro de la gracia), sin lo perdido, en dólares con fee."
+          ayuda="Cuotas sin pagar con el vencimiento ya pasado (también dentro de la gracia), sin lo perdido, en dólares con comisión."
         />
       </th>
       <th scope="col" className={`${CABECERA} text-right`}>
@@ -60,7 +60,7 @@ export function CabecerasDelCobro() {
       <th scope="col" className={`${SEPARADOR} ${CABECERA} text-left`}>
         <ConAyuda
           texto="Cobrado por cuota (%)"
-          ayuda="Cobrado de la cuota 1 y de la cuota 2 ÷ total de cada una, en dólares con fee; cada barra reparte su cuota por estado."
+          ayuda="Cobrado de la cuota 1 y de la cuota 2 ÷ total de cada una, en dólares con comisión; cada barra reparte su cuota por estado."
         />
       </th>
     </>

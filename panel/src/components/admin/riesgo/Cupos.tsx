@@ -79,7 +79,7 @@ const COLUMNAS: Array<Column<UsoDeNivel>> = [
     key: 'ocupado',
     header: 'Cupo ocupado',
     type: 'number',
-    info: 'Sin el service fee: el financiado de cada financiamiento que todavía tiene alguna cuota de ese paciente sin pagar. Es la misma cuenta que frena una compra.',
+    info: 'Sin la Comisión Helios: el financiado de cada financiamiento que todavía tiene alguna cuota de ese paciente sin pagar. Es la misma cuenta que frena una compra.',
     cell: (r) => formatUsd(r.ocupado),
     sort: (r) => r.ocupado,
     sortDir: 'desc',
@@ -89,7 +89,7 @@ const COLUMNAS: Array<Column<UsoDeNivel>> = [
     key: 'disponible-hoy',
     header: 'Cupo disponible hoy',
     type: 'number',
-    info: 'Lo que los registros del nivel pueden gastar hoy (sin fee), sumado paciente a paciente. Quien tiene una cuota vencida, la cuenta sin activar o un bloqueo suma cero aunque le quede cupo.',
+    info: 'Lo que los registros del nivel pueden gastar hoy (sin comisión), sumado paciente a paciente. Quien tiene una cuota vencida, la cuenta sin activar o un bloqueo suma cero aunque le quede cupo.',
     cell: (r) => (r.gastableHoy === null ? '—' : formatUsd(r.gastableHoy)),
     sort: (r) => r.gastableHoy,
     csv: (r) => (r.gastableHoy === null ? null : csvDinero(r.gastableHoy)),
@@ -98,7 +98,7 @@ const COLUMNAS: Array<Column<UsoDeNivel>> = [
     key: 'disponible',
     header: 'Cupo libre',
     type: 'number',
-    info: 'El límite menos lo ocupado, sin fee, sin mirar si hoy el paciente puede gastar.',
+    info: 'El límite menos lo ocupado, sin comisión, sin mirar si hoy el paciente puede gastar.',
     cell: (r) => formatUsd(r.disponible),
     sort: (r) => r.disponible,
     csv: (r) => csvDinero(r.disponible),
@@ -107,7 +107,7 @@ const COLUMNAS: Array<Column<UsoDeNivel>> = [
     key: 'exposicion',
     header: 'Exposición',
     type: 'number',
-    info: 'Sin el service fee: el financiado de cada cuota pendiente que no se ha dado por perdida, lo que falta por volver. Es menor que lo ocupado, porque quien pagó la cuota 1 sigue ocupando el financiamiento entero hasta pagar la 2.',
+    info: 'Sin la Comisión Helios: el financiado de cada cuota pendiente que no se ha dado por perdida, lo que falta por volver. Es menor que lo ocupado, porque quien pagó la cuota 1 sigue ocupando el financiamiento entero hasta pagar la 2.',
     cell: (r) => formatUsd(r.exposicion),
     sort: (r) => r.exposicion,
     sortDir: 'desc',
@@ -162,7 +162,7 @@ export function Cupos({
         <Stat
           label="Exposición"
           value={t ? formatUsd(t.exposicion) : ''}
-          info="Sin el service fee: el financiado de cada cuota pendiente que no se ha dado por perdida, de todos (también fuera de los niveles activos). Es la parte financiada de «Por cobrar» en Global › Resumen."
+          info="Sin la Comisión Helios: el financiado de cada cuota pendiente que no se ha dado por perdida, de todos (también fuera de los niveles activos). Es la parte financiada de «Por cobrar» en Global › Resumen."
           estado={estado}
           onReintentar={reintentar}
         />
@@ -170,7 +170,7 @@ export function Cupos({
           label="Cupo ocupado"
           value={t ? formatUsd(t.ocupado) : ''}
           hint={t ? `${t.usando} ${t.usando === 1 ? 'paciente' : 'pacientes'} con cupo ocupado` : undefined}
-          info="Sin el service fee: el financiado de cada financiamiento que todavía tiene alguna cuota sin pagar, de todos (también fuera de los niveles activos). Es la cuenta que frena una compra."
+          info="Sin la Comisión Helios: el financiado de cada financiamiento que todavía tiene alguna cuota sin pagar, de todos (también fuera de los niveles activos). Es la cuenta que frena una compra."
           estado={estado}
           onReintentar={reintentar}
         />
@@ -182,7 +182,7 @@ export function Cupos({
               ? `${formatUsd(t.disponible)} de cupo libre de ${formatUsd(t.cupoTotal)}, sin contar los frenos`
               : undefined
           }
-          info="Lo que los registros de los niveles activos pueden gastar hoy (sin fee), sumado paciente a paciente. Quien tiene una cuota vencida, la cuenta sin activar o un bloqueo suma cero aunque le quede cupo; debajo, el cupo libre sin contar esos frenos."
+          info="Lo que los registros de los niveles activos pueden gastar hoy (sin comisión), sumado paciente a paciente. Quien tiene una cuota vencida, la cuenta sin activar o un bloqueo suma cero aunque le quede cupo; debajo, el cupo libre sin contar esos frenos."
           link={{ to: '/admin/ajustes', search: { tab: 'niveles' } }}
           estado={estado}
           onReintentar={reintentar}
@@ -204,7 +204,7 @@ export function Cupos({
 
       <Bloque
         titulo="Por nivel"
-        info="Quien está fuera de los niveles activos no sale en la tabla, pero lo que debe (financiado, sin fee) sí entra en el cupo ocupado y en la exposición de arriba."
+        info="Quien está fuera de los niveles activos no sale en la tabla, pero lo que debe (financiado, sin comisión) sí entra en el cupo ocupado y en la exposición de arriba."
         consulta={uso}
         filas={4}
       >
@@ -224,7 +224,7 @@ export function Cupos({
                 Fuera de los niveles activos: {d.fueraDeNivel.personas}{' '}
                 {d.fueraDeNivel.personas === 1 ? 'paciente' : 'pacientes'}, que ocupan{' '}
                 {formatUsd(d.fueraDeNivel.ocupado)} y deben {formatUsd(d.fueraDeNivel.exposicion)} facturados,
-                sin el service fee.
+                sin la Comisión Helios.
               </p>
             )}
           </>

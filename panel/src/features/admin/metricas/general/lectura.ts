@@ -21,7 +21,7 @@ import type {
 // Lo que se paga en cuotas no se lee sin sus dos partes: si a un importe
 // payable le falta el consumo, la respuesta está rota y se lanza un error.
 // Así la pantalla dice «No se pudo leer» en vez de pintar un total sin su
-// desglose (la regla del fee) o un cero que no es.
+// desglose (la regla de la comisión) o un cero que no es.
 //
 // Puro: se prueba en `lectura.test.ts`.
 // ═══════════════════════════════════════════════════════════════════════════
@@ -73,11 +73,13 @@ function leerPorCadaCien(v: unknown): PorCadaCien {
     financedMaduroUsd: numero(f.financed_maduro_usd),
     servicioUsd: numero(f.servicio_usd),
     cargosUsd: numero(f.cargos_usd),
+    personalUsd: numero(f.personal_usd),
     perdidoUsd: numero(f.perdido_usd),
     por100: p
       ? {
           servicioUsd: numero(p.servicio_usd),
           cargosUsd: numero(p.cargos_usd),
+          personalUsd: numero(p.personal_usd),
           perdidoUsd: numero(p.perdido_usd),
           margenUsd: numero(p.margen_usd),
         }

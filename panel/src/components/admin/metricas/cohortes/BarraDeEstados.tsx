@@ -19,8 +19,8 @@ import { COLOR_DE_ESTADO } from './colores'
  *
  * Al pasar el ratón por un tramo (o al recorrerla con las flechas) sale el
  * globo del kit al instante: cada estado con su cifra y su parte, el tramo
- * señalado más claro que los demás y, debajo, su desglose (consumo sin fee ·
- * fee). Dentro de un enlace (la lista de semanas) la barra no se enfoca sola:
+ * señalado más claro que los demás y, debajo, su desglose (consumo sin comisión ·
+ * comisión). Dentro de un enlace (la lista de semanas) la barra no se enfoca sola:
  * `senaladaDesdeFuera` enseña el globo de la barra entera mientras el enlace
  * tiene el foco.
  *

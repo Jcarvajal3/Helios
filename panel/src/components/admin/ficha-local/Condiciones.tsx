@@ -5,9 +5,7 @@ import { useToast } from '@/components/Toast'
 import {
   Badge,
   Button,
-  Callout,
   Card,
-  Chip,
   ConfirmDialog,
   InfoDot,
   Input,
@@ -21,24 +19,32 @@ import {
   hoyCaracas,
 } from '@/components/ui'
 import { fetchMerchantTermsHistory, setSettlementTerms } from '@/features/admin/api'
-import type { MerchantTerms, SettlementPolicy } from '@/features/admin/api'
+import type { MerchantTerms } from '@/features/admin/api'
 import { SOLO_SUPER_ADMIN, useIsSuperAdmin } from '@/features/admin/role'
 import { formatoMontoEditable, leerMonto } from '@/lib/montos'
 import { describeError } from '@/lib/supabase'
 
-const POLITICAS: Array<{ value: SettlementPolicy; label: string }> = [
-  { value: 'scheduled', label: 'Por fecha' },
-  { value: 'on_collection', label: 'Por cobranza' },
-]
-
-const politica = (p: SettlementPolicy) => (p === 'scheduled' ? 'por fecha' : 'por cobranza')
+/**
+ * El reparto de Helios, el único que acepta el servidor
+ * (`admin_set_settlement_terms`, 20261019210200): sin adelanto, la mitad de la
+ * consulta en cada cuota, sin comisión de la clínica y por fecha. Las
+ * columnas vienen de Ronda, donde cada local pactaba el suyo.
+ */
+const REPARTO_DE_HELIOS: Pick<MerchantTerms, 'upfrontPct' | 'perInstallmentPct' | 'commissionPct' | 'policy'> = {
+  upfrontPct: 0,
+  perInstallmentPct: 50,
+  commissionPct: 0,
+  policy: 'scheduled',
+}
 
 /**
- * Las condiciones de liquidación: cuánto se le adelanta, cuánto por cuota, su
- * comisión, lo que gana su personal por financiamiento y cuándo se le paga.
- * Tienen fecha: cada financiamiento se liquida con las
- * vigentes su día. Cambiarlas lo exige el servidor a un super admin, y el
- * diálogo pide el motivo porque mueve el dinero que se le transfiere al local.
+ * Las condiciones de una clínica. Lo que se le paga no se pacta: recibe el
+ * 100 % de cada consulta, la mitad el día siguiente al vencimiento de cada
+ * cuota del paciente (días 8 y 15), pague o no el paciente. Lo único que se
+ * pacta es la comisión de su personal por orden confirmada.
+ *
+ * Tienen fecha: cada orden se liquida con las vigentes su día. Cambiarlas lo
+ * exige el servidor a un super admin, y el diálogo pide el motivo.
  */
 export function Condiciones({
   merchantId,
@@ -56,12 +62,8 @@ export function Condiciones({
   const isSuperAdmin = useIsSuperAdmin()
   const queryClient = useQueryClient()
 
-  // Con coma y no con `String`: «2.125» volvería de `leerMonto` como 2125.
-  const [upfront, setUpfront] = useState(formatoMontoEditable(initial.upfrontPct))
-  const [perInstallment, setPerInstallment] = useState(formatoMontoEditable(initial.perInstallmentPct))
-  const [commission, setCommission] = useState(formatoMontoEditable(initial.commissionPct))
-  const [policy, setPolicy] = useState<SettlementPolicy>(initial.policy)
-  // Vacío = usa el global (`null` en la base).
+  // Vacío = usa el global (`null` en la base). Con coma y no con `String`:
+  // «0.5» volvería de `leerMonto` como 5.
   const [comisionPersonal, setComisionPersonal] = useState(
     initial.staffCommissionUsd === null ? '' : formatoMontoEditable(initial.staffCommissionUsd),
   )
@@ -74,11 +76,7 @@ export function Condiciones({
   })
 
   const nums: MerchantTerms = {
-    // Lo que no se entiende como cifra es NaN: no cuadra y no se envía.
-    upfrontPct: leerMonto(upfront) ?? NaN,
-    perInstallmentPct: leerMonto(perInstallment) ?? NaN,
-    commissionPct: leerMonto(commission) ?? NaN,
-    policy,
+    ...REPARTO_DE_HELIOS,
     staffCommissionUsd: comisionPersonal.trim() === '' ? null : (leerMonto(comisionPersonal) ?? NaN),
   }
   const comisionOk =
@@ -89,14 +87,8 @@ export function Condiciones({
       ? `la global${comisionGlobal !== null ? ` (${formatUsd(comisionGlobal)})` : ''}`
       : formatUsd(v)
 
-  // La comisión NO entra en esta suma: los tramos reparten el neto del
-  // consumo (adelanto + dos cuotas = 100 %) y la comisión es lo que Ronda le
-  // factura al local aparte.
-  const total = nums.upfrontPct + nums.perInstallmentPct * 2
-  const cuadra = Math.abs(total - 100) < 0.001
-
-  // Nunca hacia atrás: los consumos ya cerrados se liquidaron con las
-  // condiciones de su noche.
+  // Nunca hacia atrás: las órdenes ya registradas se liquidaron con las
+  // condiciones de su día.
   const desdeOk = desde >= hoyCaracas()
 
   const mutation = useMutation({
@@ -104,7 +96,7 @@ export function Condiciones({
       setSettlementTerms({ merchantId, terms: nums, effectiveFrom: desde, note: nota }),
     onSuccess: () => {
       setConfirmando(false)
-      avisar(`Condiciones nuevas, en vigor desde el ${formatDay(desde)}`)
+      avisar(`Comisión del personal nueva, en vigor desde el ${formatDay(desde)}`)
       void queryClient.invalidateQueries({ queryKey: ['merchant-terms-history', merchantId] })
       onDone()
     },
@@ -112,134 +104,86 @@ export function Condiciones({
 
   const bloqueo = !isSuperAdmin
     ? SOLO_SUPER_ADMIN
-    : !cuadra
-      ? 'El adelanto más dos veces lo de cada cuota tiene que dar 100.'
-      : !Number.isFinite(nums.commissionPct)
-        ? 'La comisión de la clínica no es una cifra válida.'
-        : !comisionOk
-          ? 'La comisión por financiamiento no es una cifra válida (vacía = la global).'
-        : !desdeOk
-          ? 'La fecha de vigencia no puede ser anterior a hoy.'
-          : undefined
+    : !comisionOk
+      ? 'La comisión por orden no es una cifra válida (vacía = la global).'
+      : !desdeOk
+        ? 'La fecha de vigencia no puede ser anterior a hoy.'
+        : undefined
 
   return (
     <Seccion
-      titulo="Condiciones de liquidación"
-      info="Cada financiamiento se liquida con las condiciones vigentes su día: cambiarlas no toca nada de lo ya financiado. El adelanto y las dos cuotas cubren el neto entero (100); la comisión de la clínica va aparte, y Helios se la factura. Cambiarlas lo exige el servidor a un super admin."
+      titulo="Condiciones"
+      info="Cada orden se liquida con las condiciones vigentes su día: cambiarlas no toca nada de lo ya registrado. Cambiarlas lo exige el servidor a un super admin."
     >
       <Card className="flex flex-col gap-4">
-      <div className="grid grid-cols-3 gap-3">
-        <Input id={`up-${merchantId}`} label="Adelanto %" value={upfront} onChange={setUpfront} inputMode="decimal" />
-        <Input
-          id={`cu-${merchantId}`}
-          label="Por cuota %"
-          value={perInstallment}
-          onChange={setPerInstallment}
-          inputMode="decimal"
-        />
-        <Input
-          id={`co-${merchantId}`}
-          label="Comisión de la clínica %"
-          value={commission}
-          onChange={setCommission}
-          inputMode="decimal"
-        />
-      </div>
-
-      {cuadra ? (
-        <p className="type-panel-caption text-panel-muted">
-          {nums.upfrontPct || 0} + ({nums.perInstallmentPct || 0} × 2) = {total}: los tramos cuadran.
-        </p>
-      ) : (
-        <Callout tone="error" titulo="Los tramos no cuadran">
-          {nums.upfrontPct || 0} + ({nums.perInstallmentPct || 0} × 2) ={' '}
-          {Number.isFinite(total) ? total : '—'}: tienen que cubrir el neto entero (100).
-        </Callout>
-      )}
-
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-1.5">
-          <span className="type-panel-label text-on-surface-variant">Cuándo se le paga</span>
-          <InfoDot
-            title="Cuándo se le paga"
-            what="Por fecha: se le liquida en las fechas pactadas, pague o no el paciente, y la pérdida es de Helios. Por cobranza: se le liquida cuando el paciente paga, y la pérdida es de la clínica."
-          />
+        <div className="flex flex-col gap-1">
+          <span className="type-panel-label text-on-surface-variant">Lo que se le paga</span>
+          <p className="type-panel-body text-on-surface">
+            El 100 % de cada consulta: la mitad el día siguiente al vencimiento de cada cuota del paciente
+            (a los 8 y a los 15 días), pague o no el paciente. Es igual para todas las clínicas y no se
+            pacta.
+          </p>
         </div>
-        <div className="flex gap-2">
-          {POLITICAS.map((p) => (
-            <Chip key={p.value} selected={policy === p.value} onClick={() => setPolicy(p.value)}>
-              {p.label}
-            </Chip>
-          ))}
-        </div>
-      </div>
 
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-1.5">
-          <span className="type-panel-label text-on-surface-variant">Comisión por financiamiento</span>
-          <InfoDot
-            title="Comisión por financiamiento"
-            what="Lo que gana quien registra cada financiamiento confirmado en esta clínica. Se le paga a la clínica el día siguiente a la confirmación, en la transferencia de ese día junto con sus consultas, y ella se la entrega a su personal. Vacía, usa el valor global de Ajustes › Parámetros."
-          />
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-1.5">
+            <span className="type-panel-label text-on-surface-variant">Comisión del personal por orden</span>
+            <InfoDot
+              title="Comisión del personal por orden"
+              what="Lo que gana quien registra cada orden confirmada en esta clínica. Se le paga a la clínica el día siguiente a la confirmación, en la transferencia de ese día junto con sus consultas, y ella se la entrega a su personal. Vacía, usa el valor global de Ajustes › Parámetros."
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              id={`comision-personal-${merchantId}`}
+              value={comisionPersonal}
+              onChange={setComisionPersonal}
+              inputMode="decimal"
+              placeholder={comisionGlobal !== null ? `${formatoMontoEditable(comisionGlobal)} (la global)` : 'La global'}
+              error={!comisionOk}
+              hint={
+                nums.staffCommissionUsd === null
+                  ? `Vacía: usa la global${comisionGlobal !== null ? `, hoy ${formatUsd(comisionGlobal)}` : ''}.`
+                  : 'En dólares, por orden confirmada.'
+              }
+            />
+          </div>
         </div>
+
         <div className="grid grid-cols-2 gap-3">
           <Input
-            id={`comision-personal-${merchantId}`}
-            value={comisionPersonal}
-            onChange={setComisionPersonal}
-            inputMode="decimal"
-            placeholder={comisionGlobal !== null ? `${formatoMontoEditable(comisionGlobal)} (la global)` : 'La global'}
-            error={!comisionOk}
-            hint={
-              nums.staffCommissionUsd === null
-                ? `Vacía: usa la global${comisionGlobal !== null ? `, hoy ${formatUsd(comisionGlobal)}` : ''}.`
-                : 'En dólares, por financiamiento confirmado.'
-            }
+            id={`desde-${merchantId}`}
+            label="Vigente desde"
+            type="date"
+            value={desde}
+            onChange={setDesde}
+            error={!desdeOk}
           />
         </div>
-      </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <Input
-          id={`desde-${merchantId}`}
-          label="Vigente desde"
-          type="date"
-          value={desde}
-          onChange={setDesde}
-          error={!desdeOk}
-        />
-      </div>
-
-      <div>
-        <Button
-          size="md"
-          disabled={!!bloqueo}
-          motivoApagado={bloqueo}
-          onClick={() => setConfirmando(true)}
-        >
-          Guardar las condiciones
-        </Button>
-      </div>
+        <div>
+          <Button size="md" disabled={!!bloqueo} motivoApagado={bloqueo} onClick={() => setConfirmando(true)}>
+            Guardar la comisión
+          </Button>
+        </div>
       </Card>
 
       <Historia historia={historia} />
 
       {confirmando && (
         <ConfirmDialog
-          title="Cambiar las condiciones"
-          summary={`Desde el ${formatDay(desde)}, ${nums.upfrontPct} % de adelanto, ${nums.perInstallmentPct} % por cuota y ${nums.commissionPct} % de comisión de la clínica, con liquidación ${politica(policy)}. Comisión por financiamiento: ${textoComision(nums.staffCommissionUsd)}.`}
+          title="Cambiar la comisión del personal"
+          summary={`Desde el ${formatDay(desde)}, comisión del personal por orden: ${textoComision(nums.staffCommissionUsd)}.`}
           detail={
             <p className="type-panel-body text-on-surface-variant">
-              Antes: {initial.upfrontPct} % / {initial.perInstallmentPct} % / {initial.commissionPct} %,{' '}
-              {politica(initial.policy)}, comisión por financiamiento {textoComision(initial.staffCommissionUsd)}. Los
-              financiamientos anteriores a esa fecha se siguen liquidando con las suyas: la comisión ya
-              devengada no cambia.
+              Antes: {textoComision(initial.staffCommissionUsd)}. Las órdenes anteriores a esa fecha se siguen
+              liquidando con la suya: la comisión ya devengada no cambia.
             </p>
           }
           nivel="sensible"
-          reasonLabel="Por qué se cambian"
-          reasonPlaceholder="Renegociado con el administrador"
-          confirmLabel="Guardar las condiciones"
+          reasonLabel="Por qué se cambia"
+          reasonPlaceholder="Pactado con el administrador"
+          confirmLabel="Guardar la comisión"
           busy={mutation.isPending}
           error={mutation.isError ? describeError(mutation.error) : undefined}
           onConfirm={(nota) => mutation.mutate(nota)}
@@ -253,7 +197,7 @@ export function Condiciones({
   )
 }
 
-/** Lo que se ha pactado con el local, para explicar una venta vieja. */
+/** Lo que se ha pactado con la clínica, para explicar una orden vieja. */
 function Historia({
   historia,
 }: {
@@ -271,8 +215,8 @@ function Historia({
   if (filas.length <= 1) return null
 
   return (
-    <Seccion titulo="Lo que se ha pactado" as="div" info="Sirve para explicar un financiamiento vieja: cada financiamiento se liquidó con las condiciones de su día.">
-      <Table headers={['Desde', 'Reparto', 'Cómo', 'Quién']}>
+    <Seccion titulo="Lo que se ha pactado" as="div" info="Sirve para explicar una orden vieja: cada orden se liquidó con las condiciones de su día.">
+      <Table headers={['Desde', 'Comisión del personal', 'Quién']}>
         {filas.map((h) => (
           <Tr key={h.id}>
             <Td className="whitespace-nowrap">
@@ -283,16 +227,9 @@ function Historia({
                 </span>
               )}
             </Td>
-            <Td className="whitespace-nowrap tabular-nums type-panel-caption">
-              {h.upfrontPct} % + {h.perInstallmentPct} % × 2
-              <span className="block text-on-surface-variant">comisión {h.commissionPct} %</span>
-              <span className="block text-on-surface-variant">
-                por financiamiento {h.staffCommissionUsd === null ? 'la global' : formatUsd(h.staffCommissionUsd)}
-              </span>
-            </Td>
-            <Td className="type-panel-caption text-on-surface-variant">
-              {h.policy === 'scheduled' ? 'Por fecha' : 'Por cobranza'}
-              {h.note && <span className="block italic">{h.note}</span>}
+            <Td className="type-panel-caption tabular-nums">
+              {h.staffCommissionUsd === null ? 'La global' : formatUsd(h.staffCommissionUsd)}
+              {h.note && <span className="block italic text-on-surface-variant">{h.note}</span>}
             </Td>
             <Td className="type-panel-caption text-on-surface-variant">{h.createdByName}</Td>
           </Tr>

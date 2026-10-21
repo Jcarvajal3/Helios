@@ -66,36 +66,32 @@ begin
     raise exception 'Un operador no debía poder cambiar las condiciones';
   end if;
 
-  -- --- 2. Porcentajes que no suman 100 se rechazan con el motivo ---------
+  -- --- 2. Helios: la clínica recibe el 100%, la mitad a los 8 y la mitad a
+  -- los 15 días, pague o no el paciente. Nada de adelanto, comisión de la
+  -- clínica ni «por cobranza» (20261019210200): se rechaza con el motivo.
   perform set_config('request.jwt.claims', json_build_object('sub', v_super::text, 'role', 'authenticated')::text, true);
 
   v_failed := false;
   begin
-    -- 🔁 La aritmética cambió con la facturación por cuenta de terceros
-    -- (20260827100000): los tramos reparten el NETO del comercio y la comisión
-    -- ya no entra en esa suma. El check vivo es `upfront + per_installment*2 =
-    -- 100`, así que lo que hay que rechazar aquí es 40 + 25×2 = 90.
-    perform public.admin_set_settlement_terms(v_merchant, 40::numeric, 25::numeric, 20::numeric, 'scheduled'::public.settlement_policy);
+    perform public.admin_set_settlement_terms(v_merchant, 40::numeric, 30::numeric, 20::numeric, 'on_collection'::public.settlement_policy);
   exception when others then
     v_failed := true;
-    raise notice 'TEST EDIT 2 OK — porcentajes que no cuadran rebotan: %', sqlerrm;
+    raise notice 'TEST EDIT 2 OK — las condiciones de Ronda rebotan: %', sqlerrm;
   end;
   if not v_failed then
-    raise exception 'Unos tramos que no cubren el neto entero no debían aceptarse';
+    raise exception 'Un adelanto, una comisión de la clínica o «por cobranza» no debían aceptarse';
   end if;
 
-  -- --- 3. Renegociación válida: 40 de adelanto y 30 en cada cuota --------
-  -- 40 + 30×2 = 100: los tres tramos cubren el neto entero. La comisión (20)
-  -- es cosa aparte y no entra en esa suma.
-  perform public.admin_set_settlement_terms(v_merchant, 40::numeric, 30::numeric, 20::numeric, 'on_collection'::public.settlement_policy);
+  -- --- 3. Lo único que se pacta: la comisión del personal ----------------
+  perform public.admin_set_settlement_terms(v_merchant, 0::numeric, 50::numeric, 0::numeric, 'scheduled', null, 'pacto', 0.75::numeric);
 
   reset role;
   select upfront_pct into v_pct from public.merchant_settlement_terms
   where merchant_id = v_merchant;
-  if v_pct <> 40.00 then
-    raise exception 'El adelanto debía quedar en 40, quedó en %', v_pct;
+  if v_pct <> 0.00 then
+    raise exception 'El adelanto debía seguir en 0, quedó en %', v_pct;
   end if;
-  raise notice 'TEST EDIT 3 OK — condiciones renegociadas a 40/30/30 por cobranza';
+  raise notice 'TEST EDIT 3 OK — se pacta la comisión del personal; el reparto sigue 0/50/50';
 
   -- --- 4. Pausar quita el comercio de la app -----------------------------
   set local role authenticated;
@@ -135,17 +131,20 @@ begin
   -- --- 6. El detalle trae condiciones, personal y lo pendiente ------------
   v_detail := public.admin_merchant_detail(v_merchant);
 
-  if (v_detail->'terms'->>'upfront_pct')::numeric <> 40.00 then
-    raise exception 'El detalle debía traer las condiciones nuevas: %', v_detail;
+  if (v_detail->'terms'->>'per_installment_pct')::numeric <> 50.00 then
+    raise exception 'El detalle debía traer las condiciones: %', v_detail;
   end if;
   if jsonb_array_length(v_detail->'staff') <> 1 then
     raise exception 'El detalle debía traer 1 persona de personal: %', v_detail;
   end if;
-  if (v_detail->>'pending_usd')::numeric <= 0 then
+  -- Helios: sin adelanto, una orden recién registrada todavía no ha
+  -- devengado nada (cada mitad se devenga al vencer su cuota): lo pendiente
+  -- viene, aunque sea 0.
+  if (v_detail->>'pending_usd') is null then
     raise exception 'El detalle debía traer lo pendiente de pagar: %', v_detail;
   end if;
-  raise notice 'TEST EDIT 6 OK — detalle: adelanto %, % persona(s), $% pendiente',
-    v_detail->'terms'->>'upfront_pct',
+  raise notice 'TEST EDIT 6 OK — detalle: % por cuota, % persona(s), $% pendiente',
+    v_detail->'terms'->>'per_installment_pct',
     jsonb_array_length(v_detail->'staff'),
     v_detail->>'pending_usd';
 

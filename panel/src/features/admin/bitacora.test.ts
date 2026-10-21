@@ -243,9 +243,9 @@ const revertido = describirEvento(
   ),
 )
 check(
-  revertido.datos.some((d) => d.label === 'financiamiento (sin fee)' && d.valor === '$10,00') &&
+  revertido.datos.some((d) => d.label === 'financiamiento (sin comisión)' && d.valor === '$10,00') &&
     !revertido.datos.some((d) => d.valor === '$12,00'),
-  'financiamiento revertido: financed, nunca con el fee',
+  'financiamiento revertido: financed, nunca con la comisión',
   datosDe(revertido),
 )
 check(

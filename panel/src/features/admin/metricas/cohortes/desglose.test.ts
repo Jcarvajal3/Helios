@@ -4,7 +4,7 @@
  *   npx tsx src/features/admin/metricas/cohortes/desglose.test.ts
  *
  * Lo que se vigila: que el total a cobrar vaya siempre con sus dos sumandos
- * (consumo sin fee y service fee), con las palabras que pidió Javier, y que
+ * (consumo sin comisión y Comisión Helios), con las palabras que pidió Javier, y que
  * ninguna diga «servicio».
  */
 import { desgloseCorto, desgloseEnFrase, importeYDesglose, lineaDelDesglose } from './desglose'
@@ -23,16 +23,16 @@ const total = { payableUsd: 1419.26, financedUsd: 1152, feeUsd: 267.26 }
 
 igual(
   lineaDelDesglose(total),
-  'Financiado $1.152,00 (sin fee) · service fee + IVA $267,26',
-  'la línea bajo una cifra: financiamiento sin fee y service fee',
+  'Financiado $1.152,00 (sin comisión) · Comisión Helios + IVA $267,26',
+  'la línea bajo una cifra: financiamiento sin comisión y Comisión Helios',
 )
-igual(desgloseCorto(total), 'financiado $1.152,00 · fee + IVA $267,26', 'en una celda: financiamiento · fee')
+igual(desgloseCorto(total), 'financiado $1.152,00 · comisión + IVA $267,26', 'en una celda: financiamiento · comisión')
 igual(
   desgloseEnFrase(total),
-  'financiado $1.152,00 + service fee + IVA $267,26',
+  'financiado $1.152,00 + Comisión Helios + IVA $267,26',
   'dentro de una frase, para ir entre paréntesis',
 )
-igual(importeYDesglose(total), '$1.419,26 (financiado $1.152,00 · fee + IVA $267,26)', 'el importe y su desglose en una línea')
+igual(importeYDesglose(total), '$1.419,26 (financiado $1.152,00 · comisión + IVA $267,26)', 'el importe y su desglose en una línea')
 igual(
   [lineaDelDesglose(total), desgloseCorto(total), desgloseEnFrase(total), importeYDesglose(total)].some((t) =>
     /servicio/i.test(t),

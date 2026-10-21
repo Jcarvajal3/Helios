@@ -14,7 +14,7 @@ export type CuotaDeLaPersona = {
   id: string
   chargeId: string
   sequence: number
-  /** PAYABLE: lo que se paga por esta cuota, con el service fee dentro. */
+  /** PAYABLE: lo que se paga por esta cuota, con la Comisión Helios dentro. */
   amountUsd: number
   dueDate: string
   status: 'pending' | 'paid'

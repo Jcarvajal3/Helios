@@ -8,7 +8,7 @@ import { describeError } from '@/lib/supabase'
 
 type Consumo = {
   chargeId: string
-  /** El consumo sin el service fee: es lo que el local tecleó. */
+  /** El consumo sin la Comisión Helios: es lo que el local tecleó. */
   financedUsd: number
   merchantName: string
 }
@@ -78,7 +78,7 @@ export function DialogoAnularConsumo({
     mutationFn: (reason: string) => voidCharge(chargeId, reason),
     onSuccess: () => {
       onClose()
-      avisar(`Anulado: ${formatUsd(financedUsd)} (sin fee) en ${merchantName}`)
+      avisar(`Anulado: ${formatUsd(financedUsd)} (sin comisión) en ${merchantName}`)
       void client.invalidateQueries({ queryKey: ['admin-charges'] })
       void client.invalidateQueries({ queryKey: ['charge-detail', chargeId] })
       // Un pendiente puede salir ya en la ficha de quien lo iba a pagar.
@@ -93,7 +93,7 @@ export function DialogoAnularConsumo({
     <span className="contents" onClick={(e) => e.stopPropagation()}>
       <ConfirmDialog
         title="Anular el cobro"
-        summary={`Vas a anular un cobro pendiente de ${formatUsd(financedUsd)} (sin fee) en ${merchantName}. No mueve dinero: nadie lo ha confirmado.`}
+        summary={`Vas a anular un cobro pendiente de ${formatUsd(financedUsd)} (sin comisión) en ${merchantName}. No mueve dinero: nadie lo ha confirmado.`}
         nivel="sensible"
         reasonPlaceholder="El mesonero se equivocó de mesa"
         confirmLabel="Anular el cobro"

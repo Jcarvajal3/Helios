@@ -7,7 +7,6 @@ import { leerPrimeraCuota, leerUsoDelCupo } from '@/features/admin/riesgo/credit
 import type { DimensionPrimeraCuota, NumeroDeCuota } from '@/features/admin/riesgo/credito'
 import { leerFlujo } from '@/features/admin/riesgo/flujo'
 import { leerRecuentoDeAlertas } from '@/features/admin/riesgo/alertas'
-import { leerDeudores } from './deudores'
 import { leerCobroATiempo, leerDiasDeCobro, leerResumenDeCobranza } from './semana'
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -196,16 +195,6 @@ export function consultaUsoDelCupo(local: string | null) {
     queryKey: claveMetricas('cobranza', 'admin_credit_utilization', local),
     queryFn: ({ signal }) =>
       llamarRpc('admin_credit_utilization', { p_merchant_id: local }, { signal, leer: leerUsoDelCupo }),
-    ...OPCIONES_METRICAS,
-  })
-}
-
-/** Los deudores por comportamiento. Es de hoy: la cola se trabaja hoy. */
-export function consultaDeudores(local: string | null) {
-  return queryOptions({
-    queryKey: claveMetricas('cobranza', 'admin_deudores_por_perfil', local),
-    queryFn: ({ signal }) =>
-      llamarRpc('admin_deudores_por_perfil', { p_merchant_id: local }, { signal, leer: leerDeudores }),
     ...OPCIONES_METRICAS,
   })
 }

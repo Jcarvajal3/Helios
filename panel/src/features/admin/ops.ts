@@ -28,9 +28,9 @@ export type ChargeRow = {
    * paseándose por la pantalla.
    */
   orderNumber: number | null
-  /** PAYABLE: lo que se debe, con el service fee y su IVA dentro. No se enseña como consumo. */
+  /** PAYABLE: lo que se debe, con la Comisión Helios y su IVA dentro. No se enseña como consumo. */
   amountUsd: number
-  /** FINANCED: el consumo en el local, sin el fee. Es la cifra que se enseña. */
+  /** FINANCED: el consumo en el local, sin la comisión. Es la cifra que se enseña. */
   financedUsd: number
   status: ChargeStatus
   businessDate: string | null

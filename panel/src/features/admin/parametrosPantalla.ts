@@ -36,6 +36,7 @@ export const GRUPO_POR_CLAVE: Readonly<Record<string, IdGrupoEnPantalla | undefi
   alert_charges_per_merchant_day: 'alertas',
   alert_new_patients_per_merchant_day: 'alertas',
   alert_staff_share_pct: 'alertas',
+  alert_staff_share_min_charges: 'alertas',
   alert_fpd_merchant_pct: 'alertas',
   alert_fpd_min_cases: 'alertas',
   alert_merchant_exposure_usd: 'alertas',
@@ -46,13 +47,13 @@ export const GRUPO_POR_CLAVE: Readonly<Record<string, IdGrupoEnPantalla | undefi
 export const GRUPOS_DE_PARAMETROS: ReadonlyArray<GrupoEnPantalla> = [
   {
     grupo: 'producto',
-    titulo: 'Reglas del crédito',
+    titulo: 'Reglas del pago en cuotas',
     ayuda: 'Lo que paga el paciente y los plazos del estado automático. Un cambio aquí afecta a todos los pacientes.',
   },
   {
     grupo: 'financiamiento',
-    titulo: 'Financiamientos y comisión',
-    ayuda: 'El monto mínimo de un financiamiento, lo que gana el personal de la clínica por cada uno y cuántas veces al día puede reenviar el comprobante.',
+    titulo: 'Órdenes y comisión del personal',
+    ayuda: 'El monto mínimo de una orden, lo que gana el personal de la clínica por cada una y cuántas veces al día puede reenviar el comprobante.',
   },
   {
     grupo: 'control',
@@ -91,9 +92,11 @@ export const GRUPOS_DE_PARAMETROS: ReadonlyArray<GrupoEnPantalla> = [
  * se pueden cambiar. `on_time_grace_days`: desde el 27-09 hay UNA gracia
  * (Javier: «deben ser el mismo, déjalo en 3 días»); `helios_on_time_grace_days()`
  * devuelve la del cargo por atraso (migración 20260927650000), y esa se
- * cambia en su fila, «Días de gracia».
+ * cambia en su fila, «Días de gracia». `min_float_days`: solo lo lee
+ * `helios_min_float_days()`, y a esa función no la llama nadie (las cuotas
+ * vencen a los 7 y 14 días, `installment_interval_days`).
  */
-export const CLAVES_SIN_USO: ReadonlySet<string> = new Set(['on_time_grace_days'])
+export const CLAVES_SIN_USO: ReadonlySet<string> = new Set(['on_time_grace_days', 'min_float_days'])
 
 /** Las filas repartidas por grupo, en el orden de arriba. Los grupos vacíos no salen, ni las claves sin uso. */
 export function agruparParametros(
@@ -111,17 +114,17 @@ export function agruparParametros(
  * Los parámetros que son un interruptor (0 apagado, 1 encendido). Se pintan
  * «Activado» o «Apagado» y solo aceptan 0 o 1.
  */
-export const INTERRUPTORES: ReadonlySet<string> = new Set(['payment_four_eyes'])
+export const INTERRUPTORES: ReadonlySet<string> = new Set(['payment_four_eyes', 'patient_confirmation_required'])
 
 /**
  * El rótulo en pantalla cuando el de la base no es el que usa el panel. La
- * base dice «Comisión del usuario» y el fee se llama «service fee» (Javier,
- * 27-09); la comisión es la del local. Hasta que se cambie la fila de
- * `business_parameter_catalog`, manda esto.
+ * base dice «Comisión de servicio», que es como se le llama al paciente; en
+ * el panel es la «Comisión Helios» (Javier, 2026-10-13). Hasta que se cambie
+ * la fila de `business_parameter_catalog`, manda esto.
  */
 const ROTULO_EN_PANTALLA: Record<string, string | undefined> = {
-  consumer_fee_pct: 'Service fee',
-  vat_pct: 'IVA del service fee',
+  consumer_fee_pct: 'Comisión Helios',
+  vat_pct: 'IVA de la Comisión Helios',
   // Una sola gracia para el cargo, «a tiempo» y el impago (27-09). La base
   // decía «Días antes del cargo» hasta 20260927650000.
   late_fee_grace_days: 'Días de gracia',
@@ -132,8 +135,8 @@ const ROTULO_EN_PANTALLA: Record<string, string | undefined> = {
  * trae uno (contrato §3): mejor un nombre que la clave en inglés.
  */
 const ROTULO_SI_FALTA: Record<string, string | undefined> = {
-  min_charge_usd: 'Monto mínimo por financiamiento',
-  staff_commission_usd: 'Comisión por financiamiento',
+  min_charge_usd: 'Monto mínimo por orden',
+  staff_commission_usd: 'Comisión del personal por orden',
   eligibility_lookups_per_staff_day: 'Consultas de cédula por persona y día',
   payment_four_eyes: 'Doble control de pagos',
   receipt_resends_per_day: 'Reenvíos del comprobante por día',
@@ -154,16 +157,18 @@ export function nombreDelParametro(p: Pick<Parametro, 'key' | 'label'>): string 
 /** Qué decide cada parámetro, para su `InfoDot`. Sin cifras: esas son el valor. */
 export const QUE_DECIDE: Record<string, string | undefined> = {
   consumer_fee_pct:
-    'El service fee: lo que el paciente paga a Helios por financiar su financiamiento, sobre el financiamiento y sin IVA. No es la comisión de la clínica.',
-  vat_pct: 'El IVA del service fee. Se cobra al paciente y se remite: no es de Helios.',
+    'La Comisión Helios: lo que el paciente paga a Helios por pagar su consulta en cuotas, sobre la consulta y sin IVA. A la clínica no le cuesta nada.',
+  vat_pct: 'El IVA de la Comisión Helios. Se cobra al paciente y se remite: no es de Helios.',
   late_fee_usd: 'Lo que se suma a la deuda por cada cuota atrasada, una sola vez por episodio.',
   late_fee_grace_days:
     'Días de atraso que se perdonan. Al pasarlos cae el cargo por atraso; una cuota pagada dentro de ellos cuenta como pagada a tiempo, y el impago de una cuota se juzga al acabarlos. Es una sola gracia para las tres cosas.',
-  installment_interval_days: 'Del financiamiento a la cuota 1, y de la cuota 1 a la cuota 2.',
-  mora_demotion_days: 'Días de atraso que cuestan un nivel y pasan la cuenta de congelada a suspendida.',
+  installment_interval_days:
+    'De la orden a la cuota 1, y de la cuota 1 a la cuota 2. También decide cuándo se le paga a la clínica (el día siguiente a cada vencimiento) y los plazos que se publican en la portada y los términos.',
+  mora_demotion_days:
+    'Días de atraso que pasan la cuenta de congelada a suspendida (y le bajan un nivel, si tiene más de uno).',
   mora_expulsion_days: 'Días de atraso que cuestan la cuenta y dan la deuda por perdida.',
   on_time_grace_days: 'Ya no se usa: «a tiempo» cuenta con los días de gracia, los mismos del cargo por atraso.',
-  min_float_days: 'Días mínimos entre el financiamiento y su primera cuota.',
+  min_float_days: 'Ya no se usa: las cuotas vencen a los días entre cuotas.',
   umbral_mora_alerta_pct: 'La mora de una cosecha o de una clínica se pinta en ámbar desde este porcentaje.',
   umbral_mora_critica_pct: 'La mora de una cosecha o de una clínica se pinta en rojo desde este porcentaje.',
   umbral_impago_alerta_pct: 'El impago de la primera cuota se pinta en ámbar desde este porcentaje.',
@@ -172,14 +177,14 @@ export const QUE_DECIDE: Record<string, string | undefined> = {
   umbral_cobro_a_tiempo_alerta_pct:
     'El cobro a tiempo se pinta en ámbar desde este porcentaje, y en rojo por debajo.',
   capital_disponible_usd: 'El capital que Helios tiene disponible para financiar financiamientos.',
-  meta_financiado_semana_usd: 'Sin el service fee: el financiamiento financiado que se espera en una semana.',
+  meta_financiado_semana_usd: 'Sin la Comisión Helios: el financiamiento financiado que se espera en una semana.',
   meta_mora_pct: 'La mora que no se quiere superar.',
   meta_cobro_a_tiempo_pct: 'El porcentaje de cuotas cobradas a tiempo que se quiere alcanzar.',
   meta_personas_activas_semana: 'Los pacientes con algún financiamiento en la semana que se quieren alcanzar.',
   meta_locales_activos: 'Las clínicas con financiamientos que se quieren tener.',
-  min_charge_usd: 'El monto más bajo que una clínica puede financiar, sin el fee.',
+  min_charge_usd: 'El monto más bajo de una consulta en cuotas, sin la Comisión Helios.',
   staff_commission_usd:
-    'Lo que gana quien registra un financiamiento confirmado. Se le paga a la clínica el día siguiente a la confirmación, en la transferencia de ese día, y ella se la entrega a su personal. Una clínica puede tener la suya en su ficha › Condiciones; lo ya devengado no cambia.',
+    'Lo que gana quien registra una orden confirmada. Se le paga a la clínica el día siguiente a la confirmación, en la transferencia de ese día, y ella se la entrega a su personal. Una clínica puede tener la suya en su ficha › Condiciones; lo ya devengado no cambia.',
   eligibility_lookups_per_staff_day:
     'Cuántas cédulas puede consultar una persona de una clínica en un día. Pasado el límite no puede consultar más hasta mañana y salta la alerta «Demasiadas consultas de cédula»: protege la base de pacientes.',
   payment_four_eyes:
@@ -203,6 +208,9 @@ export const QUE_DECIDE: Record<string, string | undefined> = {
 const UNIDADES_ENTERAS: Record<string, string | undefined> = {
   días: 'días',
   min: 'minutos',
+  minutos: 'minutos',
+  intentos: 'intentos',
+  preguntas: 'preguntas',
   personas: 'personas',
   locales: 'locales',
   consumos: 'consumos',
@@ -217,6 +225,9 @@ const UNIDADES_ENTERAS: Record<string, string | undefined> = {
 /** El singular de las unidades que cuentan cosas: «1 día», no «1 días». */
 const SINGULAR: Record<string, string | undefined> = {
   días: 'día',
+  minutos: 'minuto',
+  intentos: 'intento',
+  preguntas: 'pregunta',
   personas: 'persona',
   locales: 'local',
   consumos: 'consumo',
@@ -242,7 +253,7 @@ export function formatValorParametro(valor: number | null, unidad: string | null
   if (unidad === '$' || unidad === 'USD' || unidad === '€') return formatUsd(valor)
   if (!unidad && clave?.endsWith('_usd')) return formatUsd(valor)
 
-  // Con todos sus decimales: un fee de 2,125 % no es uno de 2,1 %.
+  // Con todos sus decimales: una comisión de 2,125 % no es uno de 2,1 %.
   const cifra = valor.toLocaleString('es-VE', { maximumFractionDigits: 4 })
   if (unidad === '%') return `${cifra} %`
   if (!unidad) return cifra

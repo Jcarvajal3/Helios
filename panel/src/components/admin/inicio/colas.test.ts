@@ -167,6 +167,10 @@ console.log('── Caja ──────────────────�
   )
   comprueba(r.ids.at(0) === 'x', 'el primero es el primero de la lista, que es el que abre «Empezar»')
   comprueba(resumirAbonos([{ id: 'x', amountUsd: 1 }], 1).alTope, 'en el tope, el número es un mínimo')
+  comprueba(
+    resumirAbonos([{ id: 'h', amountUsd: 5, deHelios: true }, { id: 'r', amountUsd: 9, deHelios: false }], 10).cantidad === 1,
+    'los abonos de Ronda (misma cuenta) no cuentan',
+  )
 }
 {
   const r = resumirPagosALocales([
@@ -197,7 +201,7 @@ console.log('\n── Cobranza ────────────────�
   comprueba(r.cantidad === 3, 'el número es el del recuento de su pantalla', String(r.cantidad))
   comprueba(r.ids.join(',') === 'ana,luis', 'un paciente con dos promesas es un solo caso', r.ids.join(','))
   comprueba(
-    r.detalle === `Deben ${formatUsd(30)} vencidos (financiamiento ${formatUsd(24)} · fee ${formatUsd(6)}) y no han reportado el pago`,
+    r.detalle === `Deben ${formatUsd(30)} vencidos (financiamiento ${formatUsd(24)} · comisión ${formatUsd(6)}) y no han reportado el pago`,
     'la deuda se suma una vez por paciente, sin las pendientes y con sus dos partes',
     String(r.detalle),
   )
@@ -217,24 +221,9 @@ console.log('\n── Cobranza ────────────────�
   comprueba(sin.ids.join(',') === 'b,a', 'el más atrasado primero, como la cartera', sin.ids.join(','))
   comprueba(sin.plazo === 'pasado', 'la deuda ya venció')
   comprueba(
-    sin.detalle === `${formatUsd(15)} vencidos (financiamiento ${formatUsd(12)} · fee ${formatUsd(3)}) sin gestión desde que vencieron`,
+    sin.detalle === `${formatUsd(15)} vencidos (financiamiento ${formatUsd(12)} · comisión ${formatUsd(3)}) sin gestión desde que vencieron`,
     'suma lo vencido de esas filas, con sus dos partes',
     String(sin.detalle),
-  )
-
-  const recordar = resumirCartera(filas, 'recordar_hoy', HOY)
-  comprueba(recordar.ids.join(',') === 'd', 'recordar hoy: solo lo que vence mañana', recordar.ids.join(','))
-  // Sin las partes en la fila (una respuesta vieja), el importe sale sin ellas: no se inventan.
-  comprueba(recordar.plazo === 'hoy' && recordar.detalle === `${formatUsd(12)} vencen mañana`, 'y es para hoy', String(recordar.detalle))
-  const conPartes = resumirCartera(
-    [filaCartera('d', { upcomingUsd: 12, nextDueDate: '2026-09-26', upcomingDesglose: { financedUsd: 9.6, feeUsd: 2.4 } })],
-    'recordar_hoy',
-    HOY,
-  )
-  comprueba(
-    conPartes.detalle === `${formatUsd(12)} vencen mañana (financiamiento ${formatUsd(9.6)} · fee ${formatUsd(2.4)})`,
-    'con las partes, «Vence mañana» las dice',
-    String(conPartes.detalle),
   )
 }
 

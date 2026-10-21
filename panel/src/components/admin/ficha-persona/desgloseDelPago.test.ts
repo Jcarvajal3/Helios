@@ -3,8 +3,8 @@
  *
  *   npx tsx src/components/admin/ficha-persona/desgloseDelPago.test.ts
  *
- * Lo que se vigila: que el monto con fee nunca salga sin sus partes y que los
- * cargos por atraso vayan aparte, no mezclados con el fee.
+ * Lo que se vigila: que el monto con comisión nunca salga sin sus partes y que los
+ * cargos por atraso vayan aparte, no mezclados con la comisión.
  */
 import { desgloseDelPago } from './desgloseDelPago'
 
@@ -24,8 +24,8 @@ const conCargos = desgloseDelPago({
   lateFeesUsd: 8,
 })
 comprueba(
-  conCargos.includes('financiamiento') && conCargos.includes('fee') && conCargos.includes('cargos por atraso'),
-  'con cargos: financiamiento, fee y cargos, cada uno aparte',
+  conCargos.includes('financiamiento') && conCargos.includes('comisión') && conCargos.includes('cargos por atraso'),
+  'con cargos: financiamiento, comisión y cargos, cada uno aparte',
   conCargos,
 )
 comprueba(conCargos.includes('8,00'), 'los cargos, con su cifra', conCargos)

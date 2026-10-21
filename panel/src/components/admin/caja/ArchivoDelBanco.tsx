@@ -69,8 +69,7 @@ export function ArchivoDelBanco() {
   return (
     <>
       <Button size="sm" variant="text" onClick={() => setAbierto(true)}>
-        <Download size={15} aria-hidden />
-        Archivo del banco
+        <Download size={15} aria-hidden />1 · Bajar el archivo del banco
       </Button>
       {abierto && <VentanaDelArchivo onClose={() => setAbierto(false)} />}
     </>

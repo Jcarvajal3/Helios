@@ -16,8 +16,8 @@ function comprueba(ok: boolean, titulo: string, detalle = '') {
 console.log('── Los sumandos de una deuda ────────────────────────────────')
 {
   const texto = sumandosDeDeuda({ financedUsd: 37, feeUsd: 8.2 })
-  const esperado = `${formatUsd(37)} financiado + ${formatUsd(8.2)} service fee + IVA`
-  comprueba(texto === esperado, 'financiado + service fee + IVA, con el vocabulario', texto)
+  const esperado = `${formatUsd(37)} financiado + ${formatUsd(8.2)} Comisión Helios + IVA`
+  comprueba(texto === esperado, 'financiado + Comisión Helios + IVA, con el vocabulario', texto)
 }
 
 console.log('── Lo vencido de la página ──────────────────────────────────')
@@ -32,7 +32,7 @@ console.log('── Lo vencido de la página ───────────�
   ]
   const r = vencidoDelPadron(filas)
   comprueba(r.usuarios === 2, 'cuenta solo a los pacientes reales con algo vencido', String(r.usuarios))
-  comprueba(Math.abs(r.vencidoUsd - 57.5) < 1e-9, 'suma lo vencido con el fee dentro', String(r.vencidoUsd))
+  comprueba(Math.abs(r.vencidoUsd - 57.5) < 1e-9, 'suma lo vencido con la comisión dentro', String(r.vencidoUsd))
   comprueba(
     r.partes !== null && Math.abs(r.partes.financedUsd - 47) < 1e-9 && Math.abs(r.partes.feeUsd - 10.5) < 1e-9,
     'los sumandos suman por separado',
@@ -40,7 +40,7 @@ console.log('── Lo vencido de la página ───────────�
   )
   comprueba(
     r.partes !== null && Math.abs(r.partes.financedUsd + r.partes.feeUsd - r.vencidoUsd) < 1e-9,
-    'financiado + service fee + IVA = vencido',
+    'financiado + Comisión Helios + IVA = vencido',
   )
 }
 {

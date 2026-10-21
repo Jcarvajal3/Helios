@@ -76,7 +76,7 @@ function ResumenDelCaso({
   }
 
   const f: CollectionRow | null = fila.data ?? null
-  // Lo vencido partido en consumo y fee, de las cuotas de la ficha (la misma
+  // Lo vencido partido en consumo y comisión, de las cuotas de la ficha (la misma
   // consulta que la cabecera: no vuelve a pedir nada) y solo si cuadra.
   const vencidoPartido =
     f?.overdueDesglose ??
@@ -106,7 +106,7 @@ function ResumenDelCaso({
   return (
     <StatGrid cols={3}>
       <Stat
-        label="Vencido (financiamiento + fee)"
+        label="Vencido (financiamiento + comisión)"
         value={f ? formatUsd(f.overdueUsd) : ''}
         hint={
           f && f.overdueUsd === 0
@@ -117,7 +117,7 @@ function ResumenDelCaso({
               ? textoDeDesgloseCorto(vencidoPartido)
               : undefined
         }
-        info="Suma de sus cuotas sin pagar con vencimiento anterior a hoy (día operativo), en financiamiento + service fee; debajo, sus dos partes. El cargo por atraso va aparte."
+        info="Suma de sus cuotas sin pagar con vencimiento anterior a hoy (día operativo), en financiamiento + Comisión Helios; debajo, sus dos partes. El cargo por atraso va aparte."
         link={{ to: '/admin/pacientes/$id', params: { id: userId }, search: { tab: 'consumos' } }}
         estado={estado}
         onReintentar={reintentar}

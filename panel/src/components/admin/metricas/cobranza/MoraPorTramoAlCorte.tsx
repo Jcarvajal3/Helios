@@ -28,7 +28,7 @@ export function MoraPorTramoAlCorte({ semana, local }: { semana: string; local: 
   return (
     <Bloque
       titulo="Vencido por tramo de atraso"
-      info="Vencido en cartera al corte de la semana (su cierre, o ahora si está en curso), en dólares con fee, con cada paciente entero en el tramo de su cuota vencida más atrasada; los tramos suman el «Vencido en cartera» de arriba."
+      info="Vencido en cartera al corte de la semana (su cierre, o ahora si está en curso), en dólares con comisión, con cada paciente entero en el tramo de su cuota vencida más atrasada; los tramos suman el «Vencido en cartera» de arriba."
       consulta={resumen}
       filas={5}
     >
@@ -82,9 +82,9 @@ export function MoraPorTramoAlCorte({ semana, local }: { semana: string; local: 
                 'Tramo',
                 'Pacientes',
                 'Cuotas',
-                'Vencido (con fee)',
-                'Financiado (sin fee)',
-                'Service fee + IVA',
+                'Vencido (con comisión)',
+                'Financiado (sin comisión)',
+                'Comisión Helios + IVA',
                 'Atraso medio (días)',
               ]}
               filas={visibles.map((t) => ({
@@ -115,9 +115,9 @@ function globoDelTramo(t: TramoAlCorte, cortes: CortesDeTramo) {
   return {
     titulo: rotuloDeTramo(t.tramo, cortes),
     filas: [
-      { key: 'vencido', rotulo: 'vencido (con fee)', valor: formatUsd(t.vencido.payableUsd), color: SERIE.principal },
-      { key: 'consumo', rotulo: 'financiado (sin fee)', valor: formatUsd(t.vencido.financedUsd), color: SERIE.contexto },
-      { key: 'fee', rotulo: 'service fee + IVA', valor: formatUsd(t.vencido.feeUsd), color: SERIE.contexto },
+      { key: 'vencido', rotulo: 'vencido (con comisión)', valor: formatUsd(t.vencido.payableUsd), color: SERIE.principal },
+      { key: 'consumo', rotulo: 'financiado (sin comisión)', valor: formatUsd(t.vencido.financedUsd), color: SERIE.contexto },
+      { key: 'fee', rotulo: 'Comisión Helios + IVA', valor: formatUsd(t.vencido.feeUsd), color: SERIE.contexto },
       { key: 'personas', rotulo: t.personas === 1 ? 'paciente' : 'pacientes', valor: String(t.personas), color: SERIE.tenue },
       { key: 'cuotas', rotulo: t.cuotas === 1 ? 'cuota' : 'cuotas', valor: String(t.cuotas), color: SERIE.tenue },
       ...(t.diasAtrasoMedio === null

@@ -26,17 +26,17 @@ const MENSAJE_MINIMO = 10
 type Alcance = 'saldo' | 'aviso'
 
 const ALCANCES: Array<{ value: Alcance; label: string }> = [
-  { value: 'saldo', label: 'Apagar el saldo' },
+  { value: 'saldo', label: 'Parar las órdenes nuevas' },
   { value: 'aviso', label: 'Solo el aviso' },
 ]
 
 /**
  * El freno de emergencia.
  *
- * Apaga el saldo de TODO el mundo y enseña el aviso que se escriba aquí. Es la
- * única pantalla del panel cuyo efecto aparece en el teléfono de cada usuario
- * en la siguiente carga, así que encenderlo pasa por el diálogo crítico con la
- * vista previa del aviso. No apaga pagar ni reportar un pago (20260909160000).
+ * Para las órdenes nuevas en todas las clínicas (panel y bot, por
+ * `helios_spend_block`) y enseña el aviso que se escriba aquí en el panel de
+ * las clínicas. Encenderlo pasa por el diálogo crítico con la vista previa del
+ * aviso. No para registrar ni aprobar pagos (20260909160000).
  */
 export function MaintenanceTab() {
   const client = useQueryClient()
@@ -81,7 +81,7 @@ export function MaintenanceTab() {
             ? 'El aviso del mantenimiento está actualizado.'
             : m.blocksBalance
               ? 'El mantenimiento está encendido: nadie puede pagar en cuotas y todos ven el aviso en la siguiente carga.'
-              : 'El mantenimiento está encendido: todos ven el aviso en la siguiente carga y el saldo sigue funcionando.',
+              : 'El mantenimiento está encendido: las clínicas ven el aviso en la siguiente carga y pueden seguir registrando órdenes.',
       )
       setEncendiendo(false)
       void client.invalidateQueries({ queryKey: ['maintenance'] })
@@ -122,7 +122,7 @@ export function MaintenanceTab() {
   return (
     <Seccion
       titulo="Mantenimiento"
-      info="El freno de emergencia. Con el saldo apagado ninguna clínica puede registrar pagos en cuotas, y el aviso sale en el panel en la siguiente carga. Registrar y aprobar pagos sigue funcionando, para no crear atrasos a quien tiene una cuota que vence ese día."
+      info="El freno de emergencia. Con las órdenes nuevas paradas ninguna clínica puede registrar pagos en cuotas (ni por el panel ni por el bot), y el aviso sale en el panel en la siguiente carga. Registrar y aprobar los pagos de los pacientes sigue funcionando, para no crear atrasos a quien tiene una cuota que vence ese día."
       controles={
         on ? (
           <>
@@ -132,7 +132,7 @@ export function MaintenanceTab() {
               </span>
             )}
             <Badge tone={query.data?.blocksBalance ? 'error' : 'warning'} icono>
-              {query.data?.blocksBalance ? 'Encendido, con el saldo apagado' : 'Encendido, solo el aviso'}
+              {query.data?.blocksBalance ? 'Encendido, con las órdenes nuevas paradas' : 'Encendido, solo el aviso'}
             </Badge>
           </>
         ) : (
@@ -156,7 +156,7 @@ export function MaintenanceTab() {
           label="Qué pasa"
           value={message}
           onChange={setMessage}
-          placeholder="Estamos resolviendo un problema con los cobros. Tu saldo vuelve en cuanto terminemos."
+          placeholder="Estamos resolviendo un problema. Podrás registrar pagos en cuotas en cuanto terminemos."
         />
         <Input
           id="mnt-expected"

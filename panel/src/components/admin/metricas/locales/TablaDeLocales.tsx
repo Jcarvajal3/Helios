@@ -31,7 +31,7 @@ export function TablaDeLocales({ d, parametros }: { d: LocalesDeLaSemana; parame
     <SeccionMetricas
       titulo="Clínicas en la semana"
       ayuda="Pulsa una clínica para ver todas las pestañas solo con ella"
-      info="Una fila por clínica: las activas y todas las que tuvieron algo esta semana (financiamientos, cuotas que vencían, algo vencido o un cierre), aunque ya no estén activas. Financiar cero también es un dato. El financiado y el ticket van sin el service fee; lo vencido lo lleva dentro, con sus dos partes debajo."
+      info="Una fila por clínica: las activas y todas las que tuvieron algo esta semana (financiamientos, cuotas que vencían, algo vencido o un cierre), aunque ya no estén activas. Financiar cero también es un dato. El financiado y el ticket van sin la Comisión Helios; lo vencido lo lleva dentro, con sus dos partes debajo."
     >
       <DataTable
         rows={filas}

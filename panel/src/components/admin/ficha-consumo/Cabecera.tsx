@@ -23,7 +23,7 @@ import { redondear } from './comun'
 /** El nombre del consumo: su número de orden, que es lo que se dicta al teléfono. */
 export function nombreDelConsumo(detail: ChargeDetail): string {
   return detail.orderNumber === null
-    ? `${formatUsd(detail.financedUsd)} (sin fee) en ${detail.merchant.name}`
+    ? `${formatUsd(detail.financedUsd)} (sin comisión) en ${detail.merchant.name}`
     : `Orden #${detail.orderNumber}`
 }
 
@@ -119,13 +119,12 @@ export function Cabecera({ detail, menu }: { detail: ChargeDetail; menu: Readonl
  * Las cifras del carril: el consumo en el local, cómo se paga y lo que recibe
  * el local.
  *
- * La cifra grande es la que el cliente ve en su app y el cajero en su
- * comprobante: lo que cobró el local. El service fee NUNCA va sumado a
+ * La cifra grande es la que la clínica ve en su comprobante: lo que cobró
+ * por la consulta. El service fee NUNCA va sumado a
  * ella: va en su línea del desglose y repartido en las cuotas.
  */
 export function cifrasDelConsumo(detail: ChargeDetail): Array<CifraDeFicha> {
   const cuotas = detail.installments
-  const personas = new Set(cuotas.map((c) => c.userId ?? '')).size
 
   const comoSePaga: CifraDeFicha =
     cuotas.length === 0
@@ -142,21 +141,17 @@ export function cifrasDelConsumo(detail: ChargeDetail): Array<CifraDeFicha> {
       : {
           label: 'Se paga en',
           value: `${cuotas.length} ${cuotas.length === 1 ? 'cuota' : 'cuotas'}`,
-          info: 'Cada cuota es financiamiento + service fee: lleva dentro su parte del fee, con su IVA; es lo que transfiere cada paciente.',
+          info: 'Cada cuota es financiamiento + Comisión Helios: lleva dentro su parte de la comisión, con su IVA; es lo que transfiere cada paciente.',
           // Sin los montos de las cuotas: dos cifras con el fee dentro no van
           // sueltas, y abajo ya están con su desglose.
-          hint:
-            personas === 1
-              ? 'Financiamiento + fee cada una; el detalle, en «Las cuotas»'
-              : `Repartidas entre ${personas} pacientes`,
+          hint: 'Financiamiento + comisión cada una; el detalle, en «Las cuotas»',
         }
 
   return [
     {
-      label: 'Financiamiento en la clínica (sin fee)',
+      label: 'Financiamiento en la clínica (sin comisión)',
       value: formatUsd(detail.financedUsd),
-      info: 'Sin el service fee: lo que cobró la clínica, el monto de la consulta que figura en el comprobante.',
-      hint: 'Se descuenta del saldo',
+      info: 'Sin la Comisión Helios: lo que cobró la clínica, el monto de la consulta que figura en el comprobante.',
     },
     comoSePaga,
     ...(detail.merchantNetUsd === null
@@ -165,19 +160,14 @@ export function cifrasDelConsumo(detail: ChargeDetail): Array<CifraDeFicha> {
           {
             label: 'Recibe la clínica',
             value: formatUsd(detail.merchantNetUsd),
-            hint:
-              detail.merchantFeeUsd !== null && detail.merchantFeeUsd > 0
-                ? `El financiamiento menos la comisión de la clínica y su IVA, ${formatUsd(
-                    detail.merchantFeeUsd + (detail.merchantFeeVatUsd ?? 0),
-                  )}`
-                : 'El financiamiento entero, sin comisión de la clínica',
+            hint: 'La consulta entera: la mitad a los 8 días y la mitad a los 15, pague o no el paciente',
           },
         ]),
   ]
 }
 
 /**
- * El desglose, como en el recibo de la app: el consumo y, en su línea, el
+ * El desglose, como en el comprobante: la consulta y, en su línea, el
  * service fee con su IVA. Sin fila de total: la suma de las dos no es una
  * cifra que exista para nadie, porque el fee se paga repartido en las cuotas.
  */
@@ -195,14 +185,14 @@ export function Desglose({ detail }: { detail: ChargeDetail }) {
     <Seccion titulo="El desglose">
       <Card className="flex flex-col gap-3">
         <dl className="flex flex-col gap-2 type-panel-body">
-          <Linea label="Financiamiento en la clínica (sin fee)" hint="se descuenta del saldo" value={formatUsd(detail.financedUsd)} />
+          <Linea label="Financiamiento en la clínica (sin comisión)" value={formatUsd(detail.financedUsd)} />
           {desglosado ? (
             <>
-              <Linea label="Service fee sin IVA" value={formatUsd(fee)} />
-              <Linea label="IVA del service fee" value={formatUsd(iva)} />
+              <Linea label="Comisión Helios sin IVA" value={formatUsd(fee)} />
+              <Linea label="IVA de la Comisión Helios" value={formatUsd(iva)} />
             </>
           ) : (
-            conIva > 0 && <Linea label="Service fee + IVA" value={formatUsd(conIva)} />
+            conIva > 0 && <Linea label="Comisión Helios + IVA" value={formatUsd(conIva)} />
           )}
         </dl>
 

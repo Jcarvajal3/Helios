@@ -35,7 +35,7 @@ const formato = (v: number) => formatPct(v, 1)
  * en días distintos), con el día del pago de todo el panel: el día en que
  * la persona REPORTÓ el pago (decisión de Javier del 27-09). La franja marca
  * los días de gracia: lo cobrado hasta su borde derecho es lo cobrado a
- * tiempo. Todo en % de lo que se cobra en la cuota (consumo + service fee). Esta semana solo pinta los días que ya
+ * tiempo. Todo en % de lo que se cobra en la cuota (consumo + Comisión Helios). Esta semana solo pinta los días que ya
  * terminaron para todas sus cuotas; un día a medias todavía puede subir.
  *
  * Se lee sin tocar nada: el eje con marcas redondas, la cifra de cada línea
@@ -78,7 +78,7 @@ export function CurvaDeCobro({
 
   const marco = {
     titulo,
-    info: `Cobrado de la cuota ${curva.numero} de esta semana hasta cada día contado desde su vencimiento (por día operativo en que se registró el pago) ÷ total de la cuota ${curva.numero}, en dólares con fee, frente a la media simple de las (hasta) cuatro semanas anteriores en los días que todas cerraron; la franja son los ${graciaDias} días de gracia, y su borde es lo cobrado a tiempo.`,
+    info: `Cobrado de la cuota ${curva.numero} de esta semana hasta cada día contado desde su vencimiento (por día operativo en que se registró el pago) ÷ total de la cuota ${curva.numero}, en dólares con comisión, frente a la media simple de las (hasta) cuatro semanas anteriores en los días que todas cerraron; la franja son los ${graciaDias} días de gracia, y su borde es lo cobrado a tiempo.`,
     resumen: fraseDeLaCurva(curva, cuota),
     leyenda,
     controles,

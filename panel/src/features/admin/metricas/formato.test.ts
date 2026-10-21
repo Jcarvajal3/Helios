@@ -93,18 +93,18 @@ igual(porcentaje(3, 0), null, 'sin total no hay porcentaje')
 igual(porcentaje(0, 10), 0, 'un cero sobre algo sí es un dato')
 igual(
   textoDeDesglose({ financedUsd: 146.72, feeUsd: 34.04 }),
-  'Financiamiento $146,72 + service fee $34,04',
+  'Financiamiento $146,72 + Comisión Helios $34,04',
   'la cuota dice sus dos partes',
 )
 igual(
   textoDeDesglose({ financedUsd: -16.7, feeUsd: 0 }),
-  `Financiamiento ${MENOS}$16,70 + service fee $0,00`,
+  `Financiamiento ${MENOS}$16,70 + Comisión Helios $0,00`,
   'con el signo menos de verdad delante del dólar',
 )
 igual(
   textoDeDesgloseCorto({ financedUsd: 146.72, feeUsd: 34.04 }),
-  'financiamiento $146,72 · fee $34,04',
-  'en corto, «fee» y nunca «servicio»',
+  'financiamiento $146,72 · comisión $34,04',
+  'en corto, «comisión» y nunca «servicio»',
 )
 
 console.log(fallos === 0 ? '\nTodo bien.' : `\n${fallos} fallo(s).`)

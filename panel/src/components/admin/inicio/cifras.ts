@@ -133,7 +133,7 @@ export function globoDeDeudaVencida(
 ): ContenidoDelGlobo {
   const partes = (x: Desglose | null) => (x ? ` · ${textoDeDesgloseCorto(x)}` : '')
   return {
-    titulo: 'Vencido frente a la deuda viva, financiamiento + fee',
+    titulo: 'Vencido frente a la deuda viva, financiamiento + comisión',
     filas: [
       { key: 'vencido', rotulo: `vencido${partes(d.desgloseVencido)}`, valor: formatUsd(d.vencido), color, forma: 'punto' },
       {

@@ -41,7 +41,7 @@ const CLAVE_LABEL: Record<string, string | undefined> = {
   amount_usd: 'monto',
   amount_ves: 'monto en bolívares',
   amount: 'monto',
-  financed_usd: 'financiamiento (sin fee)',
+  financed_usd: 'financiamiento (sin comisión)',
   pending_usd: 'quedaba a deber',
   installments: 'cuotas saldadas',
   late_fee_usd: 'cargo por atraso cobrado',
@@ -132,7 +132,7 @@ const CERO_ES_NADA = new Set(['late_fee_usd', 'late_fee_count'])
 
 /**
  * Lo que una acción guarda y no se enseña. Revertir un consumo guarda también
- * el monto con el service fee dentro, y un consumo se lee sin el fee: se
+ * el monto con la Comisión Helios dentro, y un consumo se lee sin la comisión: se
  * enseña `financed_usd`.
  */
 const OCULTAS_POR_ACCION: Record<string, ReadonlySet<string> | undefined> = {

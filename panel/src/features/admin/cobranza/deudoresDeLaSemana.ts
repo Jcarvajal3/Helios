@@ -39,7 +39,7 @@ export type CuotaQueSeDebe = {
 }
 
 export type DeudorDeLaSemana = CollectionRow & {
-  /** Lo que debe de esa semana: la suma de sus cuotas, con fee y su desglose. */
+  /** Lo que debe de esa semana: la suma de sus cuotas, con comisión y su desglose. */
   deLaSemana: Desglose
   cuotas: ReadonlyArray<CuotaQueSeDebe>
 }

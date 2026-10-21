@@ -112,6 +112,7 @@ r as (
     (j->'por_cada_100'->'por_100'->>'servicio_usd')::numeric as p100_servicio,
     (j->'por_cada_100'->'por_100'->>'cargos_usd')::numeric   as p100_cargos,
     (j->'por_cada_100'->'por_100'->>'perdido_usd')::numeric  as p100_perdido,
+    (j->'por_cada_100'->'por_100'->>'personal_usd')::numeric as p100_personal,
     (j->'por_cada_100'->'por_100'->>'margen_usd')::numeric   as p100_margen,
     (j->>'desde')::date                                    as desde
   from g
@@ -256,8 +257,8 @@ n(orden, comprobacion, e, o, tol) as (
     (select round(100 * cargos / nullif(consumo, 0), 2) from r), (select p100_cargos from r), 0.005
   union all select '085', 'E6 Por cada 100: perdido = 100 × perdido ÷ consumo',
     (select round(100 * perdido_f / nullif(consumo, 0), 2) from r), (select p100_perdido from r), 0.005
-  union all select '086', 'E7 Por cada 100: margen = servicio + cargos − perdido',
-    (select p100_servicio + p100_cargos - p100_perdido from r), (select p100_margen from r), 0.015
+  union all select '086', 'E7 Por cada 100: margen = servicio + cargos − personal − perdido',
+    (select p100_servicio + p100_cargos - p100_personal - p100_perdido from r), (select p100_margen from r), 0.02
 
   -- ── F. La curva ───────────────────────────────────────────────────────────
   union all select '090', 'F1 Desde = la primera solicitud del código o el primer consumo',

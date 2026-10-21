@@ -2,7 +2,7 @@
 // Respuestas de mentira de `admin_metricas_cohortes` / `admin_metricas_cohorte`
 // para las pruebas de esta carpeta, con la forma exacta del JSON de la base
 // (20260927530000 y `a_cobrar` de 20260927610000). Las cifras cuadran entre
-// sí como en la base: los cinco estados suman la cuota, el fee es payable −
+// sí como en la base: los cinco estados suman la cuota, la comisión es payable −
 // financed, lo que hay que cobrar es la cuota 1 + la 2 estado a estado y lo
 // que volvió es el consumo de las cuotas pagadas.
 //

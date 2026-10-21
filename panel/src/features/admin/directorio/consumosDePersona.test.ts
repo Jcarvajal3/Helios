@@ -3,7 +3,7 @@
  *
  *   npx tsx src/features/admin/directorio/consumosDePersona.test.ts
  *
- * Lo que se comprueba no se ve mirando la pantalla: una fila con el fee
+ * Lo que se comprueba no se ve mirando la pantalla: una fila con la comisión
  * dentro parece una fila correcta, y una parte que falta se leería como cero.
  */
 import { leerConsumosDePersona } from './consumosDePersona'

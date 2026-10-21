@@ -17,7 +17,7 @@ import type { Anterior, CifrasDelTramo, NocheDeLocal, RespuestaResumen, SemanaDe
 // Puro: se prueba en `lectura.test.ts`.
 // ═══════════════════════════════════════════════════════════════════════════
 
-/** El fee que falta, deducido de su definición y en céntimos (sin el ruido de la coma flotante). */
+/** La comisión que falta, deducido de su definición y en céntimos (sin el ruido de la coma flotante). */
 function feeDeducido(payableUsd: number, financedUsd: number): number {
   return Math.round((payableUsd - financedUsd) * 100) / 100
 }

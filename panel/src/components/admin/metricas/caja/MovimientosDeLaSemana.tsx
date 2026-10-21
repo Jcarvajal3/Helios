@@ -16,7 +16,7 @@ import { delta, textoDeDesglose } from '@/features/admin/metricas/formato'
 import type { Delta } from '@/features/admin/metricas/formato'
 
 const QUE_ES =
-  'Los cobros, las transferencias a clínicas y el service fee de la semana elegida arriba, por el día operativo en que ocurrieron: una cuota cuenta el día en que se aprobó su pago; una transferencia, el día de su asiento. Todas las cifras se calculan de las cuotas, los cargos por atraso, las transferencias y los financiamientos, salvo «Dinero en caja al cierre», que sale del libro contable. Las flechas comparan con la semana anterior a la misma altura.'
+  'Los cobros, las transferencias a clínicas y la Comisión Helios de la semana elegida arriba, por el día operativo en que ocurrieron: una cuota cuenta el día en que se aprobó su pago; una transferencia, el día de su asiento. Todas las cifras se calculan de las cuotas, los cargos por atraso, las transferencias y los financiamientos, salvo «Dinero en caja al cierre», que sale del libro contable. Las flechas comparan con la semana anterior a la misma altura.'
 
 type Campo = (s: SemanaDeCaja) => number | null
 
@@ -24,8 +24,8 @@ type Campo = (s: SemanaDeCaja) => number | null
  * La chispa de las ocho semanas de una cifra, la elegida la última.
  *
  * `serie` es el nombre que va junto a la cifra en el globo de cada barra
- * («Cobrado en cuotas (consumo + fee)»): así el globo también dice si lleva
- * el fee.
+ * («Cobrado en cuotas (consumo + comisión)»): así el globo también dice si lleva
+ * la comisión.
  */
 function chispaDe(
   c: CajaDeLaSemana,
@@ -90,15 +90,15 @@ export function MovimientosDeLaSemana({
 
       <StatGrid cols={3}>
         <CifraConTendencia
-          titulo="Cobrado en cuotas (financiamiento + fee)"
+          titulo="Cobrado en cuotas (financiamiento + comisión)"
           valor={m ? formatUsd(m.cobrado.payableUsd) : ''}
           pie={m && textoDeDesglose(m.cobrado)}
           delta={cambio(m?.cobrado.payableUsd, a?.cobrado.payableUsd, true)}
           chispa={
             c &&
-            chispaDe(c, (s) => s.cobrado.payableUsd, 'Cobrado en cuotas (financiamiento + fee)', etiquetaConDesglose)
+            chispaDe(c, (s) => s.cobrado.payableUsd, 'Cobrado en cuotas (financiamiento + comisión)', etiquetaConDesglose)
           }
-          info={`Calculado de las cuotas cuyo pago se aprobó en la semana: el financiamiento más el service fee (IVA incluido), siempre con sus dos partes. ${
+          info={`Calculado de las cuotas cuyo pago se aprobó en la semana: el financiamiento más la Comisión Helios (IVA incluido), siempre con sus dos partes. ${
             m ? `Son ${m.cobrado.cuotas} cuotas de ${m.cobrado.personas} pacientes.` : ''
           } Los cargos por atraso van aparte.`}
           estado={estado}
@@ -120,28 +120,28 @@ export function MovimientosDeLaSemana({
           pie={m && `${m.transferido.n} ${m.transferido.n === 1 ? 'transferencia' : 'transferencias'}`}
           delta={cambio(m?.transferido.usd, a?.transferido.usd, null)}
           chispa={c && chispaDe(c, (s) => s.transferidoUsd, local ? 'Transferido a la clínica' : 'Transferido a clínicas')}
-          info="Calculado de las transferencias registradas en Pagos a clínicas, por el día operativo de su asiento: su neto, sin el service fee."
+          info="Calculado de las transferencias registradas en Pagos a clínicas, por el día operativo de su asiento: su neto, sin la Comisión Helios."
           link={{ to: '/admin/pagos-clinicas' }}
           estado={estado}
           onReintentar={reintentar}
         />
         <CifraConTendencia
-          titulo="Service fee ganado, sin IVA"
+          titulo="Comisión Helios ganada, sin IVA"
           valor={m ? formatUsd(m.servicioGanadoUsd) : ''}
-          pie={m && `Sobre ${formatUsd(m.consumo.financedUsd)} financiado (sin fee) en ${m.consumo.consumos} financiamientos`}
+          pie={m && `Sobre ${formatUsd(m.consumo.financedUsd)} financiado (sin comisión) en ${m.consumo.consumos} financiamientos`}
           delta={cambio(m?.servicioGanadoUsd, a?.servicioGanadoUsd, true)}
-          chispa={c && chispaDe(c, (s) => s.servicioGanadoUsd, 'Service fee ganado, sin IVA')}
-          info="Calculado de los financiamientos confirmados en la semana: su service fee sin IVA, que se gana al confirmar el financiamiento. Nunca se suma al financiado."
+          chispa={c && chispaDe(c, (s) => s.servicioGanadoUsd, 'Comisión Helios ganada, sin IVA')}
+          info="Calculado de los financiamientos confirmados en la semana: su Comisión Helios sin IVA, que se gana al confirmar el financiamiento. Nunca se suma al financiado."
           estado={estado}
           onReintentar={reintentar}
         />
         <CifraConTendencia
-          titulo="Service fee cobrado, sin IVA"
+          titulo="Comisión Helios cobrado, sin IVA"
           valor={m ? formatUsd(m.servicioCobradoUsd) : ''}
-          pie="El fee que iba en las cuotas cobradas"
+          pie="La comisión que iba en las cuotas cobradas"
           delta={cambio(m?.servicioCobradoUsd, a?.servicioCobradoUsd, true)}
-          chispa={c && chispaDe(c, (s) => s.servicioCobradoUsd, 'Service fee cobrado, sin IVA')}
-          info="Calculado de las cuotas cobradas en la semana: la parte de service fee, sin IVA, que iba dentro de cada una (en proporción a su fee). Es de financiamientos de semanas anteriores: lo ganado se cobra al pagar la cuota."
+          chispa={c && chispaDe(c, (s) => s.servicioCobradoUsd, 'Comisión Helios cobrado, sin IVA')}
+          info="Calculado de las cuotas cobradas en la semana: la parte de Comisión Helios, sin IVA, que iba dentro de cada una (en proporción a su comisión). Es de financiamientos de semanas anteriores: lo ganado se cobra al pagar la cuota."
           estado={estado}
           onReintentar={reintentar}
         />

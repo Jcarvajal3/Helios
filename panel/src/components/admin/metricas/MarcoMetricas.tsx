@@ -274,7 +274,6 @@ function LoQueSeVe({
       return (
         <PestanaGente
           {...comunes}
-          sub={lugar.sub ?? 'resumen'}
           busqueda={propiaDe('gente', busqueda)}
           cambiarBusqueda={cambiarPropia('gente')}
         />

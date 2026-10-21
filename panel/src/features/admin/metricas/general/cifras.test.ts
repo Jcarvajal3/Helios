@@ -3,7 +3,7 @@
  *
  *   npx tsx src/features/admin/metricas/general/cifras.test.ts
  *
- * Lo que se vigila: que la frase no sume el service fee al consumo, que un
+ * Lo que se vigila: que la frase no sume la Comisión Helios al consumo, que un
  * denominador que falta dé un guion y no un 0 %, que las pastillas solo
  * salgan al cruzar un umbral, que «por cada $100» cierre con su margen y que
  * la curva no pinte como cero lo que no se parte por local.
@@ -149,14 +149,15 @@ console.log('\n── Por cada $100 ──────────────�
   igual(
     lineas?.map((l) => [l.rotulo, l.valor, l.total === true]),
     [
-      ['Service fee sin IVA', '+$19,99', false],
+      ['Comisión Helios sin IVA', '+$19,99', false],
       ['Cargos por atraso', '+$3,45', false],
-      ['Margen, menos el impago', '$22,63', true],
+      ['Comisiones del personal', '−$2,16', false],
+      ['Margen, menos el impago', '$20,48', true],
     ],
-    'suma lo que entra y cierra con el margen, que ya resta el impago',
+    'suma lo que entra, resta lo que se le paga al personal y cierra con el margen, que ya resta el impago',
   )
   igual(lineasPorCadaCien({ ...todos.porCadaCien, por100: null }), null, 'sin financiamiento, nada que repartir')
-  igual(resumenPorCadaCien(todos.porCadaCien), '318 financiamientos con $7.373,00 financiados (sin fee)', 'de dónde salen los cien')
+  igual(resumenPorCadaCien(todos.porCadaCien), '318 financiamientos con $7.373,00 financiados (sin comisión)', 'de dónde salen los cien')
   igual(resumenPorCadaCien({ ...todos.porCadaCien, consumos: 0 }), 'Todavía no hay financiamientos.', 'sin financiamientos')
   igual(
     notaDeMadurez(todos.porCadaCien),
@@ -193,12 +194,12 @@ console.log('\n── La curva ────────────────�
       ['14 sep', 4500, '$0,00 esa semana'],
       ['Esta semana', 7373, '$2.873,00 esa semana'],
     ],
-    'financiamiento acumulado, sin fee',
+    'financiamiento acumulado, sin comisión',
   )
   igual(rotuloDeSemana({ semana: '2026-09-21', registros: 0, registrosAcum: 0, consumos: 0, financedUsd: 0, financedAcumUsd: 0 }, '2026-09-27'), 'Esta semana', 'el domingo sigue en la semana de su lunes')
   igual(resumenDeRegistros(todos), '194 registros en 3 semanas', 'el resumen de los registros')
   igual(resumenDeRegistros(local), undefined, 'con clínica, sin resumen de registros')
-  igual(resumenDeConsumo(todos), '$7.373,00 en 3 semanas, sin el service fee', 'el resumen del financiamiento')
+  igual(resumenDeConsumo(todos), '$7.373,00 en 3 semanas, sin la Comisión Helios', 'el resumen del financiamiento')
 }
 
 if (fallos > 0) {

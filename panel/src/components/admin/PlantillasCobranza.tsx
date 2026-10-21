@@ -29,11 +29,13 @@ import { SOLO_SUPER_ADMIN, useIsSuperAdmin } from '@/features/admin/role'
 import { describeError } from '@/lib/supabase'
 
 /**
- * Los mensajes que se mandan por WhatsApp al cobrar: antes de vencer, el día
- * que vence y uno por cada tramo de atraso, con los días de cada tramo.
+ * Los mensajes que se mandan por WhatsApp al cobrar: uno por cada tramo de
+ * atraso, con los días de cada tramo. Los recordatorios antes del vencimiento
+ * y el del día salen solos y no se editan aquí.
  *
  * No son avisos automáticos: nadie los manda solo. Son el texto con el que se
- * abre el chat desde la cartera vencida y el caso de cada persona. Cada uno
+ * abre el chat desde la cartera vencida y el caso de cada persona que debe
+ * algo vencido. Cada uno
  * se ve tal como lo recibe la persona, con datos de ejemplo.
  */
 export function PlantillasCobranza() {
@@ -58,7 +60,7 @@ export function PlantillasCobranza() {
   return (
     <Seccion
       titulo="Lo que se manda al cobrar"
-      info="No son avisos automáticos: nadie los manda solo. Son el texto con el que se abre el chat de WhatsApp desde Por cobrar y el caso de cada paciente, uno por momento del cobro."
+      info="No son avisos automáticos: nadie los manda solo. Son el texto con el que se abre el chat de WhatsApp desde Por cobrar y el caso de cada paciente con algo vencido, uno por tramo de atraso. Los recordatorios antes del vencimiento y el del día salen solos."
     >
       <div className="flex flex-col gap-4">
         {plantillasEnOrden(query.data.rows).map(({ clave, template }) => (
@@ -74,7 +76,7 @@ export function PlantillasCobranza() {
   )
 }
 
-/** Las siete del panel, en su orden. Una clave que no conoce no se enseña. */
+/** Las cuatro del panel, en su orden. Una clave que no conoce no se enseña. */
 function plantillasEnOrden(
   rows: ReadonlyArray<CollectionTemplate>,
 ): Array<{ clave: ClavePlantilla; template: CollectionTemplate }> {
@@ -92,7 +94,7 @@ function Plantilla({
   variables,
 }: {
   template: CollectionTemplate
-  /** «1–3 días de atraso»; `null` mientras no se conozcan los cortes. */
+  /** «1–7 días de atraso»; `null` mientras no se conozcan los cortes. */
   cuando: string | null
   variables: string[]
 }) {

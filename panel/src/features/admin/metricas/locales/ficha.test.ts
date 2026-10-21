@@ -3,7 +3,7 @@
  *
  *   npx tsx src/features/admin/metricas/locales/ficha.test.ts
  *
- * Lo que se vigila: que la serie del gráfico lleve el consumo (sin fee)
+ * Lo que se vigila: que la serie del gráfico lleve el consumo (sin comisión)
  * y su nota, que las semanas de consumo vayan de la más nueva a la más vieja
  * con lo consumido de la serie.
  */

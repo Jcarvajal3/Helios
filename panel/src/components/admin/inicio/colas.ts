@@ -41,9 +41,9 @@ export type IdCola =
   | 'pagos-reportados'
   | 'abonos'
   | 'pagos-a-locales'
+  | 'pago-de-hoy'
   | 'promesas-hoy'
   | 'sin-contactar'
-  | 'recordar-hoy'
   | 'alertas-altas'
   | 'avisos-hoy'
   | 'correos-rebotados'
@@ -103,9 +103,11 @@ export function resumirPagosReportados(items: ReadonlyArray<QueueItem>, ahora: n
  * equivalente en euros y no se suma: se dice cuántos son.
  */
 export function resumirAbonos(
-  abonos: ReadonlyArray<Pick<UnmatchedDeposit, 'id' | 'amountUsd'>>,
+  todos: ReadonlyArray<Pick<UnmatchedDeposit, 'id' | 'amountUsd'> & { deHelios?: boolean }>,
   tope: number,
 ): Resumen {
+  // Los que casi seguro son de Ronda (misma cuenta del BNC) no son trabajo de Helios.
+  const abonos = todos.filter((a) => a.deHelios !== false)
   const enEuros = suma(abonos, (a) => a.amountUsd ?? 0)
   const sinTasa = abonos.filter((a) => a.amountUsd === null).length
   return resumen({
@@ -117,6 +119,22 @@ export function resumirAbonos(
         : `${formatUsd(enEuros)} sin asignar${sinTasa > 0 ? `, y ${sinTasa} sin tasa del día` : ''}`,
     plazo: 'hoy',
     ids: abonos.map((a) => a.id),
+  })
+}
+
+/**
+ * Las clínicas a las que toca pagarles hoy (sin lo atrasado, que es su propia
+ * cola). Es la tarea de cada día: a la clínica se le paga el día siguiente a
+ * cada vencimiento, así que casi todos los días hay algo.
+ */
+export function resumirPagoDeHoy(liquidaciones: ReadonlyArray<MerchantPayable>): Resumen {
+  const deHoy = liquidaciones.filter((m) => !m.isTest && m.nextRunUsd - m.overdueUsd > 0.005)
+  const usd = deHoy.reduce((s, m) => s + (m.nextRunUsd - m.overdueUsd), 0)
+  return resumen({
+    cantidad: deHoy.length,
+    detalle: deHoy.length > 0 ? `${formatUsd(usd)} por transferir hoy` : null,
+    plazo: 'hoy',
+    ids: deHoy.map((m) => m.merchantId),
   })
 }
 
@@ -177,16 +195,16 @@ export type FilaParaLaCola = FilaCartera &
   Partial<Pick<CollectionRow, 'overdueDesglose' | 'upcomingDesglose'>>
 
 /**
- * «Vencidos sin contactar» o «Vence mañana», con la regla de la cartera
- * vencida: el número es el del filtro que abre su enlace. El importe es
+ * «Vencidos sin contactar», con la regla de la cartera vencida: el número
+ * es el del filtro que abre su enlace. El importe es
  * deuda (consumo + fee) y va con sus dos partes cuando la base las manda.
  */
 export function resumirCartera(
   filas: ReadonlyArray<FilaParaLaCola>,
-  filtro: 'sin_contactar' | 'recordar_hoy',
+  filtro: 'sin_contactar',
   hoy: string,
 ): Resumen {
-  // Estos dos filtros no dependen de los tramos: no hacen falta los cortes.
+  // Este filtro no depende de los tramos: no hacen falta los cortes.
   const ctx = { hoy, cortes: null }
   const del = ordenarComoLaCartera(filas.filter((f) => pasaElFiltro(f, filtro, ctx)))
   const cantidad = recuentoPorFiltro(filas, ctx)[filtro]
@@ -195,13 +213,11 @@ export function resumirCartera(
   const detalle =
     del.length === 0
       ? null
-      : filtro === 'sin_contactar'
-        ? `${formatUsd(sumas.vencidoUsd)} vencidos${partes(sumas.vencidoDesglose)} sin gestión desde que vencieron`
-        : `${formatUsd(sumas.porVencerUsd)} vencen mañana${partes(sumas.porVencerDesglose)}`
+      : `${formatUsd(sumas.vencidoUsd)} vencidos${partes(sumas.vencidoDesglose)} sin gestión desde que vencieron`
   return resumen({
     cantidad,
     detalle,
-    plazo: filtro === 'sin_contactar' ? 'pasado' : 'hoy',
+    plazo: 'pasado',
     ids: del.map((f) => f.userId),
   })
 }

@@ -51,9 +51,9 @@ igual(ultima?.enCurso, true, 'la última está en curso')
 igual(ultima?.dias, 6, 'y lleva seis días')
 igual(ultima?.hastaDato, '2026-09-26', 'hasta hoy')
 const c = ultima?.cifras
-igual(c?.consumo.consumoUsd, 912.4, 'financiamiento sin fee')
+igual(c?.consumo.consumoUsd, 912.4, 'financiamiento sin comisión')
 igual(c?.consumo.ticketMedioUsd, 30.41, 'ticket medio')
-igual(c?.ingreso.servicioUsd, 182.48, 'service fee sin IVA, aparte')
+igual(c?.ingreso.servicioUsd, 182.48, 'Comisión Helios sin IVA, aparte')
 igual(
   c?.cobro.vencian,
   { payableUsd: 1062.97, financedUsd: 862.8, feeUsd: 200.17, cuotas: 60 },

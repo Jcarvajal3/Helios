@@ -14,7 +14,7 @@ import type { DefinicionDeFila, DestinoDeFila } from './filas'
 import type { RespuestaSemanas } from './tipos'
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Las cinco cifras de arriba de la pestaña: consumo (sin fee), service fee
+// Las cinco cifras de arriba de la pestaña: consumo (sin comisión), Comisión Helios
 // sin IVA, personas, cobrado a tiempo y mora, cada una con su cambio frente
 // a la anterior, su chispa de las últimas ocho semanas, su meta o su umbral
 // y una línea.
@@ -49,8 +49,8 @@ export type CifraDeLaSemana = {
     formato: (n: number) => string
     /**
      * El nombre de la serie junto a la cifra, en el globo de cada barra de la
-     * chispa: «Consumo (sin fee)». Es el título de la tarjeta, así el globo
-     * también dice si el consumo lleva el fee.
+     * chispa: «Consumo (sin comisión)». Es el título de la tarjeta, así el globo
+     * también dice si el consumo lleva la comisión.
      */
     serie: string
   }
@@ -71,12 +71,12 @@ export type DatosDeLasCifras = {
 export const ORDEN_DE_CIFRAS: ReadonlyArray<IdCifra> = ['consumo', 'servicio', 'personas', 'a-tiempo', 'mora']
 
 /**
- * El título de cada tarjeta. El consumo dice que va sin el fee y el fee se
- * llama por su nombre: «service fee», nunca «servicio».
+ * El título de cada tarjeta. El consumo dice que va sin la comisión y la comisión se
+ * llama por su nombre: «Comisión Helios», nunca «servicio».
  */
 export const TITULOS_DE_CIFRAS: Record<IdCifra, string> = {
-  consumo: 'Total financiado (sin fee)',
-  servicio: 'Service fee sin IVA',
+  consumo: 'Total financiado (sin comisión)',
+  servicio: 'Comisión Helios sin IVA',
   personas: 'Pacientes que se financiaron',
   'a-tiempo': 'Cobrado a tiempo',
   mora: 'Mora',

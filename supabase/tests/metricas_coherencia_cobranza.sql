@@ -164,10 +164,10 @@ r(orden, comprobacion, esperado, obtenido, ok) as (
   select '10', 'C10 Paso hasta hoy: personas por tramo = mora por tramo',
          (select string_agg(f->>'personas', ',' order by f->>'tramo') from sem, jsonb_array_elements(sem.j->'tramos'->'filas') f),
          (select string_agg(coalesce(flujo.j->'weeks'->-1->'people'->>t, '0'), ',' order by t)
-            from flujo, unnest(array['t1', 't2', 't3', 't4', 't5']) t),
+            from flujo, unnest(array['t1', 't2', 't3', 't4']) t),
          (select string_agg(f->>'personas', ',' order by f->>'tramo') from sem, jsonb_array_elements(sem.j->'tramos'->'filas') f)
            = (select string_agg(coalesce(flujo.j->'weeks'->-1->'people'->>t, '0'), ',' order by t)
-                from flujo, unnest(array['t1', 't2', 't3', 't4', 't5']) t)
+                from flujo, unnest(array['t1', 't2', 't3', 't4']) t)
   union all
   select '11', 'C11 Paso hasta hoy: vencido por tramo = mora por tramo',
          round((select sum((f->>'payable_usd')::numeric) from sem, jsonb_array_elements(sem.j->'tramos'->'filas') f), 2)::text,

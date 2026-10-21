@@ -89,7 +89,7 @@ export function CifrasDeLaSemana({
           trend={deltaVencido ? comoTendencia(deltaVencido) : undefined}
           visual={vencido && <LineaDeDesglose desglose={vencido} />}
           hint={r ? `${usuarios(r.cartera.personasVencidas)} · ${corteEscrito.toLowerCase()}` : undefined}
-          info="Cuotas de todos los financiamientos (no solo los de esta semana) sin pagar y con el vencimiento pasado al corte de la semana (su cierre, o ahora si está en curso), sin lo perdido, en dólares con fee y su desglose; el cambio es frente al corte de la semana anterior a la misma altura."
+          info="Cuotas de todos los financiamientos (no solo los de esta semana) sin pagar y con el vencimiento pasado al corte de la semana (su cierre, o ahora si está en curso), sin lo perdido, en dólares con comisión y su desglose; el cambio es frente al corte de la semana anterior a la misma altura."
           link={{ to: '/admin/cobranza', search: { tramo: 'plazo_vencido' } }}
           estado={estadoResumen}
           onReintentar={reintentarResumen}
@@ -111,7 +111,7 @@ export function CifrasDeLaSemana({
             )
           }
           hint={r ? (mora === null ? 'No queda nada por cobrar' : corteEscrito) : undefined}
-          info="Vencido ÷ (vencido + por vencer) de toda la cartera al corte de la semana, en dólares con fee y sin lo perdido; el cambio es en puntos frente a la semana anterior a la misma altura."
+          info="Vencido ÷ (vencido + por vencer) de toda la cartera al corte de la semana, en dólares con comisión y sin lo perdido; el cambio es en puntos frente a la semana anterior a la misma altura."
           estado={estadoResumen}
           onReintentar={reintentarResumen}
         />
@@ -120,7 +120,7 @@ export function CifrasDeLaSemana({
           value={r ? (impago === null ? '—' : formatPct(impago)) : ''}
           senal={senalDelImpago(impago, empate, umbralDelImpago)}
           hint={r ? (empate === null ? 'Sin punto de empate todavía' : `Helios deja de ganar al ${formatPct(empate)}`) : undefined}
-          info="Financiado (sin fee) de las cuotas dadas por perdidas ÷ todo lo financiado desde el primer día (no es de la semana); el punto de empate es el perdido a partir del cual Helios deja de ganar."
+          info="Financiado (sin comisión) de las cuotas dadas por perdidas ÷ todo lo financiado desde el primer día (no es de la semana); el punto de empate es el perdido a partir del cual Helios deja de ganar."
           estado={estadoResumen}
           onReintentar={reintentarResumen}
         />

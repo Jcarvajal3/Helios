@@ -9,6 +9,7 @@ import {
   Badge,
   Button,
   Card,
+  Checkbox,
   ErrorBox,
   Input,
   Modal,
@@ -21,6 +22,7 @@ import {
   formatDocument,
   formatPhone,
 } from '@/components/ui'
+import { consultaCorreosRecientes, reenviarComprobante } from '@/features/admin/avisos/api'
 import { actualizarContactoDelPaciente, consultaCambiosPropuestos } from '@/features/admin/pacientes/api'
 import {
   NOMBRE_DEL_CAMPO,
@@ -58,7 +60,7 @@ export function PestanaDatos({ user, onDone }: { user: UserDetail; onDone: () =>
         <Card tone="inset">
           <p className="flex items-center gap-2 type-panel-body text-error">
             <MailWarning size={16} aria-hidden /> El correo rebotó el {formatDateTime(d.emailInvalidAt)}: el comprobante
-            no le llegó. Corrígelo con «Editar contacto» y reenvía el comprobante desde Avisos › Correos.
+            no le llegó. Corrígelo con «Editar contacto»: al guardar el correo nuevo, se le reenvía el comprobante.
           </p>
         </Card>
       )}
@@ -143,6 +145,7 @@ export function PestanaDatos({ user, onDone }: { user: UserDetail; onDone: () =>
           userId={user.userId}
           nombre={user.fullName}
           datos={d}
+          ultimaOrden={ultimaOrdenConfirmada(user)}
           onClose={() => setEditando(false)}
           onDone={() => {
             setEditando(false)
@@ -178,16 +181,28 @@ const BLOQUES: ReadonlyArray<{ titulo: string; campos: ReadonlyArray<CampoEditab
  * referencia. La identidad (nombre, cédula, nacimiento) no se toca desde
  * aquí. Solo se manda lo que cambió, con el motivo (obligatorio: bitácora).
  */
+/** La orden confirmada más reciente: la del comprobante que se reenvía al corregir el correo. */
+function ultimaOrdenConfirmada(user: UserDetail): { id: string; orderNumber: number | null } | null {
+  const confirmadas = user.charges
+    .filter((c) => c.status === 'confirmed')
+    .sort((a, b) => (b.confirmedAt ?? '').localeCompare(a.confirmedAt ?? ''))
+  const c = confirmadas.at(0)
+  return c ? { id: c.id, orderNumber: c.orderNumber } : null
+}
+
 function EditarContacto({
   userId,
   nombre,
   datos,
+  ultimaOrden,
   onClose,
   onDone,
 }: {
   userId: string
   nombre: string | null
   datos: DatosDelPaciente
+  /** Su orden confirmada más reciente, si tiene: se le puede reenviar el comprobante al correo nuevo. */
+  ultimaOrden: { id: string; orderNumber: number | null } | null
   onClose: () => void
   onDone: () => void
 }) {
@@ -195,8 +210,12 @@ function EditarContacto({
   const avisar = useToast()
   const [borrador, setBorrador] = useState<BorradorDeDatos>(() => borradorDeDatos(datos))
   const [motivo, setMotivo] = useState('')
+  const [reenviar, setReenviar] = useState(true)
 
   const cambio = cambioDeDatos(datos, borrador)
+  // Corregir el correo casi siempre es porque el comprobante no le llegó: se
+  // reenvía en el mismo paso, sin ir a Avisos › Correos.
+  const ofrecerReenvio = cambio.ok && cambio.campos.includes('email') && ultimaOrden !== null
   const bloqueo = !cambio.ok
     ? cambio.motivo
     : motivo.trim().length < 5
@@ -204,13 +223,30 @@ function EditarContacto({
       : undefined
 
   const guardar = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       if (!cambio.ok) throw new Error(cambio.motivo)
-      return actualizarContactoDelPaciente({ userId, cambios: cambio.payload, motivo })
+      await actualizarContactoDelPaciente({ userId, cambios: cambio.payload, motivo })
+      // `ofrecerReenvio` ya asegura que hay orden (TS lo estrecha).
+      if (!(ofrecerReenvio && reenviar)) return 'sin-reenvio' as const
+      // El contacto ya está guardado: si el reenvío falla, se dice, pero no
+      // se deshace nada.
+      try {
+        await reenviarComprobante({ chargeId: ultimaOrden.id })
+        return 'reenviado' as const
+      } catch {
+        return 'reenvio-fallido' as const
+      }
     },
-    onSuccess: () => {
-      avisar(`Datos de ${nombre ?? 'el paciente'} actualizados`)
+    onSuccess: (reenvio) => {
+      avisar(
+        reenvio === 'reenviado'
+          ? `Datos de ${nombre ?? 'el paciente'} actualizados y comprobante reenviado al correo nuevo`
+          : reenvio === 'reenvio-fallido'
+            ? `Datos actualizados, pero no se pudo reenviar el comprobante: hazlo desde Avisos › Correos`
+            : `Datos de ${nombre ?? 'el paciente'} actualizados`,
+      )
       void client.invalidateQueries({ queryKey: ['admin-user', userId] })
+      void client.invalidateQueries({ queryKey: consultaCorreosRecientes().queryKey })
       void client.invalidateQueries({ queryKey: ['admin-users'] })
       void client.invalidateQueries({ queryKey: ['admin-audit'] })
       onDone()
@@ -243,8 +279,18 @@ function EditarContacto({
         {cambio.ok && (
           <p className="type-panel-caption text-on-surface-variant">
             Cambia: {cambio.campos.map((c) => NOMBRE_DEL_CAMPO[c].toLowerCase()).join(', ')}.
-            {cambio.campos.includes('email') && ' Al corregir el correo, reenvía el comprobante desde Avisos › Correos.'}
           </p>
+        )}
+
+        {ofrecerReenvio && (
+          <Checkbox
+            id="editar-contacto-reenviar"
+            label={`Reenviar el comprobante de la orden${
+              ultimaOrden.orderNumber !== null ? ` #${ultimaOrden.orderNumber}` : ''
+            } al correo nuevo`}
+            checked={reenviar}
+            onChange={setReenviar}
+          />
         )}
 
         <Textarea
@@ -266,7 +312,11 @@ function EditarContacto({
             motivoApagado={bloqueo}
             onClick={() => guardar.mutate()}
           >
-            {guardar.isPending ? 'Guardando…' : 'Guardar los cambios'}
+            {guardar.isPending
+              ? 'Guardando…'
+              : ofrecerReenvio && reenviar
+                ? 'Guardar y reenviar el comprobante'
+                : 'Guardar los cambios'}
           </Button>
           <Button size="md" variant="text" onClick={onClose}>
             Cancelar

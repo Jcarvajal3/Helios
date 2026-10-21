@@ -14,14 +14,14 @@ import type { CifrasDePeriodo, RespuestaSemanas } from './tipos'
 // Es el único sitio que lo decide: la tabla, el CSV y las pruebas leen de
 // aquí. Una fila nueva es una entrada más en `GRUPOS_DE_FILAS`.
 //
-// La regla del fee, fila a fila: lo que se paga en cuotas (lo que vencía, lo
+// La regla de la comisión, fila a fila: lo que se paga en cuotas (lo que vencía, lo
 // vencido) va con sus dos sumandos debajo, en filas propias —«financiado» y
-// «service fee»—, así que nunca hay un total con el fee dentro sin sus
-// partes a la vista. El financiado va sin fee, el service fee de Helios sin
+// «Comisión Helios»—, así que nunca hay un total con la comisión dentro sin sus
+// partes a la vista. El financiado va sin comisión, la Comisión Helios de Helios sin
 // IVA y los cargos por atraso aparte. Lo dado por perdido se cuenta en financiado.
 //
-// Las palabras: el fee se llama «service fee» (o «fee» donde no cabe),
-// nunca «servicio»; todo financiado dice si lleva el fee, en su nombre, en su
+// Las palabras: la comisión se llama «Comisión Helios» (o «comisión» donde no cabe),
+// nunca «servicio»; todo financiado dice si lleva la comisión, en su nombre, en su
 // unidad o al empezar su ayuda.
 //
 // Puro: se prueba en `filas.test.ts`.
@@ -39,7 +39,7 @@ export type DestinoDeFila = Lugar
 export type DefinicionDeFila = {
   id: string
   nombre: string
-  /** Al lado del nombre, en gris: «sin fee», «al cierre». */
+  /** Al lado del nombre, en gris: «sin comisión», «al cierre». */
   unidad?: string
   formato: Formato
   /** Cómo se mide el cambio frente a la anterior: en % o en puntos, y si subir es bueno. */
@@ -49,7 +49,7 @@ export type DefinicionDeFila = {
   ayuda: string
   destino: DestinoDeFila
   /**
-   * Es un sumando de la fila de encima (el consumo o el service fee de lo que
+   * Es un sumando de la fila de encima (el consumo o la Comisión Helios de lo que
    * se paga en cuotas). Se pinta más pequeña y sin cambio propio.
    */
   sumando?: true
@@ -81,13 +81,13 @@ export const GRUPOS_DE_FILAS: ReadonlyArray<GrupoDeFilas> = [
     filas: [
       {
         id: 'consumo',
-        // El mismo número y el mismo nombre que «Total facturado (sin fee)» de Semana › Resumen.
+        // El mismo número y el mismo nombre que «Total facturado (sin comisión)» de Semana › Resumen.
         nombre: 'Total financiado',
-        unidad: 'sin fee',
+        unidad: 'sin comisión',
         formato: 'eur',
         comparar: MAS_ES_BUENO,
         valor: (c) => c.consumo.consumoUsd,
-        ayuda: `Sin el service fee: lo que los pacientes se financiaron en las clínicas. ${DEL_CONSUMO}`,
+        ayuda: `Sin la Comisión Helios: lo que los pacientes se financiaron en las clínicas. ${DEL_CONSUMO}`,
         destino: { vista: 'locales' },
       },
       {
@@ -102,11 +102,11 @@ export const GRUPOS_DE_FILAS: ReadonlyArray<GrupoDeFilas> = [
       {
         id: 'ticket-medio',
         nombre: 'Ticket medio',
-        unidad: 'sin fee',
+        unidad: 'sin comisión',
         formato: 'eur',
         comparar: MAS_ES_BUENO,
         valor: (c) => c.consumo.ticketMedioUsd,
-        ayuda: 'Sin el service fee: el total financiado dividido entre los financiamientos.',
+        ayuda: 'Sin la Comisión Helios: el total financiado dividido entre los financiamientos.',
         destino: { vista: 'locales' },
       },
       {
@@ -117,7 +117,7 @@ export const GRUPOS_DE_FILAS: ReadonlyArray<GrupoDeFilas> = [
         valor: (c) => c.consumo.personas,
         ayuda:
           'Pacientes distintos con cuota en algún financiamiento de la semana. Quien se financió dos veces cuenta una vez.',
-        destino: { vista: 'gente', sub: 'resumen' },
+        destino: { vista: 'gente' },
       },
       {
         id: 'locales',
@@ -137,13 +137,13 @@ export const GRUPOS_DE_FILAS: ReadonlyArray<GrupoDeFilas> = [
     filas: [
       {
         id: 'servicio',
-        nombre: 'Service fee',
+        nombre: 'Comisión Helios',
         unidad: 'sin IVA',
         formato: 'eur',
         comparar: MAS_ES_BUENO,
         valor: (c) => c.ingreso.servicioUsd,
         ayuda:
-          'El service fee de los financiamientos de la semana, sin el IVA: lo que gana Helios. Se gana al confirmar el financiamiento y se cobra con las cuotas. Nunca se suma al financiamiento.',
+          'La Comisión Helios de los financiamientos de la semana, sin el IVA: lo que gana Helios. Se gana al confirmar el financiamiento y se cobra con las cuotas. Nunca se suma al financiamiento.',
         destino: { vista: 'caja', sub: 'balance' },
       },
       {
@@ -154,7 +154,7 @@ export const GRUPOS_DE_FILAS: ReadonlyArray<GrupoDeFilas> = [
         comparar: EUR_NEUTRO,
         valor: (c) => c.ingreso.cargosPorAtrasoUsd,
         ayuda:
-          'Los cargos por atraso que se cargaron en la semana, sin los condonados. Van aparte del financiamiento y del service fee. Con una clínica, solo los de cuotas de esa clínica.',
+          'Los cargos por atraso que se cargaron en la semana, sin los condonados. Van aparte del financiamiento y de la Comisión Helios. Con una clínica, solo los de cuotas de esa clínica.',
         destino: { vista: 'caja', sub: 'balance' },
       },
     ],
@@ -167,31 +167,31 @@ export const GRUPOS_DE_FILAS: ReadonlyArray<GrupoDeFilas> = [
       {
         id: 'vencian',
         nombre: 'Cuotas que vencían',
-        unidad: 'financiado + fee',
+        unidad: 'financiado + comisión',
         formato: 'eur',
         comparar: EUR_NEUTRO,
         valor: (c) => c.cobro.vencian.payableUsd,
         ayuda:
-          'El importe de las cuotas cuyo vencimiento caía en la semana (hasta hoy, si está en curso), estén pagadas o no: el financiado (sin fee) más el service fee + IVA, que van en las dos filas de debajo.',
+          'El importe de las cuotas cuyo vencimiento caía en la semana (hasta hoy, si está en curso), estén pagadas o no: el financiado (sin comisión) más la Comisión Helios + IVA, que van en las dos filas de debajo.',
         destino: { vista: 'mora', sub: 'resumen' },
       },
       {
         id: 'vencian-consumo',
-        nombre: 'financiado (sin fee)',
+        nombre: 'financiado (sin comisión)',
         formato: 'eur',
         comparar: EUR_NEUTRO,
         valor: (c) => c.cobro.vencian.financedUsd,
-        ayuda: 'Sin el service fee: la parte financiada de las cuotas que vencían.',
+        ayuda: 'Sin la Comisión Helios: la parte financiada de las cuotas que vencían.',
         destino: { vista: 'mora', sub: 'resumen' },
         sumando: true,
       },
       {
         id: 'vencian-servicio',
-        nombre: 'service fee + IVA',
+        nombre: 'Comisión Helios + IVA',
         formato: 'eur',
         comparar: EUR_NEUTRO,
         valor: (c) => c.cobro.vencian.feeUsd,
-        ayuda: 'El service fee con su IVA, dentro de las cuotas que vencían.',
+        ayuda: 'La Comisión Helios con su IVA, dentro de las cuotas que vencían.',
         destino: { vista: 'mora', sub: 'resumen' },
         sumando: true,
       },
@@ -234,31 +234,31 @@ export const GRUPOS_DE_FILAS: ReadonlyArray<GrupoDeFilas> = [
       {
         id: 'vencido',
         nombre: 'Vencido',
-        unidad: 'financiado + fee, al cierre',
+        unidad: 'financiado + comisión, al cierre',
         formato: 'eur',
         comparar: MAS_ES_MALO,
         valor: (c) => c.riesgo.vencido.payableUsd,
         ayuda:
-          'Las cuotas vencidas y sin pagar al cierre del domingo (ahora, si la semana está en curso), sin lo perdido: el financiado (sin fee) más el service fee + IVA, en las dos filas de debajo.',
+          'Las cuotas vencidas y sin pagar al cierre del domingo (ahora, si la semana está en curso), sin lo perdido: el financiado (sin comisión) más la Comisión Helios + IVA, en las dos filas de debajo.',
         destino: { vista: 'mora', sub: 'resumen' },
       },
       {
         id: 'vencido-consumo',
-        nombre: 'financiado (sin fee)',
+        nombre: 'financiado (sin comisión)',
         formato: 'eur',
         comparar: MAS_ES_MALO,
         valor: (c) => c.riesgo.vencido.financedUsd,
-        ayuda: 'Sin el service fee: la parte financiada de lo vencido.',
+        ayuda: 'Sin la Comisión Helios: la parte financiada de lo vencido.',
         destino: { vista: 'mora', sub: 'resumen' },
         sumando: true,
       },
       {
         id: 'vencido-servicio',
-        nombre: 'service fee + IVA',
+        nombre: 'Comisión Helios + IVA',
         formato: 'eur',
         comparar: MAS_ES_MALO,
         valor: (c) => c.riesgo.vencido.feeUsd,
-        ayuda: 'El service fee con su IVA, dentro de lo vencido.',
+        ayuda: 'La Comisión Helios con su IVA, dentro de lo vencido.',
         destino: { vista: 'mora', sub: 'resumen' },
         sumando: true,
       },
@@ -270,18 +270,18 @@ export const GRUPOS_DE_FILAS: ReadonlyArray<GrupoDeFilas> = [
         comparar: PUNTOS_ABAJO,
         valor: (c) => c.riesgo.moraPct,
         ayuda:
-          'Vencido ÷ (vencido + por vencer), en importe de cuotas (financiado + fee), al cierre de la semana (ahora, si está en curso) y sin lo perdido. Es la misma mora de toda la cartera.',
+          'Vencido ÷ (vencido + por vencer), en importe de cuotas (financiado + comisión), al cierre de la semana (ahora, si está en curso) y sin lo perdido. Es la misma mora de toda la cartera.',
         destino: { vista: 'mora', sub: 'resumen' },
       },
       {
         id: 'perdido',
         nombre: 'Perdido',
-        unidad: 'sin fee',
+        unidad: 'sin comisión',
         formato: 'eur',
         comparar: MAS_ES_MALO,
         valor: (c) => c.riesgo.perdido.financedUsd,
         ayuda:
-          'Sin el service fee: el financiado de las cuotas que se dieron por perdidas en la semana y seguían sin pagar al cierre. Es lo que Helios adelantó y no va a volver.',
+          'Sin la Comisión Helios: el financiado de las cuotas que se dieron por perdidas en la semana y seguían sin pagar al cierre. Es lo que Helios adelantó y no va a volver.',
         destino: { vista: 'mora', sub: 'resumen' },
       },
     ],
@@ -299,7 +299,7 @@ export const GRUPOS_DE_FILAS: ReadonlyArray<GrupoDeFilas> = [
         valor: (c) => c.gente.registros,
         ayuda:
           'Pacientes que una clínica dio de alta en la semana, en el mismo paso que su primer financiamiento. Sin cuentas de prueba.',
-        destino: { vista: 'gente', sub: 'resumen' },
+        destino: { vista: 'gente' },
         soloSinLocal: true,
       },
       {
@@ -310,7 +310,7 @@ export const GRUPOS_DE_FILAS: ReadonlyArray<GrupoDeFilas> = [
         valor: (c) => c.gente.primerConsumo,
         ayuda:
           'Pacientes cuyo primer financiamiento en Helios cayó en la semana. Con una clínica, los que se financiaron por primera vez en esa clínica. No es «nuevos en alguna clínica» de Semana › Resumen.',
-        destino: { vista: 'gente', sub: 'resumen' },
+        destino: { vista: 'gente' },
       },
     ],
   },

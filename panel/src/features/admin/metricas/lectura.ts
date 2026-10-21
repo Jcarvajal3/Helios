@@ -7,7 +7,7 @@ import { booleano, filaONula, numeroONulo } from '@/lib/json'
 //
 // La pantalla pinta lo que la base USÓ, no lo que pidió: la semana y el «hoy»
 // vienen en la respuesta. Y todo importe que se paga (`payable_usd`) viene
-// con su consumo y su service fee al lado, para que el desglose nunca falte.
+// con su consumo y su Comisión Helios al lado, para que el desglose nunca falte.
 //
 // Puro: se prueba en `lectura.test.ts`.
 // ═══════════════════════════════════════════════════════════════════════════
@@ -32,15 +32,15 @@ export function leerHoyUsado(v: unknown): string | null {
 
 /**
  * Un importe que se paga en cuotas, siempre con sus dos partes. Nunca se
- * enseña `payableUsd` suelto: va con «Consumo $ + service fee $»
+ * enseña `payableUsd` suelto: va con «Consumo $ + Comisión Helios $»
  * (`textoDeDesglose`).
  */
 export type Desglose = {
-  /** Lo que se paga: consumo + service fee (con su IVA). */
+  /** Lo que se paga: consumo + Comisión Helios (con su IVA). */
   payableUsd: number
-  /** El consumo, sin el fee. */
+  /** El consumo, sin la comisión. */
   financedUsd: number
-  /** El service fee con su IVA: `payable − financed`. */
+  /** La Comisión Helios con su IVA: `payable − financed`. */
   feeUsd: number
 }
 

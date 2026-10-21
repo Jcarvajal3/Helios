@@ -37,7 +37,7 @@ export type CuotaParaPagar = {
   chargeId: string
   orderNumber: number | null
   sequence: number
-  /** PAYABLE: la cuota con su parte del service fee dentro, en dólares. */
+  /** PAYABLE: la cuota con su parte de la Comisión Helios dentro, en dólares. */
   amountUsd: number
   /** La moneda en que se cobró la orden: la de la tasa con que se paga. */
   moneda: Moneda

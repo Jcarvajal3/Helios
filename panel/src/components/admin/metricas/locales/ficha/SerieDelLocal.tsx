@@ -16,14 +16,14 @@ export function SerieDelLocal({ d, serie }: { d: LocalesDeLaSemana; serie: Serie
 
   return (
     <BarChart
-      title="Financiado por semana (sin fee)"
+      title="Financiado por semana (sin comisión)"
       summary={
         primera && ultima
           ? `De ${semanaCorta(primera)} a ${semanaCorta(ultima)}${d.semana.enCurso ? ', la última a medias' : ''}.`
           : undefined
       }
-      footnote="Sin el service fee: el financiado de la clínica cada semana. Los pacientes son los que tienen cuota en sus financiamientos."
-      series={[{ key: 'consumo', label: 'Financiado (sin fee)' }]}
+      footnote="Sin la Comisión Helios: el financiado de la clínica cada semana. Los pacientes son los que tienen cuota en sus financiamientos."
+      series={[{ key: 'consumo', label: 'Financiado (sin comisión)' }]}
       points={serie ? puntosDelConsumo(semanas, serie) : []}
       format={formatUsd}
       formatShort={formatUsdShort}

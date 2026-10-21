@@ -11,7 +11,6 @@
 import {
   leerGrowthOverview,
   leerUserBehavior,
-  leerUserCohorts,
 } from './growth'
 
 let fallos = 0
@@ -91,11 +90,6 @@ const uso = leerUserBehavior({
 igual(uso.levels.map((l) => l.users), [null], 'con clínica, cuánta gente hay en el nivel no se sabe')
 igual(uso.statuses, null, 'ni el padrón por estado')
 igual(leerUserBehavior({ statuses: [] }).statuses, [], 'sin clínica, una lista vacía es una lista')
-
-console.log('── La retención ──────────────────────────────────────────────')
-igual(leerUserCohorts({ base: 'primera_visita', rows: [] }, 'week', 8).base, 'primera_visita', 'con clínica, desde la primera visita')
-igual(leerUserCohorts({ rows: [] }, 'week', 8).base, 'registro', 'sin decirlo, desde el registro')
-igual(leerUserCohorts({ grain: 'month', periods: 6 }, 'week', 8).grain, 'month', 'el cubo que usó la base')
 
 if (fallos > 0) {
   console.error(`\n${fallos} ${fallos === 1 ? 'prueba falló' : 'pruebas fallaron'}`)

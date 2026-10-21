@@ -16,7 +16,7 @@ export type DefinicionDeMeta = {
   rotulo: string
   /**
    * Lo que el rótulo tiene que decir siempre, venga de donde venga: la meta
-   * del consumo va sin el service fee, y el rótulo de la base no lo dice.
+   * del consumo va sin la Comisión Helios, y el rótulo de la base no lo dice.
    */
   aclaracion?: string
   sentido: Sentido
@@ -36,7 +36,7 @@ export const METAS = {
   financiado: {
     clave: 'meta_financiado_semana_usd',
     rotulo: 'Total financiado de la semana',
-    aclaracion: '(sin fee)',
+    aclaracion: '(sin comisión)',
     sentido: 'subir',
     formato: formatUsd,
   },

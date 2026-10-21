@@ -1,12 +1,7 @@
 import { queryOptions } from '@tanstack/react-query'
 
 import type { Rango } from '@/components/ui'
-import {
-  leerGrowthOverview,
-  leerUserBehavior,
-  leerUserCohorts,
-} from '@/features/admin/growth'
-import type { CohortGrain } from '@/features/admin/growth'
+import { leerGrowthOverview, leerUserBehavior } from '@/features/admin/growth'
 import { OPCIONES_METRICAS, claveMetricas, llamarRpc } from '@/features/admin/metricas/consulta'
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -34,7 +29,7 @@ export function consultaDelTablero(rango: Rango, local: string | null) {
   })
 }
 
-/** Cuánto gasta cada persona y cómo se reparte. */
+/** Los estados de las cuentas y los niveles (`admin_user_behavior`). */
 export function consultaDelUso(rango: Rango, local: string | null) {
   return queryOptions({
     queryKey: claveMetricas('gente', 'admin_user_behavior', rango.from, rango.to, local),
@@ -43,21 +38,3 @@ export function consultaDelUso(rango: Rango, local: string | null) {
     ...OPCIONES_METRICAS,
   })
 }
-
-/**
- * Las cohortes de la Retención. Su eje es el cubo y cuántos, acabando hoy:
- * una cohorte se mide en periodos desde que entró, no en días de una ventana.
- */
-export function consultaDeRetencion(grain: CohortGrain, periods: number, local: string | null) {
-  return queryOptions({
-    queryKey: claveMetricas('gente', 'admin_user_cohorts', grain, periods, local),
-    queryFn: ({ signal }) =>
-      llamarRpc(
-        'admin_user_cohorts',
-        { p_grain: grain, p_periods: periods, p_merchant_id: local },
-        { signal, leer: (crudo) => leerUserCohorts(crudo, grain, periods) },
-      ),
-    ...OPCIONES_METRICAS,
-  })
-}
-

@@ -45,8 +45,8 @@ export function PestanaConsumos({
  * Los consumos en los que está esta persona: los que puso y los de grupo en
  * los que le tocó una parte.
  *
- * El importe es el consumo sin el service fee, que es lo que ocupó de su
- * cupo. El fee va repartido en las cuotas, en la tabla de abajo. Cada
+ * El importe es el consumo sin la Comisión Helios, que es lo que ocupó de su
+ * cupo. La comisión va repartido en las cuotas, en la tabla de abajo. Cada
  * fila abre la factura del consumo, y el local abre su ficha.
  */
 function SusConsumos({ consumos }: { consumos: Array<ConsumoDePersona> }) {
@@ -55,7 +55,7 @@ function SusConsumos({ consumos }: { consumos: Array<ConsumoDePersona> }) {
   return (
     <Seccion
       titulo="Sus financiamientos"
-      info="Los que puso y los de grupo en los que le tocó una parte. Cada fila abre la factura del financiamiento."
+      info="Sus órdenes, de todas las clínicas. Cada fila abre la orden."
     >
       {consumos.length === 0 && (
         <Card>
@@ -70,8 +70,8 @@ function SusConsumos({ consumos }: { consumos: Array<ConsumoDePersona> }) {
             'Día operativo',
             'Clínica',
             {
-              label: 'Financiamiento (sin fee)',
-              info: 'Sin el service fee. En un financiamiento de grupo, su parte (el financiamiento de sus cuotas) y debajo el financiamiento entero; en uno pendiente, anulado o revertido, el financiamiento entero.',
+              label: 'Financiamiento (sin comisión)',
+              info: 'Sin la Comisión Helios: el monto de la consulta.',
             },
             'Estado',
           ]}
@@ -150,14 +150,14 @@ function SusCuotas({
   const localDe = new Map(consumos.map((c) => [c.chargeId, c.merchantId]))
 
   return (
-    <Seccion titulo="Sus cuotas" info="Cada cuota es financiamiento + service fee: es lo que tiene que transferir. Cada fila abre la factura de su financiamiento.">
+    <Seccion titulo="Sus cuotas" info="Cada cuota es financiamiento + Comisión Helios: es lo que tiene que transferir. Cada fila abre la factura de su financiamiento.">
       <Table
         headers={[
           '# Orden',
           'Vence',
           'Clínica',
           'Cuota',
-          { label: 'Cuota (financiamiento + fee)', info: 'Lo que se paga en esa cuota: financiamiento + service fee (IVA incluido). Debajo, sus dos partes.' },
+          { label: 'Cuota (financiamiento + comisión)', info: 'Lo que se paga en esa cuota: financiamiento + Comisión Helios (IVA incluido). Debajo, sus dos partes.' },
           'Estado',
         ]}
       >

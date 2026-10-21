@@ -23,11 +23,11 @@ type Parte = { clave: string; rotulo: string; valor: number; que?: string }
 /** Por debajo de un céntimo, dos importes son el mismo. */
 const CENTIMO = 0.005
 
-/** Lo que se debe, partido: cuotas (consumo + service fee) y cargos por atraso aparte. */
+/** Lo que se debe, partido: cuotas (consumo + Comisión Helios) y cargos por atraso aparte. */
 function partesDeLoQueSeDebe(d: FotoDeCaja['porCobrar']): Parte[] {
   return [
     { clave: 'consumo', rotulo: 'Financiamiento', valor: d.financedUsd, que: DEFINICIONES.principalCalle.what },
-    { clave: 'servicio', rotulo: 'Service fee (IVA incluido)', valor: d.feeUsd, que: DEFINICIONES.comisionEnDeuda.what },
+    { clave: 'servicio', rotulo: 'Comisión Helios (IVA incluido)', valor: d.feeUsd, que: DEFINICIONES.comisionEnDeuda.what },
     {
       clave: 'cargos',
       rotulo: 'Cargos por atraso',
@@ -38,12 +38,12 @@ function partesDeLoQueSeDebe(d: FotoDeCaja['porCobrar']): Parte[] {
 }
 
 /**
- * La provisión del libro lleva el consumo, su service fee con IVA y los cargos
+ * La provisión del libro lleva el consumo, su Comisión Helios con IVA y los cargos
  * castigados: se dice en el InfoDot para que nadie la busque en la tarjeta.
  */
 function perdidoEnElLibro(f: FotoDeCaja): string {
   if (f.perdidoLibroUsd === null || f.perdidoLibroUsd < CENTIMO) return ''
-  return ` En el libro contable, la provisión es ${formatUsd(f.perdidoLibroUsd)}: ese financiamiento, su service fee con IVA y los cargos por atraso castigados.`
+  return ` En el libro contable, la provisión es ${formatUsd(f.perdidoLibroUsd)}: ese financiamiento, su Comisión Helios con IVA y los cargos por atraso castigados.`
 }
 
 /** Si el libro contable dice lo mismo que lo calculado, se dice; si no, cuánto dice. */
@@ -103,7 +103,7 @@ export function BalanceDelDinero({ semana, local }: { semana: string; local: str
 
         <StatGrid cols={4}>
           <Stat
-            label={local ? 'Por cobrar por sus financiamientos (financiamiento + fee + cargos)' : 'Por cobrar a pacientes (financiamiento + fee + cargos)'}
+            label={local ? 'Por cobrar por sus financiamientos (financiamiento + comisión + cargos)' : 'Por cobrar a pacientes (financiamiento + comisión + cargos)'}
             value={f ? formatUsd(debe) : ''}
             info={
               f
@@ -120,7 +120,7 @@ export function BalanceDelDinero({ semana, local }: { semana: string; local: str
           <Stat
             label={local ? 'Por pagar a la clínica' : DEFINICIONES.porPagarLocales.label}
             value={pp ? formatUsd(pp.totalUsd) : ''}
-            info={`Calculado de las liquidaciones a clínicas (lo mismo que Pagos a clínicas), no del libro contable. Es su neto: no lleva el service fee. ${DEFINICIONES.porPagarLocales.what}`}
+            info={`Calculado de las liquidaciones a clínicas (lo mismo que Pagos a clínicas), no del libro contable. Es su neto: no lleva la Comisión Helios. ${DEFINICIONES.porPagarLocales.what}`}
             hint={
               pp &&
               `Sale hoy${pp.fechaCierre ? ` (${formatDayShort(pp.fechaCierre)})` : ''}: ${formatUsd(pp.esteCierreUsd)}${
@@ -132,9 +132,9 @@ export function BalanceDelDinero({ semana, local }: { semana: string; local: str
             onReintentar={() => void laSemana.refetch()}
           />
           <Stat
-            label="Service fee ganado desde el inicio, sin IVA"
+            label="Comisión Helios ganada desde el inicio, sin IVA"
             value={f ? formatUsd(f.servicio.ganadoUsd) : ''}
-            info="Calculado de todos los financiamientos confirmados desde el primer día: su service fee sin el IVA (que se cobra y se remite). Se gana al confirmar el financiamiento y se cobra al pagar la cuota. Los cargos por atraso son otro ingreso y van aparte."
+            info="Calculado de todos los financiamientos confirmados desde el primer día: su Comisión Helios sin el IVA (que se cobra y se remite). Se gana al confirmar el financiamiento y se cobra al pagar la cuota. Los cargos por atraso son otro ingreso y van aparte."
             hint={
               f &&
               `Aparte, cargos por atraso desde el inicio: ${formatUsd(f.servicio.cargosGanadosUsd)} generados, ${formatUsd(f.servicio.cargosCobradosUsd)} cobrados`
@@ -147,7 +147,7 @@ export function BalanceDelDinero({ semana, local }: { semana: string; local: str
                       clave: 'cobrado',
                       rotulo: 'De eso, ya cobrado',
                       valor: f.servicio.cobradoUsd,
-                      que: 'Calculado de las cuotas ya pagadas: la parte del service fee, sin IVA, que iba dentro de cada una.',
+                      que: 'Calculado de las cuotas ya pagadas: la parte de la Comisión Helios, sin IVA, que iba dentro de cada una.',
                     },
                   ]}
                 />
@@ -158,16 +158,16 @@ export function BalanceDelDinero({ semana, local }: { semana: string; local: str
             onReintentar={reintentar}
           />
           <Stat
-            label={`${DEFINICIONES.castigado.label} (sin fee)`}
+            label={`${DEFINICIONES.castigado.label} (sin comisión)`}
             // En consumo, como en General: es lo que Ronda ya le pagó al local
             // y no volverá. El service fee y los cargos que no se cobrarán van en
             // el pie, aparte: no se suman al consumo.
             value={f ? formatUsd(f.perdido.financedUsd) : ''}
-            info={f ? `Sin el service fee: la cifra es el financiamiento perdido, calculado de las cuotas dadas por perdidas y sin pagar. ${DEFINICIONES.castigado.what}${perdidoEnElLibro(f)}` : undefined}
+            info={f ? `Sin la Comisión Helios: la cifra es el financiamiento perdido, calculado de las cuotas dadas por perdidas y sin pagar. ${DEFINICIONES.castigado.what}${perdidoEnElLibro(f)}` : undefined}
             hint={
               f &&
               (f.perdido.payableUsd > CENTIMO || f.perdido.cargosUsd > CENTIMO
-                ? `Además no se cobrarán: service fee ${formatUsd(f.perdido.feeUsd)} · cargos ${formatUsd(f.perdido.cargosUsd)}`
+                ? `Además no se cobrarán: Comisión Helios ${formatUsd(f.perdido.feeUsd)} · cargos ${formatUsd(f.perdido.cargosUsd)}`
                 : 'Nada perdido todavía')
             }
             link={{ to: '/admin/metricas', search: { vista: 'mora' } }}

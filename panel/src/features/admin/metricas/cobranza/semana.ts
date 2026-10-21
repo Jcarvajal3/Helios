@@ -23,7 +23,7 @@ import { comoFila, comoLista, numero, numeroONulo, texto } from '@/lib/json'
 // domingo si la semana ya pasó, hoy si está en curso. Lo vencido y la mora de
 // una semana pasada son los de su cierre, no los de hoy.
 //
-// Dinero: lo vencido y lo que vencía son PAYABLE (cuotas, con el service fee
+// Dinero: lo vencido y lo que vencía son PAYABLE (cuotas, con la Comisión Helios
 // dentro) y siempre van con su desglose. Puro: se prueba en `semana.test.ts`.
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -43,18 +43,18 @@ export function sumarDesgloses(a: Desglose, b: Desglose): Desglose {
 }
 
 /**
- * «Facturado $28,01 (sin fee) · service fee + IVA $6,49»: la línea que
- * acompaña SIEMPRE a una suma de cuotas (la regla del fee), con las palabras
+ * «Facturado $28,01 (sin comisión) · Comisión Helios + IVA $6,49»: la línea que
+ * acompaña SIEMPRE a una suma de cuotas (la regla de la comisión), con las palabras
  * del vocabulario de Métricas (las mismas que Cobros y Semana › Resumen). El
- * fee es payable − financed: lleva su IVA dentro.
+ * comisión es payable − financed: lleva su IVA dentro.
  */
 export function textoDelDesglose({ financedUsd, feeUsd }: Pick<Desglose, 'financedUsd' | 'feeUsd'>): string {
-  return `Financiado ${formatUsd(financedUsd)} (sin fee) · service fee + IVA ${formatUsd(feeUsd)}`
+  return `Financiado ${formatUsd(financedUsd)} (sin comisión) · Comisión Helios + IVA ${formatUsd(feeUsd)}`
 }
 
 /** «facturado $28,01 + service fee + IVA $6,49»: el desglose dentro de una frase o entre paréntesis. */
 export function desgloseEnLinea({ financedUsd, feeUsd }: Pick<Desglose, 'financedUsd' | 'feeUsd'>): string {
-  return `financiado ${formatUsd(financedUsd)} + service fee + IVA ${formatUsd(feeUsd)}`
+  return `financiado ${formatUsd(financedUsd)} + Comisión Helios + IVA ${formatUsd(feeUsd)}`
 }
 
 /** El día al cierre del cual se mira la semana: su domingo, o hoy si aún no llegó. */
@@ -92,7 +92,7 @@ export type ResumenDeCobranza = {
   anterior: { corte: string; vencido: Desglose; moraPct: number | null; personasVencidas: number }
   /** Los cortes con que la base clasificó los tramos; `null` si no vinieron. */
   cortes: CortesDeTramo | null
-  /** Siempre los cinco tramos, en orden. */
+  /** Siempre los cuatro tramos, en orden. */
   tramos: TramoAlCorte[]
   /** Desde el primer día: no es de la semana. */
   impago: {
@@ -108,12 +108,11 @@ export type ResumenDeCobranza = {
 
 function leerCortes(v: unknown): CortesDeTramo | null {
   const t = comoFila(v)
-  const gracia = numeroONulo(t.grace_days)
   const intervalo = numeroONulo(t.interval_days)
   const baja = numeroONulo(t.demotion_days)
   const expulsion = numeroONulo(t.expulsion_days)
-  if (gracia === null || intervalo === null || baja === null || expulsion === null) return null
-  return { gracia, intervalo, baja, expulsion }
+  if (intervalo === null || baja === null || expulsion === null) return null
+  return { intervalo, baja, expulsion }
 }
 
 /** La respuesta de `admin_metricas_cobranza`. */

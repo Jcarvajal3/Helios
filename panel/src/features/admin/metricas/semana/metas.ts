@@ -29,7 +29,7 @@ const ORDEN: ReadonlyArray<Meta> = ['financiado', 'mora', 'cobroATiempo', 'perso
  * semana») es el de Ajustes y usa palabras viejas.
  */
 const ROTULO_DE_META: Record<Meta, string> = {
-  financiado: 'Total financiado (sin fee)',
+  financiado: 'Total financiado (sin comisión)',
   mora: 'Mora al cierre',
   cobroATiempo: 'Cobrado a tiempo',
   personas: 'Pacientes que se financiaron',
@@ -50,7 +50,7 @@ export type VeredictoDeMeta = { tono: BadgeTone; texto: string }
 export type MetaDeLaSemana = {
   clave: Meta
   def: DefinicionDeMeta
-  /** El nombre de la fila que mide: «Total facturado (sin fee)». */
+  /** El nombre de la fila que mide: «Total facturado (sin comisión)». */
   rotulo: string
   valor: number | null
   /** `null`: la meta existe pero nadie le ha puesto valor. */

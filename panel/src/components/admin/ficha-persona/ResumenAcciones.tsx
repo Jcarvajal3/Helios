@@ -257,7 +257,7 @@ function textosDeEstado(user: UserDetail, destino: ProfileStatus): Dialogo {
       user.debt.overdueUsd > 0
         ? ` Todavía tiene ${formatUsd(user.debt.overdueUsd)} vencido${
             partesVencidas ? ` (${textoDeDesgloseCorto(partesVencidas)})` : ''
-          }, así que el estado automático la volverá a congelar mañana a las 10:00.`
+          }, así que el estado automático la volverá a congelar al empezar el día.`
         : ''
     }`,
     confirmLabel: suspendido ? 'Levantar la suspensión' : 'Descongelar',

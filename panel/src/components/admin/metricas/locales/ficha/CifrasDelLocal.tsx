@@ -52,12 +52,12 @@ export function CifrasDelLocal({
   return (
     <StatGrid cols={4}>
       <CifraConTendencia
-        titulo="Financiado (sin fee)"
+        titulo="Financiado (sin comisión)"
         valor={formatUsd(l.consumoUsd)}
         delta={frenteALaAnterior(l)}
-        info={`Sin el service fee: la suma de los financiamientos confirmados aquí. El cambio es frente a ${ref}.`}
+        info={`Sin la Comisión Helios: la suma de los financiamientos confirmados aquí. El cambio es frente a ${ref}.`}
         pie={pieDeLaParte(l.partePct)}
-        chispa={chispa(serie?.consumoUsd ?? [], 'Financiado sin fee, últimas ocho semanas', formatUsd)}
+        chispa={chispa(serie?.consumoUsd ?? [], 'Financiado sin comisión, últimas ocho semanas', formatUsd)}
       />
       <CifraConTendencia
         titulo="Financiamientos"
@@ -75,11 +75,11 @@ export function CifrasDelLocal({
         chispa={chispa(serie?.personas ?? [], 'Pacientes, últimas ocho semanas')}
       />
       <CifraConTendencia
-        titulo="Ticket medio (sin fee)"
+        titulo="Ticket medio (sin comisión)"
         valor={l.ticketMedioUsd === null ? '—' : formatUsd(l.ticketMedioUsd)}
         delta={delta(l.ticketMedioUsd, ticketAnterior(l), { tipo: 'relativo', arribaEsBueno: true })}
-        info={`Sin el service fee: el financiado entre los financiamientos. El cambio es frente a ${ref}.`}
-        chispa={chispa(serie ? ticketsPorSemana(serie) : [], 'Ticket medio sin fee, últimas ocho semanas', formatUsd)}
+        info={`Sin la Comisión Helios: el financiado entre los financiamientos. El cambio es frente a ${ref}.`}
+        chispa={chispa(serie ? ticketsPorSemana(serie) : [], 'Ticket medio sin comisión, últimas ocho semanas', formatUsd)}
       />
       <CifraConTendencia
         titulo="Pacientes nuevos en la clínica"
@@ -97,9 +97,9 @@ export function CifrasDelLocal({
         link={{ to: '/admin/metricas', search: busquedaDeMetricas('mora', {}, comun) }}
       />
       <CifraConTendencia
-        titulo="Vencido (financiamiento + fee)"
+        titulo="Vencido (financiamiento + comisión)"
         valor={formatUsd(l.vencido.payableUsd)}
-        info={`Financiamiento + fee: las cuotas de financiamientos en esta clínica (de cualquier semana) vencidas y sin pagar ${d.semana.enCurso ? 'hoy' : 'al cierre de la semana'}. Debajo, cada parte por separado: su financiamiento y el service fee (IVA incluido). Lo dado por perdido no entra.`}
+        info={`Financiamiento + comisión: las cuotas de financiamientos en esta clínica (de cualquier semana) vencidas y sin pagar ${d.semana.enCurso ? 'hoy' : 'al cierre de la semana'}. Debajo, cada parte por separado: su financiamiento y la Comisión Helios (IVA incluido). Lo dado por perdido no entra.`}
         pie={textoDeDesglose(l.vencido)}
         link={{ to: '/admin/metricas', search: busquedaDeMetricas('mora', {}, comun) }}
       />

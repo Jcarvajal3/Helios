@@ -12,7 +12,7 @@ import { CifrasDelResumen } from './CifrasDelResumen'
  * cuánta gente vino?
  * ══════════════════════════════════════════════════════════════════════════
  *
- * Arriba, el desglose que suma —Total facturado (sin fee) + Service fee + IVA
+ * Arriba, el desglose que suma —Total facturado (sin comisión) + Comisión Helios + IVA
  * = Total a cobrar— y los consumos y los usuarios, cada cifra frente a la
  * semana anterior a la misma altura y con su chispa de ocho semanas. Sale de
  * `admin_metricas_semana_resumen`, que respeta la semana y el local de arriba.

@@ -4,10 +4,10 @@
  *   npx tsx src/features/admin/cobranza/senales.test.ts
  *
  * Lo que se vigila: que cada señal diga un hecho que la base mandó (y no uno
- * que no puede saber), que un pago en revisión mande sobre todo lo demás,
- * que «no abrió los avisos» solo salga si la app ya los medía, que la
- * intención sea la suma de las señales y que los grupos de la cola partan a
- * todos sin solaparse.
+ * que no puede saber), que un pago por aprobar mande sobre todo lo demás,
+ * que no salga ninguna señal de la app (no hay app), que la intención sea la
+ * suma de las señales y que los grupos de la cola partan a todos sin
+ * solaparse.
  */
 import {
   GRUPOS_DE_COLA,
@@ -50,18 +50,17 @@ const claves = (f: FilaParaSenales) => senalesDe(f, CTX).map((s) => s.clave)
 console.log('── Leer lo que manda la base ────────────────────────────────')
 {
   const h = leerHechos({
+    // Las claves de la app de Ronda, si alguna vez llegan, no se leen.
     ultima_apertura: '2026-09-27T02:00:00Z',
-    avisos: 'apagados',
-    avisos_motivo: 'DeviceNotRegistered',
-    avisos_entregados: 3,
+    avisos: 'nunca',
     ultimo_reporte: { estado: 'rejected', en: '2026-09-25T15:00:00Z', revisado_en: null, nota: 'Referencia no aparece' },
     cuotas_pagadas: 2,
     pagadas_tarde: 0,
   })
-  comprueba(h.avisos === 'apagados' && h.avisosEntregados === 3, 'lee los avisos')
+  comprueba(!('avisos' in h) && !('ultimaApertura' in h), 'no lee las claves de la app')
   comprueba(h.ultimoReporte?.estado === 'rejected' && h.ultimoReporte.nota === 'Referencia no aparece', 'lee el último reporte')
+  comprueba(h.cuotasPagadas === 2 && h.pagadasTarde === 0, 'lee la historia')
   comprueba(leerHechos(null) === SIN_HECHOS, 'sin señales, nada')
-  comprueba(leerHechos({ avisos: 'raro' }).avisos === null, 'un estado de avisos desconocido no se inventa')
 }
 
 console.log('\n── Cuánto hace ──────────────────────────────────────────────')
@@ -76,45 +75,15 @@ console.log('\n── Cuánto hace ───────────────
 
 console.log('\n── Las señales ──────────────────────────────────────────────')
 {
-  const revision = fila({ enRevisionDesde: '2026-09-28T16:00:00Z', entroAPagar: '2026-09-28T15:00:00Z' })
+  const revision = fila({ enRevisionDesde: '2026-09-28T16:00:00Z' })
   const s = senalesDe(revision, CTX)
-  comprueba(s[0]?.clave === 'en_revision', 'un pago en revisión va primero')
-  comprueba(!s.some((x) => x.clave === 'entro_a_pagar'), 'con un pago en revisión, «entró a pagar» sobra')
-  comprueba(intencionDe(s) === 'quiere', 'con un pago en revisión, quiere pagar')
+  comprueba(s[0]?.clave === 'en_revision', 'un pago por aprobar va primero')
+  comprueba(intencionDe(s) === 'quiere', 'con un pago por aprobar, quiere pagar')
 
-  comprueba(
-    claves(fila({ entroAPagar: '2026-09-28T15:00:00Z', copioDatos: '2026-09-28T15:02:00Z' })).join() === 'entro_a_pagar,copio_datos',
-    'entró a pagar y copió los datos',
-  )
-  comprueba(
-    !claves(fila({ entroAPagar: '2026-09-20T15:00:00Z', ultimoReporte: { estado: 'reconciled', en: '2026-09-21T15:00:00Z', revisadoEn: null, nota: null } })).includes('entro_a_pagar'),
-    'entrar a pagar antes de su último pago no cuenta',
-  )
-  comprueba(
-    !claves(fila({ entroAPagar: '2026-09-10T15:00:00Z' })).includes('entro_a_pagar'),
-    'entrar a pagar hace más de una semana no cuenta',
-  )
-
-  comprueba(claves(fila({ avisos: 'apagados', avisosMotivo: 'DeviceNotRegistered' })).includes('sin_avisos'), 'sin avisos')
-  comprueba(
-    senalesDe(fila({ avisos: 'nunca' }), CTX).find((x) => x.clave === 'sin_avisos')?.ayuda.includes('Nunca dio permiso') === true,
-    'dice por qué no recibe avisos',
-  )
-
-  // Avisos entregados: sin medir, solo se dice que le llegaron.
-  const sinMedir = fila({ avisos: 'activos', avisosEntregados: 3, vencidaDesde: '2026-09-25' })
-  comprueba(claves(sinMedir).includes('avisos_entregados') && !claves(sinMedir).includes('avisos_sin_abrir'), 'sin la OTA no se afirma que no los abrió')
-  const medido = fila({ avisos: 'activos', avisosEntregados: 3, vencidaDesde: '2026-09-25', gestosDesde: '2026-09-20T12:00:00Z' })
-  comprueba(claves(medido).includes('avisos_sin_abrir'), 'con la OTA desde antes del vencimiento, sí')
-  const abrio = fila({ avisos: 'activos', avisosEntregados: 3, avisosAbiertos: 1, abrioAviso: '2026-09-27T20:00:00Z', vencidaDesde: '2026-09-25', gestosDesde: '2026-09-20T12:00:00Z' })
-  comprueba(claves(abrio).includes('abrio_aviso') && !claves(abrio).includes('avisos_sin_abrir'), 'abrió un aviso')
-
-  // La app.
-  comprueba(claves(fila({ ultimaApertura: '2026-09-22T20:00:00Z', vencidaDesde: '2026-09-25' })).includes('no_abre'), 'no abre desde que venció')
-  const abrioApp = senalesDe(fila({ ultimaApertura: '2026-09-27T20:00:00Z', vencidaDesde: '2026-09-25' }), CTX)
-  comprueba(abrioApp.some((x) => x.clave === 'abrio_app' && x.tono === 'intencion'), 'abrió la app después de vencer: cuenta a favor')
-  const alDia = senalesDe(fila({ ultimaApertura: '2026-09-27T20:00:00Z' }, { overdueUsd: 0, daysOverdue: 0 }), CTX)
-  comprueba(alDia.some((x) => x.clave === 'abrio_app' && x.peso === 0), 'sin nada vencido, abrir la app no empuja')
+  // Sin app, a quien solo debe no le sale ninguna señal en contra: los
+  // avisos le llegan solos por WhatsApp y correo (antes salía «No recibe
+  // avisos» a todo el mundo).
+  comprueba(claves(fila({})).length === 0, 'sin hechos, ninguna señal', claves(fila({})).join())
 
   // Promesas.
   comprueba(claves(fila({}, { promiseDate: '2026-09-28', promiseStatus: 'vence_hoy' })).includes('promete'), 'promete pagar hoy')
@@ -129,29 +98,26 @@ console.log('\n── Las señales ───────────────
   comprueba(claves(fila({ cuotasPagadas: 3, pagadasTarde: 0 })).includes('siempre_a_tiempo'), 'siempre a tiempo')
   comprueba(claves(fila({ cuotasPagadas: 3, pagadasTarde: 2, atrasoMedioAlPagar: 4.2 })).includes('suele_tarde'), 'suele pagar tarde')
   comprueba(claves(fila({}, { status: 'frozen' })).includes('congelada'), 'cuenta congelada')
-  comprueba(claves(fila({}, { daysOverdue: 26 })).includes('baja_pronto'), 'baja de nivel en 4 días')
-  comprueba(!claves(fila({}, { daysOverdue: 10 })).includes('baja_pronto'), 'a 20 días de la baja, no se avisa')
+  comprueba(claves(fila({}, { daysOverdue: 26 })).includes('baja_pronto'), 'se suspende en 4 días')
+  comprueba(!claves(fila({}, { daysOverdue: 10 })).includes('baja_pronto'), 'a 20 días de la suspensión, no se avisa')
 }
 
 console.log('\n── La intención ─────────────────────────────────────────────')
 {
   comprueba(intencionDe([]) === 'dudosa', 'sin señales, no está claro')
-  const evita = senalesDe(fila({ cuotasPagadas: 0, gestionesSinRespuesta: 2, ultimaApertura: '2026-09-15T20:00:00Z', vencidaDesde: '2026-09-25' }), CTX)
-  comprueba(intencionDe(evita) === 'evita', 'nunca pagó, no contesta y no abre: lo evita')
-  const quiere = senalesDe(fila({ entroAPagar: '2026-09-28T15:00:00Z', cuotasPagadas: 0 }), CTX)
-  comprueba(intencionDe(quiere) === 'quiere', 'entró a pagar pesa más que no haber pagado nunca')
+  const evita = senalesDe(fila({ cuotasPagadas: 0, gestionesSinRespuesta: 2 }), CTX)
+  comprueba(intencionDe(evita) === 'evita', 'nunca pagó y no contesta: lo evita')
+  const quiere = senalesDe(fila({ cuotasPagadas: 0 }, { promiseDate: '2026-09-28', promiseStatus: 'vence_hoy' }), CTX)
+  comprueba(intencionDe(quiere) === 'quiere', 'prometer pagar hoy pesa más que no haber pagado nunca')
 }
 
 console.log('\n── Los grupos de la cola ────────────────────────────────────')
 {
-  const hoy = '2026-09-28'
-  comprueba(grupoDe({ overdueUsd: 10, prioridad: 'alta', nextDueDate: '2026-09-20' }, hoy) === 'primero', 'vencido y prioridad alta')
-  comprueba(grupoDe({ overdueUsd: 10, prioridad: 'baja', nextDueDate: '2026-09-20' }, hoy) === 'despues', 'vencido y prioridad baja')
-  comprueba(grupoDe({ overdueUsd: 10, prioridad: null, nextDueDate: '2026-09-20' }, hoy) === 'despues', 'vencido sin perfil (perdido)')
-  comprueba(grupoDe({ overdueUsd: 0, prioridad: null, nextDueDate: '2026-09-28' }, hoy) === 'recordar', 'vence hoy')
-  comprueba(grupoDe({ overdueUsd: 0, prioridad: null, nextDueDate: '2026-09-29' }, hoy) === 'recordar', 'vence mañana')
-  comprueba(grupoDe({ overdueUsd: 0, prioridad: 'baja', nextDueDate: '2026-10-01' }, hoy) === 'vigilar', 'vence más adelante')
-  comprueba(GRUPOS_DE_COLA.length === 4, 'cuatro grupos')
+  comprueba(grupoDe({ overdueUsd: 10, prioridad: 'alta' }) === 'primero', 'vencido y prioridad alta')
+  comprueba(grupoDe({ overdueUsd: 10, prioridad: 'baja' }) === 'despues', 'vencido y prioridad baja')
+  comprueba(grupoDe({ overdueUsd: 10, prioridad: null }) === 'despues', 'vencido sin perfil (perdido)')
+  comprueba(grupoDe({ overdueUsd: 0, prioridad: null }) === 'vigilar', 'sin nada vencido, al día: los recordatorios salen solos')
+  comprueba(GRUPOS_DE_COLA.length === 3, 'tres grupos')
 }
 
 console.log('\n── El orden por días de atraso ──────────────────────────────')

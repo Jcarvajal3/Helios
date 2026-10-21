@@ -51,7 +51,7 @@ console.log('── Todas las clínicas ─────────────�
     },
     'la gente: registros verificados y, aparte, quien pidió el código',
   )
-  igual(g.consumo.financedUsd, 7373, 'el financiamiento, sin fee')
+  igual(g.consumo.financedUsd, 7373, 'el financiamiento, sin comisión')
   igual(g.consumo.ticketUsd, 23.19, 'el ticket medio')
   igual(
     g.dinero.porCobrar,
@@ -69,14 +69,15 @@ console.log('── Todas las clínicas ─────────────�
   const suma = g.dinero.cobrado.payableUsd + g.dinero.porCobrar.payableUsd + g.dinero.perdido.payableUsd
   igual(m !== null && Math.abs(m.payableUsd - suma) < 0.005, true, 'lo movido es lo cobrado + lo por cobrar + lo perdido')
   igual(m?.financedUsd, g.consumo.financedUsd, 'y su financiado es el financiamiento')
-  igual(g.dinero.servicioUsd, 1473.85, 'el service fee sin IVA, en su cifra')
+  igual(g.dinero.servicioUsd, 1473.85, 'la Comisión Helios sin IVA, en su cifra')
   igual(g.dinero.cargos, { devengadoUsd: 254, cobradoUsd: 148, cargos: 51 }, 'los cargos por atraso, en la suya')
   igual(g.dinero.perdido.financedUsd, 59.17, 'lo perdido en financiamiento')
   igual(g.dinero.cajaUsd, 2346.91, 'la caja')
   igual(g.dinero.porPagarLocales, { totalUsd: 3149.66, atrasadoUsd: 379, locales: 3 }, 'lo que se debe a las clínicas')
   igual(g.riesgo.moraPct, 20.38, 'la mora')
   igual(g.riesgo.aTiempo.map((c) => [c.cuota, c.juzgadas, c.aTiempo, c.pct]), [[1, 356, 272, 76.4], [2, 290, 222, 76.6]], 'las dos cuotas a tiempo')
-  igual(g.porCadaCien.por100, { servicioUsd: 19.99, cargosUsd: 3.45, perdidoUsd: 0.8, margenUsd: 22.63 }, 'por cada cien')
+  igual(g.porCadaCien.por100, { servicioUsd: 19.99, cargosUsd: 3.45, personalUsd: 2.16, perdidoUsd: 0.8, margenUsd: 20.48 }, 'por cada cien')
+  igual(g.porCadaCien.personalUsd, 159, 'lo pagado al personal, desde el primer día')
   igual(g.curva.length, 3, 'tres semanas de curva')
   igual(g.curva[2], { semana: '2026-09-21', registros: 44, registrosAcum: 194, consumos: 118, financedUsd: 2873, financedAcumUsd: 7373 }, 'una semana de la curva')
 }

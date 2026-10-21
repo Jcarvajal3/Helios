@@ -5,7 +5,7 @@
  *
  * Lo que no puede pasar: que un fallo se lea como «no hay nada», que una
  * acción del super admin se pueda usar sin serlo, o que un consumo enseñe un
- * monto con el service fee dentro.
+ * monto con la Comisión Helios dentro.
  */
 import { SOLO_SUPER_ADMIN } from '@/components/ui'
 import type { MerchantRow } from '@/features/admin/api'
@@ -155,8 +155,8 @@ console.log('\n── Financiamientos ──────────────
 {
   const o = opcionDeConsumo(consumo())
   igual(o.titulo, 'Orden #1043', 'se nombra por su número de orden')
-  igual(o.detalle?.includes('$10,00'), true, 'con el financiamiento sin el fee')
-  igual(o.detalle?.includes('$12,32'), false, 'y nunca con amount_usd, que lleva el fee dentro')
+  igual(o.detalle?.includes('$10,00'), true, 'con el financiamiento sin la comisión')
+  igual(o.detalle?.includes('$12,32'), false, 'y nunca con amount_usd, que lleva la comisión dentro')
   const g = construirGrupos(
     datos('1043', { consumos: listo([consumo({ chargeId: 'x', orderNumber: 10430 }), consumo()]) }),
   )

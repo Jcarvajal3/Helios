@@ -12,7 +12,7 @@ import { PastillaDeEstado } from '@/components/admin/metricas/cohortes/PastillaD
 
 /**
  * Una semana de la lista: lo que hay que cobrar de ella (la cuota 1 + la 2,
- * con el service fee dentro) con su desglose debajo en pequeño, una barra
+ * con la Comisión Helios dentro) con su desglose debajo en pequeño, una barra
  * con lo cobrado, lo vencido y lo por vencer, la pastilla de en qué está y
  * qué parte ya se cobró. Es un enlace: elegirla enseña esa semana en Por
  * cobrar › Cohortes, con el mismo local.

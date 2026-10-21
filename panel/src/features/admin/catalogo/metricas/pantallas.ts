@@ -9,10 +9,8 @@ import {
   LayoutDashboard,
   Percent,
   ReceiptText,
-  Repeat,
   Scale,
   ShieldAlert,
-  ShoppingBag,
   Sprout,
   Store,
   TrendingUp,
@@ -70,7 +68,7 @@ export const pantallasDeMetricas = [
     id: 'metricas-semana',
     titulo: 'Métricas › Semana',
     descripcion:
-      'Lo financiado en una semana (sin fee), su service fee y el total a cobrar, y cómo va frente a las anteriores. Es una pestaña de Métricas.',
+      'Lo financiado en una semana (sin comisión), su Comisión Helios y el total a cobrar, y cómo va frente a las anteriores. Es una pestaña de Métricas.',
     espacio: 'metricas',
     sinonimos: ['esta semana', 'financiamientos de la semana', 'semana', 'resumen del negocio'],
     destino: { to: '/admin/metricas', search: { vista: 'semana' } },
@@ -81,14 +79,14 @@ export const pantallasDeMetricas = [
     id: 'metricas-semana-resumen',
     titulo: 'Métricas › Semana › Resumen',
     descripcion:
-      'Lo financiado en las clínicas (sin fee), su service fee + IVA y el total a cobrar, los financiamientos y los pacientes, y la tabla de financiamientos por día y clínica.',
+      'Lo financiado en las clínicas (sin comisión), su Comisión Helios + IVA y el total a cobrar, los financiamientos y los pacientes, y la tabla de financiamientos por día y clínica.',
     espacio: 'metricas',
     sinonimos: [
       'resumen',
       'resumen de la semana',
       'total financiado',
       'financiado',
-      'service fee + iva',
+      'Comisión Helios + iva',
       'total a cobrar',
       'financiamientos por día',
       'financiamientos por clínica',
@@ -106,7 +104,7 @@ export const pantallasDeMetricas = [
     id: 'metricas-semana-rendimiento',
     titulo: 'Métricas › Semana › Rendimiento',
     descripcion:
-      'Las cifras que mandan, semana a semana, frente a la anterior y a sus metas: financiamiento (sin fee), service fee, cobro, riesgo, pacientes y caja.',
+      'Las cifras que mandan, semana a semana, frente a la anterior y a sus metas: financiamiento (sin comisión), Comisión Helios, cobro, riesgo, pacientes y caja.',
     espacio: 'metricas',
     sinonimos: [
       'semana a semana',
@@ -128,7 +126,7 @@ export const pantallasDeMetricas = [
     id: 'metricas-cobros',
     titulo: 'Métricas › Cobros',
     descripcion:
-      'Lo que hay que cobrar de los financiamientos de cada semana (financiamiento + fee), cuánto se cobró, cuánto falta y el impago de cada cuota. Es una pestaña de Métricas.',
+      'Lo que hay que cobrar de los financiamientos de cada semana (financiamiento + comisión), cuánto se cobró, cuánto falta y el impago de cada cuota. Es una pestaña de Métricas.',
     espacio: 'metricas',
     sinonimos: [
       'cohortes',
@@ -149,7 +147,7 @@ export const pantallasDeMetricas = [
     id: 'metricas-cobros-calendario',
     titulo: 'Métricas › Cobros › Semanas',
     descripcion:
-      'Todas las semanas de financiamiento comparadas: lo que hay que cobrar de cada una (financiamiento + fee) y cómo va, y la curva de cobro y el reparto por clínica de la elegida.',
+      'Todas las semanas de financiamiento comparadas: lo que hay que cobrar de cada una (financiamiento + comisión) y cómo va, y la curva de cobro y el reparto por clínica de la elegida.',
     espacio: 'metricas',
     sinonimos: [
       'comparar todas',
@@ -211,7 +209,7 @@ export const pantallasDeMetricas = [
     id: 'metricas-mora-resumen',
     titulo: 'Métricas › Riesgo › Resumen',
     descripcion:
-      'Lo vencido al cierre de la semana (financiamiento + fee) y en qué tramo, lo que vencía frente a lo que entró y el paso entre tramos.',
+      'Lo vencido al cierre de la semana (financiamiento + comisión) y en qué tramo, lo que vencía frente a lo que entró y el paso entre tramos.',
     espacio: 'metricas',
     sinonimos: ['cobranza y riesgo', 'tasa de mora', 'vencido', 'mora por tramo', 'paso entre tramos'],
     destino: { to: '/admin/metricas', search: { vista: 'mora' } },
@@ -262,8 +260,8 @@ export const pantallasDeMetricas = [
       'saldo del banco',
       'capital comprometido',
       'flujo de caja',
-      'service fee ganado',
-      'service fee cobrado',
+      'Comisión Helios ganada',
+      'Comisión Helios cobrado',
       'servicio ganado',
     ],
     destino: { to: '/admin/metricas', search: { vista: 'caja' } },
@@ -318,7 +316,7 @@ export const pantallasDeMetricas = [
     id: 'metricas-gente',
     titulo: 'Métricas › Pacientes',
     descripcion:
-      'Quién llega, quién se financia y quién vuelve: los pacientes que registran las clínicas, el uso y la retención. Es una pestaña de Métricas.',
+      'Cuántos pacientes registraron las clínicas y cuántos pagaron en cuotas en la ventana, con los estados de las cuentas y los niveles. Es una pestaña de Métricas.',
     espacio: 'metricas',
     sinonimos: [
       'crecimiento',
@@ -327,42 +325,12 @@ export const pantallasDeMetricas = [
       'registros',
       'pacientes registrados',
       'altas de pacientes',
-      'retención',
-      'cohortes de registro',
+      'pacientes nuevos',
+      'estados de las cuentas',
+      'niveles',
     ],
     destino: { to: '/admin/metricas', search: { vista: 'gente' } },
     icono: Sprout,
-  },
-  {
-    tipo: 'pantalla',
-    id: 'metricas-gente-resumen',
-    titulo: 'Métricas › Pacientes › Resumen',
-    descripcion:
-      'Cuántos pacientes registraron las clínicas y cuántos se financiaron en la ventana.',
-    espacio: 'metricas',
-    sinonimos: ['crecimiento', 'registros', 'pacientes registrados', 'altas de pacientes', 'pacientes nuevos'],
-    destino: { to: '/admin/metricas', search: { vista: 'gente' } },
-    icono: Sprout,
-  },
-  {
-    tipo: 'pantalla',
-    id: 'metricas-gente-uso',
-    titulo: 'Métricas › Pacientes › Uso',
-    descripcion: 'Cuánto se financia cada paciente (sin fee) y de cuántos pacientes depende el total.',
-    espacio: 'metricas',
-    sinonimos: ['uso', 'financiamiento por paciente', 'quién sostiene el financiamiento', 'concentración', 'frecuencia'],
-    destino: { to: '/admin/metricas', search: { vista: 'gente', sub: 'uso' } },
-    icono: ShoppingBag,
-  },
-  {
-    tipo: 'pantalla',
-    id: 'metricas-gente-retencion',
-    titulo: 'Métricas › Pacientes › Retención',
-    descripcion: 'Los pacientes registrados en el mismo periodo: cuántos siguen financiándose en las semanas siguientes.',
-    espacio: 'metricas',
-    sinonimos: ['retención', 'cohortes de registro', 'vuelven', 'se quedan', 'recurrencia'],
-    destino: { to: '/admin/metricas', search: { vista: 'gente', sub: 'retencion' } },
-    icono: Repeat,
   },
 
   // ── Global ───────────────────────────────────────────────────────────────
@@ -371,7 +339,7 @@ export const pantallasDeMetricas = [
     id: 'metricas-global',
     titulo: 'Métricas › Global',
     descripcion:
-      'Lo global del negocio desde el primer día: los pacientes, el financiamiento (sin fee), lo que se debe, lo cobrado y el riesgo. Es una pestaña de Métricas.',
+      'Lo global del negocio desde el primer día: los pacientes, el financiamiento (sin comisión), lo que se debe, lo cobrado y el riesgo. Es una pestaña de Métricas.',
     espacio: 'metricas',
     sinonimos: [
       'general',

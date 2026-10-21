@@ -1,17 +1,12 @@
 import { useState } from 'react'
 import {
-  BellOff,
   CalendarClock,
   CircleCheck,
   CircleX,
   Clock,
-  Copy,
-  CreditCard,
-  Eye,
   Handshake,
   Lock,
   MessageSquareOff,
-  Smartphone,
   TrendingDown,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -34,16 +29,8 @@ const TONO: Record<TonoDeSenal, BadgeTone> = {
 const ICONO: Record<ClaveDeSenal, LucideIcon> = {
   en_revision: Clock,
   rechazado: CircleX,
-  entro_a_pagar: CreditCard,
-  copio_datos: Copy,
   promete: Handshake,
   promesa_rota: Handshake,
-  abrio_aviso: Eye,
-  avisos_sin_abrir: BellOff,
-  avisos_entregados: Eye,
-  sin_avisos: BellOff,
-  abrio_app: Smartphone,
-  no_abre: Smartphone,
   sin_respuesta: MessageSquareOff,
   nunca_pago: CircleX,
   siempre_a_tiempo: CircleCheck,

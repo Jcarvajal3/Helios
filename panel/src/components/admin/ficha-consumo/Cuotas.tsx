@@ -38,7 +38,7 @@ export function Cuotas({ detail }: { detail: ChargeDetail }) {
           ...(variasPersonas ? ['Quién'] : []),
           'Cuota',
           'Vence',
-          { label: 'Cuota (financiamiento + fee)', info: 'Lo que se paga en esa cuota: financiamiento + service fee (IVA incluido). Debajo, sus dos partes.' },
+          { label: 'Cuota (financiamiento + comisión)', info: 'Lo que se paga en esa cuota: financiamiento + Comisión Helios (IVA incluido). Debajo, sus dos partes.' },
           'Estado',
         ]}
       >

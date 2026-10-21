@@ -10,9 +10,9 @@ import { LineaDelDesglose } from './ImporteDeCuota'
 /**
  * Las cuatro cifras de la semana elegida, en lo que hay que COBRAR (decisión
  * de Javier del 27-09): el total a cobrar (la cuota 1 + la 2, con el service
- * fee dentro), qué parte ya se cobró, lo vencido y lo por vencer. Cada
- * importe lleva debajo, en pequeño, de qué está hecho: el consumo sin fee y
- * el service fee. Es la condición de la excepción a la regla del fee.
+ * comisión dentro), qué parte ya se cobró, lo vencido y lo por vencer. Cada
+ * importe lleva debajo, en pequeño, de qué está hecho: el consumo sin comisión y
+ * la Comisión Helios. Es la condición de la excepción a la regla de la comisión.
  *
  * El desglose va en el hueco de la forma (`visual`) y no en el pie del
  * `Stat`: el pie se corta en una línea, y un desglose cortado no vale.
@@ -45,7 +45,7 @@ export function CifrasDeLaSemana({
           label="Total a cobrar"
           value={a ? formatUsd(a.importe.payableUsd) : ''}
           visual={a ? <LineasDeDesglose d={a.importe} /> : undefined}
-          info="Cuota 1 + cuota 2 de los financiamientos confirmados de esta semana (lunes a domingo, por día operativo), con su desglose: financiado (sin fee) + service fee + IVA."
+          info="Cuota 1 + cuota 2 de los financiamientos confirmados de esta semana (lunes a domingo, por día operativo), con su desglose: financiado (sin comisión) + Comisión Helios + IVA."
         />
         <Stat
           {...comun}
@@ -59,7 +59,7 @@ export function CifrasDeLaSemana({
               />
             ) : undefined
           }
-          info="Cobrado (a tiempo o con atraso) ÷ total a cobrar de esta semana, los dos en dólares con fee; debajo, el importe cobrado y su desglose."
+          info="Cobrado (a tiempo o con atraso) ÷ total a cobrar de esta semana, los dos en dólares con comisión; debajo, el importe cobrado y su desglose."
         />
         <Stat
           {...comun}
@@ -74,14 +74,14 @@ export function CifrasDeLaSemana({
               )
             ) : undefined
           }
-          info="Cuotas de esta semana sin pagar cuyo vencimiento ya pasó (también las que siguen en la gracia), sin lo perdido, en dólares con fee; debajo, su desglose y cuántos pacientes lo deben."
+          info="Cuotas de esta semana sin pagar cuyo vencimiento ya pasó (también las que siguen en la gracia), sin lo perdido, en dólares con comisión; debajo, su desglose y cuántos pacientes lo deben."
         />
         <Stat
           {...comun}
           label="Por vencer"
           value={porVencer ? formatUsd(porVencer.importe.payableUsd) : ''}
           visual={porVencer ? <LineasDeDesglose d={porVencer.importe} cola={usuarios(porVencer.personas)} /> : undefined}
-          info="Cuotas de esta semana sin pagar cuyo vencimiento todavía no llega, en dólares con fee; debajo, su desglose y cuántos pacientes las tienen."
+          info="Cuotas de esta semana sin pagar cuyo vencimiento todavía no llega, en dólares con comisión; debajo, su desglose y cuántos pacientes las tienen."
         />
       </StatGrid>
 

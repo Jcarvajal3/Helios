@@ -1,8 +1,8 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // Lo que se debe en cuotas, partido en sus dos sumandos.
 //
-// Una cuota es PAYABLE: consumo + service fee (con su IVA). La regla del fee
-// dice que un total así nunca va solo: va con «consumo €X · fee €Y» al lado.
+// Una cuota es PAYABLE: consumo + Comisión Helios (con su IVA). La regla de la comisión
+// dice que un total así nunca va solo: va con «consumo €X · comisión €Y» al lado.
 // Las fichas tienen el total del servidor (la deuda de hoy, lo vencido) y las
 // cuotas una a una; esto saca el desglose de las cuotas y SOLO lo da si su
 // suma cuadra con el total que se enseña, porque un desglose que no suma lo
@@ -21,7 +21,7 @@ function centimos(n: number): number {
   return Math.round(n * 100) / 100
 }
 
-/** Las cuotas sumadas en sus dos partes. El fee es lo que se paga menos el consumo. */
+/** Las cuotas sumadas en sus dos partes. La comisión es lo que se paga menos el consumo. */
 export function desgloseDeCuotas(cuotas: ReadonlyArray<CuotaConDesglose>): DesgloseDeCuotas {
   const payableUsd = centimos(cuotas.reduce((s, c) => s + (Number(c.amountUsd) || 0), 0))
   const financedUsd = centimos(cuotas.reduce((s, c) => s + (Number(c.financedUsd) || 0), 0))

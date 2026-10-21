@@ -73,7 +73,7 @@ export type QueueInstallment = {
    */
   quotedUsd: number
   /**
-   * El desglose de `quotedUsd`: facturado (sin fee) y service fee + IVA
+   * El desglose de `quotedUsd`: facturado (sin comisión) y Comisión Helios + IVA
    * (= cotizado − facturado). `null` en una base sin 20260927697000.
    */
   financedUsd?: number | null
@@ -150,8 +150,8 @@ export type QueueItem = {
    */
   lateFeeUsd: number
   /**
-   * El desglose de `installmentsUsd`: facturado (sin fee) de todas sus cuotas
-   * y service fee + IVA. `null` en una base sin 20260927697000.
+   * El desglose de `installmentsUsd`: facturado (sin comisión) de todas sus cuotas
+   * y Comisión Helios + IVA. `null` en una base sin 20260927697000.
    */
   installmentsFinancedUsd?: number | null
   installmentsFeeUsd?: number | null

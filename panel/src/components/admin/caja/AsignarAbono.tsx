@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-import { Button, Callout, Card, Modal, formatDay, formatUsd, formatVes } from '@/components/ui'
+import { Button, Callout, Card, Checkbox, Modal, formatDay, formatUsd, formatVes } from '@/components/ui'
 import { CuotasDelAbono } from '@/components/admin/caja/CuotasDelAbono'
 import { QuienPagoElAbono } from '@/components/admin/caja/QuienPagoElAbono'
 import type { UnmatchedDeposit } from '@/features/admin/deposits'
@@ -30,6 +30,10 @@ export function AsignarAbono({
 }) {
   const [persona, setPersona] = useState<UserRow | null>(null)
   const [hecho, setHecho] = useState<string | null>(null)
+  // Un abono cuyo pagador no es de Helios casi seguro es de Ronda: asignarlo
+  // pide confirmar que no lo es.
+  const [confirmaQueEsDeHelios, setConfirmaQueEsDeHelios] = useState(false)
+  const pideConfirmar = !deposit.deHelios && !confirmaQueEsDeHelios
 
   return (
     <Modal title="Asignar el abono" onClose={onClose} width="lg">
@@ -66,6 +70,19 @@ export function AsignarAbono({
                 Volver a la lista
               </Button>
             </div>
+          </div>
+        ) : pideConfirmar ? (
+          <div className="flex flex-col gap-4">
+            <Callout tone="warning" titulo="Este abono parece de Ronda">
+              Quien pagó no es paciente de Helios ni el pagador de ningún pago registrado aquí. Helios y Ronda
+              cobran en la misma cuenta del BNC: si es de Ronda, no se asigna aquí, se descarta.
+            </Callout>
+            <Checkbox
+              id={`abono-de-helios-${deposit.id}`}
+              label="Sé que este abono es de un paciente de Helios (pagó otra persona por él, por ejemplo)"
+              checked={confirmaQueEsDeHelios}
+              onChange={setConfirmaQueEsDeHelios}
+            />
           </div>
         ) : persona === null ? (
           <QuienPagoElAbono deposit={deposit} onElegir={setPersona} />

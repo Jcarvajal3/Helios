@@ -91,7 +91,7 @@ igual(
     mora: ['resumen', 'cupos', 'rendimiento'],
     caja: ['balance', 'proyeccion'],
     locales: [],
-    gente: ['resumen', 'uso', 'retencion'],
+    gente: [],
     global: [],
   },
   'las sub-pestañas de cada una, en su orden',
@@ -104,15 +104,15 @@ igual(
     'Resumen · Cupos · Rendimiento',
     'Balance · Proyección y banco',
     '',
-    'Resumen · Uso · Retención',
+    '',
     '',
   ],
   'con sus rótulos',
 )
 igual(
   IDS_PESTANA.map((id) => subPorDefecto(id) ?? null),
-  ['resumen', 'calendario', 'resumen', 'balance', null, 'resumen', null],
-  'la primera es la de por defecto; Clínicas y Global no tienen',
+  ['resumen', 'calendario', 'resumen', 'balance', null, null, null],
+  'la primera es la de por defecto; Clínicas, Pacientes y Global no tienen',
 )
 {
   const sinDescripcion = PESTANAS.flatMap((p) =>
@@ -126,7 +126,7 @@ igual(
       /servicio/i.test(t),
     ),
   )
-  igual(conServicio, [], 'el fee se llama «service fee» o «fee», nunca «servicio»')
+  igual(conServicio, [], 'la comisión se llama «Comisión Helios» o «comisión», nunca «servicio»')
 }
 igual(
   PESTANAS.map((p) => p.tono),

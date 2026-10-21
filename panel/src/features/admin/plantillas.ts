@@ -5,9 +5,10 @@ import type { CortesDeTramo, TramoVencido } from '@/features/admin/tramos'
 // ═══════════════════════════════════════════════════════════════════════════
 // Las plantillas de WhatsApp de cobranza.
 //
-// Un mensaje por momento: antes de vencer, el día que vence y uno por cada
-// tramo de atraso (`tramos.ts`). No se le escribe igual a quien vence mañana
-// que a quien lleva cuarenta días. Las variables se rellenan con los datos de la
+// Un mensaje por tramo de atraso (`tramos.ts`): no se le escribe igual a
+// quien lleva tres días que a quien lleva cuarenta. Solo para quien debe algo
+// vencido: los recordatorios antes del vencimiento y el del día salen solos
+// por WhatsApp y correo (crons cuota_en_3_dias, cuota_manana, cuota_hoy). Las variables se rellenan con los datos de la
 // persona y con la cuenta de cobro que esté activa hoy, que es el error más
 // caro de todos: un mensaje con la cuenta vieja manda el dinero a un sitio
 // donde nadie lo va a aprobar.
@@ -25,36 +26,34 @@ export type VariablesPlantilla = {
   banco: string
   telefono_pago: string
   cedula_pago: string
-  /** «12 días». Solo la ofrecen las plantillas de tramo. */
+  /** «12 días». */
   dias_atraso: string
 }
 
-/** Las siete plantillas que usa el panel, en el orden en que se enseñan. */
-export type ClavePlantilla = 'por_vencer' | 'vence_hoy' | TramoVencido
+/** Las cuatro plantillas que usa el panel, una por tramo, en el orden en que se enseñan. */
+export type ClavePlantilla = TramoVencido
 
-export const CLAVES_PLANTILLA: readonly ClavePlantilla[] = ['por_vencer', 'vence_hoy', ...TRAMOS_VENCIDOS]
+export const CLAVES_PLANTILLA: readonly ClavePlantilla[] = TRAMOS_VENCIDOS
 
 /**
- * La plantilla que le toca a una persona: la de su tramo si debe algo
- * vencido y, si no, la de antes de vencer o la del día del vencimiento.
- * Los tramos se calculan con los mismos cortes que el filtro de la cartera.
+ * La plantilla que le toca a una persona: la de su tramo. `null` si no debe
+ * nada vencido: a ella no se le escribe desde cobranza (sus recordatorios
+ * salen solos). Los tramos se calculan con los mismos cortes que el filtro
+ * de la cartera.
  */
 export function claveDePlantilla(
-  persona: { daysOverdue: number; bucket: string },
+  persona: { daysOverdue: number },
   cortes: CortesDeTramo,
-): ClavePlantilla {
+): ClavePlantilla | null {
   const tramo = tramoDe(persona.daysOverdue, cortes)
-  if (tramo !== 'al_dia') return tramo
-  return persona.bucket === 'vence_hoy' ? 'vence_hoy' : 'por_vencer'
+  return tramo === 'al_dia' ? null : tramo
 }
 
 /**
- * Cuándo se usa cada plantilla, en palabras: «Antes del vencimiento»,
- * «1–3 días de atraso». `null` si es un tramo y aún no se conocen los cortes.
+ * Cuándo se usa cada plantilla, en palabras: «1–7 días de atraso». `null`
+ * si aún no se conocen los cortes.
  */
 export function cuandoSeUsa(clave: ClavePlantilla, cortes: CortesDeTramo | null): string | null {
-  if (clave === 'por_vencer') return 'Antes del vencimiento'
-  if (clave === 'vence_hoy') return 'El día del vencimiento'
   return cortes ? `${rotuloDeTramo(clave, cortes)} de atraso` : null
 }
 

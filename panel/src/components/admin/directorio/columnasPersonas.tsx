@@ -100,8 +100,8 @@ export const COLUMNAS_PERSONAS: Array<Column<UserRow>> = [
 
   {
     key: 'disponible',
-    header: 'Disponible hoy (sin fee)',
-    info: 'Lo que puede financiarse hoy, sin fee: el cupo de su nivel menos lo que ocupan sus financiamientos sin pagar del todo, o cero si tiene una cuota vencida, la cuenta no está activa o hay un bloqueo.',
+    header: 'Disponible hoy (sin comisión)',
+    info: 'Lo que puede financiarse hoy, sin comisión: el cupo de su nivel menos lo que ocupan sus financiamientos sin pagar del todo, o cero si tiene una cuota vencida, la cuenta no está activa o hay un bloqueo.',
     type: 'number',
     hidden: true,
     sortDir: 'desc',
@@ -122,8 +122,8 @@ export const COLUMNAS_PERSONAS: Array<Column<UserRow>> = [
 
   {
     key: 'deuda',
-    header: 'Deuda pendiente (financiamiento + fee)',
-    info: 'Suma de sus cuotas sin cobrar y no dadas por perdidas (vencidas y por vencer), con el service fee + IVA dentro; debajo, lo financiado (sin fee) y el service fee + IVA; no incluye cargos por atraso.',
+    header: 'Deuda pendiente (financiamiento + comisión)',
+    info: 'Suma de sus cuotas sin cobrar y no dadas por perdidas (vencidas y por vencer), con la Comisión Helios + IVA dentro; debajo, lo financiado (sin comisión) y la Comisión Helios + IVA; no incluye cargos por atraso.',
     type: 'number',
     sortDir: 'desc',
     sort: (u) => u.openDebtUsd,
@@ -145,7 +145,7 @@ export const COLUMNAS_PERSONAS: Array<Column<UserRow>> = [
 
   {
     key: 'deuda-facturado',
-    header: 'Deuda pendiente: financiado (sin fee)',
+    header: 'Deuda pendiente: financiado (sin comisión)',
     hidden: true,
     type: 'number',
     sort: (u) => u.openDebtDesglose?.financedUsd ?? null,
@@ -154,8 +154,8 @@ export const COLUMNAS_PERSONAS: Array<Column<UserRow>> = [
   },
 
   {
-    key: 'deuda-fee',
-    header: 'Deuda pendiente: service fee + IVA',
+    key: 'deuda-comisión',
+    header: 'Deuda pendiente: Comisión Helios + IVA',
     hidden: true,
     type: 'number',
     sort: (u) => u.openDebtDesglose?.feeUsd ?? null,
@@ -165,8 +165,8 @@ export const COLUMNAS_PERSONAS: Array<Column<UserRow>> = [
 
   {
     key: 'vencido',
-    header: 'Vencido (financiamiento + fee)',
-    info: 'Suma de sus cuotas sin cobrar, no dadas por perdidas y con vencimiento anterior a hoy (día operativo), con el service fee + IVA dentro; debajo, su desglose y los días desde la más antigua.',
+    header: 'Vencido (financiamiento + comisión)',
+    info: 'Suma de sus cuotas sin cobrar, no dadas por perdidas y con vencimiento anterior a hoy (día operativo), con la Comisión Helios + IVA dentro; debajo, su desglose y los días desde la más antigua.',
     type: 'number',
     sortDir: 'desc',
     sort: (u) => u.overdueUsd,
@@ -191,7 +191,7 @@ export const COLUMNAS_PERSONAS: Array<Column<UserRow>> = [
 
   {
     key: 'vencido-facturado',
-    header: 'Vencido: financiado (sin fee)',
+    header: 'Vencido: financiado (sin comisión)',
     hidden: true,
     type: 'number',
     sort: (u) => u.overdueDesglose?.financedUsd ?? null,
@@ -200,8 +200,8 @@ export const COLUMNAS_PERSONAS: Array<Column<UserRow>> = [
   },
 
   {
-    key: 'vencido-fee',
-    header: 'Vencido: service fee + IVA',
+    key: 'vencido-comisión',
+    header: 'Vencido: Comisión Helios + IVA',
     hidden: true,
     type: 'number',
     sort: (u) => u.overdueDesglose?.feeUsd ?? null,

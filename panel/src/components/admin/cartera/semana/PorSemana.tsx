@@ -63,7 +63,7 @@ export function semanaPorDefecto(cohortes: ReadonlyArray<Cohorte>): string | nul
  * lo que debe en total y sus señales. Lo que la lista suma por estado es lo
  * de las tarjetas: salen de la misma fuente (`metricas.cuotas`).
  *
- * Todo lo que se cobra lleva el fee, con su desglose a la vista (Javier,
+ * Todo lo que se cobra lleva la comisión, con su desglose a la vista (Javier,
  * 28-09). Comparar esta semana con las demás es de Métricas › Cobros ›
  * Semanas, y se enlaza.
  */
@@ -288,10 +288,10 @@ function QuienDebe({
       de('telefono'),
       {
         key: 'semana',
-        header: 'De esta semana (financiamiento + fee)',
+        header: 'De esta semana (financiamiento + comisión)',
         type: 'number',
         sortDir: 'desc',
-        info: 'Lo que debe de lo financiado esta semana, cuota a cuota: vencida, por vencer o dada por perdida. Financiamiento + service fee, con sus dos partes debajo.',
+        info: 'Lo que debe de lo financiado esta semana, cuota a cuota: vencida, por vencer o dada por perdida. Financiamiento + Comisión Helios, con sus dos partes debajo.',
         sort: (r: DeudorDeLaSemana) => r.deLaSemana.payableUsd,
         csv: (r: DeudorDeLaSemana) => csvDinero(r.deLaSemana.payableUsd),
         cell: (r: DeudorDeLaSemana) => (
@@ -312,10 +312,10 @@ function QuienDebe({
       },
       {
         key: 'total',
-        header: 'Debe en total (financiamiento + fee)',
+        header: 'Debe en total (financiamiento + comisión)',
         type: 'number',
         sortDir: 'desc',
-        info: `Todo lo que debe, de esta y de otras semanas: lo vencido y lo que vence en los próximos ${d.horizonteDias} días. Financiamiento + service fee.`,
+        info: `Todo lo que debe, de esta y de otras semanas: lo vencido y lo que vence en los próximos ${d.horizonteDias} días. Financiamiento + Comisión Helios.`,
         sort: (r: DeudorDeLaSemana) => r.overdueUsd + r.upcomingUsd,
         csv: (r: DeudorDeLaSemana) => csvDinero(r.overdueUsd + r.upcomingUsd),
         cell: (r: DeudorDeLaSemana) => (
@@ -392,7 +392,7 @@ function QuienDebe({
                 .filter(([e]) => sumas[e].importe.payableUsd > 0)
                 .map(([e, rotulo]) => `${formatUsd(sumas[e].importe.payableUsd)} ${rotulo} de ${sumas[e].personas}`)
                 .join(' · ')}{' '}
-              (financiamiento + fee)
+              (financiamiento + comisión)
             </span>
           }
           exportar={{ archivo: `por-cobrar-semana-${semana}${cuota === 'todas' ? '' : `-cuota-${cuota}`}` }}

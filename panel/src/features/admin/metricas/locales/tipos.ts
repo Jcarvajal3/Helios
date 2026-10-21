@@ -7,7 +7,7 @@ import type { Desglose, SemanaUsada } from '@/features/admin/metricas/lectura'
 // Sale de `admin_metricas_locales(p_semana, p_merchant_id)` (migración
 // 20260927560000), que lo cuenta todo desde el esquema `metricas`. Los
 // nombres dicen la clase de cada importe: `…Usd` suelto es consumo (sin el
-// service fee); lo que se paga en cuotas llega como `Desglose`, con sus
+// Comisión Helios); lo que se paga en cuotas llega como `Desglose`, con sus
 // dos partes, y no se enseña nunca sin ellas.
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -57,7 +57,7 @@ export type FilaLocal = {
   nombre: string
   estado: EstadoLocal | null
   ciudad: string | null
-  /** Consumo de la semana, sin el service fee. */
+  /** Consumo de la semana, sin la Comisión Helios. */
   consumoUsd: number
   consumos: number
   /** `null` sin consumos: un ticket de $0 no existe. */

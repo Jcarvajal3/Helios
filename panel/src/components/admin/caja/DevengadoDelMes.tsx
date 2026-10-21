@@ -6,9 +6,10 @@ import { devengadoDelMes } from '@/features/admin/contabilidad'
 /**
  * Lo devengado y lo cobrado del mes, cada línea con su explicación.
  *
- * No hay total: el service fee es ingreso, el IVA es de Hacienda, lo dado por
- * perdido es deuda y lo cobrado es caja. Sumarlos mezclaría el consumo con el
- * service fee en una cifra que no es nada.
+ * No hay total: la Comisión Helios es ingreso, el IVA es de Hacienda, la
+ * comisión del personal es gasto, lo dado por perdido es deuda y lo cobrado es
+ * caja. Sumarlos mezclaría la consulta con la comisión en una cifra que no es
+ * nada.
  */
 export function DevengadoDelMes({ mes }: { mes: string }) {
   const query = useMesContable(mes)
@@ -32,14 +33,19 @@ function Lineas({ d }: { d: ReturnType<typeof devengadoDelMes> }) {
       <Desglose
         lineas={[
           {
-            rotulo: 'Service fee devengado, sin IVA',
-            info: 'El service fee de los financiamientos confirmados en el mes, sin IVA, menos lo revertido. Se gana al confirmar el financiamiento, se cobre o no.',
+            rotulo: 'Comisión Helios devengada, sin IVA',
+            info: 'La Comisión Helios de las órdenes confirmadas en el mes, sin IVA, menos lo revertido. Se gana al confirmar la orden, se cobre o no.',
             valor: formatUsd(d.servicioUsd),
           },
           {
-            rotulo: 'IVA del service fee, por pagar',
-            info: 'El IVA que grava el service fee del mes. No es de Helios: se cobra al paciente y se remite.',
+            rotulo: 'IVA de la Comisión Helios, por pagar',
+            info: 'El IVA que grava la Comisión Helios del mes. No es de Helios: se cobra al paciente y se remite.',
             valor: formatUsd(d.ivaUsd),
+          },
+          {
+            rotulo: 'Comisiones del personal (gasto)',
+            info: 'Lo que Helios le debe al personal de las clínicas por las órdenes confirmadas en el mes. Es gasto: se le paga a la clínica junto con sus consultas.',
+            valor: formatUsd(d.comisionesDelPersonalUsd),
           },
           {
             rotulo: 'Cargos por atraso devengados',
@@ -47,8 +53,8 @@ function Lineas({ d }: { d: ReturnType<typeof devengadoDelMes> }) {
             valor: formatUsd(d.cargosPorAtrasoUsd),
           },
           {
-            rotulo: 'Dado por perdido (financiamiento + fee)',
-            info: 'La deuda que pasó a pérdida en el mes, según el libro. Es deuda: lleva el service fee y su IVA dentro, y no se compara con el financiamiento, que va sin fee.',
+            rotulo: 'Dado por perdido (consulta + comisión)',
+            info: 'La deuda que pasó a pérdida en el mes, según el libro. Es deuda: lleva la Comisión Helios y su IVA dentro, y no se compara con la consulta, que va sin comisión.',
             valor: formatUsd(d.dadoPorPerdidoUsd),
           },
           {

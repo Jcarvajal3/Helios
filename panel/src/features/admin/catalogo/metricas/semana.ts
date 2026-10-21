@@ -3,7 +3,7 @@ import type { Entrada } from '../tipos'
 /**
  * Las cifras, acciones y términos de la pestaña Semana de Métricas, para la
  * búsqueda (Ctrl K) y el asistente. Solo lo NUEVO de la pestaña: el financiado,
- * el service fee y las metas de la semana ya están en `gerencia.ts`
+ * la Comisión Helios y las metas de la semana ya están en `gerencia.ts`
  * (`financiado-de-la-semana`, `ingreso-por-servicio`, `metas-del-negocio`), y
  * la mora, el cobro a tiempo y la caja de hoy en los archivos de su equipo.
  */
@@ -27,18 +27,18 @@ export const metricasSemana = [
       'cobro a tiempo por semana',
     ],
     destino: { to: '/admin/metricas', search: { vista: 'semana', sub: 'rendimiento' } },
-    que: 'Financiamiento, ingreso de Helios, cobro, riesgo, pacientes y caja de las últimas 8, 12 o 26 semanas (de lunes a domingo, por día operativo), de todas las clínicas o de una. La semana elegida va al final y se compara con la anterior; si está en curso, con la anterior hasta el mismo momento. El total financiado va sin el service fee; el importe de las cuotas va con su financiado y su service fee + IVA en filas aparte.',
+    que: 'Financiamiento, ingreso de Helios, cobro, riesgo, pacientes y caja de las últimas 8, 12 o 26 semanas (de lunes a domingo, por día operativo), de todas las clínicas o de una. La semana elegida va al final y se compara con la anterior; si está en curso, con la anterior hasta el mismo momento. El total financiado va sin la Comisión Helios; el importe de las cuotas va con su financiado y su Comisión Helios + IVA en filas aparte.',
     rpc: 'admin_metricas_semanas',
   },
   {
     tipo: 'cifra',
     id: 'cuotas-que-vencian',
-    titulo: 'Cuotas que vencían en la semana (financiado + fee)',
-    descripcion: 'El importe de las cuotas que vencían cada semana: el financiado (sin fee) más el service fee + IVA, con las dos partes.',
+    titulo: 'Cuotas que vencían en la semana (financiado + comisión)',
+    descripcion: 'El importe de las cuotas que vencían cada semana: el financiado (sin comisión) más la Comisión Helios + IVA, con las dos partes.',
     espacio: 'metricas',
     sinonimos: ['vencimientos de la semana', 'lo que vencía', 'cuotas de la semana', 'por cobrar de la semana'],
     destino: { to: '/admin/metricas', search: { vista: 'semana', sub: 'rendimiento' } },
-    que: 'La suma de las cuotas cuyo vencimiento caía en la semana (hasta hoy si está en curso), pagadas o no: el financiado (sin fee) más el service fee + IVA, que se enseñan siempre como dos líneas aparte.',
+    que: 'La suma de las cuotas cuyo vencimiento caía en la semana (hasta hoy si está en curso), pagadas o no: el financiado (sin comisión) más la Comisión Helios + IVA, que se enseñan siempre como dos líneas aparte.',
     rpc: 'admin_metricas_semanas',
   },
   {
@@ -67,8 +67,8 @@ export const metricasSemana = [
   {
     tipo: 'cifra',
     id: 'total-facturado-de-la-semana',
-    titulo: 'Total financiado de la semana (sin fee)',
-    descripcion: 'Lo financiado en las clínicas en la semana, sin el service fee, frente a la semana anterior.',
+    titulo: 'Total financiado de la semana (sin comisión)',
+    descripcion: 'Lo financiado en las clínicas en la semana, sin la Comisión Helios, frente a la semana anterior.',
     espacio: 'metricas',
     sinonimos: [
       'total financiado',
@@ -76,33 +76,33 @@ export const metricasSemana = [
       'facturación de la semana',
       'cuánto se facturó',
       'financiamientos de la semana',
-      'financiamiento sin fee',
+      'financiamiento sin comisión',
       'resumen de la semana',
     ],
     destino: { to: '/admin/metricas' },
-    que: 'Sin el service fee: la suma de los financiamientos confirmados de la semana (de lunes a domingo, por día operativo; la semana en curso, hasta ahora), de todas las clínicas o de una. Es la fila «Total financiado» de Semana › Rendimiento. Se compara con la semana anterior a la misma altura y va junto al service fee + IVA y al total a cobrar, que suman con él.',
+    que: 'Sin la Comisión Helios: la suma de los financiamientos confirmados de la semana (de lunes a domingo, por día operativo; la semana en curso, hasta ahora), de todas las clínicas o de una. Es la fila «Total financiado» de Semana › Rendimiento. Se compara con la semana anterior a la misma altura y va junto a la Comisión Helios + IVA y al total a cobrar, que suman con él.',
     rpc: 'admin_metricas_semana_resumen',
   },
   {
     tipo: 'cifra',
-    id: 'service-fee-e-iva-de-la-semana',
-    titulo: 'Service fee + IVA de la semana',
-    descripcion: 'El service fee de los financiamientos de la semana con su IVA, partido en el fee sin IVA y el IVA.',
+    id: 'service-comisión-e-iva-de-la-semana',
+    titulo: 'Comisión Helios + IVA de la semana',
+    descripcion: 'La Comisión Helios de los financiamientos de la semana con su IVA, partido en la comisión sin IVA y el IVA.',
     espacio: 'metricas',
-    sinonimos: ['service fee', 'fee de la semana', 'fee más iva', 'iva del fee', 'servicio', 'servicio de helios', 'comisión'],
+    sinonimos: ['Comisión Helios', 'comisión de la semana', 'comisión más iva', 'iva de la comisión', 'servicio', 'servicio de helios', 'comisión'],
     destino: { to: '/admin/metricas' },
-    que: 'El service fee de los financiamientos de la semana con su IVA dentro: el total a cobrar menos el total financiado. Se enseña partido en el service fee sin IVA (el ingreso de Helios) y el IVA, y siempre entre el total financiado y el total a cobrar, frente a la semana anterior a la misma altura.',
+    que: 'La Comisión Helios de los financiamientos de la semana con su IVA dentro: el total a cobrar menos el total financiado. Se enseña partido en la Comisión Helios sin IVA (el ingreso de Helios) y el IVA, y siempre entre el total financiado y el total a cobrar, frente a la semana anterior a la misma altura.',
     rpc: 'admin_metricas_semana_resumen',
   },
   {
     tipo: 'cifra',
     id: 'total-a-cobrar-de-la-semana',
     titulo: 'Total a cobrar de la semana',
-    descripcion: 'Lo que se cobra en cuotas por los financiamientos de la semana: el total financiado más el service fee y su IVA.',
+    descripcion: 'Lo que se cobra en cuotas por los financiamientos de la semana: el total financiado más la Comisión Helios y su IVA.',
     espacio: 'metricas',
-    sinonimos: ['total a cobrar', 'financiamiento más fee', 'financiamiento + fee', 'lo que se cobra de la semana', 'financiado más fee'],
+    sinonimos: ['total a cobrar', 'financiamiento más comisión', 'financiamiento + comisión', 'lo que se cobra de la semana', 'financiado más comisión'],
     destino: { to: '/admin/metricas' },
-    que: 'Lo que los pacientes pagan en sus dos cuotas por los financiamientos de la semana: el total financiado (sin fee) más el service fee y su IVA. No es un total suelto: se enseña siempre con sus dos sumandos al lado, en la tarjeta, en la tabla y en el CSV.',
+    que: 'Lo que los pacientes pagan en sus dos cuotas por los financiamientos de la semana: el total financiado (sin comisión) más la Comisión Helios y su IVA. No es un total suelto: se enseña siempre con sus dos sumandos al lado, en la tarjeta, en la tabla y en el CSV.',
     rpc: 'admin_metricas_semana_resumen',
   },
   {

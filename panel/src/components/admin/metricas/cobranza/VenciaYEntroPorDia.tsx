@@ -39,7 +39,7 @@ export function VenciaYEntroPorDia({
   if (dias.isError) {
     return (
       <Card className="flex flex-col gap-3">
-        <h3 className="type-panel-section text-on-surface">Vencía cada día y cobrado de ello (con fee)</h3>
+        <h3 className="type-panel-section text-on-surface">Vencía cada día y cobrado de ello (con comisión)</h3>
         <NoSePudoLeer onReintentar={() => void dias.refetch()} />
       </Card>
     )
@@ -49,7 +49,7 @@ export function VenciaYEntroPorDia({
   return (
     <div className={`transition-opacity ${dias.isPlaceholderData ? 'opacity-60' : 'opacity-100'}`}>
       <BarChart
-        title="Vencía cada día y cobrado de ello (con fee)"
+        title="Vencía cada día y cobrado de ello (con comisión)"
         summary={<PartesEnLinea partes={fraseDeLosDias(dias.data, enCurso, hoy)} />}
         series={[
           { key: 'vencia', label: 'Vencía' },
@@ -66,7 +66,7 @@ export function VenciaYEntroPorDia({
         ejeLabel="Día"
         unidadLabel="Cuotas pagadas y desglose de lo que vencía"
         height={200}
-        footnote="Por día de la semana: cuotas con vencimiento ese día (sin las dadas por perdidas) y, dentro, la parte de ellas ya pagada hoy (antes, ese día o después), en dólares con fee; el desglose de cada día está en la tabla."
+        footnote="Por día de la semana: cuotas con vencimiento ese día (sin las dadas por perdidas) y, dentro, la parte de ellas ya pagada hoy (antes, ese día o después), en dólares con comisión; el desglose de cada día está en la tabla."
         empty="No vencía ninguna cuota esta semana."
       />
     </div>

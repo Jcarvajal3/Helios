@@ -12,13 +12,13 @@ import type { CifraDelResumen, IdCifraResumen } from '@/features/admin/metricas/
 /**
  * Las cinco cifras de la semana, en dos filas:
  *
- *   [Total facturado (sin fee)]  +  [Service fee + IVA]  =  [Total a cobrar]
- *   (el total a cobrar no dice «+ fee» en su título: sus dos sumandos están
+ *   [Total facturado (sin comisión)]  +  [Comisión Helios + IVA]  =  [Total a cobrar]
+ *   (el total a cobrar no dice «+ comisión» en su título: sus dos sumandos están
  *   a su izquierda, con los signos)
  *   [Consumos]  [Usuarios que consumieron]
  *
  * La primera es un desglose que suma y se lee como tal: los signos van entre
- * las tarjetas, y el total a cobrar (que lleva el fee dentro) nunca aparece
+ * las tarjetas, y el total a cobrar (que lleva la comisión dentro) nunca aparece
  * sin sus dos sumandos al lado. En fila desde 50rem, cuando cada tarjeta
  * pasa de ~15rem y el pie del total a cobrar (sus dos partes) cabe entero;
  * más estrecho, una debajo de otra, con los signos entre ellas.
@@ -71,7 +71,7 @@ export function CifrasDelResumen({
 
       <div
         role="group"
-        aria-label="Desglose: total financiado más service fee e IVA es igual al total a cobrar"
+        aria-label="Desglose: total financiado más Comisión Helios e IVA es igual al total a cobrar"
         className="grid grid-cols-1 gap-2 @min-[50rem]:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)]"
       >
         {tarjeta(facturado)}

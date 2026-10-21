@@ -49,6 +49,7 @@ export function DecisionDelPago({
   item,
   movimiento,
   sinCotejo,
+  motivoConAviso = null,
   onResuelto,
 }: {
   item: QueueItem
@@ -59,6 +60,11 @@ export function DecisionDelPago({
    * Aprobarlo sin respaldo pide marcarlo y dar el motivo.
    */
   sinCotejo: string | null
+  /**
+   * Si el aviso (SMS) del BNC encaja con el pago, el motivo de aprobarlo sin
+   * cotejo ya escrito: el SMS es el respaldo mientras llega el extracto.
+   */
+  motivoConAviso?: string | null
   onResuelto: (aviso: string) => void
 }) {
   const queryClient = useQueryClient()
@@ -125,7 +131,8 @@ export function DecisionDelPago({
         {sinCotejo !== null && (
           <p className="mb-1 flex items-start gap-1.5 type-panel-caption text-on-surface-variant">
             <TriangleAlert size={14} aria-hidden className="mt-px shrink-0 text-warning" />
-            {sinCotejo} Aprobarlo pide el motivo.
+            {sinCotejo}{' '}
+            {motivoConAviso ? 'Lo respalda el aviso del BNC: el motivo ya va escrito.' : 'Aprobarlo pide el motivo.'}
           </p>
         )}
         <Button size="md" className="w-full" onClick={() => setDialogo('aprobar')}>
@@ -151,7 +158,7 @@ export function DecisionDelPago({
           title="Aprobar el pago"
           summary={`Vas a aprobar el pago de ${quien}: ${formatUsd(item.amountUsd)} (${item.installmentCount} ${
             item.installmentCount === 1 ? 'cuota' : 'cuotas'
-          } con fee${
+          } con comisión${
             item.lateFeeUsd > 0 ? ` y ${formatUsd(item.lateFeeUsd)} en cargos por atraso` : ''
           })${item.reference ? `, referencia ${item.reference}` : ''}.`}
           detail={
@@ -189,6 +196,7 @@ export function DecisionDelPago({
           }
           reasonLabel={sinCotejo !== null ? 'Por qué se aprueba sin cotejo' : undefined}
           reasonPlaceholder="El paciente envió la captura del banco por WhatsApp"
+          reasonInicial={sinCotejo !== null && motivoConAviso ? motivoConAviso : undefined}
           bloqueo={
             sinCotejo !== null && !aceptaSinCotejo
               ? 'Marca «Aprobar sin cotejo bancario» para poder aprobarlo.'
@@ -216,7 +224,7 @@ export function DecisionDelPago({
       {dialogo === 'rechazar' && (
         <ConfirmDialog
           title="Rechazar el pago"
-          summary={`${item.fullName ?? 'El paciente'} va a recibir el motivo y podrá reportar el pago otra vez.`}
+          summary={`${item.fullName ?? 'El paciente'} va a recibir el motivo y podrá mandar el comprobante otra vez.`}
           detail={
             <div className="flex flex-col gap-3">
               <Select

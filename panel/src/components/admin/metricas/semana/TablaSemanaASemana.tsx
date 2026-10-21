@@ -15,7 +15,7 @@ import { descargarCsv } from '@/lib/csv'
 import { CLASE_ELEGIDA, FilaDeLaTabla } from './FilaDeLaTabla'
 
 const INFO =
-  'Una columna por semana, de lunes a domingo por día operativo, con la elegida a la derecha. El total financiado va sin el service fee; el importe de las cuotas va con sus dos partes debajo: el financiado (sin fee) y el service fee + IVA. «Frente a la anterior» compara la elegida con la semana de antes: entera si la elegida está cerrada; si está en curso, hasta el mismo momento (hace siete días), con lo vencido, la mora y la caja al cierre del mismo día de la semana y el cobro a tiempo con los mismos días de vencimiento. Señala el nombre de una fila para ver qué es.'
+  'Una columna por semana, de lunes a domingo por día operativo, con la elegida a la derecha. El total financiado va sin la Comisión Helios; el importe de las cuotas va con sus dos partes debajo: el financiado (sin comisión) y la Comisión Helios + IVA. «Frente a la anterior» compara la elegida con la semana de antes: entera si la elegida está cerrada; si está en curso, hasta el mismo momento (hace siete días), con lo vencido, la mora y la caja al cierre del mismo día de la semana y el cobro a tiempo con los mismos días de vencimiento. Señala el nombre de una fila para ver qué es.'
 
 /**
  * «Semana a semana»: la tabla de la pestaña. Una fila por cifra, agrupadas

@@ -4,7 +4,7 @@
  *   npx tsx src/features/admin/metricas/caja/calculos.test.ts
  *
  * Lo que se vigila: que lo que entró de cuotas se lea y se diga SIEMPRE con
- * su consumo y su service fee (regla del fee); que con un local la caja
+ * su consumo y su Comisión Helios (regla de la comisión); que con un local la caja
  * sea `null` y la frase hable de lo que se le debe; que lo que se esperaba
  * cobrar se reparta como lo que vencía; y que el aviso del libro solo salga
  * cuando no cuadra.
@@ -22,7 +22,7 @@ import { textoDeDesglose } from '@/features/admin/metricas/formato'
 
 let fallos = 0
 
-/** Las dos partes de lo cobrado tal como van en la frase y en el globo: «consumo $X + service fee $Y». */
+/** Las dos partes de lo cobrado tal como van en la frase y en el globo: «consumo $X + Comisión Helios $Y». */
 function dosPartes(financedUsd: number, feeUsd: number): string {
   return textoDeDesglose({ financedUsd, feeUsd }).replace('Financiamiento', 'financiamiento')
 }

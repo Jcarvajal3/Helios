@@ -12,10 +12,10 @@ import { DEFINICIONES } from '@/features/admin/definitions'
 // Ningún texto escribe un plazo ni un monto del negocio (la gracia, la
 // escalera): cambian en Ajustes sin tocar esto.
 //
-// Las palabras del fee: se llama «service fee» (o «fee» donde no cabe),
-// nunca «servicio». Todo financiado dice si lleva el fee: el que va sin él lo
-// dice en el título o al empezar su InfoDot («Sin el service fee»), y lo que
-// se paga en cuotas lleva «(financiado + fee)» y sus dos partes a la vista.
+// Las palabras de la comisión: se llama «Comisión Helios» (o «comisión» donde no cabe),
+// nunca «servicio». Todo financiado dice si lleva la comisión: el que va sin él lo
+// dice en el título o al empezar su InfoDot («Sin la Comisión Helios»), y lo que
+// se paga en cuotas lleva «(financiado + comisión)» y sus dos partes a la vista.
 // ═══════════════════════════════════════════════════════════════════════════
 
 export type ClaveCifraGeneral =
@@ -61,16 +61,16 @@ export const CIFRAS_GENERAL: Record<ClaveCifraGeneral, { titulo: string; que: st
     que: 'Los pacientes con financiamientos en dos días distintos o más, desde el primer día; con una clínica elegida, dos días en esa clínica.',
   },
   consumo: {
-    titulo: 'Total financiado (sin fee)',
-    que: 'Sin el service fee ni su IVA: todo lo financiado en las clínicas desde el primer día.',
+    titulo: 'Total financiado (sin comisión)',
+    que: 'Sin la Comisión Helios ni su IVA: todo lo financiado en las clínicas desde el primer día.',
   },
   consumos: {
     titulo: 'Financiamientos',
     que: 'Los financiamientos confirmados desde el primer día.',
   },
   ticket: {
-    titulo: 'Ticket medio (sin fee)',
-    que: 'Sin el service fee: el total financiado dividido entre el número de financiamientos, desde el primer día.',
+    titulo: 'Ticket medio (sin comisión)',
+    que: 'Sin la Comisión Helios: el total financiado dividido entre el número de financiamientos, desde el primer día.',
   },
   personas: {
     titulo: 'Pacientes que se financiaron',
@@ -81,32 +81,32 @@ export const CIFRAS_GENERAL: Record<ClaveCifraGeneral, { titulo: string; que: st
     que: 'Las clínicas con algún financiamiento en los últimos treinta días operativos, hoy incluido. El pie: cuántas han financiado alguna vez.',
   },
   movido: {
-    titulo: 'Total movido (financiado + fee)',
-    que: 'Todo lo que ha pasado por Helios desde el primer día: el importe de todas las cuotas de todos los financiamientos, cobradas o no, el financiado (sin fee) más el service fee + IVA, con las dos partes por separado. Es lo cobrado + lo por cobrar + lo perdido. No cuenta los cargos por atraso.',
+    titulo: 'Total movido (financiado + comisión)',
+    que: 'Todo lo que ha pasado por Helios desde el primer día: el importe de todas las cuotas de todos los financiamientos, cobradas o no, el financiado (sin comisión) más la Comisión Helios + IVA, con las dos partes por separado. Es lo cobrado + lo por cobrar + lo perdido. No cuenta los cargos por atraso.',
   },
   porCobrar: {
-    titulo: 'Por cobrar (financiado + fee)',
-    que: 'Hoy: el importe de las cuotas vencidas o por vencer que siguen sin pagarse, el financiado (sin fee) más el service fee + IVA, con las dos partes por separado. No cuenta lo perdido ni los cargos por atraso.',
+    titulo: 'Por cobrar (financiado + comisión)',
+    que: 'Hoy: el importe de las cuotas vencidas o por vencer que siguen sin pagarse, el financiado (sin comisión) más la Comisión Helios + IVA, con las dos partes por separado. No cuenta lo perdido ni los cargos por atraso.',
   },
   vencido: {
     titulo: 'De ello, vencido',
-    que: 'Hoy: la parte de lo que está por cobrar con el vencimiento ya pasado, financiado (sin fee) más service fee + IVA, con las dos partes por separado.',
+    que: 'Hoy: la parte de lo que está por cobrar con el vencimiento ya pasado, financiado (sin comisión) más Comisión Helios + IVA, con las dos partes por separado.',
   },
   cobrado: {
-    titulo: 'Cobrado (financiado + fee)',
-    que: 'El importe de todas las cuotas pagadas desde el primer día: el financiado (sin fee) más el service fee + IVA, con las dos partes por separado. Los cargos por atraso cobrados van en su cifra.',
+    titulo: 'Cobrado (financiado + comisión)',
+    que: 'El importe de todas las cuotas pagadas desde el primer día: el financiado (sin comisión) más la Comisión Helios + IVA, con las dos partes por separado. Los cargos por atraso cobrados van en su cifra.',
   },
   servicio: {
-    titulo: 'Service fee sin IVA',
-    que: 'Lo que Helios ha ganado con el service fee de todos los financiamientos confirmados desde el primer día, sin el IVA, que se cobra y se remite. Nunca se suma al financiado.',
+    titulo: 'Comisión Helios sin IVA',
+    que: 'Lo que Helios ha ganado con la Comisión Helios de todos los financiamientos confirmados desde el primer día, sin el IVA, que se cobra y se remite. Nunca se suma al financiado.',
   },
   cargos: {
     titulo: 'Cargos por atraso',
-    que: 'Los cargos por atraso cargados desde el primer día, sin los condonados. Son ingreso de Helios sin IVA y van aparte del service fee. El pie: lo cobrado de ellos.',
+    que: 'Los cargos por atraso cargados desde el primer día, sin los condonados. Son ingreso de Helios sin IVA y van aparte de la Comisión Helios. El pie: lo cobrado de ellos.',
   },
   perdido: {
-    titulo: 'Perdido (sin fee)',
-    que: 'Sin el service fee: el financiado de las cuotas que se dieron por perdidas desde el primer día y siguen sin pagarse, lo que Helios ya le pagó a la clínica y no va a volver. Su service fee tampoco se cobrará.',
+    titulo: 'Perdido (sin comisión)',
+    que: 'Sin la Comisión Helios: el financiado de las cuotas que se dieron por perdidas desde el primer día y siguen sin pagarse, lo que Helios ya le pagó a la clínica y no va a volver. Su Comisión Helios tampoco se cobrará.',
   },
   caja: {
     titulo: DEFINICIONES.caja.label,
@@ -131,10 +131,10 @@ export const CIFRAS_GENERAL: Record<ClaveCifraGeneral, { titulo: string; que: st
   },
   porCadaCien: {
     titulo: 'Por cada $100 financiados',
-    que: 'Lo que dejan el service fee (sin IVA) y los cargos por atraso por cada cien dólares financiados (sin fee) desde el primer día, y el margen que queda después del impago (%) del bloque Riesgo. Los cien dólares son el denominador, no una línea: el fee nunca se suma al financiado.',
+    que: 'Lo que dejan la Comisión Helios (sin IVA) y los cargos por atraso por cada cien dólares financiados (sin comisión) desde el primer día, y el margen que queda después del impago (%) del bloque Riesgo. Los cien dólares son el denominador, no una línea: la comisión nunca se suma al financiado.',
   },
   curva: {
     titulo: 'Registros y financiado acumulados',
-    que: 'Los registros y el total financiado (sin fee) acumulados semana a semana desde el primer día, de lunes a domingo por día operativo. Un registro cuenta la semana en que la clínica dio de alta al paciente. La última semana llega hasta hoy.',
+    que: 'Los registros y el total financiado (sin comisión) acumulados semana a semana desde el primer día, de lunes a domingo por día operativo. Un registro cuenta la semana en que la clínica dio de alta al paciente. La última semana llega hasta hoy.',
   },
 }

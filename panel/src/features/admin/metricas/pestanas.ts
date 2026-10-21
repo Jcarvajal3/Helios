@@ -109,7 +109,7 @@ const REGISTRO = {
         id: 'resumen',
         titulo: 'Resumen',
         descripcion:
-          'Total financiado (sin fee), service fee + IVA y total a cobrar de la semana, con los financiamientos y los pacientes.',
+          'Total financiado (sin comisión), Comisión Helios + IVA y total a cobrar de la semana, con los financiamientos y los pacientes.',
         carpeta: 'semana',
       },
       {
@@ -125,7 +125,7 @@ const REGISTRO = {
     tono: 'cobranza',
     periodo: 'semana',
     local: 'filtra',
-    pregunta: 'De lo financiado una semana: cuánto hay que cobrar (financiamiento + fee), cuánto se cobró y cuánto falta.',
+    pregunta: 'De lo financiado una semana: cuánto hay que cobrar (financiamiento + comisión), cuánto se cobró y cuánto falta.',
     descripcion: 'Lo que hay que cobrar de cada semana de financiamientos y cómo va.',
     carpeta: 'cohortes',
     // Una semana sola, con sus cuotas y quién la debe, es trabajo: vive en
@@ -169,7 +169,7 @@ const REGISTRO = {
       {
         id: 'cupos',
         titulo: 'Cupos',
-        descripcion: 'Qué parte de su cupo (sin fee) usan hoy los pacientes de cada nivel.',
+        descripcion: 'Qué parte de su cupo (sin comisión) usan hoy los pacientes de cada nivel.',
         carpeta: 'cobranza',
         periodo: 'hoy',
       },
@@ -211,7 +211,7 @@ const REGISTRO = {
     periodo: 'semana',
     local: 'filtra',
     pregunta: '¿Cuánto se financia en cada clínica y cómo pagan sus pacientes?',
-    descripcion: 'Lo financiado (sin fee) en cada clínica en la semana y cómo pagan sus pacientes. Pulsa una clínica para ver su ficha.',
+    descripcion: 'Lo financiado (sin comisión) en cada clínica en la semana y cómo pagan sus pacientes. Pulsa una clínica para ver su ficha.',
     carpeta: 'locales',
     subpestanas: [],
   },
@@ -220,29 +220,10 @@ const REGISTRO = {
     tono: 'gerencia',
     periodo: 'semana',
     local: 'parcial',
-    pregunta: '¿Cuántos pacientes registraron las clínicas, cuántos se financiaron y cuántos volvieron a financiarse?',
-    descripcion: 'Pacientes registrados por las clínicas, pacientes que se financiaron y retención.',
+    pregunta: '¿Cuántos pacientes registraron las clínicas y cuántos pagaron en cuotas?',
+    descripcion: 'Pacientes registrados por las clínicas y pacientes que pagaron en cuotas en la ventana, con los estados de las cuentas y los niveles.',
     carpeta: 'gente',
-    subpestanas: [
-      {
-        id: 'resumen',
-        titulo: 'Resumen',
-        descripcion: 'Cuántos pacientes registraron las clínicas y cuántos se financiaron en la ventana.',
-        carpeta: 'gente',
-      },
-      {
-        id: 'uso',
-        titulo: 'Uso',
-        descripcion: 'Financiado (sin fee) y financiamientos por paciente, y qué parte del total hacen los pacientes que más se financian.',
-        carpeta: 'gente',
-      },
-      {
-        id: 'retencion',
-        titulo: 'Retención',
-        descripcion: 'Los pacientes registrados en el mismo periodo: cuántos siguen financiándose en las semanas siguientes.',
-        carpeta: 'gente',
-      },
-    ],
+    subpestanas: [],
   },
   global: {
     titulo: 'Global',
@@ -250,7 +231,7 @@ const REGISTRO = {
     periodo: 'desde-el-inicio',
     local: 'parcial',
     pregunta: '¿Cómo va el negocio desde el primer día: pacientes, financiado, dinero y riesgo?',
-    descripcion: 'Todo el negocio desde el primer día: registros y pacientes, financiado (sin fee), lo que se debe, lo cobrado y el riesgo.',
+    descripcion: 'Todo el negocio desde el primer día: registros y pacientes, financiado (sin comisión), lo que se debe, lo cobrado y el riesgo.',
     carpeta: 'general',
     subpestanas: [],
   },

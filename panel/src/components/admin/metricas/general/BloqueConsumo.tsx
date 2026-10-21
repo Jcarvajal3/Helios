@@ -6,7 +6,7 @@ import { BloqueGeneral } from './BloqueGeneral'
 import type { LecturaGeneral } from './lectura'
 
 /**
- * El consumo desde el primer día, sin el service fee: cuánto, en cuántos
+ * El consumo desde el primer día, sin la Comisión Helios: cuánto, en cuántos
  * consumos, el ticket, cuánta gente y en cuántos locales. Con un local, todo
  * es de ese local salvo cuántos locales hay.
  */
@@ -38,7 +38,7 @@ export function BloqueConsumo({ lectura }: { lectura: LecturaGeneral }) {
           info={T.ticket.que}
           valor={g ? (g.consumo.ticketUsd === null ? SIN_DATO : formatUsd(g.consumo.ticketUsd)) : ''}
           pie={g && g.consumo.ticketUsd === null ? 'Todavía no hay financiamientos' : undefined}
-          link={{ to: '/admin/metricas', search: { vista: 'gente', sub: 'uso', local: conLocal } }}
+          link={{ to: '/admin/metricas', search: { vista: 'gente', local: conLocal } }}
           estado={estado}
           onReintentar={reintentar}
         />
@@ -47,7 +47,7 @@ export function BloqueConsumo({ lectura }: { lectura: LecturaGeneral }) {
           info={T.personas.que}
           valor={g ? entero(g.consumo.personas) : ''}
           pie="Cada paciente cuenta una vez"
-          link={{ to: '/admin/metricas', search: { vista: 'gente', sub: 'resumen', local: conLocal } }}
+          link={{ to: '/admin/metricas', search: { vista: 'gente', local: conLocal } }}
           estado={estado}
           onReintentar={reintentar}
         />

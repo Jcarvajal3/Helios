@@ -131,9 +131,9 @@ export function QuienPagoElAbono({
                 )}
               </span>
               <span className="block type-panel-caption text-on-surface-variant">
-                {formatPhone(u.phone)} · debe {formatUsd(u.openDebtUsd)} con fee
+                {formatPhone(u.phone)} · debe {formatUsd(u.openDebtUsd)} con comisión
                 {u.openDebtDesglose &&
-                  ` (financiado ${formatUsd(u.openDebtDesglose.financedUsd)} + service fee + IVA ${formatUsd(u.openDebtDesglose.feeUsd)})`}
+                  ` (financiado ${formatUsd(u.openDebtDesglose.financedUsd)} + Comisión Helios + IVA ${formatUsd(u.openDebtDesglose.feeUsd)})`}
               </span>
             </span>
             <Search size={14} className="shrink-0 text-on-surface-variant" aria-hidden />

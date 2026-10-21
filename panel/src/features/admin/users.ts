@@ -66,7 +66,7 @@ export type UserRow = {
   /** PAYABLE: lo vencido, sin lo dado por perdido. */
   overdueUsd: number
   /**
-   * Las dos partes de cada deuda: facturado (sin fee) y service fee + IVA.
+   * Las dos partes de cada deuda: facturado (sin comisión) y Comisión Helios + IVA.
    * `null` si la base todavía no las manda: no se inventan.
    */
   openDebtDesglose?: { financedUsd: number; feeUsd: number } | null
@@ -231,7 +231,7 @@ export type UserDetail = {
     /** Por qué `availableNowUsd` es cero con cupo libre. `null` si puede gastar. */
     availableBlockedReason: MotivoSinDisponible | null
     /**
-     * El bloque de crédito: consumo sin fee menos cuotas con fee. Mezcla dos
+     * El bloque de crédito: consumo sin comisión menos cuotas con comisión. Mezcla dos
      * clases de cifra y responde a la regla de antes de 20260830240000 (hoy el
      * cupo se libera por consumo): no se pinta en ninguna parte (AUD-OPERACION C1).
      */
@@ -243,7 +243,7 @@ export type UserDetail = {
     openUsd: number
     /** PAYABLE: las de `openUsd` con vencimiento anterior a hoy. */
     overdueUsd: number
-    /** PAYABLE: sus cuotas pagadas, con el fee dentro. */
+    /** PAYABLE: sus cuotas pagadas, con la comisión dentro. */
     paidUsd: number
     /**
      * FINANCED: el consumo de sus cuotas pagadas, la cifra del motor de
@@ -267,7 +267,7 @@ export type UserDetail = {
      */
     orderNumber: number | null
     sequence: number
-    /** PAYABLE: lo que se paga en esta cuota, con su parte del service fee dentro. */
+    /** PAYABLE: lo que se paga en esta cuota, con su parte de la Comisión Helios dentro. */
     amountUsd: number
     /** FINANCED: el consumo que lleva dentro esta cuota. */
     financedUsd: number
@@ -306,9 +306,9 @@ export type UserDetail = {
     id: string
     /** Ver `installments[].orderNumber`. */
     orderNumber: number | null
-    /** PAYABLE: el consumo con el service fee dentro. */
+    /** PAYABLE: el consumo con la Comisión Helios dentro. */
     amountUsd: number
-    /** FINANCED: el consumo en el local, sin el fee. */
+    /** FINANCED: el consumo en el local, sin la comisión. */
     financedUsd: number
     /** La moneda en que la cobró el médico. Las cifras de arriba siguen en dólares. */
     currency: Moneda
@@ -341,7 +341,7 @@ export type UserDetail = {
     rejectionNote: string | null
     createdAt: string
     /**
-     * Los sumandos de `amountUsd`: sus cuotas partidas en consumo y fee, y
+     * Los sumandos de `amountUsd`: sus cuotas partidas en consumo y comisión, y
      * los cargos por atraso. Null si la base no tiene 20260927696000.
      */
     partes: {

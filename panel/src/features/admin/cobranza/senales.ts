@@ -1,5 +1,5 @@
 import { diaOperativo, formatDay, formatNumero } from '@/components/ui'
-import { comoFila, filaONula, numero, numeroONulo, textoONulo } from '@/lib/json'
+import { comoFila, filaONula, numeroONulo, textoONulo } from '@/lib/json'
 import { unoDe } from '@/lib/busqueda'
 import type { EstadoPromesa } from '@/features/admin/estados'
 
@@ -13,11 +13,15 @@ import type { EstadoPromesa } from '@/features/admin/estados'
 // resume: nunca añade nada que no esté en una señal.
 //
 // Los tonos:
-//   intencion  un gesto de querer pagar (entró a pagar, promete, abrió el aviso)
-//   evita      un gesto de no querer, o de no enterarse (no abre, no contesta)
+//   intencion  un gesto de querer pagar (promete, tiene un pago registrado)
+//   evita      un gesto de no querer, o de no enterarse (no contesta)
 //   aviso      algo que quien cobra tiene que saber antes de escribir (pago
-//              en revisión, cuenta congelada, baja de nivel cerca)
+//              en revisión, cuenta congelada, suspensión cerca)
 //   historia   un dato de cómo ha pagado antes, que no empuja la intención
+//
+// Sin app no hay gestos que leer (abrir la app, entrar a pagar, tocar un
+// aviso): los avisos salen solos por WhatsApp y correo, y lo que se sabe de un
+// paciente es lo que pagó, lo que prometió y si contestó.
 //
 // Puro: se prueba en `senales.test.ts`.
 // ═══════════════════════════════════════════════════════════════════════════
@@ -31,20 +35,6 @@ export type ReporteDePago = {
 
 /** Lo que manda la base en `senales`. Un `null` es «no se sabe», no «no». */
 export type HechosDeDeudor = {
-  /** El último arranque o vuelta a la app que se conoce. */
-  ultimaApertura: string | null
-  avisos: 'activos' | 'apagados' | 'nunca' | null
-  /** Por qué se apagaron: `DeviceNotRegistered` (desinstaló) o `Sesión cerrada`. */
-  avisosMotivo: string | null
-  /** Desde cuándo la app anota sus gestos. Sin esto no se puede decir que NO hizo algo. */
-  gestosDesde: string | null
-  entroAPagar: string | null
-  copioDatos: string | null
-  abrioAviso: string | null
-  /** Su cuota vencida más vieja (sin lo dado por perdido). */
-  vencidaDesde: string | null
-  avisosEntregados: number
-  avisosAbiertos: number
   ultimoReporte: ReporteDePago | null
   enRevisionDesde: string | null
   cuotasPagadas: number | null
@@ -57,16 +47,6 @@ export type HechosDeDeudor = {
 }
 
 export const SIN_HECHOS: HechosDeDeudor = {
-  ultimaApertura: null,
-  avisos: null,
-  avisosMotivo: null,
-  gestosDesde: null,
-  entroAPagar: null,
-  copioDatos: null,
-  abrioAviso: null,
-  vencidaDesde: null,
-  avisosEntregados: 0,
-  avisosAbiertos: 0,
   ultimoReporte: null,
   enRevisionDesde: null,
   cuotasPagadas: null,
@@ -86,16 +66,6 @@ export function leerHechos(raw: unknown): HechosDeDeudor {
   const rep = filaONula(r.ultimo_reporte)
   const estadoRep = rep ? unoDe(ESTADOS_DE_REPORTE, rep.estado) : undefined
   return {
-    ultimaApertura: textoONulo(r.ultima_apertura),
-    avisos: unoDe(['activos', 'apagados', 'nunca'] as const, r.avisos) ?? null,
-    avisosMotivo: textoONulo(r.avisos_motivo),
-    gestosDesde: textoONulo(r.gestos_desde),
-    entroAPagar: textoONulo(r.entro_a_pagar),
-    copioDatos: textoONulo(r.copio_datos),
-    abrioAviso: textoONulo(r.abrio_aviso),
-    vencidaDesde: textoONulo(r.vencida_desde),
-    avisosEntregados: numero(r.avisos_entregados),
-    avisosAbiertos: numero(r.avisos_abiertos),
     ultimoReporte:
       rep && estadoRep
         ? {
@@ -147,16 +117,8 @@ export type TonoDeSenal = 'intencion' | 'evita' | 'aviso' | 'historia'
 export type ClaveDeSenal =
   | 'en_revision'
   | 'rechazado'
-  | 'entro_a_pagar'
-  | 'copio_datos'
   | 'promete'
   | 'promesa_rota'
-  | 'abrio_aviso'
-  | 'avisos_sin_abrir'
-  | 'avisos_entregados'
-  | 'sin_avisos'
-  | 'abrio_app'
-  | 'no_abre'
   | 'sin_respuesta'
   | 'nunca_pago'
   | 'siempre_a_tiempo'
@@ -188,19 +150,8 @@ export type ContextoDeSenales = {
   ahora: Date
   /** Día operativo de hoy. */
   hoy: string
-  /** Días de atraso con que el estado automático baja de nivel. */
+  /** Días de atraso con que el estado automático suspende la cuenta (y baja un nivel). */
   diasBaja: number
-}
-
-/** Cuántos días atrás un gesto sigue contando como reciente. */
-const RECIENTE_DIAS = 7
-
-function reciente(instante: string | null, ctx: ContextoDeSenales): instante is string {
-  return instante !== null && diasEntre(diaOperativo(new Date(instante)), ctx.hoy) <= RECIENTE_DIAS
-}
-
-function despuesDe(a: string | null, b: string | null): boolean {
-  return a !== null && (b === null || new Date(a) > new Date(b))
 }
 
 function plural(n: number, uno: string, varios: string): string {
@@ -217,13 +168,13 @@ export function senalesDe(fila: FilaParaSenales, ctx: ContextoDeSenales): Senal[
   const debeVencido = fila.overdueUsd > 0
   const s: Senal[] = []
 
-  // ── Pagos reportados ─────────────────────────────────────────────────────
+  // ── Pagos registrados ────────────────────────────────────────────────────
   if (h.enRevisionDesde) {
     s.push({
       clave: 'en_revision',
       tono: 'aviso',
-      texto: `Pago en revisión ${haceCuanto(h.enRevisionDesde, ctx.ahora)}`,
-      ayuda: 'Reportó un pago que todavía no se ha aprobado. Revísalo en Pagos reportados antes de escribirle.',
+      texto: `Pago por aprobar ${haceCuanto(h.enRevisionDesde, ctx.ahora)}`,
+      ayuda: 'Tiene un pago registrado que todavía no se ha aprobado. Revísalo en Pagos reportados antes de escribirle.',
       peso: 3,
     })
   } else if (h.ultimoReporte?.estado === 'rejected') {
@@ -232,31 +183,9 @@ export function senalesDe(fila: FilaParaSenales, ctx: ContextoDeSenales): Senal[
       clave: 'rechazado',
       tono: 'evita',
       texto: `Pago rechazado ${haceCuanto(h.ultimoReporte.revisadoEn ?? h.ultimoReporte.en, ctx.ahora)}`,
-      ayuda: `Su último pago reportado se rechazó y no ha reportado otro. Puede que no sepa por qué.${nota}`,
+      ayuda: `Su último pago registrado se rechazó y no ha mandado otro comprobante. Puede que no sepa por qué.${nota}`,
       peso: -1,
     })
-  }
-
-  // ── Gestos en la app (desde la OTA que los anota) ─────────────────────────
-  // Solo cuenta lo que hizo después de su último pago reportado: antes, ya pagó.
-  const ultimoPago = h.ultimoReporte?.en ?? null
-  if (!h.enRevisionDesde && reciente(h.entroAPagar, ctx) && despuesDe(h.entroAPagar, ultimoPago)) {
-    s.push({
-      clave: 'entro_a_pagar',
-      tono: 'intencion',
-      texto: `Entró a pagar ${haceCuanto(h.entroAPagar, ctx.ahora)}, no reportó`,
-      ayuda: 'Abrió la pantalla de reportar pago y no llegó a reportar ninguno. Puede que le falte saldo o que no sepa cómo.',
-      peso: 2,
-    })
-    if (reciente(h.copioDatos, ctx) && despuesDe(h.copioDatos, ultimoPago)) {
-      s.push({
-        clave: 'copio_datos',
-        tono: 'intencion',
-        texto: 'Copió los datos del pago',
-        ayuda: `Copió la cuenta destino o el monto ${haceCuanto(h.copioDatos, ctx.ahora)}: fue a su banco.`,
-        peso: 1,
-      })
-    }
   }
 
   // ── Promesas ──────────────────────────────────────────────────────────────
@@ -280,95 +209,13 @@ export function senalesDe(fila: FilaParaSenales, ctx: ContextoDeSenales): Senal[
     })
   }
 
-  // ── Los avisos ─────────────────────────────────────────────────────────────
-  if (h.avisos === 'apagados' || h.avisos === 'nunca') {
-    const porque =
-      h.avisos === 'nunca'
-        ? 'Nunca dio permiso de avisos en su teléfono.'
-        : h.avisosMotivo === 'DeviceNotRegistered'
-          ? 'Su teléfono dejó de aceptar avisos: desinstaló la app o borró sus datos.'
-          : h.avisosMotivo === 'Sesión cerrada'
-            ? 'Cerró sesión en la app y no ha vuelto a entrar.'
-            : 'Ningún teléfono suyo acepta avisos.'
-    s.push({
-      clave: 'sin_avisos',
-      tono: 'evita',
-      texto: 'No recibe avisos',
-      ayuda: `${porque} Los recordatorios no le llegan: hay que escribirle por WhatsApp.`,
-      peso: -1,
-    })
-  } else if (debeVencido && reciente(h.abrioAviso, ctx) && h.avisosAbiertos > 0) {
-    s.push({
-      clave: 'abrio_aviso',
-      tono: 'intencion',
-      texto: `Abrió el aviso ${haceCuanto(h.abrioAviso, ctx.ahora)}`,
-      ayuda: `Tocó ${plural(h.avisosAbiertos, 'aviso de cuota', 'avisos de cuota')} desde que venció: sabe que debe.`,
-      peso: 1,
-    })
-  } else if (debeVencido && h.avisosEntregados > 0) {
-    // Solo se puede decir que NO los abrió si la app ya anotaba los toques
-    // cuando le llegaron.
-    const medido =
-      h.gestosDesde !== null && h.vencidaDesde !== null && diaOperativo(new Date(h.gestosDesde)) <= h.vencidaDesde
-    s.push(
-      medido && h.avisosEntregados >= 2
-        ? {
-            clave: 'avisos_sin_abrir',
-            tono: 'evita',
-            texto: `${plural(h.avisosEntregados, 'aviso', 'avisos')} sin abrir`,
-            ayuda: 'Los recordatorios de cuota le llegaron al teléfono desde que venció, y no tocó ninguno.',
-            peso: -1,
-          }
-        : {
-            clave: 'avisos_entregados',
-            tono: 'historia',
-            texto: `Le llegaron ${plural(h.avisosEntregados, 'aviso', 'avisos')}`,
-            ayuda: 'Recordatorios de cuota entregados en su teléfono desde que venció. No se sabe si los abrió.',
-            peso: 0,
-          },
-    )
-  }
-
-  // ── La app ───────────────────────────────────────────────────────────────
-  // Heredado de Ronda: en Helios no hay app, la base no manda `ultimaApertura`
-  // ni el estado de los avisos push, y estas señales no salen.
-  if (h.ultimaApertura) {
-    const dia = diaOperativo(new Date(h.ultimaApertura))
-    const desdeQueVencio = h.vencidaDesde !== null && dia < h.vencidaDesde
-    if (debeVencido && desdeQueVencio) {
-      s.push({
-        clave: 'no_abre',
-        tono: 'evita',
-        texto: 'No abre la app desde que venció',
-        ayuda: `La última vez que abrió la app fue el ${formatDay(dia)}, antes de su vencimiento del ${formatDay(h.vencidaDesde)}.`,
-        peso: -1,
-      })
-    } else if (diasEntre(dia, ctx.hoy) > RECIENTE_DIAS) {
-      s.push({
-        clave: 'no_abre',
-        tono: debeVencido ? 'evita' : 'historia',
-        texto: `Sin abrir la app desde ${haceCuanto(h.ultimaApertura, ctx.ahora)}`,
-        ayuda: `La última vez que abrió la app fue el ${formatDay(dia)}.`,
-        peso: debeVencido ? -1 : 0,
-      })
-    } else {
-      s.push({
-        clave: 'abrio_app',
-        tono: debeVencido ? 'intencion' : 'historia',
-        texto: `Abrió la app ${haceCuanto(h.ultimaApertura, ctx.ahora)}`,
-        ayuda: 'La última vez que arrancó o volvió a la app.',
-        peso: debeVencido ? 1 : 0,
-      })
-    }
-  }
-
   // ── Gestiones sin respuesta ────────────────────────────────────────────────
   if (debeVencido && h.gestionesSinRespuesta && h.gestionesSinRespuesta > 0) {
     s.push({
       clave: 'sin_respuesta',
       tono: 'evita',
       texto: `${plural(h.gestionesSinRespuesta, 'gestión', 'gestiones')} sin respuesta`,
-      ayuda: 'Gestiones desde que venció sin promesa ni pago reportado en las horas siguientes.',
+      ayuda: 'Gestiones desde que venció sin promesa ni pago registrado en las horas siguientes.',
       peso: h.gestionesSinRespuesta >= 2 ? -2 : -1,
     })
   }
@@ -379,7 +226,7 @@ export function senalesDe(fila: FilaParaSenales, ctx: ContextoDeSenales): Senal[
       clave: 'congelada',
       tono: 'aviso',
       texto: 'Cuenta congelada',
-      ayuda: 'El estado automático le congeló la cuenta por el atraso: no puede financiarse hasta que pague.',
+      ayuda: 'El estado automático le congeló la cuenta por el atraso: no puede pagar otra consulta en cuotas hasta que pague.',
       peso: 0,
     })
   }
@@ -388,8 +235,8 @@ export function senalesDe(fila: FilaParaSenales, ctx: ContextoDeSenales): Senal[
     s.push({
       clave: 'baja_pronto',
       tono: 'aviso',
-      texto: faltanParaBaja === 1 ? 'Baja de nivel mañana' : `Baja de nivel en ${faltanParaBaja} días`,
-      ayuda: `Si no paga, el estado automático le baja de nivel al cumplir ${ctx.diasBaja} días de atraso.`,
+      texto: faltanParaBaja === 1 ? 'Se suspende mañana' : `Se suspende en ${faltanParaBaja} días`,
+      ayuda: `Si no paga, el estado automático le suspende la cuenta (y le baja un nivel, si tiene más de uno) al cumplir ${ctx.diasBaja} días de atraso.`,
       peso: 0,
     })
   }
@@ -453,27 +300,26 @@ export function intencionDe(senales: ReadonlyArray<Senal>): Intencion {
 
 // ── Los grupos de la cola ──────────────────────────────────────────────────
 
-export type GrupoDeCola = 'primero' | 'despues' | 'recordar' | 'vigilar'
+export type GrupoDeCola = 'primero' | 'despues' | 'vigilar'
 
-export const GRUPOS_DE_COLA: readonly GrupoDeCola[] = ['primero', 'despues', 'recordar', 'vigilar']
+export const GRUPOS_DE_COLA: readonly GrupoDeCola[] = ['primero', 'despues', 'vigilar']
 
 export const ROTULO_GRUPO: Record<GrupoDeCola, string> = {
   primero: 'Llamar primero',
   despues: 'Después',
-  recordar: 'Recordar: vence hoy o mañana',
-  vigilar: 'Vigilar',
+  vigilar: 'Al día',
 }
 
 export const QUE_ES_EL_GRUPO: Record<GrupoDeCola, string> = {
   primero: 'Deben algo vencido y su perfil tiene prioridad alta: nunca han pagado, rompieron una promesa o no contestan.',
   despues: 'Deben algo vencido con prioridad media o baja: suelen pagar, aunque tarde, o se les pasó por pocos días.',
-  recordar: 'No deben nada vencido y les vence una cuota hoy o mañana: un recordatorio a tiempo evita el atraso.',
-  vigilar: 'No deben nada vencido y lo próximo les vence más adelante.',
+  vigilar:
+    'No deben nada vencido. Los recordatorios de antes del vencimiento (3 días antes, la víspera y el mismo día) les salen solos por WhatsApp y correo.',
 }
 
 /**
  * Las dos formas de ver la cola: una sola lista de más días de atraso a menos
- * (la de por defecto, Javier 28-09) o los cuatro grupos por prioridad.
+ * (la de por defecto, Javier 28-09) o los tres grupos por prioridad.
  */
 export const ORDENES_DE_COLA = ['atraso', 'prioridad'] as const
 export type OrdenDeCola = (typeof ORDENES_DE_COLA)[number]
@@ -503,10 +349,7 @@ export function ordenarPorAtraso<
  * El grupo de una fila. Excluyentes y exhaustivos: cada persona de la cola
  * está en uno solo.
  */
-export function grupoDe(
-  fila: { overdueUsd: number; prioridad: 'alta' | 'media' | 'baja' | null; nextDueDate: string },
-  hoy: string,
-): GrupoDeCola {
+export function grupoDe(fila: { overdueUsd: number; prioridad: 'alta' | 'media' | 'baja' | null }): GrupoDeCola {
   if (fila.overdueUsd > 0) return fila.prioridad === 'alta' ? 'primero' : 'despues'
-  return diasEntre(hoy, fila.nextDueDate) <= 1 ? 'recordar' : 'vigilar'
+  return 'vigilar'
 }

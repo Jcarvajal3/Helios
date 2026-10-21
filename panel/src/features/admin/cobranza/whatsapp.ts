@@ -8,7 +8,8 @@ import type { CollectionRow } from './cartera'
 //
 // El chat solo se abre con la plantilla de su tramo ya rellenada: el tramo
 // sale de sus días de atraso y de los cortes vigentes (`tramos.ts`), igual
-// que el filtro de la cartera. Si falta
+// que el filtro de la cartera. Solo a quien debe algo vencido: los
+// recordatorios antes del vencimiento y el del día salen solos. Si falta
 // algo —la plantilla no cargó, no hay cuenta de cobro activa— se dice por qué
 // y no se abre un chat vacío ni un mensaje con la cuenta en blanco.
 // Módulo puro: recibe el estado de cada lectura.
@@ -42,6 +43,7 @@ export function whatsAppDeCobro(e: {
   if (e.persona.estado === 'error') return no('No se pudo leer la cartera.')
   const persona = e.persona.valor
   if (!persona) return no('No tiene cuotas vencidas ni por vencer esta semana.')
+  if (persona.daysOverdue <= 0) return no('No tiene nada vencido: sus recordatorios le llegan solos.')
 
   const numero = whatsappNumber(persona.phone)
   if (!numero) return no('No tiene teléfono.')
@@ -54,6 +56,7 @@ export function whatsAppDeCobro(e: {
   if (e.plantillas.estado === 'cargando') return no('Cargando la plantilla…')
   if (e.plantillas.estado === 'error') return no('No se pudieron leer las plantillas.')
   const clave = claveDePlantilla(persona, cortes)
+  if (clave === null) return no('No tiene nada vencido: sus recordatorios le llegan solos.')
   const plantilla = e.plantillas.valor.find((p) => p.bucket === clave)
   if (!plantilla) return no('No hay plantilla para este tramo.')
 

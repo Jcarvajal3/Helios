@@ -10,8 +10,8 @@ import type { Cohorte, CuotaDeCohorte, CurvaDeCuota, PuntoDeCurva } from './tipo
 // con los números dentro vale más que un párrafo.
 //
 // Cohortes habla en lo que hay que COBRAR: el total a cobrar de una semana es
-// la cuota 1 + la cuota 2, con el service fee dentro. Todo importe que se
-// cobra lleva su desglose entre paréntesis (consumo sin fee + service fee):
+// la cuota 1 + la cuota 2, con la Comisión Helios dentro. Todo importe que se
+// cobra lleva su desglose entre paréntesis (consumo sin comisión + Comisión Helios):
 // es la condición de la excepción que aprobó Javier. Las frases prefieren los
 // porcentajes, que no necesitan desglose.
 //
@@ -192,7 +192,7 @@ function trozosDeCuotaEnEjemplo(q: CuotaDeCohorte, hoy: string): Trozo[] {
  * cuota 2).»
  */
 export function comoSeLee(c: Cohorte | null, hoy: string): Trozo[] {
-  const base = 'cada fila es el total a cobrar de los financiamientos de una semana: la cuota 1 más la cuota 2, cada una con su service fee + IVA.'
+  const base = 'cada fila es el total a cobrar de los financiamientos de una semana: la cuota 1 más la cuota 2, cada una con su Comisión Helios + IVA.'
   if (!c) return [base]
   const a = c.aCobrar
   const trozos: Trozo[] = [

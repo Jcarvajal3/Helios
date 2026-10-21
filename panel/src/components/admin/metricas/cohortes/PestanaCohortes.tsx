@@ -16,8 +16,8 @@ import { TodasLasSemanas } from './TodasLasSemanas'
  *
  * La semana de arriba ES la cohorte elegida, y el local de arriba filtra
  * todo. Habla en lo que hay que COBRAR: el total a cobrar de una semana es la
- * cuota 1 + la cuota 2, con el service fee dentro y SIEMPRE con su desglose a
- * la vista (en cobranza el fee se cobra: Javier, 28-09).
+ * cuota 1 + la cuota 2, con la Comisión Helios dentro y SIEMPRE con su desglose a
+ * la vista (en cobranza la comisión se cobra: Javier, 28-09).
  */
 export function PestanaCohortes({
   semana,

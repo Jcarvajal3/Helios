@@ -11,9 +11,9 @@ import type { Cohorte, CuotaDeCohorte, EstadoDeCuota, NumeroDeCuota, ParteDeCuot
 // tabla (y su CSV) con todas las cohortes.
 //
 // Todo en lo que se COBRA (payable). El total a cobrar de una semana es la
-// cuota 1 + la cuota 2, con el service fee dentro, y va SIEMPRE con su
+// cuota 1 + la cuota 2, con la Comisión Helios dentro, y va SIEMPRE con su
 // desglose: en el globo, en la tabla del gráfico y en dos columnas más del
-// CSV (consumo sin fee y service fee).
+// CSV (consumo sin comisión y Comisión Helios).
 //
 // Puro: se prueba en `comparar.test.ts`.
 // ═══════════════════════════════════════════════════════════════════════════
@@ -66,8 +66,8 @@ function columnasDeImporte<T>(
   }
   return [
     { header: `${nombre} ($)`, value: dinero((d) => d.payableUsd) },
-    { header: `${nombre}: financiado, sin fee ($)`, value: dinero((d) => d.financedUsd) },
-    { header: `${nombre}: service fee + IVA ($)`, value: dinero((d) => d.feeUsd) },
+    { header: `${nombre}: financiado, sin comisión ($)`, value: dinero((d) => d.financedUsd) },
+    { header: `${nombre}: Comisión Helios + IVA ($)`, value: dinero((d) => d.feeUsd) },
   ]
 }
 

@@ -17,9 +17,9 @@ import { COLOR_DE_ESTADO } from './colores'
 
 /**
  * Todas las semanas de consumo, una por fila, en lo que hay que COBRAR: el
- * total a cobrar (la cuota 1 + la 2, con el service fee dentro), qué parte se
+ * total a cobrar (la cuota 1 + la 2, con la Comisión Helios dentro), qué parte se
  * cobró, lo cobrado, lo vencido y lo por vencer, cada importe con su desglose
- * debajo (consumo · fee), y cómo va cada cuota.
+ * debajo (consumo · comisión), y cómo va cada cuota.
  *
  * Pulsar una fila abre esa semana en «Una semana». El CSV lleva lo mismo,
  * con el desglose de cada importe en columnas.
@@ -50,7 +50,7 @@ export function TablaComparada({
   return (
     <SeccionMetricas
       titulo="Total a cobrar y cobrado por semana de financiamiento"
-      info="Una fila por semana de financiamiento (lunes a domingo, por día operativo) con su total a cobrar (cuota 1 + cuota 2, con fee y su desglose), lo cobrado, lo vencido, lo por vencer y los pacientes que se financiaron."
+      info="Una fila por semana de financiamiento (lunes a domingo, por día operativo) con su total a cobrar (cuota 1 + cuota 2, con comisión y su desglose), lo cobrado, lo vencido, lo por vencer y los pacientes que se financiaron."
       ayuda="Pulsa una fila para abrir esa semana"
       acciones={
         <Button variant="text" size="sm" onClick={bajarCsv} disabled={cohortes.length === 0}>

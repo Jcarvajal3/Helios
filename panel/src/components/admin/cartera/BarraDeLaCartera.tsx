@@ -12,11 +12,10 @@ type Clave = TramoVencido | 'por_vencer'
  * color de estado sale solo donde algo ESTÁ mal.
  */
 const COLOR: Record<Clave, string> = {
-  t5: 'var(--color-error-dim)',
-  t4: 'var(--color-error)',
-  t3: 'color-mix(in oklab, var(--color-error) 55%, var(--color-warning))',
-  t2: 'var(--color-warning)',
-  t1: 'color-mix(in oklab, var(--color-warning) 55%, var(--color-panel-muted))',
+  t4: 'var(--color-error-dim)',
+  t3: 'var(--color-error)',
+  t2: 'color-mix(in oklab, var(--color-error) 55%, var(--color-warning))',
+  t1: 'var(--color-warning)',
   por_vencer: 'color-mix(in oklab, var(--color-panel-muted) 55%, transparent)',
 }
 

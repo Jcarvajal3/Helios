@@ -71,11 +71,45 @@ export function RegistrarPagoMasivo() {
   return (
     <>
       <Button size="sm" variant="text" onClick={() => setAbierto(true)}>
-        <ListChecks size={15} aria-hidden />
-        Registrar el pago masivo
+        <ListChecks size={15} aria-hidden />2 · Registrar el pago masivo
       </Button>
       {abierto && <VentanaDelRegistro onClose={() => setAbierto(false)} />}
     </>
+  )
+}
+
+/**
+ * El aviso fijo de «Por pagar» cuando hay un archivo del banco bajado con
+ * transferencias sin registrar: antes solo se veía abriendo el registro, y
+ * una transferencia hecha y sin registrar sale como atrasada al día
+ * siguiente. Sin nada pendiente (o sin poder leerlo) no se pinta.
+ */
+export function AvisoDeLotePendiente() {
+  const lotes = useQuery(consultaLotes())
+  const [abierto, setAbierto] = useState(false)
+
+  const pendiente = (lotes.data ?? []).find((l) => porRegistrar(l).length > 0)
+  if (!pendiente) return null
+  const faltan = porRegistrar(pendiente).length
+
+  return (
+    <div className="mb-4">
+      <Callout
+        tone="warning"
+        titulo={`El archivo del pago del ${formatDay(pendiente.payDate)} está bajado y le ${
+          faltan === 1 ? 'falta 1 transferencia' : `faltan ${faltan} transferencias`
+        } por registrar`}
+        accion={
+          <Button size="sm" variant="tonal" onClick={() => setAbierto(true)}>
+            <ListChecks size={15} aria-hidden />
+            Registrarlo
+          </Button>
+        }
+      >
+        Cuando el banco lo procese, regístralo: si no, esas clínicas salen mañana como atrasadas.
+      </Callout>
+      {abierto && <VentanaDelRegistro onClose={() => setAbierto(false)} />}
+    </div>
   )
 }
 

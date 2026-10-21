@@ -40,7 +40,7 @@ function queEs(cuota: NumeroDeCuota): string {
     cuota === 1
       ? 'la cuota 1 de cada paciente en cada financiamiento, la señal más temprana de crédito mal dado'
       : 'la cuota 2 de cada paciente en cada financiamiento (vence una semana después de la 1), también de quien no pagó la 1; «de quien pagó la 1» deja solo a quien ya la había pagado'
-  return `Cuotas sin pagar (sin pago reportado) el último día de la gracia ÷ cuotas con la gracia terminada, contadas por número de cuotas, de los financiamientos de los seis meses naturales que acaban en el de la semana elegida (hasta su domingo): ${quien}. Los importes son financiado, sin el service fee.`
+  return `Cuotas sin pagar (sin pago reportado) el último día de la gracia ÷ cuotas con la gracia terminada, contadas por número de cuotas, de los financiamientos de los seis meses naturales que acaban en el de la semana elegida (hasta su domingo): ${quien}. Los importes son financiado, sin la Comisión Helios.`
 }
 
 /** La explicación de la sección, con la nota del nivel cuando se parte por nivel. */
@@ -132,9 +132,9 @@ function columnas(
     ...(d.cuota === 2 ? [columnaTras, columnaOtra] : [columnaOtra, columnaTras]),
     {
       key: 'monto',
-      header: 'Financiado sin pagar (sin fee)',
+      header: 'Financiado sin pagar (sin comisión)',
       type: 'number',
-      info: 'Financiado (sin fee) de las cuotas sin pagar al terminar la gracia.',
+      info: 'Financiado (sin comisión) de las cuotas sin pagar al terminar la gracia.',
       cell: (r) => formatUsd(r.impagasMonto),
       sort: (r) => r.impagasMonto,
       sortDir: 'desc',
@@ -167,7 +167,7 @@ function columnas(
     },
     {
       key: 'monto30',
-      header: `Financiado sin pagar a los ${d.diasTarde} días (sin fee)`,
+      header: `Financiado sin pagar a los ${d.diasTarde} días (sin comisión)`,
       type: 'number',
       hidden: true,
       cell: (r) => formatUsd(r.impagas30Monto),
@@ -380,9 +380,9 @@ function Totales({
         }
       />
       <Stat
-        label="Financiado sin pagar al terminar la gracia (sin fee)"
+        label="Financiado sin pagar al terminar la gracia (sin comisión)"
         value={formatUsd(total.impagasMonto)}
-        info="Financiado (sin fee) de las cuotas que seguían sin pagar el último día de la gracia, en los seis meses."
+        info="Financiado (sin comisión) de las cuotas que seguían sin pagar el último día de la gracia, en los seis meses."
         hint={
           total.enGracia > 0
             ? `${total.enGracia} ${total.enGracia === 1 ? 'cuota sigue' : 'cuotas siguen'} en la gracia`

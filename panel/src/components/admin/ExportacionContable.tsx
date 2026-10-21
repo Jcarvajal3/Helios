@@ -96,17 +96,17 @@ export function ExportacionContable({
                 },
                 {
                   rotulo: 'Ingresos de Helios',
-                  info: 'El service fee devengado y los cargos por atraso del mes, sin IVA. En el cierre de mes van por separado.',
+                  info: 'La Comisión Helios devengada y los cargos por atraso del mes, sin IVA. En el cierre de mes van por separado.',
                   valor: formatUsd(d.summary.revenueUsd),
                 },
                 {
                   rotulo: 'IVA por pagar',
-                  info: 'El IVA del service fee. No es de Helios: se cobra al paciente y se remite.',
+                  info: 'El IVA de la Comisión Helios. No es de Helios: se cobra al paciente y se remite.',
                   valor: formatUsd(d.summary.vatUsd),
                 },
                 {
                   rotulo: 'Dado por perdido',
-                  info: 'La deuda que pasó a pérdida en el mes. Es deuda: financiamiento + service fee.',
+                  info: 'La deuda que pasó a pérdida en el mes. Es deuda: financiamiento + Comisión Helios.',
                   valor: formatUsd(d.summary.writtenOffUsd),
                 },
               ]}

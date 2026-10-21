@@ -17,7 +17,7 @@ import { PastillaDeEstado } from './PastillaDeEstado'
 
 /**
  * Una cuota de la semana (la 1 o la 2, cada una en su tarjeta). Lo que se
- * cobra en ella con su desglose (consumo sin fee · service fee), la barra por
+ * cobra en ella con su desglose (consumo sin comisión · Comisión Helios), la barra por
  * estados y, por cada estado, su importe (también con desglose), qué parte es
  * y cuántas personas. Las dos tarjetas suman el total a cobrar de arriba.
  */
@@ -36,10 +36,10 @@ export function TarjetaDeCuota({ cuota, hoy }: { cuota: CuotaDeCohorte; hoy: str
 
       <div className="flex flex-col gap-1">
         <span className="flex items-center gap-1.5">
-          <DataLabel>Total de la cuota {q.numero} (con fee)</DataLabel>
+          <DataLabel>Total de la cuota {q.numero} (con comisión)</DataLabel>
           <InfoDot
             title={`Cuota ${q.numero}`}
-            what={`Suma de las cuotas ${q.numero} de los financiamientos de esta semana: financiado (sin fee) + service fee + IVA. ${queEsCadaEstado()}`}
+            what={`Suma de las cuotas ${q.numero} de los financiamientos de esta semana: financiado (sin comisión) + Comisión Helios + IVA. ${queEsCadaEstado()}`}
           />
         </span>
         <ImporteDeCuota importe={q.importe} claseCifra="type-panel-figure text-on-surface" />
@@ -55,12 +55,12 @@ export function TarjetaDeCuota({ cuota, hoy }: { cuota: CuotaDeCohorte; hoy: str
 
       <table className="w-full border-collapse tabular-nums">
         <caption className="sr-only">
-          Cuota {q.numero} por estado: importe con fee (financiado y service fee + IVA), qué parte es y cuántos pacientes
+          Cuota {q.numero} por estado: importe con comisión (financiado y Comisión Helios + IVA), qué parte es y cuántos pacientes
         </caption>
         <thead className="sr-only">
           <tr>
             <th scope="col">Estado</th>
-            <th scope="col">Importe (con fee)</th>
+            <th scope="col">Importe (con comisión)</th>
             <th scope="col">Parte</th>
             <th scope="col">Pacientes</th>
           </tr>

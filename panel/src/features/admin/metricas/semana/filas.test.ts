@@ -57,7 +57,7 @@ igual(
   'no se parten por clínica: los registros y la caja',
 )
 
-console.log('── La regla del fee ──────────────────────────────────────────')
+console.log('── La regla de la comisión ──────────────────────────────────────────')
 // Toda fila que es un importe que se paga en cuotas va seguida de sus dos sumandos.
 for (const [total, consumo, servicio] of [
   ['vencian', 'vencian-consumo', 'vencian-servicio'],
@@ -73,13 +73,13 @@ for (const [total, consumo, servicio] of [
   igual(
     Math.abs(suma - (fila(total).valor(elegida) ?? 0)) < 0.005,
     true,
-    `y financiamiento + service fee = ${fila(total).nombre.toLowerCase()}`,
+    `y financiamiento + Comisión Helios = ${fila(total).nombre.toLowerCase()}`,
   )
 }
-igual(fila('consumo').valor(elegida), 912.4, 'el financiamiento es financed, sin fee')
-igual(fila('servicio').valor(elegida), 182.48, 'el service fee va en su fila, sin IVA')
+igual(fila('consumo').valor(elegida), 912.4, 'el financiamiento es financed, sin comisión')
+igual(fila('servicio').valor(elegida), 182.48, 'la Comisión Helios va en su fila, sin IVA')
 igual(fila('perdido').valor(elegida), 0, 'lo perdido se cuenta en financiamiento')
-igual(fila('perdido').unidad, 'sin fee', 'y lo dice')
+igual(fila('perdido').unidad, 'sin comisión', 'y lo dice')
 
 console.log('── Escribir ──────────────────────────────────────────────────')
 igual(escribir(912.4, 'eur'), '$912,40', 'un importe con céntimos')

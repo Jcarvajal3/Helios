@@ -48,7 +48,7 @@ export function CarrilPersona({
 }
 
 /**
- * Las dos cifras. La deuda en cuotas lleva el service fee dentro, repartido en
+ * Las dos cifras. La deuda en cuotas lleva la Comisión Helios dentro, repartido en
  * sus cuotas, y por eso va con su desglose debajo; el cupo y el disponible
  * van sin él.
  */
@@ -58,7 +58,7 @@ function cifrasDePersona(user: UserDetail): Array<CifraDeFicha> {
   const motivo = credit.availableBlockedReason
   const vencido = debt.overdueUsd > 0
   // Las cuotas sin pagar (sin las perdidas, que no son deuda viva), partidas
-  // en consumo y fee, si suman la deuda de hoy. Lo vencido, igual: es payable
+  // en consumo y comisión, si suman la deuda de hoy. Lo vencido, igual: es payable
   // y va con sus sumandos.
   const vivas = user.installments.filter((i) => i.status === 'pending' && !i.writtenOffAt)
   const partes = desgloseQueCuadra(vivas, debt.openUsd)
@@ -76,9 +76,9 @@ function cifrasDePersona(user: UserDetail): Array<CifraDeFicha> {
       : null
 
   const deuda: CifraDeFicha = {
-    label: 'Deuda en cuotas (financiamiento + fee)',
+    label: 'Deuda en cuotas (financiamiento + comisión)',
     value: formatUsd(debt.openUsd),
-    info: 'Suma de sus cuotas sin pagar, vencidas y por vencer, en financiamiento + service fee (IVA incluido); debajo, sus dos partes y lo vencido. Sin cargos por atraso ni cuotas perdidas (si las hay, van aparte debajo).',
+    info: 'Suma de sus cuotas sin pagar, vencidas y por vencer, en financiamiento + Comisión Helios (IVA incluido); debajo, sus dos partes y lo vencido. Sin cargos por atraso ni cuotas perdidas (si las hay, van aparte debajo).',
     senal: vencido
       ? {
           tone: 'error',
@@ -108,7 +108,7 @@ function cifrasDePersona(user: UserDetail): Array<CifraDeFicha> {
       : {
           label: 'Disponible hoy',
           value: formatUsd(credit.availableNowUsd),
-          info: 'Límite del nivel menos el financiamiento (sin fee) de sus financiamientos con alguna cuota sin pagar, o cero con una cuota vencida, la cuenta no activa o un bloqueo: lo que una clínica vería como disponible; el cupo de cada financiamiento vuelve al pagar sus dos cuotas.',
+          info: 'Límite del nivel menos el financiamiento (sin comisión) de sus financiamientos con alguna cuota sin pagar, o cero con una cuota vencida, la cuenta no activa o un bloqueo: lo que una clínica vería como disponible; el cupo de cada financiamiento vuelve al pagar sus dos cuotas.',
           senal: motivo ? { tone: 'error', texto: 'No puede gastar' } : undefined,
           visual: (
             <Meter

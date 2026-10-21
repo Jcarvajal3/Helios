@@ -52,10 +52,10 @@ igual(
 )
 
 console.log('── Filas ─────────────────────────────────────────────────────')
-igual(linea('Total financiado'), ['Financiamiento', 'Total financiado', '$ sin fee', '100,00', '200,00', '912,40', '815,00', '12 % más'], 'el financiamiento, con coma decimal')
+igual(linea('Total financiado'), ['Financiamiento', 'Total financiado', '$ sin comisión', '100,00', '200,00', '912,40', '815,00', '12 % más'], 'el financiamiento, con coma decimal')
 igual(linea('Cuotas que vencían')?.slice(5, 7), ['1062,97', '862,40'], 'lo que vencía, sin separador de miles')
-igual(linea('  de ello, financiado (sin fee)')?.[0], 'Cobro', 'y sus sumandos, también en el CSV')
-igual(linea('  de ello, service fee + IVA')?.slice(5, 8), ['200,17', '162,40', ''], 'el sumando sin cambio propio')
+igual(linea('  de ello, financiado (sin comisión)')?.[0], 'Cobro', 'y sus sumandos, también en el CSV')
+igual(linea('  de ello, Comisión Helios + IVA')?.slice(5, 8), ['200,17', '162,40', ''], 'el sumando sin cambio propio')
 igual(linea('Mora')?.slice(2, 8), ['%', '5,10', '5,20', '9,39', '7,41', '2,0 puntos más'], 'una tasa en puntos')
 igual(tabla.length, 1 + FILAS.length, 'una línea por fila de la tabla')
 

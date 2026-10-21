@@ -5,7 +5,7 @@ import { comoFila, comoLista, filaONula, numeroONulo, textoONulo } from '@/lib/j
 // cuota, el uso del cupo por nivel y los locales por volumen.
 //
 // Solo se leen y se tipan. Los montos de consumo son financed (sin el service
-// fee); los de deuda, payable, y cada campo lo dice en su nombre.
+// comisión); los de deuda, payable, y cada campo lo dice en su nombre.
 // ═══════════════════════════════════════════════════════════════════════════
 
 // ── Impago de una cuota tras la gracia (`admin_first_payment_default`) ─────
@@ -49,7 +49,7 @@ export type CifrasPrimeraCuota = {
   impagas: number
   /** Sobre cuotas, no sobre euros. `null` sin cuotas maduras. */
   impagoPct: number | null
-  /** Consumo (financed, sin el service fee) de esas cuotas. */
+  /** Consumo (financed, sin la Comisión Helios) de esas cuotas. */
   madurasMonto: number
   impagasMonto: number
   /** Lo mismo a los 30 días del vencimiento. */
@@ -78,7 +78,7 @@ export type CifrasTrasPagarLaAnterior = {
   impagas: number
   /** Sobre cuotas. `null` si nadie que pagó la anterior tiene esta madura. */
   impagoPct: number | null
-  /** Consumo (financed, sin el service fee). */
+  /** Consumo (financed, sin la Comisión Helios). */
   madurasMonto: number
   impagasMonto: number
   maduras30: number

@@ -13,7 +13,7 @@ import { sumandosDelPago } from '@/features/admin/sumandosDelPago'
  * número de orden), nunca de un identificador de cuota.
  *
  * El consumo no lleva monto en su cabecera: la base solo trae el del cargo con
- * el service fee dentro, y un consumo se enseña sin el fee. Lo que se paga
+ * la Comisión Helios dentro, y un consumo se enseña sin la comisión. Lo que se paga
  * está en las cuotas, que es lo que salda este pago.
  */
 export function DesgloseDelPago({ item }: { item: QueueItem }) {
@@ -32,7 +32,7 @@ export function DesgloseDelPago({ item }: { item: QueueItem }) {
   return (
     <Seccion
       titulo="Qué salda este pago"
-      info="Agrupado por financiamiento. Cada cuota es financiado (sin fee) + service fee + IVA, congelada al cotizar; los cargos por atraso van aparte."
+      info="Agrupado por financiamiento. Cada cuota es financiado (sin comisión) + Comisión Helios + IVA, congelada al cotizar; los cargos por atraso van aparte."
     >
       {item.purchases.map((compra) => (
         <div
@@ -107,7 +107,7 @@ export function DesgloseDelPago({ item }: { item: QueueItem }) {
                     </span>
                     {cuota.financedUsd != null && cuota.feeUsd != null && (
                       <span className="type-panel-caption tabular-nums text-on-surface-variant">
-                        Financiado {formatUsd(cuota.financedUsd)} + service fee + IVA{' '}
+                        Financiado {formatUsd(cuota.financedUsd)} + Comisión Helios + IVA{' '}
                         {formatUsd(cuota.feeUsd)}
                       </span>
                     )}
@@ -145,7 +145,7 @@ export function DesgloseDelPago({ item }: { item: QueueItem }) {
           dentro de cada cuota y no se suma aparte. */}
       <div className="flex items-baseline justify-between gap-4 rounded-panel-card border border-panel-hairline bg-panel-card px-4 py-3">
         <p className="type-panel-body text-on-surface-variant">
-          {item.installmentCount} {item.installmentCount === 1 ? 'cuota' : 'cuotas'} (financiado + service fee + IVA):{' '}
+          {item.installmentCount} {item.installmentCount === 1 ? 'cuota' : 'cuotas'} (financiado + Comisión Helios + IVA):{' '}
           {facturadoUsd !== null && feeUsd !== null
             ? `${formatUsd(facturadoUsd)} + ${formatUsd(feeUsd)} = ${formatUsd(cuotasUsd)}`
             : formatUsd(cuotasUsd)}

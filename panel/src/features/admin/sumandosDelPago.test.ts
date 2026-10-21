@@ -31,18 +31,18 @@ const pendiente = {
 }
 
 igual('lo que debía = cuotas + cargos', sumandosDelPago(pendiente).totalUsd, 44.96)
-igual('financiado + fee = cuotas', 30 + 6.96, sumandosDelPago(pendiente).cuotasUsd)
+igual('financiado + comisión = cuotas', 30 + 6.96, sumandosDelPago(pendiente).cuotasUsd)
 igual(
   'la línea lleva los tres sumandos',
   lineaDeSumandos(sumandosDelPago(pendiente), eur),
-  'financiado $30.00 + service fee + IVA $6.96 + cargos por atraso $8.00',
+  'financiado $30.00 + Comisión Helios + IVA $6.96 + cargos por atraso $8.00',
 )
 
 const sinCargos = { ...pendiente, lateFeeUsd: 0 }
 igual(
   'sin cargos no se nombran',
   lineaDeSumandos(sumandosDelPago(sinCargos), eur),
-  'financiado $30.00 + service fee + IVA $6.96',
+  'financiado $30.00 + Comisión Helios + IVA $6.96',
 )
 
 const baseVieja = { ...pendiente, installmentsFinancedUsd: null, installmentsFeeUsd: null }

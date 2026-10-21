@@ -281,7 +281,7 @@ comprueba(
   ids('calendario de cobro').join(', '),
 )
 
-console.log('\n── El fee se llama «service fee» (Javier, 27-09) ──────────────')
+console.log('\n── La comisión se llama «Comisión Helios» (Javier, 27-09) ──────────────')
 {
   // Lo que se LEE: título, descripción, qué es y definición. Los sinónimos
   // guardan «servicio» y «comisión» a propósito, para que la búsqueda vieja
@@ -300,24 +300,30 @@ console.log('\n── El fee se llama «service fee» (Javier, 27-09) ───�
   ]
   const leido = (e: Entrada) =>
     [e.titulo, e.descripcion, e.tipo === 'cifra' ? e.que : '', e.tipo === 'termino' ? e.definicion : ''].join(' ')
-  // «servicio» a secas es el fee; «el servicio de Fly.io» o «cuenta de
-  // servicio» no lo son, pero aquí no sale ninguno.
+  // «servicio» a secas era el nombre viejo de la Comisión Helios; «el
+  // servicio de Fly.io» o «cuenta de servicio» no lo son, pero aquí no sale
+  // ninguno.
   const conServicio = primerNivel.filter((e) => /\bservicio\b/i.test(leido(e))).map((e) => e.id)
-  comprueba(conServicio.length === 0, 'ninguna entrada llama «servicio» al fee', conServicio.join(', '))
-  // La comisión que queda es la de la clínica, que no es el service fee.
-  const conComision = primerNivel
-    .filter((e) => /comisi[oó]n(?! de la clínica)/i.test(leido(e).replace(/la comisión y cuándo se le paga/, '')))
-    .map((e) => e.id)
-  comprueba(conComision.length === 0, 'ninguna entrada llama «comisión» al fee', conComision.join(', '))
+  comprueba(conServicio.length === 0, 'ninguna entrada llama «servicio» a la Comisión Helios', conServicio.join(', '))
+  // Desde el 2026-10-13 es la «Comisión Helios» (CLAUDE.md): ni «fee» ni
+  // «service fee». La clínica no tiene comisión: recibe el 100 %.
+  const conFee = primerNivel.filter((e) => /\bfee\b/i.test(leido(e))).map((e) => e.id)
+  comprueba(conFee.length === 0, 'ninguna entrada dice «fee»', conFee.join(', '))
+  const conComisionDeLaClinica = primerNivel.filter((e) => /comisi[oó]n de la cl[ií]nica/i.test(leido(e))).map((e) => e.id)
+  comprueba(
+    conComisionDeLaClinica.length === 0,
+    'ninguna entrada habla de una comisión de la clínica',
+    conComisionDeLaClinica.join(', '),
+  )
 }
-comprueba(ids('servicio').includes('servicio-ronda'), '«servicio», el nombre viejo, encuentra Service fee', ids('servicio').join(', '))
-comprueba(ids('service fee').includes('servicio-ronda'), '«service fee» encuentra su entrada del glosario', ids('service fee').join(', '))
+comprueba(ids('servicio').includes('servicio-ronda'), '«servicio», el nombre viejo, encuentra Comisión Helios', ids('servicio').join(', '))
+comprueba(ids('Comisión Helios').includes('servicio-ronda'), '«Comisión Helios» encuentra su entrada del glosario', ids('Comisión Helios').join(', '))
 comprueba(
   ids('servicio ganado').includes('comision-ganada') && ids('comisión').includes('comision-ganada'),
-  '«servicio ganado» y «comisión» siguen llevando a Service fee ganado, sin IVA',
+  '«servicio ganado» y «comisión» siguen llevando a Comisión Helios ganada, sin IVA',
   ids('servicio ganado').join(', '),
 )
-comprueba(ids('sin fee').includes('consumo'), '«sin fee» encuentra qué es un financiamiento sin fee', ids('sin fee').join(', '))
+comprueba(ids('sin comisión').includes('consumo'), '«sin comisión» encuentra qué es un financiamiento sin comisión', ids('sin comisión').join(', '))
 
 comprueba(
   buscarEnCatalogo('   ').total === 0 && buscarEnCatalogo('').total === 0,

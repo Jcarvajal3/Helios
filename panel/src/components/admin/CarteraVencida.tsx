@@ -54,7 +54,6 @@ import { describeError } from '@/lib/supabase'
 const PUNTO: Record<GrupoDeCola, string> = {
   primero: 'bg-error',
   despues: 'bg-warning',
-  recordar: 'bg-area',
   vigilar: 'bg-panel-muted',
 }
 
@@ -69,8 +68,8 @@ const TODOS_LOS_LOCALES = 'todos'
  * Arriba, la barra de la cartera: cuánto hay por cobrar y cuánto lleva
  * cuánto tiempo vencido. Debajo, la cola, de dos formas (`orden`): por días
  * de atraso, una sola tabla de quien más lleva a quien menos (la de por
- * defecto), o por prioridad, en cuatro grupos (Llamar primero · Después ·
- * Recordar · Vigilar, `senales.ts`), cada uno en su tabla. En cada persona,
+ * defecto), o por prioridad, en tres grupos (Llamar primero · Después ·
+ * Al día, `senales.ts`), cada uno en su tabla. En cada persona,
  * sus señales: lo que hizo antes de que le escribas.
  *
  * No hay filtros de plazo, tramo ni perfil: los grupos los sustituyen. Los
@@ -78,8 +77,8 @@ const TODOS_LOS_LOCALES = 'todos'
  * desde Métricas) siguen acotando la lista, y se ven como una etiqueta que se
  * quita.
  *
- * El estado automático aplica las consecuencias solo (congela, pone el cargo,
- * baja de nivel, expulsa). Esta lista existe para que alguien hable con la
+ * El estado automático aplica las consecuencias solo (congela, suspende,
+ * expulsa). Esta lista existe para que alguien hable con la
  * persona antes de que eso pase. Cada fila abre su caso en modo cola.
  */
 export function CarteraVencida({
@@ -109,7 +108,7 @@ export function CarteraVencida({
 
   const cortes = cortesDeTramo(parametros.data)
   // Se recalcula en cada pintura: la cartera se refresca cada minuto y así
-  // «Vence mañana» cambia solo a las 10:00.
+  // «Vence mañana» cambia solo a medianoche.
   const ahora = new Date()
   const hoy = diaOperativo(ahora)
 
@@ -138,8 +137,8 @@ export function CarteraVencida({
   }, [delLocal, filtro, hoy, cortes, perfil, buscar])
 
   const grupos = useMemo(() => {
-    const por: Record<GrupoDeCola, CollectionRow[]> = { primero: [], despues: [], recordar: [], vigilar: [] }
-    for (const f of filas) por[grupoDe(f, hoy)].push(f)
+    const por: Record<GrupoDeCola, CollectionRow[]> = { primero: [], despues: [], vigilar: [] }
+    for (const f of filas) por[grupoDe(f)].push(f)
     // Dentro de cada grupo, el orden de la base (la prioridad del perfil) y,
     // a igualdad, el más atrasado y el que más debe.
     for (const g of GRUPOS_DE_COLA) {
@@ -151,7 +150,7 @@ export function CarteraVencida({
       )
     }
     return por
-  }, [filas, hoy])
+  }, [filas])
 
   const porAtraso = useMemo(() => ordenarPorAtraso(filas), [filas])
 

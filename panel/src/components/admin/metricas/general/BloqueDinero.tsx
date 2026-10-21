@@ -14,17 +14,17 @@ import type { LecturaGeneral } from './lectura'
  *   Dinero hoy              por cobrar, de ello vencido, la caja y lo que
  *                           se les debe a los locales.
  *   Dinero desde el inicio  en una fila, lo movido y lo cobrado; en otra, lo
- *                           ganado (service fee sin IVA y cargos por atraso)
+ *                           ganado (Comisión Helios sin IVA y cargos por atraso)
  *                           y lo perdido.
  *
- * La regla del fee, cifra por cifra:
+ * La regla de la comisión, cifra por cifra:
  *   - Movido, por cobrar, vencido y cobrado son importes de cuotas (con el service
- *     fee y su IVA dentro), y por eso dicen «(facturado + fee)» o van debajo
+ *     comisión y su IVA dentro), y por eso dicen «(facturado + comisión)» o van debajo
  *     de uno que lo dice, y llevan SIEMPRE su desglose «Facturado / Service
- *     fee + IVA» dentro de la tarjeta.
- *   - Lo ganado va en dos tarjetas: el service fee SIN IVA y los cargos por
+ *     comisión + IVA» dentro de la tarjeta.
+ *   - Lo ganado va en dos tarjetas: la Comisión Helios SIN IVA y los cargos por
  *     atraso. Ninguna se suma a la otra ni al facturado.
- *   - Lo perdido va sin fee: es lo que Helios ya le pagó al local.
+ *   - Lo perdido va sin comisión: es lo que Helios ya le pagó al local.
  *   - La caja y lo que se debe a los locales son del libro y de Pagos a
  *     locales, las mismas cifras que en Caja.
  */

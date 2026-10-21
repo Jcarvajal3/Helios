@@ -7,7 +7,7 @@
  *
  * Lo que se vigila: que una semana pasada se mire a su cierre y la en curso
  * ahora; que lo que vencía vaya siempre con su desglose y lo que entró como
- * la parte que es de ello (nunca otro total con el fee dentro); que un
+ * la parte que es de ello (nunca otro total con la comisión dentro); que un
  * tramo que no vino sea un cero; que «sin cuotas que juzgar» no sea un 0 %, y
  * que el paso cuente a cada persona en una sola de las cuatro líneas.
  */
@@ -77,11 +77,11 @@ console.log('── La cartera al corte ─────────────�
   igual(
     r.cartera.porVencer.feeUsd.toFixed(2),
     '188.31',
-    'un fee que no viene se deduce de payable − financed',
+    'una comisión que no viene se deduce de payable − financed',
   )
   igual(r.cartera.perdido, { payableUsd: 0, financedUsd: 0, feeUsd: 0 }, 'lo perdido que no viene es cero')
   igual(r.anterior.moraPct, null, 'una mora sin nada vivo es nula, no 0 %')
-  igual(r.tramos.map((t) => t.tramo), ['t1', 't2', 't3', 't4', 't5'], 'siempre los cinco tramos')
+  igual(r.tramos.map((t) => t.tramo), ['t1', 't2', 't3', 't4'], 'siempre los cuatro tramos')
   igual(r.tramos[1].personas, 0, 'un tramo que no vino es cero')
   const total = totalDeLosTramos(r.tramos)
   igual(total.personas, 25, 'los pacientes de los tramos son las de la cartera')
@@ -122,7 +122,7 @@ console.log('── Lo que vencía cada día ───────────�
     [
       'Hasta hoy vencían ',
       { cifra: '$36,96 en cuotas' },
-      ' (financiado $30,00 + service fee + IVA $6,96) y ',
+      ' (financiado $30,00 + Comisión Helios + IVA $6,96) y ',
       'ya se ha cobrado ',
       { cifra: 'el 67 %' },
       '.',
@@ -138,12 +138,12 @@ console.log('── Lo que vencía cada día ───────────�
   igual(notaDelDia(dias[1]), 'No vencía nada', 'un día sin nada')
   igual(
     notaDelDia(dias[2]),
-    '1 de 2 cuotas pagadas · vencía financiado $20,00 + service fee + IVA $4,64 · cobrado financiado $10,00 + service fee + IVA $2,32',
+    '1 de 2 cuotas pagadas · vencía financiado $20,00 + Comisión Helios + IVA $4,64 · cobrado financiado $10,00 + Comisión Helios + IVA $2,32',
     'la nota del día con el desglose de lo que vencía y de lo que entró',
   )
   igual(
     notaDelDia(dias[3]),
-    '0 de 1 cuota pagada · vencía financiado $10,00 + service fee + IVA $2,32',
+    '0 de 1 cuota pagada · vencía financiado $10,00 + Comisión Helios + IVA $2,32',
     'si no entró nada, solo lo que vencía',
   )
 }
@@ -241,10 +241,10 @@ console.log('── El impago de cada cuota ────────────
 console.log('── El desglose ─────────────────────────────────────────────────')
 igual(
   textoDelDesglose({ financedUsd: 146.72, feeUsd: 34.04 }),
-  'Financiado $146,72 (sin fee) · service fee + IVA $34,04',
-  'el fee se llama «service fee» en el desglose',
+  'Financiado $146,72 (sin comisión) · Comisión Helios + IVA $34,04',
+  'la comisión se llama «Comisión Helios» en el desglose',
 )
-igual(desgloseEnLinea({ financedUsd: 10, feeUsd: 2.32 }), 'financiado $10,00 + service fee + IVA $2,32', 'dentro de una frase, en minúscula')
+igual(desgloseEnLinea({ financedUsd: 10, feeUsd: 2.32 }), 'financiado $10,00 + Comisión Helios + IVA $2,32', 'dentro de una frase, en minúscula')
 
 console.log('── El paso entre tramos ────────────────────────────────────────')
 {

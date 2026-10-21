@@ -40,7 +40,7 @@ export type Promesa = {
   renegociada: boolean
   /** PAYABLE (deuda): lo vencido de la persona hoy. */
   vencidoHoyUsd: number
-  /** Las dos partes de `vencidoHoyUsd`: el consumo y el service fee (con su IVA). */
+  /** Las dos partes de `vencidoHoyUsd`: el consumo y la Comisión Helios (con su IVA). */
   vencidoHoyFinancedUsd: number
   vencidoHoyFeeUsd: number
   diasDeAtraso: number

@@ -16,8 +16,8 @@ import { QUE_ES, ROTULOS } from './Sumandos'
  * el gráfico, de mayor a menor total. La fila abre la ficha del local.
  *
  * La columna Total existe solo porque a su lado están sus sumandos, y por eso
- * el consumo y el service fee no se pueden ocultar (`fija`): un total con el
- * fee dentro no se queda nunca solo.
+ * el consumo y la Comisión Helios no se pueden ocultar (`fija`): un total con el
+ * comisión dentro no se queda nunca solo.
  */
 export function PorLocal({
   datos,
@@ -137,10 +137,10 @@ function columnasPorLocal(
     {
       key: 'total',
       header: incluyePagadas
-        ? 'Total a cobrar (financiado + service fee + IVA)'
-        : 'Por cobrar (financiado + service fee + IVA)',
+        ? 'Total a cobrar (financiado + Comisión Helios + IVA)'
+        : 'Por cobrar (financiado + Comisión Helios + IVA)',
       type: 'number',
-      info: `La suma de las columnas de al lado: el financiado (sin fee), el service fee + IVA y, si hay, los cargos por atraso. La barrita es la parte del total de ${deQue} que corresponde a esa clínica.`,
+      info: `La suma de las columnas de al lado: el financiado (sin comisión), la Comisión Helios + IVA y, si hay, los cargos por atraso. La barrita es la parte del total de ${deQue} que corresponde a esa clínica.`,
       fija: true,
       sort: (f) => f.totalUsd,
       sortDir: 'desc',
@@ -159,8 +159,8 @@ function columnasPorLocal(
                 color: SERIE.principal,
               },
               { key: 'total', rotulo: rotuloTotal, valor: formatUsd(f.totalUsd), color: SERIE.contexto },
-              { key: 'consumo', rotulo: 'financiado (sin fee)', valor: formatUsd(f.consumoUsd), color: SERIE.tenue },
-              { key: 'fee', rotulo: 'service fee + IVA', valor: formatUsd(f.comisionUsd), color: SERIE.tenue },
+              { key: 'consumo', rotulo: 'financiado (sin comisión)', valor: formatUsd(f.consumoUsd), color: SERIE.tenue },
+              { key: 'fee', rotulo: 'Comisión Helios + IVA', valor: formatUsd(f.comisionUsd), color: SERIE.tenue },
               ...(f.cargosUsd > 0
                 ? [{ key: 'cargos', rotulo: 'cargos por atraso', valor: formatUsd(f.cargosUsd), color: SERIE.tenue }]
                 : []),

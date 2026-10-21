@@ -36,7 +36,7 @@ import { describeError } from '@/lib/supabase'
  *
  * Las cifras de cada nivel (personas, cupo ocupado, lo que falta por volver)
  * salen de `admin_credit_utilization`, que es la misma cuenta que frena una
- * compra y va en consumo, sin el service fee. Un nivel apagado no está en esa
+ * compra y va en consumo, sin la Comisión Helios. Un nivel apagado no está en esa
  * cuenta.
  */
 
@@ -84,7 +84,7 @@ export function Niveles() {
 
 /**
  * Personas y cupo del nivel: una línea y el medidor de lo ocupado. El cupo es
- * consumo, sin el service fee: el fee no entra en ninguna de estas cifras.
+ * consumo, sin la Comisión Helios: la comisión no entra en ninguna de estas cifras.
  */
 function CifrasDelNivel({
   nivel,
@@ -287,10 +287,10 @@ function TarjetaNivel({
               ? `Vas a cambiar el cupo de ${nivel.label} de ${formatUsd(nivel.monthlyLimitUsd)} a ${formatUsd(
                   limite ?? nivel.monthlyLimitUsd,
                 )}. Eso cambia en este momento el cupo de ${deQuien}${
-                  uso ? `, que hoy ocupan ${formatUsd(uso.ocupado)} y deben devolver ${formatUsd(uso.exposicion)} de financiamiento (sin fee)` : ''
+                  uso ? `, que hoy ocupan ${formatUsd(uso.ocupado)} y deben devolver ${formatUsd(uso.exposicion)} de financiamiento (sin comisión)` : ''
                 }.`
               : `Vas a cambiar los requisitos de ${nivel.label}, donde hay ${deQuien}${
-                  uso ? ` que deben devolver ${formatUsd(uso.exposicion)} de financiamiento (sin fee)` : ''
+                  uso ? ` que deben devolver ${formatUsd(uso.exposicion)} de financiamiento (sin comisión)` : ''
                 }.`
           }
           detail={

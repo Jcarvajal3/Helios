@@ -13,7 +13,7 @@ import { comoFila, comoLista, numero, numeroONulo, texto, textoONulo } from '@/l
 //   admin_collection_flow         la cura: quién pasó de un tramo a estar al día
 //   admin_contact_effectiveness   las gestiones seguidas de un pago en 72 h
 //
-// Módulo puro. Todo monto es PAYABLE (deuda, con el service fee dentro) y el
+// Módulo puro. Todo monto es PAYABLE (deuda, con la Comisión Helios dentro) y el
 // cargo por atraso va siempre aparte: nunca se suma a lo recuperado.
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -37,20 +37,19 @@ export function rangoDe(hasta: string, dias: number): { desde: string; hasta: st
 /** Los cortes con los que la base calculó los tramos, para rotularlos igual. */
 function leerCortes(raw: unknown): CortesDeTramo | null {
   const t = comoFila(raw)
-  const gracia = numeroONulo(t.grace_days)
   const intervalo = numeroONulo(t.interval_days)
   const baja = numeroONulo(t.demotion_days)
   const expulsion = numeroONulo(t.expulsion_days)
-  if (gracia === null || intervalo === null || baja === null || expulsion === null) return null
-  return { gracia, intervalo, baja, expulsion }
+  if (intervalo === null || baja === null || expulsion === null) return null
+  return { intervalo, baja, expulsion }
 }
 
 // ── Recuperado ─────────────────────────────────────────────────────────────
 
 /**
- * Un montón de cuotas. `usd` es PAYABLE (lo pagado, con el service fee dentro);
+ * Un montón de cuotas. `usd` es PAYABLE (lo pagado, con la Comisión Helios dentro);
  * `financedUsd` y `feeUsd` son su desglose (desde 20260927551000), para
- * enseñarlo como «Consumo € + service fee €» y nunca como un total suelto.
+ * enseñarlo como «Consumo € + Comisión Helios €» y nunca como un total suelto.
  */
 export type Bolsa = {
   usd: number
@@ -110,7 +109,7 @@ export function leerRecuperado(raw: unknown): Recuperado {
     hasta: texto(d.to),
     recuperado: { ...leerBolsa(d.recovered), perdidoUsd: numero(comoFila(d.recovered).written_off_usd) },
     cargosPorAtraso: { usd: numero(cargos.usd), cuantos: numero(cargos.count) },
-    // Siempre los cinco, en orden: un tramo que no vino es un tramo sin cobros.
+    // Siempre los cuatro, en orden: un tramo que no vino es un tramo sin cobros.
     porTramo: TRAMOS_VENCIDOS.map((tramo) => ({
       tramo,
       ...(porTramo.get(tramo) ?? { usd: 0, financedUsd: 0, feeUsd: 0, cuotas: 0, personas: 0 }),
@@ -165,7 +164,6 @@ export function leerCura(raw: unknown): Cura {
           t2: leerCuraDeTramo(cura.t2),
           t3: leerCuraDeTramo(cura.t3),
           t4: leerCuraDeTramo(cura.t4),
-          t5: leerCuraDeTramo(cura.t5),
         },
       }
     }),

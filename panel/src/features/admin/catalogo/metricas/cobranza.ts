@@ -21,7 +21,7 @@ export const metricasCobranza = [
     espacio: 'metricas',
     sinonimos: ['vencido sin pagar de la semana', 'vencido al cierre', 'vencido de la semana', 'deuda vencida de la semana', 'mora de la semana'],
     destino: { to: '/admin/metricas', search: { vista: 'mora' } },
-    que: 'Las cuotas vencidas y sin pagar al cierre de la semana elegida (o ahora, si está en curso), sin lo dado por perdido, y cuántos pacientes las deben. Son cuotas: financiamiento + service fee, siempre con su desglose a la vista. Se compara con la semana anterior a la misma altura.',
+    que: 'Las cuotas vencidas y sin pagar al cierre de la semana elegida (o ahora, si está en curso), sin lo dado por perdido, y cuántos pacientes las deben. Son cuotas: financiamiento + Comisión Helios, siempre con su desglose a la vista. Se compara con la semana anterior a la misma altura.',
     rpc: 'admin_metricas_cobranza',
   },
   {
@@ -40,7 +40,7 @@ export const metricasCobranza = [
       'spd',
     ],
     destino: { to: '/admin/metricas', search: { vista: 'cobros', sub: 'impago-por-cuota', cuota: '2' } },
-    que: 'De la cuota 2 de cada paciente en cada financiamiento, qué parte seguía sin pagar el último día de la gracia; vence una semana después de la 1 y cuenta también a quien tampoco pagó la 1. Se parte por semana, mes, clínica, nivel o primer financiamiento, con la cuota 1 al lado. Los montos son financiamiento, sin el service fee.',
+    que: 'De la cuota 2 de cada paciente en cada financiamiento, qué parte seguía sin pagar el último día de la gracia; vence una semana después de la 1 y cuenta también a quien tampoco pagó la 1. Se parte por semana, mes, clínica, nivel o primer financiamiento, con la cuota 1 al lado. Los montos son financiamiento, sin la Comisión Helios.',
     rpc: 'admin_first_payment_default',
   },
   {
@@ -164,7 +164,7 @@ export const metricasCobranza = [
       'cuota 2 tras pagar la 1',
     ],
     destino: { to: '/admin/metricas', search: { vista: 'cobros', sub: 'impago-por-cuota', cuota: '2' } },
-    que: 'De las cuotas 2 ya maduras de quien había pagado la cuota 1 del mismo financiamiento el día en que se juzga la 2 (al acabar su gracia), qué parte seguía sin pagar. Separa a quien empieza pagando y se cae de quien nunca pagó, que el impago de la cuota 2 cuenta junto. Va sobre cuotas y se parte por semana, mes, clínica, nivel o primer financiamiento. Los montos son financiamiento, sin el service fee.',
+    que: 'De las cuotas 2 ya maduras de quien había pagado la cuota 1 del mismo financiamiento el día en que se juzga la 2 (al acabar su gracia), qué parte seguía sin pagar. Separa a quien empieza pagando y se cae de quien nunca pagó, que el impago de la cuota 2 cuenta junto. Va sobre cuotas y se parte por semana, mes, clínica, nivel o primer financiamiento. Los montos son financiamiento, sin la Comisión Helios.',
     rpc: 'admin_first_payment_default',
   },
 ] as const satisfies ReadonlyArray<Entrada>

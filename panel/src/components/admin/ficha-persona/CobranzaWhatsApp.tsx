@@ -26,8 +26,9 @@ export function useCasoDeCobranza(userId: string, enabled = true) {
 }
 
 /**
- * «Escribir por WhatsApp» con la plantilla de su tramo de atraso (o la de
- * antes de vencer), y anotar lo que pasó.
+ * «Escribir por WhatsApp» con la plantilla de su tramo de atraso, y anotar lo
+ * que pasó. Solo sale a quien debe algo vencido: a quien no, sus
+ * recordatorios le llegan solos y aquí no se pinta nada.
  *
  * <BotonWhatsAppCobranza userId={id} />                    en una cabecera
  * <BotonWhatsAppCobranza userId={fila.userId} persona={fila} compacto />   en una fila
@@ -84,7 +85,11 @@ export function BotonWhatsAppCobranza({
   })
 
   const rotulo = compacto ? 'WhatsApp' : 'Escribir por WhatsApp'
-  const nombre = (persona ?? fila.data)?.fullName ?? 'este paciente'
+  const quien = persona ?? fila.data
+  const nombre = quien?.fullName ?? 'este paciente'
+
+  // Sin nada vencido no hay mensaje de cobranza que mandar.
+  if (quien === null || (quien !== undefined && quien.daysOverdue <= 0)) return null
 
   if (!whatsapp.listo) {
     return (

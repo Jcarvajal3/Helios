@@ -60,7 +60,7 @@ export function FlujoEntreTramos({
   return (
     <Bloque
       titulo="El paso entre tramos"
-      info="Cada lunes a las 10 de la mañana se mira en qué tramo está cada paciente, por su cuota más atrasada, y se compara con el lunes anterior. Los tramos son los de los parámetros vigentes hoy para todas las semanas, así que un cambio de parámetros no mueve a nadie de tramo. No cuenta las cuentas de prueba."
+      info="Cada lunes se mira en qué tramo está cada paciente, por su cuota más atrasada, y se compara con el lunes anterior. Los tramos son los de los parámetros vigentes hoy para todas las semanas, así que un cambio de parámetros no mueve a nadie de tramo. No cuenta las cuentas de prueba."
       consulta={flujo}
       aside={
         elegida && semanas.length > 1 ? (

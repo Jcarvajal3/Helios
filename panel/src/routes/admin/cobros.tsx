@@ -399,7 +399,7 @@ function Lista({
       rowKey={(p) => p.reportId}
       columns={COLUMNAS}
       noun={['pago', 'pagos']}
-      summary={`${formatUsd(total)} reportados: ${sumandos ?? 'cuotas con fee y cargos por atraso'}`}
+      summary={`${formatUsd(total)} reportados: ${sumandos ?? 'cuotas con comisión y cargos por atraso'}`}
       exportar={{ archivo: `pagos-reportados-${cola}-${hoyCaracas()}` }}
       // Una referencia repetida no es prueba de fraude (con seis dígitos se
       // repiten solas), pero es lo único de esta lista que hay que ver antes
@@ -511,8 +511,8 @@ const COLUMNAS: Array<Column<QueueItem>> = [
   },
   {
     key: 'monto',
-    header: 'Monto reportado (con fee)',
-    info: 'Lo que el paciente dice haber transferido: las cuotas que salda (financiado + service fee + IVA) más los cargos por atraso, si hay. Debajo, en bolívares del día de su cotización: lo de órdenes en dólares (y los cargos) a la tasa BCV del dólar y lo de órdenes en euros a la del euro.',
+    header: 'Monto reportado (con comisión)',
+    info: 'Lo que el paciente dice haber transferido: las cuotas que salda (financiado + Comisión Helios + IVA) más los cargos por atraso, si hay. Debajo, en bolívares del día de su cotización: lo de órdenes en dólares (y los cargos) a la tasa BCV del dólar y lo de órdenes en euros a la del euro.',
     type: 'number',
     sort: (p) => p.amountUsd,
     sortDir: 'desc',

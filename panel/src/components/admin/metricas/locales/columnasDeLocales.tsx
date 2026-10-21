@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 
 import type { Column } from '@/components/DataTable'
 import { SERIE } from '@/components/charts'
-import { Badge, Tendencia, formatDay, formatUsd, formatPorcentaje } from '@/components/ui'
+import { Badge, Tendencia, formatUsd, formatPorcentaje } from '@/components/ui'
 import { ESTADOS_LOCAL } from '@/features/admin/estados'
 import { comoTendencia } from '@/features/admin/metricas/formato'
 import { frenteALaAnterior, recurrentes, variacion } from '@/features/admin/metricas/locales/rendimiento'
@@ -90,8 +90,8 @@ export function columnasDeLocales({
 
     {
       key: 'consumo',
-      header: 'Financiado (sin fee)',
-      info: 'Sin el service fee: la suma de los financiamientos confirmados en la clínica esta semana. Los de prueba no cuentan.',
+      header: 'Financiado (sin comisión)',
+      info: 'Sin la Comisión Helios: la suma de los financiamientos confirmados en la clínica esta semana. Los de prueba no cuentan.',
       type: 'number',
       sortDir: 'desc',
       sort: orden((l) => l.consumoUsd),
@@ -102,7 +102,7 @@ export function columnasDeLocales({
     {
       key: 'anterior',
       header: 'Financiado frente a la anterior (%)',
-      info: `El financiado (sin fee) frente al de ${antes}. Sin financiamientos antes no hay porcentaje.`,
+      info: `El financiado (sin comisión) frente al de ${antes}. Sin financiamientos antes no hay porcentaje.`,
       type: 'number',
       sortDir: 'desc',
       sort: orden((l) => variacion(l.consumoUsd, l.consumoAnteriorUsd)),
@@ -124,9 +124,9 @@ export function columnasDeLocales({
 
     {
       key: 'consumo-anterior',
-      header: 'Financiado anterior (sin fee)',
+      header: 'Financiado anterior (sin comisión)',
       hidden: true,
-      info: `Sin el service fee: el financiado de ${antes}.`,
+      info: `Sin la Comisión Helios: el financiado de ${antes}.`,
       type: 'number',
       sortDir: 'desc',
       sort: orden((l) => l.consumoAnteriorUsd),
@@ -158,8 +158,8 @@ export function columnasDeLocales({
 
     {
       key: 'ticket',
-      header: 'Ticket medio (sin fee)',
-      info: 'Sin el service fee: el financiado entre el número de financiamientos.',
+      header: 'Ticket medio (sin comisión)',
+      info: 'Sin la Comisión Helios: el financiado entre el número de financiamientos.',
       type: 'number',
       sortDir: 'desc',
       sort: orden((l) => l.ticketMedioUsd),
@@ -232,8 +232,8 @@ export function columnasDeLocales({
 
     {
       key: 'vencido',
-      header: 'Vencido (financiamiento + fee)',
-      info: `Financiamiento + fee: las cuotas de financiamientos en esta clínica (de cualquier semana) vencidas y sin pagar ${alCierre}. Debajo, cada parte por separado: su financiamiento y el service fee (IVA incluido). Lo dado por perdido no entra.`,
+      header: 'Vencido (financiamiento + comisión)',
+      info: `Financiamiento + comisión: las cuotas de financiamientos en esta clínica (de cualquier semana) vencidas y sin pagar ${alCierre}. Debajo, cada parte por separado: su financiamiento y la Comisión Helios (IVA incluido). Lo dado por perdido no entra.`,
       type: 'number',
       sortDir: 'desc',
       sort: orden((l) => l.vencido.payableUsd),
@@ -243,7 +243,7 @@ export function columnasDeLocales({
 
     {
       key: 'vencido-consumo',
-      header: 'Vencido: financiamiento (sin fee)',
+      header: 'Vencido: financiamiento (sin comisión)',
       hidden: true,
       type: 'number',
       sortDir: 'desc',
@@ -254,7 +254,7 @@ export function columnasDeLocales({
 
     {
       key: 'vencido-servicio',
-      header: 'Vencido: service fee (IVA incluido)',
+      header: 'Vencido: Comisión Helios (IVA incluido)',
       hidden: true,
       type: 'number',
       sortDir: 'desc',
@@ -310,7 +310,7 @@ export function columnasDeLocales({
     {
       key: 'parte',
       header: 'Parte del financiado (%)',
-      info: 'El financiado (sin fee) de la clínica entre el de todas las clínicas, esta semana. Al pasar el ratón por la barra, los importes.',
+      info: 'El financiado (sin comisión) de la clínica entre el de todas las clínicas, esta semana. Al pasar el ratón por la barra, los importes.',
       type: 'number',
       sortDir: 'desc',
       sort: orden((l) => l.partePct),
@@ -335,7 +335,7 @@ export function columnasDeLocales({
                 },
                 {
                   key: 'consumo',
-                  rotulo: 'financiado, sin fee',
+                  rotulo: 'financiado, sin comisión',
                   valor: formatUsd(l.consumoUsd),
                   color: 'transparent',
                 },
@@ -345,7 +345,7 @@ export function columnasDeLocales({
                   : [
                       {
                         key: 'todos',
-                        rotulo: 'entre todos, sin fee',
+                        rotulo: 'entre todos, sin comisión',
                         valor: formatUsd(d.totales.consumoUsd),
                         color: 'transparent',
                       },
@@ -378,50 +378,6 @@ export function columnasDeLocales({
       sort: orden((l) => (l.estado ? ESTADOS_LOCAL[l.estado].label : null)),
       csv: (l) => (l.estado ? ESTADOS_LOCAL[l.estado].label : null),
       cell: (l) => (l.estado ? ESTADOS_LOCAL[l.estado].label : '—'),
-    },
-
-    {
-      key: 'noches',
-      header: 'Días con financiamientos',
-      hidden: true,
-      info: 'Días con al menos un financiamiento. El día operativo va de medianoche a medianoche, hora de Caracas.',
-      type: 'number',
-      sortDir: 'desc',
-      sort: orden((l) => l.noches),
-      csv: (l) => l.noches,
-      cell: (l) => tenue(l, l.noches),
-    },
-
-    {
-      key: 'mejor-noche',
-      header: 'Mejor día (financiado sin fee)',
-      hidden: true,
-      info: 'Sin el service fee: el día de la semana con más financiado, y su financiado.',
-      type: 'number',
-      sortDir: 'desc',
-      sort: orden((l) => l.mejorNoche?.consumoUsd ?? null),
-      csv: (l) => l.mejorNoche?.fecha ?? null,
-      cell: (l) =>
-        l.mejorNoche
-          ? tenue(
-              l,
-              <>
-                {formatUsd(l.mejorNoche.consumoUsd)}
-                <Linea>{formatDay(l.mejorNoche.fecha)}</Linea>
-              </>,
-            )
-          : RAYA,
-    },
-
-    {
-      key: 'mejor-noche-consumo',
-      header: 'Financiado del mejor día (sin fee)',
-      hidden: true,
-      type: 'number',
-      sortDir: 'desc',
-      sort: orden((l) => l.mejorNoche?.consumoUsd ?? null),
-      csv: (l) => csvDinero(l.mejorNoche?.consumoUsd),
-      cell: (l) => (l.mejorNoche ? formatUsd(l.mejorNoche.consumoUsd) : '—'),
     },
   ]
 }

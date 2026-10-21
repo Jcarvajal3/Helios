@@ -37,7 +37,7 @@ export const directorio = [
     tipo: 'pantalla',
     id: 'locales',
     titulo: 'Clínicas',
-    descripcion: 'Las clínicas aliadas, con lo financiado (sin fee), lo que se les debe, sus condiciones y su personal.',
+    descripcion: 'Las clínicas aliadas, con lo financiado (sin comisión), lo que se les debe, sus condiciones y su personal.',
     espacio: 'directorio',
     sinonimos: [
       'clínicas',
@@ -189,10 +189,10 @@ export const directorio = [
   {
     tipo: 'accion',
     id: 'condiciones-del-local',
-    titulo: 'Cambiar las condiciones de una clínica',
-    descripcion: 'El adelanto, lo de cada cuota, la comisión y cuándo se le paga, desde una fecha.',
+    titulo: 'Cambiar la comisión del personal de una clínica',
+    descripcion: 'Lo que gana su personal por cada orden confirmada, desde una fecha. Lo que se le paga a la clínica (el 100 %) no se pacta.',
     espacio: 'directorio',
-    sinonimos: ['comisión de la clínica', 'adelanto', 'liquidación', 'por fecha', 'por cobranza'],
+    sinonimos: ['comisión de la secretaria', 'comisión del personal', 'condiciones', 'liquidación'],
     destino: { to: '/admin/clinicas' },
     soloSuperAdmin: true,
   },
@@ -246,7 +246,7 @@ export const directorio = [
       'mejor día',
     ],
     destino: { to: '/admin/metricas', search: { vista: 'locales' } },
-    que: 'Por clínica y en la semana elegida: el financiado (sin fee), los financiamientos, el ticket medio (sin fee), los pacientes (contados por sus cuotas) y cuántos eran nuevos en esa clínica, los días con financiamientos y el mejor día, con el cambio frente a la semana anterior a la misma altura; las clínicas activas que no financiaron nada también salen.',
+    que: 'Por clínica y en la semana elegida: el financiado (sin comisión), los financiamientos, el ticket medio (sin comisión), los pacientes (contados por sus cuotas) y cuántos eran nuevos en esa clínica, los días con financiamientos y el mejor día, con el cambio frente a la semana anterior a la misma altura; las clínicas activas que no financiaron nada también salen.',
     rpc: 'admin_metricas_locales',
   },
 ] as const satisfies ReadonlyArray<Entrada>

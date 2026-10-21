@@ -7,7 +7,7 @@ import { OPCIONES_DE_VENTANA, textoDeLaVentana } from '@/features/admin/metricas
 import type { VentanaGente } from '@/features/admin/metricas/gente/ventana'
 
 const COMO_SE_CUENTA =
-  'Todos los importes de Pacientes son financiado, sin el service fee: la suma de los financiamientos confirmados. El día es el operativo, de medianoche a medianoche, hora de Caracas. La ventana acaba el domingo de la semana elegida arriba (o hoy, si está en curso).'
+  'Todos los importes de Pacientes son financiado, sin la Comisión Helios: la suma de los financiamientos confirmados. El día es el operativo, de medianoche a medianoche, hora de Caracas. La ventana acaba el domingo de la semana elegida arriba (o hoy, si está en curso).'
 
 /**
  * La ventana de Resumen y Uso: cuántas semanas se miran, acabando en
@@ -44,7 +44,7 @@ export function BarraDeVentana({
       <p className="flex flex-wrap items-center gap-x-1.5 type-panel-caption text-panel-muted">
         {usado ? textoDeLaVentana({ from: usado.from, to: usado.to }, usado.windowDays) : ' '}
         {comparacion && <span>· {comparacion}</span>}
-        <span>· Importes en financiado, sin el service fee</span>
+        <span>· Importes en financiado, sin la Comisión Helios</span>
         <InfoDot title="Cómo se cuenta" what={COMO_SE_CUENTA} />
       </p>
     </div>

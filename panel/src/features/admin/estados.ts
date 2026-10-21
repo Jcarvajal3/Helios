@@ -82,7 +82,7 @@ export const VALORES_ESTADO_PAGO: ReadonlyArray<PaymentReportStatus> = [
   'duplicate',
 ]
 
-/** Lo que la persona reportó desde la app. «Aprobado», nunca «conciliado». */
+/** El pago que se le registró (lo manda por WhatsApp). «Aprobado», nunca «conciliado». */
 export const ESTADOS_PAGO_REPORTADO: Record<PaymentReportStatus, EstadoVisual> = {
   reported: { label: 'Pendiente', plural: 'Pendientes', tone: 'warning' },
   in_review: { label: 'En revisión', plural: 'En revisión', tone: 'warning' },

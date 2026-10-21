@@ -9,11 +9,11 @@ import type { Desglose, SemanaUsada } from '@/features/admin/metricas/lectura'
 // operativo) seguido hasta cobrar sus dos cuotas. Cohortes habla en lo que
 // hay que COBRAR (decisión de Javier del 27-09):
 //   - lo de la semana entera es el TOTAL A COBRAR (`aCobrar`): la cuota 1 + la
-//     cuota 2, con el service fee dentro, SIEMPRE con su desglose (`Desglose`:
-//     consumo sin fee + service fee). Es la excepción aprobada a la regla de
-//     no sumar el fee a un total, y solo vale aquí porque los sumandos se ven;
+//     cuota 2, con la Comisión Helios dentro, SIEMPRE con su desglose (`Desglose`:
+//     consumo sin comisión + Comisión Helios). Es la excepción aprobada a la regla de
+//     no sumar la comisión a un total, y solo vale aquí porque los sumandos se ven;
 //   - cada cuota va aparte, también con su desglose;
-//   - el consumo sin fee (`consumoUsd`) queda como dato secundario.
+//   - el consumo sin comisión (`consumoUsd`) queda como dato secundario.
 // ═══════════════════════════════════════════════════════════════════════════
 
 /** Los cinco estados de una cuota hoy, excluyentes (`metricas.cuotas.estado_hoy`). */
@@ -29,7 +29,7 @@ export type ParteDeCuota = {
   cuotas: number
   /** Personas distintas: quien tiene las dos cuotas en ese estado cuenta una vez. */
   personas: number
-  /** Lo que se cobra (payable) con su consumo sin fee y su service fee. */
+  /** Lo que se cobra (payable) con su consumo sin comisión y su Comisión Helios. */
   importe: Desglose
 }
 
@@ -40,7 +40,7 @@ export type ParteDeCuota = {
 export type Cobro = {
   cuotas: number
   personas: number
-  /** Lo que se cobra: consumo (sin fee) + service fee (IVA incluido). */
+  /** Lo que se cobra: consumo (sin comisión) + Comisión Helios (IVA incluido). */
   importe: Desglose
   /** De lo que se cobra, qué parte ya se pagó (a tiempo o tarde). `null` sin nada que cobrar. */
   cobradoPct: number | null
@@ -59,7 +59,7 @@ export type CuotaDeCohorte = Cobro & {
 
 /**
  * Lo que hay que cobrar de una semana: la cuota 1 + la cuota 2, con el
- * service fee dentro y su desglose. Lo cobrado es lo pagado a tiempo o tarde;
+ * Comisión Helios dentro y su desglose. Lo cobrado es lo pagado a tiempo o tarde;
  * lo que falta, lo vencido y lo por vencer; lo dado por perdido va en su
  * estado. Las personas de cada parte son personas distintas.
  */
@@ -82,7 +82,7 @@ export type Cohorte = {
   hasta: string
   enCurso: boolean
   consumos: number
-  /** El consumo, sin el fee: dato secundario (va en el desglose del total a cobrar). */
+  /** El consumo, sin la comisión: dato secundario (va en el desglose del total a cobrar). */
   consumoUsd: number
   /** Pacientes con alguna cuota de esos financiamientos. */
   personas: number

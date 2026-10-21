@@ -4,7 +4,7 @@
  *   npx tsx src/features/admin/metricas/semana/resumen/lectura.test.ts
  *
  * Lo que se vigila: que cada cifra llegue a su sitio con su clase de dinero
- * (facturado sin fee, total a cobrar con sus dos partes), que el fee se
+ * (facturado sin comisión, total a cobrar con sus dos partes), que la comisión se
  * deduzca si falta, que lo que puede faltar llegue como null y no como cero,
  * y que una respuesta sin la semana o sin sus cifras se rechace en vez de
  * pintarse en ceros.
@@ -47,17 +47,17 @@ igual(r.local, null, 'sin clínica')
 igual(leerResumen(respuestaCruda({ local: 'abc' })).local, 'abc', 'con clínica')
 
 console.log('── Las cifras ────────────────────────────────────────────────')
-igual(r.cifras.financedUsd, 1129, 'total financiado: el financiamiento sin fee')
-igual(r.cifras.feeUsd, 261.92, 'service fee + IVA')
+igual(r.cifras.financedUsd, 1129, 'total financiado: el financiamiento sin comisión')
+igual(r.cifras.feeUsd, 261.92, 'Comisión Helios + IVA')
 igual(r.cifras.payableUsd, 1390.92, 'total a cobrar')
 igual(
   Math.round((r.cifras.financedUsd + r.cifras.feeUsd) * 100) / 100,
   r.cifras.payableUsd,
-  'el total a cobrar es financiado + fee',
+  'el total a cobrar es financiado + comisión',
 )
-igual([r.cifras.servicioUsd, r.cifras.ivaUsd], [225.8, 36.12], 'el fee sin IVA y su IVA')
+igual([r.cifras.servicioUsd, r.cifras.ivaUsd], [225.8, 36.12], 'la comisión sin IVA y su IVA')
 igual([r.cifras.consumos, r.cifras.personas, r.cifras.nuevas], [43, 61, 30], 'financiamientos, pacientes y nuevos')
-igual(r.cifras.ticketMedioUsd, 26.26, 'ticket medio sin fee')
+igual(r.cifras.ticketMedioUsd, 26.26, 'ticket medio sin comisión')
 igual(r.comparacion.financedUsd, 1015.5, 'la comparación')
 
 console.log('── La chispa ─────────────────────────────────────────────────')

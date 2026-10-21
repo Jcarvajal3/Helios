@@ -27,7 +27,7 @@ export type RasgosDeGrupo = {
   nuevos: number
   enGrupo: number
   sinAvisos: number
-  /** Lo que ha consumido en Ronda, sin fee, de media por persona. */
+  /** Lo que ha consumido en Ronda, sin comisión, de media por persona. */
   consumoMedioUsd: number | null
   ciudades: ReadonlyArray<{ ciudad: string; personas: number }>
   ciudadesOtras: number
@@ -167,7 +167,7 @@ const RASGOS: ReadonlyArray<{
   {
     clave: 'consumo',
     rotulo: 'Financiamiento medio en Helios',
-    ayuda: 'Lo que se ha financiado cada paciente desde que entró, sin fee: el financiado, de media.',
+    ayuda: 'Lo que se ha financiado cada paciente desde que entró, sin comisión: el financiado, de media.',
     celda: (g) => (g.consumoMedioUsd === null ? null : { texto: formatUsd(g.consumoMedioUsd), pct: null }),
   },
   {

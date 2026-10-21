@@ -90,10 +90,13 @@ console.log('\n── Lo devengado ───────────────
       linea('late_fee', 'platform_revenue', 0, 4),
       linea('manual_adjustment', 'platform_revenue', 2, 0, 'Cargo por atraso condonado: pagó a tiempo'),
       linea('manual_adjustment', 'platform_revenue', 1, 0, 'Financiamiento revertido'),
+      linea('staff_commission', 'commission_expense', 0.5, 0),
+      linea('staff_commission', 'merchant_payable', 0, 0.5),
     ],
   }
   const r = devengadoDelMes(d)
-  comprueba(r.servicioUsd === 9, 'el service fee, sin cargos y con la reversa', String(r.servicioUsd))
+  comprueba(r.servicioUsd === 9, 'la Comisión Helios, sin cargos y con la reversa', String(r.servicioUsd))
+  comprueba(r.comisionesDelPersonalUsd === 0.5, 'la comisión del personal, en positivo (es gasto)', String(r.comisionesDelPersonalUsd))
   comprueba(r.cargosPorAtrasoUsd === 2, 'los cargos, menos el condonado', String(r.cargosPorAtrasoUsd))
   comprueba(r.ivaUsd === 1.6, 'el IVA aparte', String(r.ivaUsd))
   comprueba(r.cobradoUsd === 30 && r.pagadoALocalesUsd === 20, 'la caja del mes')

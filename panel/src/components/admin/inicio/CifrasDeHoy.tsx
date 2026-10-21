@@ -45,8 +45,8 @@ function DeudaVencida() {
     <TarjetaDeArea
       area={p.espacio}
       icono={p.icono}
-      rotulo="Vencido (financiamiento + fee)"
-      info="Las cuotas vencidas y sin pagar hoy, sin la deuda dada por perdida ni los cargos por atraso, con su financiamiento y su service fee debajo y los pacientes que las deben; «Mora» es ese vencido ÷ (vencido + por vencer)."
+      rotulo="Vencido (financiamiento + comisión)"
+      info="Las cuotas vencidas y sin pagar hoy, sin la deuda dada por perdida ni los cargos por atraso, con su financiamiento y su Comisión Helios debajo y los pacientes que las deben; «Mora» es ese vencido ÷ (vencido + por vencer)."
       destino={p.destino}
       {...estadoDe(lectura)}
       valor={d ? formatUsd(d.vencido) : '—'}
@@ -57,7 +57,7 @@ function DeudaVencida() {
             valor={d.vencido}
             max={d.porCobrar}
             tono={tonoDelMedidor(d.senal)}
-            rotulo={`Vencido, financiamiento + fee: ${formatUsd(d.vencido)} de ${formatUsd(d.porCobrar)} de deuda viva (vencido + por vencer)`}
+            rotulo={`Vencido, financiamiento + comisión: ${formatUsd(d.vencido)} de ${formatUsd(d.porCobrar)} de deuda viva (vencido + por vencer)`}
             globo={globoDeDeudaVencida(d, colorDeTono(tonoDelMedidor(d.senal)))}
           />
         ) : undefined
@@ -155,8 +155,8 @@ function FinanciadoEstaSemana() {
     <TarjetaDeArea
       area="gerencia"
       icono={LayoutDashboard}
-      rotulo="Financiado esta semana (sin fee)"
-      info="Sin el service fee: lo financiado en las clínicas en financiamientos confirmados de lunes a hoy, por día operativo; la pastilla y las barras son el número de financiamientos, en total y de cada día."
+      rotulo="Financiado esta semana (sin comisión)"
+      info="Sin la Comisión Helios: lo financiado en las clínicas en financiamientos confirmados de lunes a hoy, por día operativo; la pastilla y las barras son el número de financiamientos, en total y de cada día."
       destino={pantalla('metricas-semana').destino}
       {...estadoDe(lectura)}
       valor={f ? formatUsd(f.financiado) : '—'}

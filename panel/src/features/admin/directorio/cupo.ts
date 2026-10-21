@@ -27,7 +27,7 @@ export function comoMotivoSinDisponible(v: unknown): MotivoSinDisponible | null 
  *
  * Sale del límite de su nivel y del disponible NOMINAL del servidor (límite
  * menos lo que ocupan sus consumos), no de la deuda: la deuda lleva el
- * service fee dentro y el cupo no, así que restarlas mezclaría dos
+ * Comisión Helios dentro y el cupo no, así que restarlas mezclaría dos
  * clases de cifra. Tampoco del disponible de hoy, que es cero con una cuota
  * vencida aunque el cupo esté casi libre.
  *

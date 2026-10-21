@@ -18,11 +18,9 @@ import {
 import { diasAlCierre, horizonteDelCierre, sumarCartera, ultimoMesMaduro, veredictoDelCierre } from './numeros'
 import {
   diaCortoConNombre,
-  duracionCorta,
   horaDeCaracas,
   horaYMinutoDeCaracas,
   hoyOperativo,
-  minutosHastaElCorte,
 } from './reloj'
 
 let fallos = 0
@@ -40,24 +38,9 @@ console.log('── El reloj ─────────────────
   comprueba(hoyOperativo(new Date('2026-09-25T13:59:00Z')) === '2026-09-25', 'a las 9:59 ya es hoy: el corte no es a las 10')
   comprueba(hoyOperativo(new Date('2026-09-26T03:30:00Z')) === '2026-09-25', 'a las 23:30 sigue siendo hoy')
 
-  comprueba(minutosHastaElCorte(new Date('2026-09-26T03:15:00Z')) === 45, 'a las 23:15 faltan 45 minutos')
-  comprueba(minutosHastaElCorte(new Date('2026-09-25T14:00:00Z')) === 14 * 60, 'a las 10:00 faltan catorce horas')
-  comprueba(
-    minutosHastaElCorte(new Date('2026-09-25T04:00:00Z')) === 24 * 60,
-    'a medianoche en punto el día acaba de empezar: faltan 24 h',
-  )
-  comprueba(
-    minutosHastaElCorte(new Date('2026-09-25T19:15:00Z')) === 8 * 60 + 45,
-    'a las 15:15 faltan 8 h 45 min, hasta la medianoche',
-  )
-
   const t = horaYMinutoDeCaracas(new Date('2026-09-25T19:15:00Z'))
   comprueba(t.hora === 15 && t.minuto === 15, 'las 19:15 UTC son las 15:15 en Caracas')
   comprueba(horaYMinutoDeCaracas(new Date('2026-09-25T04:05:00Z')).hora === 0, 'la medianoche es la hora 0, no la 24')
-
-  comprueba(duracionCorta(18 * 60 + 45) === '18 h 45 min', 'horas y minutos')
-  comprueba(duracionCorta(120) === '2 h', 'horas justas, sin «0 min»')
-  comprueba(duracionCorta(45) === '45 min', 'menos de una hora, solo minutos')
 
   comprueba(diaCortoConNombre('2026-09-25') === 'Viernes 25 sep', 'el día con nombre, corto', diaCortoConNombre('2026-09-25'))
   comprueba(diaCortoConNombre('2026-10-04') === 'Domingo 4 oct', 'sin cero delante del día')
@@ -78,6 +61,8 @@ console.log('\n── Bloquea la operación ────────────
     String(vieja?.texto),
   )
   comprueba(bloqueoDeTasa({ rate: 1000, isStale: false, ageHours: 3 }) === null, 'una tasa al día no bloquea')
+  const euroVieja = bloqueoDeTasa({ rate: 1100, isStale: true, ageHours: 60 }, 'EUR')
+  comprueba(euroVieja?.id === 'tasa-eur' && euroVieja.texto.includes('del euro'), 'la del euro vieja también bloquea, con su nombre')
 }
 {
   comprueba(

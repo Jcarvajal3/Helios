@@ -44,29 +44,29 @@ import { tonoImpago } from '@/features/admin/umbrales'
 //   1. **Verbo o preposición antes que sustantivo técnico.** "Por cobrar a
 //      usuarios" y "Por pagar a locales" se leen como pareja; "Deuda de
 //      usuarios" y "Por pagar a comercios" no. "Dado por perdido" en vez de
-//      "Castigado". "Service fee ganado" en vez de "Comisión devengada".
+//      "Castigado". "Comisión Helios ganada" en vez de "Comisión devengada".
 //   2. **El término contable no se tira, se baja al `what`.** Quien audite
 //      necesita leer "devengado" y "principal"; quien mira el panel a diario,
 //      no. El ícono de información es donde conviven.
 //   3. **Si dos cifras son partes de una tercera, van DENTRO de ella.** Es lo
 //      que hace la tarjeta de "Por cobrar a usuarios" con el consumo y el
-//      service fee, y la de "Service fee ganado" con lo ya cobrado. Dos tarjetas
+//      Comisión Helios, y la de "Comisión Helios ganada" con lo ya cobrado. Dos tarjetas
 //      hermanas no tienen forma de decir que una está contenida en la otra, y
 //      el lector acaba sumándolas.
 //
 // Y dos más de Javier (2026-09-27):
 //
-//   4. **El fee se llama «service fee», o «fee» donde no cabe.** Nunca
+//   4. **La comisión se llama «Comisión Helios», o «comisión» donde no cabe.** Nunca
 //      «servicio», «servicio de Ronda» ni «comisión»: la comisión es la del
 //      local (`comision_local_usd`), que es otra cosa. Las claves de aquí
 //      (`comisionEnDeuda`, `comisionDevengada`…) no cambian: solo lo que se lee.
-//   5. **Todo «consumo» dice si lleva el fee**: «Consumo (sin fee)» en el
-//      rótulo o, si no cabe, un `what` que empieza por «Sin el service fee».
+//   5. **Todo «consumo» dice si lleva la comisión**: «Consumo (sin comisión)» en el
+//      rótulo o, si no cabe, un `what` que empieza por «Sin la Comisión Helios».
 //
 // Y el repaso de rigor de Javier (2026-09-27, ola 5):
 //
-//   6. **El vocabulario es uno**: «Facturado (sin fee)» para el consumo sin
-//      fee, «Service fee + IVA» para el fee con su IVA, «Service fee sin IVA»
+//   6. **El vocabulario es uno**: «Facturado (sin comisión)» para el consumo sin
+//      comisión, «Comisión Helios + IVA» para la comisión con su IVA, «Comisión Helios sin IVA»
 //      para lo que gana Ronda, «Perdido», «Mora (%)», «Cobrado a tiempo»,
 //      «usuarios» y no «personas». Un porcentaje lleva «(%)» en el rótulo.
 //   7. **El `what` es UNA frase con la definición operativa**: qué se cuenta,
@@ -98,38 +98,38 @@ export type MetricKey =
 export const DEFINICIONES: Record<MetricKey, { label: string; what: string }> = {
   caja: {
     label: 'Dinero en caja',
-    what: 'El saldo de la cuenta de caja del libro de asientos: lo cobrado a los pacientes (cuotas y cargos por atraso) menos lo transferido a las clínicas, la garantía depositada en los que tienen bóveda y los ajustes, que no es el saldo del banco (ese se coteja en Métricas › Caja › Proyección y banco).',
+    what: 'El saldo de la cuenta de caja del libro de asientos: lo cobrado a los pacientes menos lo transferido a las clínicas y los ajustes, que no es el saldo del banco (ese se coteja en Métricas › Caja › Proyección y banco).',
   },
   deudaUsuarios: {
     label: 'Por cobrar a pacientes',
-    what: 'Lo que los pacientes deben y todavía no han pagado, vencido o no: el financiado (sin fee), el service fee + IVA de sus cuotas y los cargos por atraso pendientes, sin lo dado por perdido.',
+    what: 'Lo que los pacientes deben y todavía no han pagado, vencido o no: el financiado (sin comisión), la Comisión Helios + IVA de sus cuotas y los cargos por atraso pendientes, sin lo dado por perdido.',
   },
   principalCalle: {
-    label: 'Financiado (sin fee)',
-    what: 'Sin el service fee: la parte de las cuotas sin pagar que es financiamiento en las clínicas, el dinero de Helios que está fuera y que se pierde entero si el paciente no paga; sale de las cuotas.',
+    label: 'Financiado (sin comisión)',
+    what: 'Sin la Comisión Helios: la parte de las cuotas sin pagar que es financiamiento en las clínicas, el dinero de Helios que está fuera y que se pierde entero si el paciente no paga; sale de las cuotas.',
   },
   comisionEnDeuda: {
-    label: 'Service fee + IVA',
-    what: 'La otra parte de las cuotas sin pagar: el service fee y el IVA que lo grava (el IVA no es de Helios: se cobra al paciente y se remite).',
+    label: 'Comisión Helios + IVA',
+    what: 'La otra parte de las cuotas sin pagar: la Comisión Helios y el IVA que lo grava (el IVA no es de Helios: se cobra al paciente y se remite).',
   },
   porPagarLocales: {
     label: 'Por pagar a clínicas',
-    what: 'Lo que Helios les debe a las clínicas (sin los de prueba) por lo que ya se financiaron sus pacientes y todavía no se ha transferido: el financiado (sin fee) menos la comisión de la clínica, partido en atrasado (tocaba pagarlo ayer o antes) y por vencer.',
+    what: 'Lo que Helios les debe a las clínicas (sin los de prueba) por las consultas de sus pacientes y las comisiones de su personal que ya se devengaron y todavía no se han transferido: la consulta entera, sin la Comisión Helios, partido en atrasado (tocaba pagarlo ayer o antes) y por vencer.',
   },
   capitalLibre: {
     // El rótulo va delante del número, en el pie: «Caja tras pagar a todos los
     // locales −€642,00». «Capital libre» obligaba a saber de antemano qué
     // capital y libre de qué.
     label: 'Caja tras pagar a todas las clínicas',
-    what: 'Dinero en caja menos lo que se les debe a las clínicas y no cubre su garantía, que sale negativo casi siempre porque a cada clínica se le paga cada consulta en dos partes, el día siguiente a cada cuota del paciente, y la deuda entera nunca vence el mismo día.',
+    what: 'Dinero en caja menos lo que se les debe a las clínicas, que sale negativo casi siempre porque a cada clínica se le paga cada consulta en dos partes, el día siguiente a cada cuota del paciente, y la deuda entera nunca vence el mismo día.',
   },
   comisionDevengada: {
-    label: 'Service fee sin IVA',
-    what: 'El service fee sin IVA de todos los financiamientos confirmados que no se han dado por perdidos, cobrado o no (lo devengado: se gana al confirmar el financiamiento y se cobra con las cuotas).',
+    label: 'Comisión Helios sin IVA',
+    what: 'La Comisión Helios sin IVA de todos los financiamientos confirmados que no se han dado por perdidos, cobrado o no (lo devengado: se gana al confirmar el financiamiento y se cobra con las cuotas).',
   },
   comisionCobrada: {
-    label: 'Service fee sin IVA cobrado',
-    what: 'La parte de ese service fee sin IVA que los pacientes ya pagaron, sacada de las cuotas pagadas.',
+    label: 'Comisión Helios sin IVA cobrado',
+    what: 'La parte de ese Comisión Helios sin IVA que los pacientes ya pagaron, sacada de las cuotas pagadas.',
   },
   castigado: {
     label: 'Perdido',
@@ -137,15 +137,15 @@ export const DEFINICIONES: Record<MetricKey, { label: string; what: string }> = 
   },
   mora: {
     label: 'Mora (%)',
-    what: 'Vencido ÷ (vencido + por vencer): la parte de las cuotas sin pagar cuyo vencimiento ya pasó, en financiamiento + fee y sin lo dado por perdido, que tiene su propia cifra.',
+    what: 'Vencido ÷ (vencido + por vencer): la parte de las cuotas sin pagar cuyo vencimiento ya pasó, en financiamiento + comisión y sin lo dado por perdido, que tiene su propia cifra.',
   },
   impago: {
     label: 'Impago sobre lo financiado (%)',
-    what: 'Sin el service fee: lo dado por perdido y sin pagar ÷ todo lo financiado desde el primer día, que solo es definitivo en las semanas de financiamiento que ya terminaron su ciclo de cobro.',
+    what: 'Sin la Comisión Helios: lo dado por perdido y sin pagar ÷ todo lo financiado desde el primer día, que solo es definitivo en las semanas de financiamiento que ya terminaron su ciclo de cobro.',
   },
   puntoDeEmpate: {
     label: 'Punto de empate del impago (%)',
-    what: 'El impago con el que Helios ni gana ni pierde: el service fee que pagan los que cumplen frente a lo que cuesta cada uno que no paga (el financiamiento ya transferido a la clínica más el fee que nunca se cobra).',
+    what: 'El impago con el que Helios ni gana ni pierde: la Comisión Helios que pagan los que cumplen frente a lo que cuesta cada uno que no paga (el financiamiento ya transferido a la clínica más la comisión que nunca se cobra).',
   },
   cobroATiempo: {
     label: 'Cobrado a tiempo (%)',

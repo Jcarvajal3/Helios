@@ -3,26 +3,26 @@ import type { SemanaUsada } from '@/features/admin/metricas/lectura'
 // ═══════════════════════════════════════════════════════════════════════════
 // La respuesta de `admin_metricas_semana_resumen`, ya en camelCase.
 //
-// Dos clases de dinero que no se mezclan (la regla del fee):
-//   financedUsd  el consumo SIN el fee: el «Total facturado».
-//   payableUsd   lo que se cobra: consumo + service fee con su IVA. Nunca se
+// Dos clases de dinero que no se mezclan (la regla de la comisión):
+//   financedUsd  el consumo SIN la comisión: el «Total facturado».
+//   payableUsd   lo que se cobra: consumo + Comisión Helios con su IVA. Nunca se
 //                enseña sin sus dos partes (`financedUsd` y `feeUsd`) al lado.
 // ═══════════════════════════════════════════════════════════════════════════
 
 /** Las cifras de un tramo de días (la semana, la anterior, una de la chispa). */
 export type CifrasDelTramo = {
-  /** Total facturado: el consumo en los locales, sin el fee. */
+  /** Total facturado: el consumo en los locales, sin la comisión. */
   financedUsd: number
-  /** El service fee con su IVA: `payable − financed`. */
+  /** La Comisión Helios con su IVA: `payable − financed`. */
   feeUsd: number
-  /** Total a cobrar: facturado + service fee + IVA. Solo con sus dos partes. */
+  /** Total a cobrar: facturado + Comisión Helios + IVA. Solo con sus dos partes. */
   payableUsd: number
-  /** El service fee SIN IVA (el ingreso de Helios). */
+  /** La Comisión Helios SIN IVA (el ingreso de Helios). */
   servicioUsd: number
-  /** El IVA del service fee: `fee − servicio`. */
+  /** El IVA de la Comisión Helios: `comisión − servicio`. */
   ivaUsd: number
   consumos: number
-  /** Sin el fee. `null` sin consumos: no hay ticket de nada. */
+  /** Sin la comisión. `null` sin consumos: no hay ticket de nada. */
   ticketMedioUsd: number | null
   /** Personas con cuota: quien vino dos noches cuenta una vez. */
   personas: number

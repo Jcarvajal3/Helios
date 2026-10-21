@@ -1,9 +1,9 @@
 import { sumarDias } from '@/components/ui'
 import type { Overview } from '@/features/admin/metrics'
 
-/** El volumen de una ventana de días, sin el service fee. */
+/** El volumen de una ventana de días, sin la Comisión Helios. */
 export type VolumenDeLaVentana = {
-  /** Consumo (financed), sin el service fee. */
+  /** Consumo (financed), sin la Comisión Helios. */
   financiado: number
   consumos: number
   /** `null` sin consumos: un ticket de 0 no existe. */
@@ -18,10 +18,10 @@ export type VolumenDeLaVentana = {
 }
 
 /**
- * El volumen de la ventana, con los campos sin el service fee de `admin_overview`.
+ * El volumen de la ventana, con los campos sin la Comisión Helios de `admin_overview`.
  *
  * Los de siempre (`financedUsd`, `previousUsd`, `avgTicketUsd`) llevan el
- * service fee dentro, y `activeUsers` cuenta solo a quien abrió el
+ * Comisión Helios dentro, y `activeUsers` cuenta solo a quien abrió el
  * consumo de un grupo: ninguno se enseña como consumo. La ventana es la de la
  * base: los `windowDays` días operativos que terminan en `businessDate`.
  */

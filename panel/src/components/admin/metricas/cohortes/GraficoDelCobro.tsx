@@ -21,7 +21,7 @@ const ANCHO = 'min(24px, calc(100% - 2px))'
 
 /**
  * Lo que hay que cobrar, semana a semana: cada columna es el total a cobrar
- * de una semana de consumo (la cuota 1 + la 2, con el service fee dentro),
+ * de una semana de consumo (la cuota 1 + la 2, con la Comisión Helios dentro),
  * partido por estado con los colores de toda la pestaña: lo cobrado a tiempo
  * abajo, en el tono del área; lo cobrado tarde; lo vencido en ámbar; lo por
  * vencer en gris y lo perdido en rojo. Así se ve de un vistazo qué semanas
@@ -29,7 +29,7 @@ const ANCHO = 'min(24px, calc(100% - 2px))'
  *
  * Se lee sin tocar nada: el eje con marcas redondas, el total de la columna
  * más alta escrito encima y la tabla (con el desglose de cada total: consumo
- * sin fee y service fee) a un clic en la cabecera. El globo sale al instante
+ * sin comisión y Comisión Helios) a un clic en la cabecera. El globo sale al instante
  * con el ratón o con las flechas.
  */
 export function GraficoDelCobro({ cohortes, semana }: { cohortes: ReadonlyArray<Cohorte>; semana: string }) {
@@ -43,7 +43,7 @@ export function GraficoDelCobro({ cohortes, semana }: { cohortes: ReadonlyArray<
 
   const marco = {
     titulo: 'Total a cobrar por semana de financiamiento, por estado',
-    info: 'Cada columna es el total a cobrar (cuota 1 + cuota 2, con fee) de los financiamientos de una de las doce últimas semanas, partido por su estado hoy; el desglose financiado + service fee + IVA está en el globo y en la tabla.',
+    info: 'Cada columna es el total a cobrar (cuota 1 + cuota 2, con comisión) de los financiamientos de una de las doce últimas semanas, partido por su estado hoy; el desglose financiado + Comisión Helios + IVA está en el globo y en la tabla.',
     resumen: <TextoConCifras trozos={fraseDelGrafico(cohortes.filter((c) => vistas.has(c.semana)))} />,
     leyenda: ESTADOS_DE_CUOTA.map((e, i) => ({ rotulo: ROTULO_DE_ESTADO[e], color: muestras[i] ?? SERIE.principal })),
   }
@@ -89,8 +89,8 @@ export function GraficoDelCobro({ cohortes, semana }: { cohortes: ReadonlyArray<
           series={[
             ...ESTADOS_DE_CUOTA.map((e) => ({ key: e, label: ROTULO_DE_ESTADO[e] })),
             { key: '__total', label: 'Total a cobrar' },
-            { key: '__consumo', label: 'De ello financiado (sin fee)' },
-            { key: '__fee', label: 'De ello service fee + IVA' },
+            { key: '__consumo', label: 'De ello financiado (sin comisión)' },
+            { key: '__fee', label: 'De ello Comisión Helios + IVA' },
           ]}
           points={columnas.map((c) => ({
             key: c.semana,
