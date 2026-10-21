@@ -128,18 +128,32 @@ function tasaDe(r: ResumenDelPaciente, m: Moneda): number | null {
 }
 
 /**
- * Los bolívares de hoy: cada monto a la tasa BCV de su moneda (Bs de una
- * cuota = monto × tasa de su moneda + cargo por atraso × tasa del dólar).
- * Null si falta alguna tasa que haga falta.
+ * Un monto por una tasa, en bolívares redondeados al céntimo como los
+ * redondea la base (`round(x * tasa, 2)` en numeric): en enteros, sin los
+ * errores de los decimales flotantes. El monto lleva hasta 4 decimales y la
+ * tasa hasta 6.
+ */
+function aBolivares(x: number, tasa: number): number {
+  const p = BigInt(Math.round(x * 1e4)) * BigInt(Math.round(tasa * 1e6)) // en 1e-10 Bs
+  const centimos = (p + (p >= 0n ? 50_000_000n : -50_000_000n)) / 100_000_000n
+  return Number(centimos) / 100
+}
+
+/**
+ * Los bolívares de hoy: cada moneda a su tasa BCV, redondeada por separado y
+ * luego sumada, como `helios_bolivares` en la base (Bs de una cuota = monto ×
+ * tasa de su moneda + cargo por atraso × tasa del dólar). Así la cifra es la
+ * misma que cotiza el bot al leer el comprobante, al céntimo. Null si falta
+ * alguna tasa que haga falta.
  */
 export function bolivaresDeHoy(r: ResumenDelPaciente, s: PorMoneda): number | null {
   let bs = 0
   for (const [m, x] of s) {
     const tasa = tasaDe(r, m)
     if (tasa === null) return null
-    bs += x * tasa
+    bs += aBolivares(x, tasa)
   }
-  return bs
+  return Math.round(bs * 100) / 100
 }
 
 /** «del dólar», «del euro», «del dólar y del euro». */
@@ -163,21 +177,36 @@ export function fechaLarga(fecha: string): string {
   return `${d}/${m}/${y}`
 }
 
+/** Todo lo que le queda por pagar, para quien quiera pagarlo de una vez. */
+type Todo = { cuotas: number; s: PorMoneda }
+
 /**
  * El bloque de pago (el mismo que `helios_payment_block` en la base): los
  * bolívares de hoy y que otro día será la tasa de ese día, las cuentas,
  * «envíanos la foto del comprobante» y la frase de los niveles.
+ *
+ * Con `todo` (2026-10-21, Javier): también los bolívares de hoy de todo lo
+ * que le queda, para que quien quiera pagarlo de una vez copie la cifra
+ * exacta en vez de multiplicar la de una cuota (que puede errar en un
+ * céntimo, y entonces el lector no reconoce el pago).
  */
-export function bloqueDePago(r: ResumenDelPaciente, s: PorMoneda): string {
+export function bloqueDePago(r: ResumenDelPaciente, s: PorMoneda, todo: Todo | null = null): string {
   const bs = bolivaresDeHoy(r, s)
+  const bsTodo = todo ? bolivaresDeHoy(r, todo.s) : null
   const monto =
     bs !== null
       ? `💵 *Monto en bolívares hoy: ${bolivares(bs)}*\n` +
         `Es el equivalente a ${enSusMonedas(s)} a la tasa BCV ${deLasMonedas(s)} de hoy. ` +
         'Si pagas otro día, paga el equivalente a la tasa BCV de ese día.'
       : `💵 *Monto en bolívares*\nPagas el equivalente a ${enSusMonedas(s)} a la tasa BCV ${deLasMonedas(s)} del día en que pagues.`
+  const deUnaVez =
+    todo && bsTodo !== null
+      ? `💰 *Para pagar todo de una vez hoy: ${bolivares(bsTodo)}*\n` +
+        `Son tus ${todo.cuotas} cuotas pendientes (${enSusMonedas(todo.s)}).`
+      : null
   return [
     monto,
+    ...(deUnaVez ? [deUnaVez] : []),
     r.datos_de_pago ?? r.cuentas_de_cobro,
     '📸 Cuando pagues, envíanos la foto del comprobante por este chat.',
     FRASE_NIVEL,
@@ -313,7 +342,13 @@ export function mensajePagar(r: ResumenDelPaciente): string {
       `Consulta con ${medicoRefDe(f)} (orden #${f.orden})`
   }
 
-  return [cabeza, ...(r.pago_en_revision ? [PAGO_EN_REVISION] : []), bloqueDePago(r, total)].join('\n\n')
+  // Todo lo que le queda, si es más de lo que toca. No con un pago en
+  // revisión: sus cuotas no entran en lo que el bot reconoce al leer el
+  // siguiente comprobante.
+  const pendientes = r.financiamientos.flatMap((f) => f.cuotas.map((c) => ({ f, c })))
+  const todo = pendientes.length > aPagar.length && !r.pago_en_revision ? { cuotas: pendientes.length, s: porMoneda(pendientes) } : null
+
+  return [cabeza, ...(r.pago_en_revision ? [PAGO_EN_REVISION] : []), bloqueDePago(r, total, todo)].join('\n\n')
 }
 
 /** «1.ª cuota». */

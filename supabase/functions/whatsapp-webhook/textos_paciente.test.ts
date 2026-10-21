@@ -9,6 +9,7 @@ import {
   FRASE_NIVEL,
   MAXIMO_CON_BOTONES,
   MENU_PACIENTE,
+  bolivaresDeHoy,
   cuotasAPagar,
   diaLargo,
   fechaLarga,
@@ -100,7 +101,50 @@ comprueba(
   'dice que otro día es la tasa de ese día',
   pagar,
 )
-comprueba(pagar.split('Bs ').length === 2, 'los bolívares salen una sola vez', pagar)
+// La cuota y, como le quedan dos, el total de todo: los dos en el bloque de
+// pago, antes de las cuentas (2026-10-21).
+comprueba(
+  pagar.split('Bs ').length === 3 && pagar.lastIndexOf('Bs ') < pagar.indexOf('🏦 *Pago Móvil*'),
+  'los bolívares, solo en el bloque de pago',
+  pagar,
+)
+// 113,92 × 184,52 = 21.020,5184
+comprueba(
+  pagar.includes('💰 *Para pagar todo de una vez hoy: Bs 21.020,52*\nSon tus 2 cuotas pendientes ($113,92).'),
+  'el total de todo lo pendiente, para pagarlo de una vez',
+  pagar,
+)
+comprueba(
+  pagar.indexOf('Monto en bolívares hoy') < pagar.indexOf('Para pagar todo') &&
+    pagar.indexOf('Para pagar todo') < pagar.indexOf('🏦 *Pago Móvil*'),
+  'el total va después de la cuota y antes de las cuentas',
+  pagar,
+)
+comprueba(
+  !mensajePagar({ ...base, pago_en_revision: true }).includes('Para pagar todo'),
+  'con un pago en revisión, sin el total de todo',
+)
+comprueba(
+  !mensajePagar({ ...base, financiamientos: [{ ...base.financiamientos[0], cuotas: [base.financiamientos[0].cuotas[0]] }] }).includes(
+    'Para pagar todo',
+  ),
+  'con una sola cuota pendiente, sin el total de todo',
+)
+
+// El céntimo: a esta tasa, una cuota da Bs 10.252,88 y el doble 20.505,76,
+// pero las dos cuotas juntas son 20.505,77 (lo que cotiza la base).
+const tasaRara = mensajePagar({ ...base, tasa_bcv: 180.001462 })
+comprueba(
+  tasaRara.includes('Monto en bolívares hoy: Bs 10.252,88*') && tasaRara.includes('hoy: Bs 20.505,77*'),
+  'el total se redondea entero, no la cuota por dos',
+  tasaRara,
+)
+// $1 × 100,004 = 100,00 y €1 × 110,004 = 110,00: 210,00 (juntos serían 210,01).
+const mixto = bolivaresDeHoy({ ...base, tasa_bcv: 100.004, tasa_bcv_eur: 110.004 }, new Map([['USD', 1], ['EUR', 1]]))
+comprueba(mixto === 210, 'cada moneda se redondea por separado, como la base', String(mixto))
+// 1,005 × 1: en flotante sale 1,00; la base dice 1,01.
+const medio = bolivaresDeHoy({ ...base, tasa_bcv: 1 }, new Map([['USD', 1.005]]))
+comprueba(medio === 1.01, 'el medio céntimo se redondea hacia arriba, en exacto', String(medio))
 comprueba(
   pagar.indexOf('Monto en bolívares') < pagar.indexOf('🏦 *Pago Móvil*') &&
     pagar.indexOf('🏦 *Pago Móvil*') < pagar.indexOf('📸 Cuando pagues') &&
