@@ -4,11 +4,13 @@
  *   npx tsx supabase/functions/whatsapp-inbox/logica.test.ts
  */
 import {
+  anotarChats,
   errorDelInbox,
   leerPeticion,
   pagina,
   peticionAlInbox,
   rutaRelativa,
+  waIdDelChat,
 } from './logica.ts'
 
 let fallos = 0
@@ -51,6 +53,7 @@ comprueba(
     tipo: 'chats',
     busqueda: 'ana',
     sinLeer: true,
+    quien: null,
     limite: 100,
     desde: 0,
   }),
@@ -62,10 +65,20 @@ comprueba(
     tipo: 'chats',
     busqueda: null,
     sinLeer: false,
+    quien: null,
     limite: 30,
     desde: 0,
   }),
   'chats: valores por defecto',
+)
+comprueba(
+  (leerPeticion('GET', u('/chats?quien=medicos'), null) as { quien?: unknown })
+    .quien === 'medicos',
+  'chats: solo médicos',
+)
+comprueba(
+  'error' in leerPeticion('GET', u('/chats?quien=todos'), null),
+  'chats: un filtro desconocido, no',
 )
 comprueba(
   igual(
@@ -189,11 +202,24 @@ comprueba(
     tipo: 'chats',
     busqueda: 'ana',
     sinLeer: true,
+    quien: null,
     limite: 30,
     desde: 60,
   }).url ===
     'https://helios.inbox.getchat.360dialog.io/api/v1/chats/?limit=30&offset=60&search=ana&unread=true',
   'chats',
+)
+comprueba(
+  peticionAlInbox(BASE, {
+    tipo: 'chats',
+    busqueda: null,
+    sinLeer: false,
+    quien: 'pacientes',
+    limite: 30,
+    desde: 0,
+  }).url ===
+    'https://helios.inbox.getchat.360dialog.io/api/v1/chats/?limit=100&offset=0',
+  'chats filtrados: páginas enteras',
 )
 comprueba(
   peticionAlInbox(BASE, {
@@ -261,10 +287,59 @@ comprueba(
   igual(pagina({ count: 2, next: 'https://x', results: [1, 2] }), {
     count: 2,
     results: [1, 2],
+    siguiente: null,
   }),
   'página sin next',
 )
-comprueba(igual(pagina(null), { count: 0, results: [] }), 'página vacía')
+comprueba(
+  igual(pagina(null), { count: 0, results: [], siguiente: null }),
+  'página vacía',
+)
+comprueba(
+  pagina({ count: 250, results: [1, 2, 3] }, 100).siguiente === 103,
+  'página con más detrás: siguiente',
+)
+
+console.log('Médicos y pacientes')
+const lista = [
+  { contact: { wa_id: '584141111111' } },
+  { contact: { wa_id: '584142222222' } },
+  { wa_id: '584143333333' },
+  { contact: {} },
+]
+const quienes = {
+  '584141111111': { tipo: 'medico', nombre: 'Dra. Ana' },
+  '584142222222': { tipo: 'paciente', nombre: 'Luis' },
+}
+comprueba(
+  waIdDelChat(lista[2]) === '584143333333' && waIdDelChat(lista[3]) === null,
+  'el wa_id, del contacto o del chat',
+)
+const todos = anotarChats(lista, quienes, null)
+comprueba(
+  todos.length === 4 &&
+    (todos[0].helios as { tipo: string }).tipo === 'medico' &&
+    todos[2].helios === null,
+  'sin filtro: todos, con su etiqueta',
+)
+comprueba(
+  igual(
+    anotarChats(lista, quienes, 'medicos').map(waIdDelChat),
+    ['584141111111'],
+  ),
+  'solo médicos',
+)
+comprueba(
+  igual(
+    anotarChats(lista, quienes, 'pacientes').map(waIdDelChat),
+    ['584142222222'],
+  ),
+  'solo pacientes',
+)
+comprueba(
+  anotarChats(lista, null, null).every((c) => c.helios === null),
+  'si la base no contestó, sin etiquetas',
+)
 
 console.log(fallos === 0 ? '\nTodo bien.' : `\n${fallos} fallo(s).`)
 if (fallos > 0) process.exit(1)

@@ -27,10 +27,13 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
 import {
+  PAGINAS_POR_FILTRO,
+  anotarChats,
   errorDelInbox,
   leerPeticion,
   pagina,
   peticionAlInbox,
+  waIdDelChat,
 } from './logica.ts'
 import type { CodigoDeError, Peticion } from './logica.ts'
 
@@ -113,6 +116,79 @@ async function alInbox(
   return { status: respuesta.status, cuerpo, respuesta }
 }
 
+type Base = ReturnType<typeof createClient>
+
+/** El error del Inbox como se le cuenta al panel, con su `reason` si trae. */
+function falloDelInbox(
+  r: Awaited<ReturnType<typeof alInbox>>,
+  error: { status: number; error: CodigoDeError },
+  tipo: Peticion['tipo'],
+): Response {
+  const razon = (r.cuerpo as { reason?: unknown } | null)?.reason
+  if (error.error === 'inbox_no_responde')
+    console.error('whatsapp-inbox:', tipo, r.status, r.cuerpo)
+  return fallo(
+    error.status,
+    error.error,
+    typeof razon === 'string' ? razon : undefined,
+  )
+}
+
+/**
+ * La lista de chats, cada uno con lo que la base sabe de él (`helios`:
+ * médico, paciente o `null`). Si se filtra por médicos o pacientes, recorre
+ * páginas del Inbox hasta llenar la del panel o hasta `PAGINAS_POR_FILTRO`;
+ * `siguiente` dice desde dónde seguir.
+ */
+async function listarChats(
+  db: Base,
+  base: string,
+  token: string,
+  p: Extract<Peticion, { tipo: 'chats' }>,
+): Promise<Response> {
+  const filas: Record<string, unknown>[] = []
+  let desde = p.desde
+  let count = 0
+  let siguiente: number | null = null
+
+  for (let i = 0; i < (p.quien ? PAGINAS_POR_FILTRO : 1); i++) {
+    let r: Awaited<ReturnType<typeof alInbox>>
+    try {
+      r = await alInbox(base, token, { ...p, desde })
+    } catch (e) {
+      console.error('whatsapp-inbox: el Inbox no respondió', p.tipo, e)
+      return fallo(504, 'inbox_no_responde')
+    }
+    const error = errorDelInbox(r.status)
+    if (error) return falloDelInbox(r, error, p.tipo)
+
+    const pag = pagina(r.cuerpo, desde)
+    count = pag.count
+    const ids = pag.results
+      .map(waIdDelChat)
+      .filter((id): id is string => id !== null)
+    let quienes: unknown = {}
+    if (ids.length > 0) {
+      const { data, error: errorDeLaBase } = await db.rpc(
+        'admin_whatsapp_inbox_contacts',
+        { p_wa_ids: ids },
+      )
+      // Sin filtro, un fallo de la base solo deja los chats sin etiqueta.
+      if (errorDeLaBase && p.quien) return fallo(502, 'base_no_responde')
+      if (errorDeLaBase)
+        console.error('whatsapp-inbox: quién es cada chat', errorDeLaBase)
+      quienes = data
+    }
+    filas.push(...anotarChats(pag.results, quienes, p.quien))
+
+    siguiente = pag.siguiente
+    if (siguiente === null || filas.length >= p.limite) break
+    desde = siguiente
+  }
+
+  return json(200, { count, results: filas, siguiente })
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
 
@@ -175,6 +251,8 @@ Deno.serve(async (req) => {
       )
   }
 
+  if (p.tipo === 'chats') return listarChats(db, base, token, p)
+
   let r: Awaited<ReturnType<typeof alInbox>>
   try {
     r = await alInbox(base, token, p)
@@ -186,19 +264,9 @@ Deno.serve(async (req) => {
   const error = errorDelInbox(r.status, p.tipo === 'estado')
   if (p.tipo === 'estado')
     return json(200, { configurado: true, conectado: error === null })
-  if (error) {
-    const razon = (r.cuerpo as { reason?: unknown } | null)?.reason
-    if (error.error === 'inbox_no_responde')
-      console.error('whatsapp-inbox:', p.tipo, r.status, r.cuerpo)
-    return fallo(
-      error.status,
-      error.error,
-      typeof razon === 'string' ? razon : undefined,
-    )
-  }
+  if (error) return falloDelInbox(r, error, p.tipo)
 
   switch (p.tipo) {
-    case 'chats':
     case 'mensajes':
       return json(200, pagina(r.cuerpo))
     case 'enviar': {

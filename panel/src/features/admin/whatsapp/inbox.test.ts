@@ -7,6 +7,7 @@ import {
   leerChat,
   leerMensaje,
   leerPagina,
+  rotuloDeQuien,
   ventanaAbierta,
   vistaPrevia,
 } from './inbox'
@@ -169,6 +170,45 @@ check(
 
 const pagina = leerPagina({ count: 41, results: [entrante] }, leerMensaje)
 check(pagina.total === 41 && pagina.filas.length === 1, 'una página')
+check(pagina.siguiente === null, 'sin siguiente, no hay más')
+check(
+  leerPagina({ count: 900, results: [], siguiente: 500 }, leerChat)
+    .siguiente === 500,
+  'una página filtrada vacía con más detrás',
+)
+
+const medico = leerChat({
+  contact: { wa_id: '584141111111' },
+  helios: {
+    tipo: 'medico',
+    nombre: 'Nadia Khabbaze',
+    rol: 'gerente',
+    merchant_id: 'm1',
+    clinica: 'Clínica Andi',
+  },
+})
+check(
+  medico.quien?.tipo === 'medico' &&
+    medico.quien.clinica === 'Clínica Andi' &&
+    rotuloDeQuien(medico.quien) === 'Médico',
+  'un médico',
+)
+const secretaria = leerChat({ helios: { tipo: 'medico', rol: 'cajero' } })
+check(
+  secretaria.quien !== null && rotuloDeQuien(secretaria.quien) === 'Secretaria',
+  'su secretaria',
+)
+const paciente = leerChat({
+  helios: { tipo: 'paciente', nombre: 'Luis', profile_id: 'p1' },
+})
+check(
+  paciente.quien?.tipo === 'paciente' && paciente.quien.profileId === 'p1',
+  'un paciente',
+)
+check(
+  chat.quien === null && leerChat({ helios: { tipo: 'otro' } }).quien === null,
+  'sin saber quién es',
+)
 
 console.log(failures === 0 ? '\nTodo bien.' : `\n${failures} fallo(s).`)
 if (failures > 0) process.exit(1)

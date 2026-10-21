@@ -30,6 +30,8 @@ export type Peticion =
       tipo: 'chats'
       busqueda: string | null
       sinLeer: boolean
+      /** Solo los de médicos o solo los de pacientes; `null`, todos. */
+      quien: Quien | null
       limite: number
       desde: number
     }
@@ -43,6 +45,9 @@ export type Peticion =
   | { tipo: 'enviar'; waId: string; texto: string }
   | { tipo: 'resolver'; waId: string; resuelto: boolean }
   | { tipo: 'adjunto'; id: string; mime: string | null }
+
+/** De qué lado es un chat, según la base (`admin_whatsapp_inbox_contacts`). */
+export type Quien = 'medicos' | 'pacientes'
 
 export type PeticionInvalida = {
   error: 'ruta_desconocida' | 'peticion_invalida'
@@ -114,10 +119,14 @@ export function leerPeticion(
 
   if (metodo === 'GET' && ruta === 'chats' && !param) {
     const busqueda = (q.get('q') ?? '').trim().slice(0, 100)
+    const quien = q.get('quien') || null
+    if (quien !== null && quien !== 'medicos' && quien !== 'pacientes')
+      return invalida('quien')
     return {
       tipo: 'chats',
       busqueda: busqueda === '' ? null : busqueda,
       sinLeer: si(q.get('sin_leer')),
+      quien,
       limite: entero(q.get('limite'), LIMITE_POR_DEFECTO, 1, LIMITE_MAXIMO),
       desde: entero(q.get('desde'), 0, 0, 1_000_000),
     }
@@ -177,8 +186,10 @@ export function peticionAlInbox(base: string, p: Peticion): PeticionAlInbox {
     case 'estado':
       return { metodo: 'GET', url: `${raiz}/api/v1/users/current/` }
     case 'chats': {
+      // Filtrando, se le piden páginas enteras al Inbox: la mayoría de las
+      // filas se descarta aquí.
       const q = new URLSearchParams({
-        limit: String(p.limite),
+        limit: String(p.quien ? LIMITE_MAXIMO : p.limite),
         offset: String(p.desde),
       })
       if (p.busqueda) q.set('search', p.busqueda)
@@ -258,12 +269,59 @@ export function errorDelInbox(
 
 /**
  * Una página del Inbox sin `next`/`previous`: son URLs con la dirección del
- * Inbox, que al panel no le hacen falta (pagina con `desde`).
+ * Inbox, que al panel no le hacen falta. En su lugar, `siguiente`: el `desde`
+ * de la próxima página, o `null` si no hay más. `desde` es el de esta.
  */
-export function pagina(crudo: unknown): { count: number; results: unknown[] } {
+export function pagina(
+  crudo: unknown,
+  desde = 0,
+): { count: number; results: unknown[]; siguiente: number | null } {
   const c = (crudo ?? {}) as Record<string, unknown>
+  const count = typeof c.count === 'number' ? c.count : 0
+  const results = Array.isArray(c.results) ? c.results : []
+  const vistos = desde + results.length
   return {
-    count: typeof c.count === 'number' ? c.count : 0,
-    results: Array.isArray(c.results) ? c.results : [],
+    count,
+    results,
+    siguiente: results.length > 0 && vistos < count ? vistos : null,
   }
 }
+
+/** El wa_id de un chat del Inbox, o `null`. */
+export function waIdDelChat(chat: unknown): string | null {
+  const c = (chat ?? {}) as Record<string, unknown>
+  const contacto = (c.contact ?? {}) as Record<string, unknown>
+  const id = contacto.wa_id ?? c.wa_id
+  return waIdValido(id) ? id : null
+}
+
+/**
+ * Cada chat con lo que la base sabe de él en `helios` (`null` si no es ni
+ * médico ni paciente) y, si se filtra, solo los de ese lado. `quienes` es lo
+ * que devuelve `admin_whatsapp_inbox_contacts`: {wa_id: {tipo, …}}.
+ */
+export function anotarChats(
+  chats: unknown[],
+  quienes: unknown,
+  filtro: Quien | null,
+): Record<string, unknown>[] {
+  const q = (quienes ?? {}) as Record<string, unknown>
+  const tipo = filtro === 'medicos' ? 'medico' : 'paciente'
+  return chats
+    .map((chat) => {
+      const id = waIdDelChat(chat)
+      const helios = (id !== null && q[id]) || null
+      return { ...(chat as Record<string, unknown>), helios }
+    })
+    .filter(
+      (chat) =>
+        filtro === null ||
+        (chat.helios as { tipo?: unknown } | null)?.tipo === tipo,
+    )
+}
+
+/**
+ * Cuántas páginas del Inbox (de `LIMITE_MAXIMO`) se recorren, como mucho, en
+ * una petición filtrada. Si no se llenó, el panel pide la siguiente tanda.
+ */
+export const PAGINAS_POR_FILTRO = 5

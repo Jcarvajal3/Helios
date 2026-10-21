@@ -3,6 +3,7 @@ import { useInfiniteQuery } from '@tanstack/react-query'
 import { MessageCircle } from 'lucide-react'
 
 import {
+  Badge,
   Button,
   NoSePudoLeer,
   SearchInput,
@@ -11,31 +12,40 @@ import {
   formatPhone,
 } from '@/components/ui'
 import { consultaChats } from '@/features/admin/whatsapp/api'
-import { nombreDelChat, vistaPrevia } from '@/features/admin/whatsapp/inbox'
-import type { Chat } from '@/features/admin/whatsapp/inbox'
+import {
+  nombreDelChat,
+  rotuloDeQuien,
+  vistaPrevia,
+} from '@/features/admin/whatsapp/inbox'
+import type { Chat, FiltroDeQuien } from '@/features/admin/whatsapp/inbox'
 import { horaCorta } from './horas'
 
 /**
  * La columna de la izquierda: los chats del número de Helios, del último
- * mensaje al primero, con buscador y «Sin leer». Se refresca sola cada 15 s.
+ * mensaje al primero, con buscador, «Sin leer» y el filtro de médicos o
+ * pacientes (cada chat lleva su pastilla). Se refresca sola cada 15 s.
  */
 export function ListaDeChats({
   q,
   sinLeer,
+  quien,
   abierto,
   onBuscar,
   onSinLeer,
+  onQuien,
   onAbrir,
 }: {
   q: string
   sinLeer: boolean
+  quien: FiltroDeQuien | null
   abierto: string | null
   onBuscar: (q: string) => void
   onSinLeer: (sinLeer: boolean) => void
+  onQuien: (quien: FiltroDeQuien | null) => void
   onAbrir: (waId: string) => void
 }) {
   const consulta = useInfiniteQuery(
-    consultaChats({ q: q.trim() || null, sinLeer }),
+    consultaChats({ q: q.trim() || null, sinLeer, quien }),
   )
   const chats = consulta.data?.pages.flatMap((p) => p.filas) ?? []
 
@@ -58,22 +68,34 @@ export function ListaDeChats({
         onChange={setTexto}
         placeholder="Nombre, teléfono o etiqueta"
       />
-      <Segmented
-        etiqueta="Qué chats"
-        options={[
-          { value: 'todos', label: 'Todos' },
-          { value: 'sin-leer', label: 'Sin leer' },
-        ]}
-        value={sinLeer ? 'sin-leer' : 'todos'}
-        onChange={(v) => onSinLeer(v === 'sin-leer')}
-      />
+      <div className="flex flex-wrap gap-2">
+        <Segmented
+          etiqueta="De quién"
+          options={[
+            { value: 'todos', label: 'Todos' },
+            { value: 'pacientes', label: 'Pacientes' },
+            { value: 'medicos', label: 'Médicos' },
+          ]}
+          value={quien ?? 'todos'}
+          onChange={(v) => onQuien(v === 'todos' ? null : v)}
+        />
+        <Segmented
+          etiqueta="Qué chats"
+          options={[
+            { value: 'todos', label: 'Todos' },
+            { value: 'sin-leer', label: 'Sin leer' },
+          ]}
+          value={sinLeer ? 'sin-leer' : 'todos'}
+          onChange={(v) => onSinLeer(v === 'sin-leer')}
+        />
+      </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         {consulta.isError ? (
           <NoSePudoLeer onReintentar={() => void consulta.refetch()} />
         ) : consulta.isPending ? (
           <SkeletonList />
-        ) : chats.length === 0 ? (
+        ) : chats.length === 0 && !consulta.hasNextPage ? (
           <div className="flex flex-col items-center gap-2 py-10 text-center text-panel-muted">
             <MessageCircle size={32} aria-hidden />
             <p className="type-panel-body">
@@ -81,7 +103,11 @@ export function ListaDeChats({
                 ? 'Ningún chat coincide con la búsqueda.'
                 : sinLeer
                   ? 'Nada sin leer.'
-                  : 'Aún no hay conversaciones.'}
+                  : quien === 'medicos'
+                    ? 'Ningún chat de médicos.'
+                    : quien === 'pacientes'
+                      ? 'Ningún chat de pacientes.'
+                      : 'Aún no hay conversaciones.'}
             </p>
           </div>
         ) : (
@@ -145,6 +171,14 @@ function FilaDeChat({
           >
             {nombreDelChat(chat, formatPhone)}
           </span>
+          {chat.quien && (
+            <Badge
+              tone={chat.quien.tipo === 'medico' ? 'brand' : 'neutral'}
+              className="h-5 px-2"
+            >
+              {rotuloDeQuien(chat.quien)}
+            </Badge>
+          )}
           <span className="ml-auto shrink-0 type-panel-caption tabular-nums text-panel-muted">
             {horaCorta(chat.ultimo?.hora ?? null)}
           </span>

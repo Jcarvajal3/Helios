@@ -5,11 +5,15 @@ import { MessageCircle, PlugZap } from 'lucide-react'
 import { Callout } from '@/components/kit/Callout'
 import { Card, EmptyState, NoSePudoLeer, SkeletonCard } from '@/components/ui'
 import {
-  CLAVE_WHATSAPP,
+  claveDeChats,
   consultaChat,
   consultaEstadoDelInbox,
 } from '@/features/admin/whatsapp/api'
-import type { Chat, Pagina } from '@/features/admin/whatsapp/inbox'
+import type {
+  Chat,
+  FiltroDeQuien,
+  Pagina,
+} from '@/features/admin/whatsapp/inbox'
 import { Conversacion } from './Conversacion'
 import { ListaDeChats } from './ListaDeChats'
 
@@ -18,22 +22,25 @@ import { ListaDeChats } from './ListaDeChats'
  * contestadas desde el Inbox de 360dialog sin salir del superadmin.
  *
  * Dos columnas en pantalla ancha (lista y chat); en una estrecha, una u otra
- * según haya un chat abierto. El chat abierto, la búsqueda y «Sin leer»
- * viven en la URL: se puede mandar el enlace de un chat a un compañero.
+ * según haya un chat abierto. El chat abierto, la búsqueda, «Sin leer» y
+ * el filtro de médicos o pacientes viven en la URL: se puede mandar el enlace de un chat a un compañero.
  */
 export function InboxDeWhatsApp({
   chat,
   q,
   sinLeer,
+  quien,
   onCambiar,
 }: {
   chat: string | null
   q: string
   sinLeer: boolean
+  quien: FiltroDeQuien | null
   onCambiar: (cambio: {
     chat?: string | null
     q?: string
     sinLeer?: boolean
+    quien?: FiltroDeQuien | null
   }) => void
 }) {
   const estado = useQuery(consultaEstadoDelInbox())
@@ -61,9 +68,11 @@ export function InboxDeWhatsApp({
           <ListaDeChats
             q={q}
             sinLeer={sinLeer}
+            quien={quien}
             abierto={chat}
             onBuscar={(v) => onCambiar({ q: v })}
             onSinLeer={(v) => onCambiar({ sinLeer: v })}
+            onQuien={(v) => onCambiar({ quien: v })}
             onAbrir={(waId) => onCambiar({ chat: waId })}
           />
         </div>
@@ -75,6 +84,7 @@ export function InboxDeWhatsApp({
               waId={chat}
               q={q}
               sinLeer={sinLeer}
+              quien={quien}
               onVolver={() => onCambiar({ chat: null })}
             />
           ) : (
@@ -99,20 +109,19 @@ function ChatAbierto({
   waId,
   q,
   sinLeer,
+  quien,
   onVolver,
 }: {
   waId: string
   q: string
   sinLeer: boolean
+  quien: FiltroDeQuien | null
   onVolver: () => void
 }) {
   const qc = useQueryClient()
-  const lista = qc.getQueryData<InfiniteData<Pagina<Chat>>>([
-    ...CLAVE_WHATSAPP,
-    'chats',
-    q.trim() || null,
-    sinLeer,
-  ])
+  const lista = qc.getQueryData<InfiniteData<Pagina<Chat>>>(
+    claveDeChats({ q: q.trim() || null, sinLeer, quien }),
+  )
   const deLaLista =
     lista?.pages.flatMap((p) => p.filas).find((c) => c.waId === waId) ?? null
   const suelto = useQuery({

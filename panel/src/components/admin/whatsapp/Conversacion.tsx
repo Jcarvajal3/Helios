@@ -37,7 +37,11 @@ import {
   marcarResuelto,
   textoDelFallo,
 } from '@/features/admin/whatsapp/api'
-import { nombreDelChat, ventanaAbierta } from '@/features/admin/whatsapp/inbox'
+import {
+  nombreDelChat,
+  rotuloDeQuien,
+  ventanaAbierta,
+} from '@/features/admin/whatsapp/inbox'
 import type { Adjunto, Chat, Mensaje } from '@/features/admin/whatsapp/inbox'
 import { diaDe, hora, rotuloDelDia } from './horas'
 
@@ -91,15 +95,7 @@ export function Conversacion({
             {chat.telefono && (
               <span className="tabular-nums">{formatPhone(chat.telefono)}</span>
             )}
-            {chat.telefono && (
-              <Link
-                to="/admin/pacientes"
-                search={{ q: chat.telefono }}
-                className="underline-offset-2 hover:underline"
-              >
-                Buscar en pacientes
-              </Link>
-            )}
+            <QuienEnLaCabecera chat={chat} />
           </p>
         </div>
         {chat.etiquetas.map((e) => (
@@ -128,6 +124,60 @@ export function Conversacion({
         ventanaHasta={chat.ventanaHasta}
       />
     </div>
+  )
+}
+
+const ENLACE = 'underline-offset-2 hover:underline'
+
+/**
+ * Quién es para Helios, con el enlace a su ficha: el paciente, o el médico
+ * (o su secretaria) y su clínica. Si la base no lo conoce, buscarlo por el
+ * teléfono en pacientes.
+ */
+function QuienEnLaCabecera({ chat }: { chat: Chat }) {
+  const q = chat.quien
+  if (q?.tipo === 'paciente') {
+    const texto = `Paciente${q.nombre ? ` · ${q.nombre}` : ''}`
+    return q.profileId ? (
+      <Link
+        to="/admin/pacientes/$id"
+        params={{ id: q.profileId }}
+        className={ENLACE}
+      >
+        {texto}
+      </Link>
+    ) : (
+      <span>{texto}</span>
+    )
+  }
+  if (q?.tipo === 'medico') {
+    return (
+      <>
+        <span>
+          {rotuloDeQuien(q)}
+          {q.nombre ? ` · ${q.nombre}` : ''}
+        </span>
+        {q.merchantId && q.clinica && (
+          <Link
+            to="/admin/clinicas/$id"
+            params={{ id: q.merchantId }}
+            className={ENLACE}
+          >
+            {q.clinica}
+          </Link>
+        )}
+      </>
+    )
+  }
+  if (!chat.telefono) return null
+  return (
+    <Link
+      to="/admin/pacientes"
+      search={{ q: chat.telefono }}
+      className={ENLACE}
+    >
+      Buscar en pacientes
+    </Link>
   )
 }
 

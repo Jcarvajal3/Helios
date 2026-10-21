@@ -32,6 +32,52 @@ export type Chat = {
   ventanaHasta: number | null
   ultimo: Mensaje | null
   etiquetas: string[]
+  /** Quién es para Helios, si la base lo sabe (`admin_whatsapp_inbox_contacts`). */
+  quien: QuienEs | null
+}
+
+/**
+ * Un médico (o su secretaria): un número registrado para el bot. Un paciente:
+ * un perfil con ese teléfono. Si es las dos cosas, gana médico, como en el bot.
+ */
+export type QuienEs =
+  | {
+      tipo: 'medico'
+      nombre: string | null
+      /** `cajero` es la secretaria; `gerente`, el administrador (el médico). */
+      rol: string | null
+      merchantId: string | null
+      clinica: string | null
+    }
+  | { tipo: 'paciente'; nombre: string | null; profileId: string | null }
+
+/** El filtro de la lista: solo los chats de un lado. */
+export type FiltroDeQuien = 'medicos' | 'pacientes'
+
+export function leerQuien(v: unknown): QuienEs | null {
+  const q = filaONula(v)
+  if (!q) return null
+  if (q.tipo === 'medico')
+    return {
+      tipo: 'medico',
+      nombre: textoONulo(q.nombre),
+      rol: textoONulo(q.rol),
+      merchantId: textoONulo(q.merchant_id),
+      clinica: textoONulo(q.clinica),
+    }
+  if (q.tipo === 'paciente')
+    return {
+      tipo: 'paciente',
+      nombre: textoONulo(q.nombre),
+      profileId: textoONulo(q.profile_id),
+    }
+  return null
+}
+
+/** La pastilla del chat: «Médico», «Secretaria» o «Paciente». */
+export function rotuloDeQuien(q: QuienEs): string {
+  if (q.tipo === 'paciente') return 'Paciente'
+  return q.rol === 'cajero' ? 'Secretaria' : 'Médico'
 }
 
 export type Adjunto = {
@@ -213,11 +259,16 @@ export function leerChat(v: unknown): Chat {
     etiquetas: comoLista(c.tags)
       .map((t) => textoONulo(comoFila(t).name))
       .filter((t): t is string => t !== null),
+    quien: leerQuien(c.helios),
   }
 }
 
-/** Una página del Inbox, como la deja la Edge Function. */
-export type Pagina<T> = { total: number; filas: T[] }
+/**
+ * Una página del Inbox, como la deja la Edge Function. `siguiente` es el
+ * `desde` de la próxima, o `null` si no hay más: con un filtro de médicos o
+ * pacientes, `total` cuenta todos los chats y no sirve para paginar.
+ */
+export type Pagina<T> = { total: number; filas: T[]; siguiente: number | null }
 
 export function leerPagina<T>(
   v: unknown,
@@ -227,6 +278,7 @@ export function leerPagina<T>(
   return {
     total: numeroONulo(p.count) ?? 0,
     filas: comoLista(p.results).map(leer),
+    siguiente: numeroONulo(p.siguiente),
   }
 }
 

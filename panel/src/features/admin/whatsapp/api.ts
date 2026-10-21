@@ -3,7 +3,7 @@ import { infiniteQueryOptions, queryOptions } from '@tanstack/react-query'
 import { SUPABASE_ANON_KEY, SUPABASE_URL, supabase } from '@/lib/supabase'
 import { comoFila, textoONulo } from '@/lib/json'
 import { leerChat, leerMensaje, leerPagina } from './inbox'
-import type { Chat, Mensaje, Pagina } from './inbox'
+import type { Chat, FiltroDeQuien, Mensaje, Pagina } from './inbox'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Las llamadas del inbox de WhatsApp y sus claves de caché.
@@ -153,10 +153,25 @@ export function consultaEstadoDelInbox() {
   })
 }
 
-/** La lista de chats, del más reciente al más viejo, de `POR_PAGINA` en `POR_PAGINA`. */
-export function consultaChats(f: { q: string | null; sinLeer: boolean }) {
+export type FiltroDeChats = {
+  q: string | null
+  sinLeer: boolean
+  quien: FiltroDeQuien | null
+}
+
+/** La clave de la lista: la usa también el chat abierto para buscarse en ella. */
+export function claveDeChats(f: FiltroDeChats) {
+  return [...CLAVE_WHATSAPP, 'chats', f.q, f.sinLeer, f.quien] as const
+}
+
+/**
+ * La lista de chats, del más reciente al más viejo, de `POR_PAGINA` en
+ * `POR_PAGINA`. Filtrada por médicos o pacientes, una página puede traer
+ * menos (o ninguno) y aun así haber más detrás: manda `siguiente`.
+ */
+export function consultaChats(f: FiltroDeChats) {
   return infiniteQueryOptions({
-    queryKey: [...CLAVE_WHATSAPP, 'chats', f.q, f.sinLeer],
+    queryKey: claveDeChats(f),
     queryFn: async ({ pageParam, signal }): Promise<Pagina<Chat>> => {
       const q = new URLSearchParams({
         limite: String(POR_PAGINA),
@@ -164,15 +179,11 @@ export function consultaChats(f: { q: string | null; sinLeer: boolean }) {
       })
       if (f.q) q.set('q', f.q)
       if (f.sinLeer) q.set('sin_leer', '1')
+      if (f.quien) q.set('quien', f.quien)
       return leerPagina(await llamarJson(`chats?${q}`, { signal }), leerChat)
     },
     initialPageParam: 0,
-    getNextPageParam: (ultima, paginas) => {
-      const vistos = paginas.reduce((n, p) => n + p.filas.length, 0)
-      return ultima.filas.length === POR_PAGINA && vistos < ultima.total
-        ? vistos
-        : undefined
-    },
+    getNextPageParam: (ultima) => ultima.siguiente ?? undefined,
     refetchInterval: CADA_15_S,
   })
 }
