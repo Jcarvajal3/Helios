@@ -118,8 +118,15 @@ begin
      or v_row.rendered_text not like '%tu cuota de $56,96 de la consulta con % vence el ' || public.helios_weekday_es(v_d) || ' ' || to_char(v_d, 'DD/MM') || '.%'
      or v_row.rendered_text not like '%envíanos la foto del comprobante por este chat.%'
      or v_row.rendered_text like '%{%'
+     -- La v2 (20261020200000): 10 variables y los botones del bot.
+     or v_row.wa_template ->> 'name' <> 'helios_cuota_en_3_dias_v2'
      or v_row.wa_template -> 'params' ->> 0 <> 'María'
-     or jsonb_array_length(v_row.wa_template -> 'params') <> 7 then
+     or v_row.wa_template -> 'params' ->> 1 <> '$56,96'
+     or jsonb_array_length(v_row.wa_template -> 'params') <> 10
+     or v_row.wa_template -> 'params' ->> 3 <> public.helios_weekday_es(v_d) || ' ' || to_char(v_d, 'DD/MM')
+     or v_row.wa_template -> 'params' ->> 4 not like 'Bs %'
+     or v_row.wa_template -> 'buttons' -> 0 ->> 'id' <> 'paciente:ya_pague'
+     or v_row.wa_template -> 'buttons' -> 1 ->> 'title' <> 'Hablar con alguien' then
     raise exception 'El WhatsApp de tres días antes no está listo para la API: %', to_jsonb(v_row);
   end if;
   select * into v_row from public.outbound_messages

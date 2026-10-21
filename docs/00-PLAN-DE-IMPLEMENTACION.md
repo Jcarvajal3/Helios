@@ -1160,7 +1160,7 @@ Ejemplo: María · la Dra. Nadia Khabbaze · $100 · 12 · $12 · 16 · $1,92 ·
 
 Ejemplo de B2 a B5: María · $56,96 · la Dra. Nadia Khabbaze · lunes 26/10 · Bs 10.624,18 · dólar · BNC (0191) · 0412-1714930 · J-50496786-6 · Quarto Latam, C.A.
 
-**Al aprobarse**, el equipo técnico las conecta (el Pago Móvil de las variables es la primera cuenta de Pago Móvil activa de Ajustes › Cuentas de cobro):
+**Aprobadas por Meta y conectadas el 2026-10-20** (`20261020200000_se_conectan_las_plantillas_v2_del_paciente`). Lo que hace la migración (el Pago Móvil de las variables es la primera cuenta de Pago Móvil activa de Ajustes › Cuentas de cobro):
 
 ```sql
 update public.notification_templates

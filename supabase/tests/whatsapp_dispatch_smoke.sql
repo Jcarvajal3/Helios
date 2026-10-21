@@ -135,10 +135,10 @@ begin
   -- =========================================================================
   update public.business_parameters set value = 1
    where key = 'patient_confirmation_required' and effective_from = v_bdate;
-  -- La plantilla aprobada (20261008000100): 13 variables en el orden del texto.
+  -- La plantilla aprobada: la v2 desde 20261020200000, con 10 variables en el orden del texto.
   if (select wa_template_name from public.notification_templates where key = 'confirmar_financiamiento')
-     is distinct from 'helios_confirmar_pago_en_cuotas' then
-    raise exception 'La pregunta al paciente debía usar la plantilla aprobada helios_confirmar_pago_en_cuotas';
+     is distinct from 'helios_confirmar_pago_en_cuotas_v2' then
+    raise exception 'La pregunta al paciente debía usar la plantilla aprobada helios_confirmar_pago_en_cuotas_v2';
   end if;
   set local role authenticated;
   perform set_config('request.jwt.claims', json_build_object('sub', v_cajero::text, 'role', 'authenticated')::text, true);
@@ -150,23 +150,22 @@ begin
 
   select * into v_row from public.outbound_messages
   where charge_id = v_charge and template_key = 'confirmar_financiamiento';
-  if v_row.wa_template->>'name' <> 'helios_confirmar_pago_en_cuotas'
+  -- La v2 (20261020200000): 10 variables, nombra al médico (aquí, sin
+  -- titular, la clínica) y sin bolívares.
+  if v_row.wa_template->>'name' <> 'helios_confirmar_pago_en_cuotas_v2'
      or v_row.wa_template->>'language' <> 'es'
-     or jsonb_array_length(v_row.wa_template->'params') <> 13
+     or jsonb_array_length(v_row.wa_template->'params') <> 10
      or v_row.wa_template->'params'->>0 <> 'José'
      or v_row.wa_template->'params'->>1 <> 'Clínica Despacho'
      -- Las variables de dinero traen su símbolo (2026-10-07).
      or v_row.wa_template->'params'->>2 <> '$100'
-     or v_row.wa_template->'params'->>3 <> '$100'
-     or v_row.wa_template->'params'->>4 <> '12'
-     or v_row.wa_template->'params'->>5 <> '$12'
-     or v_row.wa_template->'params'->>6 <> '16'
-     or v_row.wa_template->'params'->>7 <> '$1,92'
-     or v_row.wa_template->'params'->>8 <> '$113,92'
-     or coalesce(v_row.wa_template->'params'->>9, '') = ''
-     or v_row.wa_template->'params'->>10 <> '$56,96'
-     or v_row.wa_template->'params'->>11 not like '__/__ y __/__'
-     or v_row.wa_template->'params'->>12 <> 'dólar'
+     or v_row.wa_template->'params'->>3 <> '12'
+     or v_row.wa_template->'params'->>4 <> '$12'
+     or v_row.wa_template->'params'->>5 <> '16'
+     or v_row.wa_template->'params'->>6 <> '$1,92'
+     or v_row.wa_template->'params'->>7 <> '$113,92'
+     or v_row.wa_template->'params'->>8 not like '$56,96 el % __/__ y $56,96 el % __/__'
+     or v_row.wa_template->'params'->>9 <> 'dólar'
      or v_row.wa_template->'buttons'->0->>'id' <> 'confirmar:' || v_charge
      or v_row.wa_template->'buttons'->1->>'id' <> 'rechazar:' || v_charge
      or v_row.wa_template->'buttons'->0->>'title' <> 'Sí' then
@@ -184,9 +183,9 @@ begin
   if v_call.path <> '/messages' or v_call.body->>'type' <> 'template'
      or v_call.body->>'to' <> '584141234567'
      or v_call.body->>'messaging_product' <> 'whatsapp'
-     or v_call.body->'template'->>'name' <> 'helios_confirmar_pago_en_cuotas'
+     or v_call.body->'template'->>'name' <> 'helios_confirmar_pago_en_cuotas_v2'
      or v_call.body->'template'->'language'->>'code' <> 'es'
-     or jsonb_array_length(v_call.body->'template'->'components'->0->'parameters') <> 13
+     or jsonb_array_length(v_call.body->'template'->'components'->0->'parameters') <> 10
      or v_call.body->'template'->'components'->1->>'sub_type' <> 'quick_reply'
      or v_call.body->'template'->'components'->1->'parameters'->0->>'payload' <> 'confirmar:' || v_charge
      or v_call.body->'template'->'components'->2->>'index' <> '1' then
@@ -270,7 +269,7 @@ begin
     raise exception 'La pregunta sin plantilla, fuera de la ventana, va a la cola manual: %', to_jsonb(v_row);
   end if;
   update public.outbound_messages set status = 'cancelado' where id = v_msg;
-  update public.notification_templates set wa_template_name = 'helios_confirmar_pago_en_cuotas'
+  update public.notification_templates set wa_template_name = 'helios_confirmar_pago_en_cuotas_v2'
    where key = 'confirmar_financiamiento';
 
   -- =========================================================================
