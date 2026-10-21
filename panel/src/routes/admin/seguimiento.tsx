@@ -67,7 +67,8 @@ const OPCIONES_VER: Array<{ value: QueSeVe; label: string }> = [
  * que nunca se han llamado, arriba). «Por persona» es todo el personal junto,
  * quien más órdenes registra primero: a quien preguntarle cómo funciona Helios
  * y pedirle su opinión. Las dos abren la misma ficha, donde se llama, se
- * escribe y se anota lo hablado.
+ * escribe y se anota lo hablado. Los datos salen de `admin_followups_board`
+ * (docs/01 §2.8).
  */
 function SeguimientoPage() {
   const navigate = useNavigate({ from: '/admin/seguimiento' })
