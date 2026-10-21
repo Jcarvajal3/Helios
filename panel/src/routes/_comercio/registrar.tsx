@@ -286,12 +286,12 @@ function Registrar({ staff }: { staff: StaffContext }) {
   const titular = esNuevo
     ? `${limpio(`${paciente.firstName} ${paciente.lastName}`)} · ${documentoLegible}`
     : elegibilidad?.estado === 'disponible'
-      ? `${elegibilidad.nombreEnmascarado ?? 'Paciente'} · ${documentoLegible}`
+      ? `${elegibilidad.nombre ?? 'Paciente'} · ${documentoLegible}`
       : documentoLegible
   const correoDestino = esNuevo
     ? correoLimpio(paciente.email)
     : elegibilidad?.estado === 'disponible'
-      ? elegibilidad.emailEnmascarado
+      ? elegibilidad.email
       : null
 
   return (

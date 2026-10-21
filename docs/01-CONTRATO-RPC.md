@@ -69,6 +69,10 @@ clínica (`gerente` o `cajero`).
 { "estado": "disponible",
   "disponible_usd": 212.40,
   "min_charge_usd": 10,
+  "nombre": "José Pérez",             // (2026-10-21) completos: la secretaria
+  "telefono": "0414-1234567",         // se los lee al paciente para confirmar
+  "email": "jose@gmail.com",          // que es él. Null si no los tiene.
+  // Obsoletas: siguen mientras el panel y el bot desplegados las lean.
   "nombre_enmascarado": "J*** P***",
   "telefono_enmascarado": "0414-***-**67",
   "email_enmascarado": "j***@gmail.com" }

@@ -84,9 +84,11 @@ type Datos = {
   usdPorEur?: number | null
   /** La moneda de la orden; null mientras no se elija. */
   moneda?: Moneda | null
-  nombreEnmascarado?: string | null
-  telefonoEnmascarado?: string | null
-  emailEnmascarado?: string | null
+  /** Del paciente conocido, completos desde el 2026-10-21. */
+  nombre?: string | null
+  /** «0414-1234567». */
+  telefono?: string | null
+  email?: string | null
   paciente?: DatosDelPaciente
   monto?: number | null
   concepto?: string | null
@@ -369,11 +371,11 @@ export async function atenderAlPersonal({
         disponible: Number(e.disponible_usd ?? 0),
         usdPorEur,
         moneda: null,
-        nombreEnmascarado: (e.nombre_enmascarado as string) ?? null,
-        telefonoEnmascarado: (e.telefono_enmascarado as string) ?? null,
-        emailEnmascarado: (e.email_enmascarado as string) ?? null,
+        nombre: (e.nombre as string) ?? null,
+        telefono: (e.telefono as string) ?? null,
+        email: (e.email as string) ?? null,
       },
-      `Paciente: ${e.nombre_enmascarado ?? cedula} · ${e.telefono_enmascarado ?? ''}\n\n`,
+      `Paciente: ${e.nombre ?? cedula} · ${e.telefono ?? ''}\n\n`,
     )
   }
 
@@ -531,7 +533,7 @@ export async function atenderAlPersonal({
 
     const f = r.data.charge as Record<string, unknown>
     const conf = (f.confirmation ?? {}) as Record<string, unknown>
-    const quien = d.nuevo ? `${d.paciente?.first_name ?? 'el paciente'}` : (d.nombreEnmascarado ?? 'el paciente')
+    const quien = d.nuevo ? `${d.paciente?.first_name ?? 'el paciente'}` : (d.nombre ?? 'el paciente')
     if (f.status === 'pending') {
       await enviar(
         `Listo. Orden #${f.order_number} enviada. Le escribimos a ${quien}` +
@@ -640,7 +642,11 @@ export async function atenderAlPersonal({
           `Correo: *${pac.email}*  ← ahí le llega el comprobante`,
           `Dirección: ${[pac.address, pac.city, pac.state].filter(Boolean).join(', ')}`,
         ].join('\n')
-      : `*${d.nombreEnmascarado ?? d.cedula}* · ${d.cedula}\nTeléfono: ${d.telefonoEnmascarado ?? ''}  ← ahí le preguntamos si acepta`
+      : [
+          `*${d.nombre ?? d.cedula}* · ${d.cedula}`,
+          `Teléfono: ${d.telefono ?? ''}  ← ahí le preguntamos si acepta`,
+          ...(d.email ? [`Correo: *${d.email}*  ← ahí le llega el comprobante`] : []),
+        ].join('\n')
 
     await guardar('resumen', d)
     await enviar(

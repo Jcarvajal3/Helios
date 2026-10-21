@@ -5,7 +5,8 @@
 --
 -- Cubre `helios_patient_eligibility` (20261003000400) y la tabla
 -- `eligibility_lookups` (20261003000100):
---   1. Formatos de cédula y enmascarado (nombre, teléfono, correo).
+--   1. Formatos de cédula y los datos del paciente conocido (completos
+--      desde el 2026-10-21, más los enmascarados de antes).
 --   2. «No disponible» nunca dice por qué: la misma forma y el mismo texto
 --      para lista negra, expulsado, suspendido, bloqueado, moroso y cupo
 --      agotado; sin WhatsApp configurado, el texto de reserva.
@@ -84,7 +85,7 @@ begin
   perform pg_temp.prueba_cobro(v_x, v_m, v_br, v_cajero, 145, 'el-sin-cupo');
 
   -- =========================================================================
-  -- 1. Formatos y enmascarado
+  -- 1. Formatos y datos del paciente
   -- =========================================================================
   set local role authenticated;
   perform set_config('request.jwt.claims', json_build_object('sub', v_cajero::text, 'role', 'authenticated')::text, true);
@@ -96,14 +97,16 @@ begin
     end if;
   end loop;
   if (v_j->>'disponible_usd')::numeric <> 150 or (v_j->>'min_charge_usd')::numeric <> 10
+     or v_j->>'nombre' <> 'José Pérez'
+     or v_j->>'telefono' <> '0414-1234567'
+     or v_j->>'email' <> 'jose@gmail.com'
      or v_j->>'nombre_enmascarado' <> 'J*** P***'
      or v_j->>'telefono_enmascarado' <> '0414-***-**67'
      or v_j->>'email_enmascarado' <> 'j***@gmail.com' then
-    raise exception 'Enmascarado inesperado: %', v_j;
+    raise exception 'Datos del paciente inesperados: %', v_j;
   end if;
-  -- Nada que no sea enmascarado: ni el nombre, ni el teléfono, ni el id.
-  if v_j::text like '%José%' or v_j::text like '%Pérez%' or v_j::text like '%1234567%'
-     or v_j::text like '%jose@%' or v_j ? 'id' or v_j ? 'user_id' or v_j ? 'level' then
+  -- Sus datos de contacto sí (2026-10-21); nada más de él: ni el id ni el nivel.
+  if v_j ? 'id' or v_j ? 'user_id' or v_j ? 'level' or v_j ? 'document_number' then
     raise exception 'La elegibilidad filtra datos del paciente: %', v_j;
   end if;
 
@@ -123,7 +126,7 @@ begin
       raise exception '«%» debía ser una cédula inválida: %', v_doc, v_err;
     end if;
   end loop;
-  raise notice 'TEST 1 OK — formatos de cédula y enmascarado';
+  raise notice 'TEST 1 OK — formatos de cédula y datos del paciente';
 
   -- =========================================================================
   -- 2. «No disponible» nunca dice por qué

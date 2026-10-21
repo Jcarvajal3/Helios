@@ -66,7 +66,7 @@ export function PasoMonto({
   atrasLabel,
   onSeguir,
 }: {
-  /** Quién paga, para tenerlo delante: nombre tecleado o enmascarado, y cédula. */
+  /** Quién paga, para tenerlo delante: nombre tecleado o el que ya tiene Helios, y cédula. */
   titular: string
   moneda: Moneda
   monto: string

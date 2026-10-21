@@ -75,7 +75,7 @@ export function PasoConfirmar({
   concepto: string | null
   beneficiario: string | null
   titular: string
-  /** El correo tecleado (nuevo) o el enmascarado que ya tiene Helios (conocido). */
+  /** El correo tecleado (nuevo) o el que ya tiene Helios (conocido). */
   correoDestino: string | null
   esNuevo: boolean
   /** La orden espera el Sí del paciente por WhatsApp. */

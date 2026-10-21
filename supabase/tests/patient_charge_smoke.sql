@@ -290,8 +290,8 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub', v_gerente::text, 'role', 'authenticated')::text, true);
   v_j := public.helios_patient_eligibility(v_m, 'V12345678');
   if v_j->>'estado' <> 'disponible' or (v_j->>'disponible_usd')::numeric <> 50
-     or v_j->>'nombre_enmascarado' <> 'J*** P***' or v_j->>'telefono_enmascarado' <> '0414-***-**67'
-     or v_j->>'email_enmascarado' <> 'j***@gmail.com' then
+     or v_j->>'nombre' <> 'José Pérez' or v_j->>'telefono' <> '0414-1234567'
+     or v_j->>'email' <> 'jose@gmail.com' then
     raise exception 'Elegibilidad del conocido inesperada: %', v_j;
   end if;
   v_j := public.preview_patient_charge(v_m, 'V12345678', 60);

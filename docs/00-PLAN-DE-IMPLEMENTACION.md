@@ -84,7 +84,7 @@ El resto del documento conserva "financiamiento" como término interno del dise�
 | Pago y reporte del paciente | **Por WhatsApp al equipo Helios**, que registra el pago en el superadmin | Javier, 2026-09-30 |
 | Comisión de la secretaria | **Se suma a la liquidación de la clínica**, y la clínica se la entrega a su personal | Javier, 2026-09-30 |
 | Antifraude | **Solo alertas automáticas.** Los topes por clínica, la retención de liquidaciones y el expediente con fotos se evaluarán después (§14) | Javier, 2026-09-30 |
-| Privacidad entre clínicas | Una clínica que busca una cédula solo ve el nombre enmascarado y "disponible $X" o "no disponible", nunca la deuda ni el motivo | Javier, 2026-09-30 |
+| Privacidad entre clínicas | Una clínica que busca una cédula ve ~~el nombre enmascarado~~ el nombre, el teléfono y el correo completos (2026-10-21) y "disponible $X" o "no disponible", nunca la deuda ni el motivo | Javier, 2026-09-30 / 2026-10-21 |
 | Avisos | **5 momentos** por vencimiento (§7.2), no los 12 de Ronda | Javier, 2026-09-30 |
 | Comisión de servicio | ~~20% + IVA~~ (2026-09-30). **12% + IVA** al paciente, 0% a la clínica | Javier, 2026-10-06 |
 | Liquidación a la clínica | ~~Igual que Ronda: 50% al vencer cada cuota, pagado los lunes~~ (2026-09-30). **50% a los 8 días y 50% a los 15** (el día siguiente a cada vencimiento), a diario, cobre Helios o no | Javier, 2026-10-06 |
@@ -160,7 +160,7 @@ sequenceDiagram
 
 1. **Cédula** (V/E + número). La RPC `helios_patient_eligibility` responde una de tres cosas, **sin revelar la deuda ni el motivo**:
    - **Paciente nuevo**: pide todos los datos.
-   - **Paciente conocido**: muestra el nombre y el teléfono enmascarados ("J\*\*\* P\*\*\*", "0414-\*\*\*-\*\*67") para confirmarlos, y el **disponible para financiar: $X**.
+   - **Paciente conocido**: muestra su nombre, su teléfono y su correo **completos** (desde el 2026-10-21; antes, enmascarados) para confirmarlos, y el **disponible para financiar: $X**.
    - **No disponible**: "No podemos financiar a esta persona. Si tiene dudas, que escriba a Helios al …". Cubre mora, lista negra, bloqueo, mantenimiento y cupo agotado.
 2. **Datos del paciente**, todos obligatorios salvo que se indique:
    - Identidad: nombres, apellidos, fecha de nacimiento (calcula la edad y **exige ≥ 18**: si quien se atiende es menor, se registra a su **representante** como titular de la deuda; D-H5) y sexo.
@@ -184,7 +184,7 @@ sequenceDiagram
 El mismo flujo, conversado. El detalle técnico está en §15.
 
 1. El médico escribe al WhatsApp de Helios desde **su número registrado**. El bot le ofrece botones (sin PIN desde el 2026-10-13): **Nuevo financiamiento**, **Mis financiamientos**, **Ayuda**.
-2. **Cédula** → la misma respuesta que en el panel (nuevo / disponible $X con nombre enmascarado / no disponible, sin motivo).
+2. **Cédula** → la misma respuesta que en el panel (nuevo / disponible $X con su nombre y su teléfono / no disponible, sin motivo).
 3. **Paciente conocido**: pide monto y concepto ("$80, Limpieza Dental"). **Paciente nuevo**: pide **todos los datos en un solo mensaje** (el bot le manda el formulario en un mensaje aparte para copiarlo; valen también solo las respuestas, una por línea y en orden). El bot **pregunta solo lo que falte** y nunca inventa un dato.
 4. **Resumen**: datos del paciente (con el **correo bien visible**, porque ahí llega el comprobante), monto de la consulta, línea "Servicio Helios 20 % + IVA" y las 2 cuotas con fechas. Botones **Confirmar** / **Corregir**.
 5. **Confirmar** → orden pendiente → WhatsApp al paciente. El bot avisa "Esperando la respuesta de José (vence a las 16:40)".
@@ -457,7 +457,7 @@ Orden, todo en una sola transacción:
 12. `audit`. Las alertas de H10 se calculan al vuelo; no hace falta dispararlas aquí.
 
 Complementos:
-- **`helios_patient_eligibility(cédula, merchant_id)`**: devuelve `{estado: nuevo|disponible|no_disponible, disponible_usd?, nombre_enmascarado?, telefono_enmascarado?}`. **Privacidad entre clínicas (decidido):**
+- **`helios_patient_eligibility(cédula, merchant_id)`**: devuelve `{estado: nuevo|disponible|no_disponible, disponible_usd?, nombre?, telefono?, email?}` (completos desde el 2026-10-21). **Privacidad entre clínicas (decidido):**
   - Nunca devuelve deuda, cuotas, mora, clínicas anteriores ni el motivo de "no disponible".
   - Límite de consultas por usuario y día (`eligibility_lookups_per_staff_day` = 60) para que una clínica no pueda **enumerar la base de pacientes** de Helios. Pasado el límite, responde "inténtalo mañana" y crea la alerta `consultas_de_cedula_excesivas`.
   - Cada consulta queda registrada en `eligibility_lookups` (quién, cuándo, qué cédula y qué respondió).
@@ -763,7 +763,7 @@ Estimación para una persona con asistencia de IA, en semanas de trabajo efectiv
 | D-H1 | ¿Fee del 20% + IVA al paciente y 0% a la clínica? | **Sí** → sustituida el 2026-10-06: **12% + IVA** (§0.1) |
 | D-H2 | ¿La clínica cobra como un local de Ronda (50% + 50% al vencer cada cuota, los lunes, cobre Helios o no)? | **Sí, por ahora** → sustituida el 2026-10-06: **a los 8 y 15 días**, a diario (§0.1) |
 | D-H3 | ¿Se retiene la liquidación hasta tener la constancia firmada? | **No por ahora.** No hay constancia firmada: se envía un comprobante por correo. Ver §14 |
-| D-H6 | ¿Qué ve la clínica de un paciente conocido? | Solo el nombre enmascarado y "disponible $X" o "no disponible" (§5) |
+| D-H6 | ¿Qué ve la clínica de un paciente conocido? | ~~Solo el nombre enmascarado~~ Su nombre, su teléfono y su correo completos (2026-10-21) y "disponible $X" o "no disponible" (§5) |
 | D-H8 | ¿Cuentas de cobro de Helios y titular? | **Configurables** en Ajustes (`payment_destinations`, varias activas); se llenan después |
 | D-H9 | ¿WhatsApp de Helios? | **Configurable** en Ajustes › Contacto (`platform_contact`) |
 | D-H4 | ¿Catálogo o monto libre? | **Monto libre**, sin catálogo (2026-09-30) |

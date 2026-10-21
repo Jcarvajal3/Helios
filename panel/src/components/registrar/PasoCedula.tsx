@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { MessageCircle, Search, UserCheck, UserPlus } from 'lucide-react'
 
 import { Callout, Card, DataLabel, ErrorBox, Tecla, formatUsd, whatsappNumber } from '@/components/ui'
-import { cedulaLegible, problemaDeCedula } from '@/features/merchant/paciente'
+import { cedulaLegible, problemaDeCedula, telefonoLegible } from '@/features/merchant/paciente'
 import type { Nacionalidad } from '@/features/merchant/paciente'
 import { codigoDeError } from '@/features/merchant/registro'
 import type { Elegibilidad } from '@/features/merchant/registro'
@@ -22,8 +22,8 @@ const NACIONALIDADES: Array<{ value: Nacionalidad; label: string }> = [
  *
  *   nuevo          Helios no lo conoce: se piden todos sus datos.
  *   disponible     lo conoce y puede pagar en cuotas hasta $X. Se le leen al
- *                  paciente su nombre, su teléfono y su correo enmascarados
- *                  para confirmar que es él.
+ *                  paciente su nombre, su teléfono y su correo (completos
+ *                  desde el 2026-10-21) para confirmar que es él.
  *   no_disponible  no puede pagar en cuotas. NUNCA se dice por qué: mora,
  *                  lista negra o cupo agotado se ven igual desde la clínica.
  *
@@ -177,9 +177,12 @@ export function PasoCedula({
           </div>
 
           <dl className="grid gap-3 sm:grid-cols-3">
-            <DatoEnmascarado rotulo="Nombre" valor={elegibilidad.nombreEnmascarado} />
-            <DatoEnmascarado rotulo="Teléfono" valor={elegibilidad.telefonoEnmascarado} />
-            <DatoEnmascarado rotulo="Correo" valor={elegibilidad.emailEnmascarado} />
+            <DatoDelPaciente rotulo="Nombre" valor={elegibilidad.nombre} />
+            <DatoDelPaciente
+              rotulo="Teléfono"
+              valor={elegibilidad.telefono && telefonoLegible(elegibilidad.telefono)}
+            />
+            <DatoDelPaciente rotulo="Correo" valor={elegibilidad.email} />
           </dl>
 
           <div className="rounded-panel-card bg-panel-raised p-4">
@@ -215,7 +218,7 @@ export function PasoCedula({
   )
 }
 
-function DatoEnmascarado({ rotulo, valor }: { rotulo: string; valor: string | null }) {
+function DatoDelPaciente({ rotulo, valor }: { rotulo: string; valor: string | null }) {
   return (
     <div className="rounded-panel-card border border-panel-hairline px-4 py-3">
       <dt>

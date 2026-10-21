@@ -41,9 +41,11 @@ export type Elegibilidad =
       estado: 'disponible'
       disponibleUsd: number
       minChargeUsd: number
-      nombreEnmascarado: string | null
-      telefonoEnmascarado: string | null
-      emailEnmascarado: string | null
+      /** Completos desde el 2026-10-21: la secretaria se los lee al paciente. */
+      nombre: string | null
+      /** «0414-1234567». */
+      telefono: string | null
+      email: string | null
     }
   | { estado: 'no_disponible'; mensaje: string; whatsappHelios: string | null }
 
@@ -80,9 +82,9 @@ export function leerElegibilidad(v: unknown): Elegibilidad {
         estado: 'disponible',
         disponibleUsd: numero(r.disponible_usd),
         minChargeUsd: minimo,
-        nombreEnmascarado: textoONulo(r.nombre_enmascarado),
-        telefonoEnmascarado: textoONulo(r.telefono_enmascarado),
-        emailEnmascarado: textoONulo(r.email_enmascarado),
+        nombre: textoONulo(r.nombre),
+        telefono: textoONulo(r.telefono),
+        email: textoONulo(r.email),
       }
     case 'no_disponible':
       return {

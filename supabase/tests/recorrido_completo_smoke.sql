@@ -20,8 +20,8 @@
 --      Cr merchant_payable 0.50; el libro entero cuadra.
 --   4. Mensajes: comprobante (correo, con el total al paciente, «no es una factura») y
 --      bienvenida (WhatsApp manual). Con Resend SUSTITUIDO dentro de la
---      transacción, el despacho lo envía. Otra clínica consulta la cédula: solo
---      lo enmascarado y disponible 50, nunca la deuda.
+--      transacción, el despacho lo envía. Otra clínica consulta la cédula: sus
+--      datos de contacto y disponible 50, nunca la deuda.
 --   5. Víspera de la cuota 1: cuota_manana con dedupe; dos veces no duplica.
 --   6. Pago de la cuota 1 por el equipo (operador registra, super_admin
 --      concilia contra el extracto importado): cuota pagada, caja / cuentas por
@@ -438,22 +438,25 @@ begin
     raise exception 'PASO 4: la clínica debía ver el comprobante enviado: %', public.helios_charge_for_staff(v_charge)->'receipt';
   end if;
 
-  -- Otra clínica consulta la misma cédula: enmascarado y disponible, nada más.
+  -- Otra clínica consulta la misma cédula: sus datos y disponible, nada más.
   perform pg_temp.como(v_otro, 'aal1');
   v_j := public.helios_patient_eligibility(v_otra, v_doc);
   if v_j->>'estado' is distinct from 'disponible' or (v_j->>'disponible_usd')::numeric is distinct from 50
+     or v_j->>'nombre' is distinct from 'Paula Recorrido'
+     or v_j->>'telefono' is distinct from '0414-1234599'
+     or v_j->>'email' is distinct from 'paula.recorrido@prueba.helios.test'
      or v_j->>'nombre_enmascarado' is distinct from 'P*** R***'
-     or v_j->>'telefono_enmascarado' is distinct from '0414-***-**99'
-     or v_j->>'email_enmascarado' is null or v_j->>'email_enmascarado' like '%paula.recorrido%' then
-    raise exception 'PASO 4: otra clínica debía ver solo lo enmascarado y disponible 50: %', v_j;
+     or v_j->>'telefono_enmascarado' is distinct from '0414-***-**99' then
+    raise exception 'PASO 4: otra clínica debía ver sus datos y disponible 50: %', v_j;
   end if;
   if (select array_agg(k order by k) from jsonb_object_keys(v_j) k)
-       is distinct from array['disponible_usd', 'email_enmascarado', 'estado', 'min_charge_usd', 'nombre_enmascarado', 'telefono_enmascarado']
+       is distinct from array['disponible_usd', 'email', 'email_enmascarado', 'estado', 'min_charge_usd', 'nombre',
+                            'nombre_enmascarado', 'telefono', 'telefono_enmascarado']
      or v_j::text like '%56.96%' or v_j::text like '%113.92%' or v_j::text like '%Clínica Recorrido%' then
     raise exception 'PASO 4: la elegibilidad de otra clínica no puede revelar la deuda: %', v_j;
   end if;
   reset role;
-  raise notice 'PASO 4 OK — comprobante con el total al paciente y «no es una factura», bienvenida, despacho a Resend (doble) enviado, otra clínica ve 50 enmascarado';
+  raise notice 'PASO 4 OK — comprobante con el total al paciente y «no es una factura», bienvenida, despacho a Resend (doble) enviado, otra clínica ve sus datos y 50';
 
   -- =========================================================================
   -- PASO 5 — La víspera de la cuota 1
