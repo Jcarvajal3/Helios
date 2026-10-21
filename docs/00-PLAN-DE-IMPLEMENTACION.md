@@ -503,7 +503,7 @@ Con `patient_confirmation_required = 1`, `create_patient_charge` se parte en dos
 - Tabla `staff_commissions`: `charge_id` (única), `merchant_id`, `staff_user_id`, `amount_usd`, `settlement_id`, `status` (`devengada` | `pagada` | `revertida`).
 - Al confirmar:
   - asiento Dr `commission_expense` / Cr `merchant_payable`;
-  - fila en `settlements` con `reason = 'staff_commission'` y `due_date = business_date`, de modo que se paga **el día siguiente al alta**, aunque las cuotas de esa consulta vayan más tarde;
+  - fila en `settlements` con `reason = 'staff_commission'` y `due_date` = el vencimiento de la primera cuota, de modo que se paga **con la primera mitad de la consulta** (día 8), sumada en la misma transferencia (Javier, 2026-10-21; hasta entonces salía sola el día siguiente al alta);
   - `run_scheduled_settlements_loop` y `admin_merchant_payables` la recogen sin cambios de lógica, solo reconociendo la nueva `reason`.
 - **Reversa** antes de pagarse: el asiento espejo y el settlement se cancelan. Después de pagada, la reversa sigue bloqueada (regla de Ronda) y el ajuste es manual.
 - El **impago del paciente no quita la comisión** (se gana al confirmar). Por ahora, la defensa contra altas falsas son las alertas de H10; las medidas que bloquean se evaluarán después (§14).

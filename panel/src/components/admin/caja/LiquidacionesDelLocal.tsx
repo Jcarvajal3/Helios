@@ -43,7 +43,7 @@ type Grupo = {
  *
  * Desde el 2026-10-06 se paga a diario: cada liquidación, el día siguiente a
  * su vencimiento (la consulta a los días 8 y 15, la comisión de la secretaria
- * el día siguiente a la confirmación). La unidad de trabajo es el día de pago
+ * junto con la primera mitad). La unidad de trabajo es el día de pago
  * (el «cierre» de la base): nadie paga «la cuota de la orden 1187», se paga un
  * día. Cada uno lleva su estado, su total y una casilla que marca el bloque
  * entero; vienen marcados los atrasados y el de hoy, que es lo que hay que
@@ -173,7 +173,7 @@ export function LiquidacionesDelLocal({
   return (
     <Seccion
       titulo="Por día de pago"
-      info="Cada liquidación se paga el día siguiente a su vencimiento (la consulta, a los 8 y a los 15 días; la comisión de la secretaria, el día siguiente a la confirmación). Se paga un día, no una cuota suelta: cada día de pago lleva su estado, su total y una casilla que lo marca entero. Vienen marcados los atrasados y el de hoy."
+      info="Cada liquidación se paga el día siguiente a su vencimiento (la consulta, a los 8 y a los 15 días; la comisión de la secretaria, junto con la primera mitad). Se paga un día, no una cuota suelta: cada día de pago lleva su estado, su total y una casilla que lo marca entero. Vienen marcados los atrasados y el de hoy."
       controles={
         <span className="type-panel-caption text-panel-muted">
           {grupos.length} {grupos.length === 1 ? 'día de pago' : 'días de pago'} · {lineas.length}{' '}

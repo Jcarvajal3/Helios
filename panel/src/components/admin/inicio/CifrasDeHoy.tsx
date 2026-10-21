@@ -88,7 +88,7 @@ function SaleEnElCierre({ hoy }: { hoy: string }) {
           ? 'Sale hoy hacia las clínicas'
           : `Sale el ${diaDelCierre(c.fechaCierre)} hacia las clínicas`
       }
-      info="Lo que hay que transferirles hoy a las clínicas, con lo atrasado de días anteriores, frente a la caja según el libro. Se les paga a diario: cada liquidación, el día siguiente a su vencimiento (la consulta, a los 8 y a los 15 días; la comisión de la secretaria, el día siguiente a la confirmación). «No cubre»: la caja de hoy no alcanza para el pago de hoy."
+      info="Lo que hay que transferirles hoy a las clínicas, con lo atrasado de días anteriores, frente a la caja según el libro. Se les paga a diario: cada liquidación, el día siguiente a su vencimiento (la consulta, a los 8 y a los 15 días; la comisión de la secretaria, junto con la primera mitad). «No cubre»: la caja de hoy no alcanza para el pago de hoy."
       destino={p.destino}
       {...estadoDe(lectura)}
       valor={c ? formatUsd(c.salen) : ''}

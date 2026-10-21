@@ -184,7 +184,7 @@ export const QUE_DECIDE: Record<string, string | undefined> = {
   meta_locales_activos: 'Las clínicas con financiamientos que se quieren tener.',
   min_charge_usd: 'El monto más bajo de una consulta en cuotas, sin la Comisión Helios.',
   staff_commission_usd:
-    'Lo que gana quien registra una orden confirmada. Se le paga a la clínica el día siguiente a la confirmación, en la transferencia de ese día, y ella se la entrega a su personal. Una clínica puede tener la suya en su ficha › Condiciones; lo ya devengado no cambia.',
+    'Lo que gana quien registra una orden confirmada. Se le paga a la clínica junto con la primera mitad de la consulta (día 8 de la orden), en la misma transferencia, y ella se la entrega a su personal. Una clínica puede tener la suya en su ficha › Condiciones; lo ya devengado no cambia.',
   eligibility_lookups_per_staff_day:
     'Cuántas cédulas puede consultar una persona de una clínica en un día. Pasado el límite no puede consultar más hasta mañana y salta la alerta «Demasiadas consultas de cédula»: protege la base de pacientes.',
   payment_four_eyes:

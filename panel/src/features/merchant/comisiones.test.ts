@@ -9,7 +9,6 @@ import {
   diaEnCaracas,
   leerComisiones,
   leerItemsDeComision,
-  diaDePagoDeComision,
   lunesDe,
   rangoPorDefecto,
   semanasDelRango,
@@ -81,26 +80,8 @@ igual(grupos[0].pendingUsd, 0.5, 'por pagar: solo las devengadas')
 igual(grupos[1].pendingUsd, 0, 'una semana ya pagada no tiene nada por pagar')
 
 console.log('\n── día de pago ───────────────────────────────────────────────')
-igual(
-  diaDePagoDeComision({ createdAt: '2026-09-30T15:00:00Z', confirmedAt: null }),
-  '2026-10-01',
-  'se paga el día siguiente (sin cierre de los lunes)',
-)
-igual(
-  diaDePagoDeComision({ createdAt: '2026-10-03T15:00:00Z', confirmedAt: null }),
-  '2026-10-04',
-  'un sábado se paga el domingo: el pago es diario',
-)
-igual(
-  diaDePagoDeComision({ createdAt: '2026-09-22T02:30:00Z', confirmedAt: null }),
-  '2026-09-22',
-  'por el día de Caracas: las 22:30 del 21 se pagan el 22',
-)
-igual(
-  diaDePagoDeComision({ createdAt: '2026-09-21T23:30:00Z', confirmedAt: '2026-09-22T04:10:00Z' }),
-  '2026-09-23',
-  'cuenta la confirmación, no el alta (confirmó pasada la medianoche del 22)',
-)
+igual(leerItemsDeComision([{ pay_date: '2026-10-29' }])[0].payDate, '2026-10-29', 'el día de pago lo dice la base')
+igual(leerItemsDeComision([{}])[0].payDate, null, 'sin día de pago (revertida): null')
 igual(leerItemsDeComision([{ confirmed_at: '2026-09-22T04:10:00Z' }])[0].confirmedAt, '2026-09-22T04:10:00Z', 'lee confirmed_at')
 
 console.log('\n── atajos ────────────────────────────────────────────────────')

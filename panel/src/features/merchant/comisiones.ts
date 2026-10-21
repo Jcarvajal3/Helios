@@ -7,8 +7,8 @@ import { comoFila, comoLista, numero, texto, textoONulo } from '@/lib/json'
 //
 // Por cada pago en cuotas confirmado, quien lo registró gana una comisión
 // ($0,50 por defecto). Se devenga al confirmar y Helios la paga a la clínica
-// el día siguiente a la confirmación, dentro de la misma transferencia que
-// las consultas de ese día; la clínica se la entrega a su personal. No hay
+// junto con la primera mitad de esa consulta (día 8 de la orden), sumada en
+// la misma transferencia; la clínica se la entrega a su personal. No hay
 // cierre semanal: el pago a la clínica es diario.
 //
 //   merchant_commissions(p_from, p_to)                 → una fila por persona
@@ -63,6 +63,12 @@ export type ItemDeComision = {
   payoutId: string | null
   /** El día en que se transfirió a la clínica. */
   paidOn: string | null
+  /**
+   * El día en que Helios se la paga a la clínica: el de la primera mitad de
+   * la consulta (día 8 de la orden, 20261021190000). Lo dice la base; `null`
+   * en una revertida.
+   */
+  payDate: string | null
 }
 
 const ESTADOS: readonly EstadoDeComision[] = ['devengada', 'pagada', 'revertida']
@@ -79,6 +85,7 @@ export function leerItemsDeComision(v: unknown): ItemDeComision[] {
       status: ESTADOS.find((e) => e === r.status) ?? null,
       payoutId: textoONulo(r.payout_id),
       paidOn: textoONulo(r.paid_on),
+      payDate: textoONulo(r.pay_date),
     }))
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 }
@@ -117,26 +124,11 @@ export function totales(rows: ReadonlyArray<ComisionDePersona>): Totales {
   )
 }
 
-// ── Día de pago ───────────────────────────────────────────────────────────
-//
-// La comisión se paga el día siguiente a que el paciente confirma: el
-// settlement nace con `due_date` = el día operativo de la confirmación y la
-// base lo paga en `helios_settlement_run_for(due_date)` = `due_date + 1`.
-
-/**
- * El día en que Helios le paga a la clínica una comisión: el siguiente al de
- * la confirmación, en Caracas. Sin `confirmedAt`, el del alta: el paciente
- * tiene dos horas para responder, así que casi siempre es el mismo día.
- */
-export function diaDePagoDeComision(item: Pick<ItemDeComision, 'createdAt' | 'confirmedAt'>): string {
-  return sumarDias(diaEnCaracas(item.confirmedAt ?? item.createdAt), 1)
-}
-
 // ── Semanas ───────────────────────────────────────────────────────────────
 //
 // Las comisiones se leen por semanas de lunes a domingo, como en el
-// calendario. Es solo una forma de agruparlas: cada una se paga el día
-// siguiente a su confirmación, no al acabar la semana.
+// calendario. Es solo una forma de agruparlas: cada una se paga con la
+// primera mitad de su consulta, no al acabar la semana.
 
 /** El lunes de la semana de `dia` ('YYYY-MM-DD'). */
 export function lunesDe(dia: string): string {

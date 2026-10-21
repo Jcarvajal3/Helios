@@ -345,13 +345,15 @@ Implementado en 20261003000500 y 000600.
 El `gerente` ve todas; el `cajero`, solo su fila.
 
 `merchant_commission_items(p_from date, p_to date, p_staff_user_id uuid default null) → table`:
-`charge_id, order_number, created_at, amount_usd, status ('devengada'|'pagada'|'revertida'), payout_id, paid_on, staff_user_id, staff_name, business_date`.
+`charge_id, order_number, created_at, amount_usd, status ('devengada'|'pagada'|'revertida'), payout_id, paid_on, staff_user_id, staff_name, business_date, confirmed_at, pay_date`.
 
 Implementado en 20261003000500. El rango es el día operativo del
 financiamiento. `merchant_commissions` no cuenta las revertidas; `paid_usd`
 cuenta también lo pagado en transferencias parciales. Una comisión pasa a
 `pagada` cuando su liquidación queda pagada entera. `paid_on` solo viene si
-está `pagada`.
+está `pagada`. `pay_date` (20261021190000) es el día del pago que la lleva:
+la comisión vence con la primera cuota y sale sumada a la primera mitad de la
+consulta (día 8 de la orden); `null` si está revertida.
 
 ---
 

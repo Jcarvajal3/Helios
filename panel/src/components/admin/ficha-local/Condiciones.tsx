@@ -130,7 +130,7 @@ export function Condiciones({
             <span className="type-panel-label text-on-surface-variant">Comisión del personal por orden</span>
             <InfoDot
               title="Comisión del personal por orden"
-              what="Lo que gana quien registra cada orden confirmada en esta clínica. Se le paga a la clínica el día siguiente a la confirmación, en la transferencia de ese día junto con sus consultas, y ella se la entrega a su personal. Vacía, usa el valor global de Ajustes › Parámetros."
+              what="Lo que gana quien registra cada orden confirmada en esta clínica. Se le paga a la clínica junto con la primera mitad de esa consulta (día 8 de la orden), sumada en la misma transferencia, y ella se la entrega a su personal. Vacía, usa el valor global de Ajustes › Parámetros."
             />
           </div>
           <div className="grid grid-cols-2 gap-3">

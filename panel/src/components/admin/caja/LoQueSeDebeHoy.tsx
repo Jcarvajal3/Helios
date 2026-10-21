@@ -110,7 +110,7 @@ export function LoQueSeDebeHoy({
       {prueba > 0 && ` · ${formatUsd(prueba)} en clínicas de prueba, aparte`}{' '}
       <InfoDot
         title="Lo que se debe hoy"
-        what="Lo que se le transfiere a cada clínica: sus consultas enteras (sin la Comisión Helios, que paga el paciente) más las comisiones de su personal. Se paga a diario: cada liquidación, el día siguiente a su vencimiento (la consulta, a los 8 y a los 15 días; la comisión de la secretaria, el día siguiente a la confirmación). El panel no mueve dinero: la transferencia se hace en el banco y aquí se registra."
+        what="Lo que se le transfiere a cada clínica: sus consultas enteras (sin la Comisión Helios, que paga el paciente) más las comisiones de su personal. Se paga a diario: cada liquidación, el día siguiente a su vencimiento (la consulta, a los 8 y a los 15 días; la comisión de la secretaria, junto con la primera mitad). El panel no mueve dinero: la transferencia se hace en el banco y aquí se registra."
       />
     </>
   )

@@ -5,12 +5,12 @@
 --
 -- Cubre 20261003000200…000600:
 --   1. Devengo al registrar: asiento Dr commission_expense / Cr
---      merchant_payable, liquidación `staff_commission` del mismo día y la
---      fila en `staff_commissions`.
+--      merchant_payable, liquidación `staff_commission` que vence con la
+--      primera cuota (20261021190000) y la fila en `staff_commissions`.
 --   2. El monto: el parámetro global vs. el pactado con la clínica, con su
 --      vigencia; 0 = sin comisión; la instantánea no se recalcula.
---   3. Se paga el día siguiente al alta y el cron de las cuotas no le resta la
---      comisión a la mitad de la clínica.
+--   3. Se paga el día 8, en el mismo pago que la primera mitad de la consulta,
+--      y el cron de las cuotas no le resta la comisión a esa mitad.
 --   4. La transferencia: parcial (la comisión sigue devengada) y entera
 --      (pasa a pagada); el reparto consultas / comisiones; lo que ve la
 --      clínica (`merchant_commissions`, `merchant_commission_items`, ventas por
@@ -96,7 +96,7 @@ begin
     raise exception 'La comisión de A no se devengó';
   end if;
   select * into v_row from public.settlements where id = v_set_a;
-  if v_row.reason <> 'staff_commission' or v_row.amount_usd <> 0.50 or v_row.due_date <> v_bdate
+  if v_row.reason <> 'staff_commission' or v_row.amount_usd <> 0.50 or v_row.due_date <> v_bdate + 7
      or v_row.business_date <> v_bdate or v_row.status <> 'pending' or v_row.charge_id <> v_ch_a then
     raise exception 'Liquidación de la comisión inesperada: %', to_jsonb(v_row);
   end if;
@@ -118,7 +118,7 @@ begin
      or (select count(*) from public.settlements where charge_id = v_ch_a and reason = 'staff_commission') <> 1 then
     raise exception 'Devengar dos veces no debía duplicar nada';
   end if;
-  raise notice 'TEST 1 OK — devengo: asiento, liquidación del día y fila de comisión';
+  raise notice 'TEST 1 OK — devengo: asiento, liquidación con la primera cuota y fila de comisión';
 
   -- =========================================================================
   -- 2. Global vs. pactado con la clínica, con vigencia
@@ -215,10 +215,10 @@ begin
   raise notice 'TEST 2 OK — global vs. pactada con vigencia, 0 = sin comisión, instantánea';
 
   -- =========================================================================
-  -- 3. El pago del día siguiente (desde 2026-10-06 ya no hay cierre del lunes)
+  -- 3. El pago del día 8, junto con la primera mitad (20261021190000)
   -- =========================================================================
-  -- 0.50 + 0.75 + 0.30, todas del día: se pagan mañana. El pago que viene es
-  -- el de hoy, que solo recoge lo que venció antes de hoy: ninguna de ellas.
+  -- 0.50 + 0.75 + 0.30 vencen con la primera cuota (día 7) y se pagan el día
+  -- 8. El pago que viene es el de hoy: ninguna de ellas.
   select * into v_row from public.helios_settlement_outlook(v_m);
   if v_row.next_run_date <> v_bdate
      or v_row.accrued_comisiones_usd <> 1.55 or v_row.accrued_consultas_usd <> 0
@@ -226,18 +226,17 @@ begin
      or v_row.upcoming_usd <> 150 then
     raise exception 'Previsión inesperada: %', to_jsonb(v_row);
   end if;
-  if public.helios_settlement_run_for(v_bdate) <> v_bdate + 1 then
-    raise exception 'La comisión debía pagarse el día siguiente al alta, no el %',
-      public.helios_settlement_run_for(v_bdate);
-  end if;
-
   set local role authenticated;
   perform set_config('request.jwt.claims', json_build_object('sub', v_admin::text, 'role', 'authenticated')::text, true);
-  v_j := public.admin_merchant_settlements(v_m, v_bdate + 1);
+  if exists (select 1 from jsonb_array_elements(public.admin_merchant_settlements(v_m, v_bdate + 1)) x
+             where x->>'reason' = 'staff_commission' and (x->>'run_date')::date <= v_bdate + 1) then
+    raise exception 'Las comisiones ya no salen al día siguiente del alta';
+  end if;
+  v_j := public.admin_merchant_settlements(v_m, v_bdate + 8);
   select count(*) into v_n from jsonb_array_elements(v_j) x
-  where x->>'reason' = 'staff_commission' and (x->>'run_date')::date = v_bdate + 1;
+  where x->>'reason' = 'staff_commission' and (x->>'run_date')::date = v_bdate + 8;
   if v_n <> 3 then
-    raise exception 'El pago de mañana debía traer las 3 comisiones: %', v_j;
+    raise exception 'El pago del día 8 debía traer las 3 comisiones: %', v_j;
   end if;
   if jsonb_array_length(public.admin_merchant_settlements(v_m, v_bdate)) <> 0 then
     raise exception 'El pago de hoy no debía traer las comisiones de hoy';
@@ -267,14 +266,15 @@ begin
   end if;
   set local role authenticated;
   perform set_config('request.jwt.claims', json_build_object('sub', v_admin::text, 'role', 'authenticated')::text, true);
+  -- La primera mitad de A y su comisión, en el mismo pago del día 8.
   if (select count(*) from jsonb_array_elements(public.admin_merchant_settlements(v_m, v_bdate + 8)) x
-      where x->>'id' = v_inst_a::text) <> 1
+      where (x->>'run_date')::date = v_bdate + 8 and x->>'id' in (v_inst_a::text, v_set_a::text)) <> 2
      or (select count(*) from jsonb_array_elements(public.admin_merchant_settlements(v_m, v_bdate + 15)) x
          where x->>'reason' = 'scheduled_installment' and (x->>'amount_usd')::numeric = 50) <> 1 then
-    raise exception 'Las mitades de A debían pagarse los días 8 y 15';
+    raise exception 'Las mitades de A debían pagarse los días 8 y 15, y la comisión con la primera';
   end if;
   reset role;
-  raise notice 'TEST 3 OK — la comisión se paga al día siguiente y las mitades no la descuentan';
+  raise notice 'TEST 3 OK — la comisión sale con la primera mitad y las mitades no la descuentan';
 
   -- =========================================================================
   -- 4. Transferencias
@@ -339,6 +339,7 @@ begin
   end if;
   select * into v_row from public.merchant_commission_items(v_bdate, v_bdate) i where i.charge_id = v_ch_a;
   if v_row.status <> 'pagada' or v_row.payout_id is null or v_row.paid_on <> v_bdate
+     or v_row.pay_date <> v_bdate + 8
      or v_row.staff_user_id <> v_ana or v_row.staff_name <> 'Ana Secretaria' or v_row.amount_usd <> 0.50 then
     raise exception 'merchant_commission_items de A: %', to_jsonb(v_row);
   end if;

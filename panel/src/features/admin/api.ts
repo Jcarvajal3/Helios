@@ -456,7 +456,7 @@ export async function fetchMerchants(): Promise<MerchantRow[]> {
  *
  * Desde el 2026-10-06 a la clínica se le paga a diario: cada liquidación, el
  * día siguiente a su vencimiento (la consulta a los días 8 y 15, la comisión
- * de la secretaria el día siguiente a la confirmación). El «cierre» de las RPC
+ * de la secretaria junto con la primera mitad). El «cierre» de las RPC
  * (`next_run_date`, `run_date`) es el pago de un día.
  *
  * `accruedUsd` son filas reales de `settlements`; `upcomingUsd` es la cuota que

@@ -106,7 +106,7 @@ console.log('\n── Los parámetros de Helios (contrato §3) ─────�
     'sin rótulo en la base, el del panel y no la clave',
   )
   comprueba(nombreDelParametro(de('min_charge_usd', '$', null, 'Mínimo')) === 'Mínimo', 'con rótulo en la base, el de la base')
-  comprueba((QUE_DECIDE.staff_commission_usd ?? '').includes('día siguiente a la confirmación'), 'la comisión dice cuándo se paga')
+  comprueba((QUE_DECIDE.staff_commission_usd ?? '').includes('junto con la primera mitad'), 'la comisión dice cuándo se paga')
 }
 
 console.log(fallos === 0 ? '\nTODO BIEN' : `\n${fallos} FALLOS`)

@@ -99,7 +99,7 @@ export function PaginaPagosComercio({
                 {
                   // Se paga a diario: el próximo pago es siempre hoy.
                   label: 'Sale hoy (con lo atrasado)',
-                  info: 'Lo que hay que transferirle hoy: cada liquidación se paga el día siguiente a su vencimiento (la consulta, a los 8 y a los 15 días; la comisión de la secretaria, el día siguiente a la confirmación).',
+                  info: 'Lo que hay que transferirle hoy: cada liquidación se paga el día siguiente a su vencimiento (la consulta, a los 8 y a los 15 días; la comisión de la secretaria, junto con la primera mitad).',
                   value: formatUsd(payable?.nextRunUsd ?? 0),
                   hint: payable?.desglose
                     ? `Consultas ${formatUsd(payable.desglose.consultasUsd)} + Comisiones del personal ${formatUsd(payable.desglose.comisionesUsd)}`

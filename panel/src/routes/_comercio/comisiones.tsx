@@ -32,7 +32,6 @@ import {
   MAXIMO_DE_SEMANAS,
   agruparPorSemana,
   atajosDeComisiones,
-  diaDePagoDeComision,
   rangoPorDefecto,
   semanasDelRango,
   totales,
@@ -171,7 +170,7 @@ function Comisiones({ staff }: { staff: StaffContext }) {
       <p className="mb-6 type-panel-caption leading-5 text-panel-muted">
         {deTodos
           ? 'Helios paga cada comisión a la clínica el día siguiente a que el paciente confirma, junto con las consultas de ese día. La clínica se las entrega a su personal.'
-          : 'Ves solo tus comisiones. Helios le paga cada una a la clínica el día siguiente a que el paciente confirma, y la clínica te las entrega.'}
+          : 'Ves solo tus comisiones. Helios le paga cada una a la clínica junto con la primera mitad de la consulta (8 días después de que el paciente confirma), y la clínica te las entrega.'}
         {canSee(staff.role, 'pagos') && (
           <>
             {' '}
@@ -372,7 +371,7 @@ function PorSemana({
 
 /**
  * Las comisiones de una persona, orden a orden y agrupadas por semana, con
- * el día en que se paga cada una (el siguiente a la confirmación) o en que se
+ * el día en que se paga cada una (el de la primera mitad de su consulta) o en que se
  * pagó. `persona` a null: las de quien mira (la secretaria).
  */
 function DetalleDePersona({
@@ -461,8 +460,8 @@ function DetalleDePersona({
                   <Td className="whitespace-nowrap text-on-surface-variant">
                     {i.paidOn
                       ? formatDay(i.paidOn)
-                      : i.status === 'devengada'
-                        ? formatDay(diaDePagoDeComision(i))
+                      : i.status === 'devengada' && i.payDate
+                        ? formatDay(i.payDate)
                         : '—'}
                   </Td>
                 </Tr>

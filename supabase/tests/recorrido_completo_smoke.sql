@@ -738,15 +738,16 @@ begin
      or (v_j->0->>'comisiones_usd')::numeric is distinct from 0.50 then
     raise exception 'PASO 8: admin_merchant_payables debía decir consultas 100 y comisiones 0.50: %', v_j;
   end if;
-  -- Cada parte se paga el día siguiente a su vencimiento (2026-10-06): la
-  -- comisión el día siguiente al alta y cada mitad el siguiente a su cuota
-  -- (días 8 y 15; aquí las cuotas se movieron en el tiempo para la mora).
+  -- Cada parte se paga el día siguiente a su vencimiento (2026-10-06): cada
+  -- mitad el siguiente a su cuota (días 8 y 15; aquí las cuotas se movieron
+  -- en el tiempo para la mora) y la comisión con la primera, el día 8 de la
+  -- orden (20261021190000).
   v_j := public.admin_merchant_settlements(v_m);
   if jsonb_array_length(v_j) is distinct from 3
      or exists (select 1 from jsonb_array_elements(v_j) x
                 where (x->>'run_date')::date is distinct from (x->>'due_date')::date + 1)
      or (select (x->>'run_date')::date from jsonb_array_elements(v_j) x where x->>'reason' = 'staff_commission')
-          is distinct from v_bdate + 1
+          is distinct from v_bdate + 8
      or (select array_agg((x->>'run_date')::date order by (x->>'run_date')::date) from jsonb_array_elements(v_j) x
           where x->>'reason' = 'scheduled_installment')
           is distinct from (select array_agg(d + 1 order by d) from unnest(array[v_i1.due_date, v_i2.due_date]) d) then

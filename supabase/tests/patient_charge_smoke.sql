@@ -220,12 +220,13 @@ begin
     raise exception 'Las patas de la venta no son 100 / 12 / 1.92';
   end if;
 
-  -- Comisión devengada, liquidación del día y cupo ocupado.
+  -- Comisión devengada, liquidación con la primera cuota (20261021190000) y
+  -- cupo ocupado.
   if not exists (select 1 from public.staff_commissions sc join public.settlements s on s.id = sc.settlement_id
                  where sc.charge_id = v_charge and sc.status = 'devengada' and sc.amount_usd = 0.50
                    and sc.staff_user_id = v_cajero and s.reason = 'staff_commission'
-                   and s.due_date = v_bdate and s.status = 'pending') then
-    raise exception 'La comisión debía quedar devengada con su liquidación de hoy';
+                   and s.due_date = v_bdate + 7 and s.status = 'pending') then
+    raise exception 'La comisión debía quedar devengada con su liquidación en la primera cuota';
   end if;
   if public.helios_credit_used_usd(v_profile) <> 100 then
     raise exception 'El cupo ocupado debía ser 100';

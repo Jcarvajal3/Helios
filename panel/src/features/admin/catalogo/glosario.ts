@@ -353,7 +353,7 @@ export const glosario = [
     sinonimos: ['settlement', 'deuda con la clínica', 'pago a la clínica'],
     destino: { to: '/admin/pagos-clinicas' },
     definicion:
-      'Lo que Helios le debe a una clínica por el financiamiento de sus pacientes: la consulta entera (sin la Comisión Helios, que paga el paciente) más lo que gana su personal. A la clínica se le liquida por la fecha de vencimiento, pague o no el paciente a tiempo, y cada liquidación se transfiere el día siguiente a su vencimiento: cada mitad de la consulta, el día siguiente a su cuota; lo que gana la secretaria, el día siguiente a la confirmación. Puede quedar pagada en parte.',
+      'Lo que Helios le debe a una clínica por el financiamiento de sus pacientes: la consulta entera (sin la Comisión Helios, que paga el paciente) más lo que gana su personal. A la clínica se le liquida por la fecha de vencimiento, pague o no el paciente a tiempo, y cada liquidación se transfiere el día siguiente a su vencimiento: cada mitad de la consulta, el día siguiente a su cuota; lo que gana la secretaria, junto con la primera mitad. Puede quedar pagada en parte.',
   },
   {
     tipo: 'termino',
@@ -364,7 +364,7 @@ export const glosario = [
     sinonimos: ['cierre', 'cierre de caja', 'pago diario', 'pago de hoy', 'cierre del lunes'],
     destino: { to: '/admin/pagos-clinicas' },
     definicion:
-      'El día en que se les transfiere a las clínicas lo que se les debe. Se paga a diario: cada liquidación pertenece a un solo día de pago, el siguiente a su vencimiento (cada mitad de la consulta, el día siguiente a su cuota; lo que gana la secretaria, el día siguiente a la confirmación), y lo que sale hoy incluye lo atrasado de días anteriores. Hasta el 2026-10-06 era el cierre de los lunes.',
+      'El día en que se les transfiere a las clínicas lo que se les debe. Se paga a diario: cada liquidación pertenece a un solo día de pago, el siguiente a su vencimiento (cada mitad de la consulta, el día siguiente a su cuota; lo que gana la secretaria, junto con la primera mitad), y lo que sale hoy incluye lo atrasado de días anteriores. Hasta el 2026-10-06 era el cierre de los lunes.',
   },
   {
     tipo: 'termino',

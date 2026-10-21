@@ -59,7 +59,7 @@ export function UnCierreDeCaja({ run }: { run: SettlementRun }) {
         <SectionTitle>Pago del {formatDay(run.runDate)}</SectionTitle>
         <InfoDot
           title={`Pago del ${formatDay(run.runDate)}`}
-          what="Lo que tocaba transferirles a las clínicas ese día: cada liquidación se paga el día siguiente a su vencimiento (la consulta, a los 8 y a los 15 días; la comisión de la secretaria, el día siguiente a la confirmación). Lo que quede sin transferir sigue contando como atrasado en «Lo que se debe hoy»."
+          what="Lo que tocaba transferirles a las clínicas ese día: cada liquidación se paga el día siguiente a su vencimiento (la consulta, a los 8 y a los 15 días; la comisión de la secretaria, junto con la primera mitad). Lo que quede sin transferir sigue contando como atrasado en «Lo que se debe hoy»."
         />
         {run.isNext ? (
           <Badge tone="neutral">Hoy</Badge>
