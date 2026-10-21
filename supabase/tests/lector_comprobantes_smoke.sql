@@ -281,14 +281,25 @@ begin
   end if;
   perform public.bot_paciente_guardar(v_tel, null, 0, null, null);
 
+  -- Tres fallos del lector (20261021230000: con espera entre intentos y la
+  -- captura guardada aunque falle).
   v_id := (public.bot_comprobante_nuevo('wamid.lec.9', v_tel, v_pac, 'media-9', 'image/jpeg')->>'id')::uuid;
   for v_n in 1..3 loop
-    perform public.lector_tomar(5);
-    perform public.lector_fallo(v_id, 'prueba ' || v_n);
+    if jsonb_array_length(public.lector_tomar(5)) <> 1 then
+      raise exception 'El intento % debía tomar la captura', v_n;
+    end if;
+    perform public.lector_fallo(v_id, 'prueba ' || v_n, 'bot/' || v_pac || '/' || v_id || '.jpg');
+    if v_n = 1 and jsonb_array_length(public.lector_tomar(5)) <> 0 then
+      raise exception 'Una captura que acaba de fallar espera antes de volver a tomarse';
+    end if;
+    update public.payment_receipt_reads set taken_at = now() - interval '3 minutes' where id = v_id;
   end loop;
   select * into v_r from public.payment_receipt_reads where id = v_id;
   if v_r.status <> 'para_el_equipo' or v_r.reason <> 'no_se_pudo_leer' or v_r.attempts <> 3 then
     raise exception 'Tres fallos del lector van al equipo: % % %', v_r.status, v_r.reason, v_r.attempts;
+  end if;
+  if v_r.receipt_path is null then
+    raise exception 'Lo que va al equipo por un fallo del lector lleva su captura';
   end if;
   perform public.bot_paciente_guardar(v_tel, null, 0, null, null);
 

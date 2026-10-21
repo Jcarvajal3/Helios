@@ -12,8 +12,8 @@
 //      `payment-receipts` (bot/<paciente>/<lectura>.<ext>), como prueba;
 //   2. se lo pasa a Claude con un esquema de salida cerrado (logica.ts);
 //   3. le pasa a la base lo leído (`lector_leido`), que es la que decide.
-// Si algo falla, `lector_fallo`: se reintenta hasta tres veces y luego va al
-// equipo.
+// Si algo falla, `lector_fallo`: se reintenta hasta tres veces, con dos
+// minutos de espera entre una y otra, y luego va al equipo con su captura.
 //
 // Es pública (sin JWT): la protege la clave del encabezado `x-helios-clave`,
 // que conocen esta función (LECTOR_CLAVE) y el vault (`lector_clave`).
@@ -124,6 +124,9 @@ async function leer(bytes: Uint8Array, mime: string) {
 }
 
 async function procesar(t: Tomada, cfg: Config): Promise<void> {
+  // La ruta de la captura una vez guardada: va también con un fallo, para
+  // que el equipo la vea.
+  let guardada: string | null = null
   try {
     const bytes = await bajarAdjunto(t.media_id, cfg)
 
@@ -132,6 +135,7 @@ async function procesar(t: Tomada, cfg: Config): Promise<void> {
       .from('payment-receipts')
       .upload(ruta, bytes, { contentType: t.mime, upsert: true })
     if (subida.error) throw new Error(`No se pudo guardar la captura: ${subida.error.message}`)
+    guardada = ruta
 
     const { leido, modelo, consumo } = await leer(bytes, t.mime)
     const r = await rpc<{ status?: string }>('lector_leido', {
@@ -147,7 +151,7 @@ async function procesar(t: Tomada, cfg: Config): Promise<void> {
     const mensaje = err instanceof Error ? err.message : String(err)
     console.error('lector: no se pudo leer', { id: t.id, mensaje })
     try {
-      await rpc('lector_fallo', { p_id: t.id, p_error: mensaje })
+      await rpc('lector_fallo', { p_id: t.id, p_error: mensaje, p_receipt_path: guardada })
     } catch (e) {
       console.error('lector: tampoco se pudo anotar el fallo', e)
     }

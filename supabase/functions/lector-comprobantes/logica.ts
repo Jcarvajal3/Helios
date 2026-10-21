@@ -13,7 +13,7 @@
 export type Comprobante = {
   es_comprobante: boolean
   estado: 'exitosa' | 'rechazada' | 'en_proceso' | 'no_se_ve'
-  metodo: 'pago_movil' | 'transferencia' | 'otro' | null
+  metodo: 'pago_movil' | 'transferencia' | 'otro' | 'no_se_ve'
   banco_origen: string | null
   banco_destino: string | null
   referencia: string | null
@@ -37,7 +37,12 @@ export type DatosLeidos = {
   payer_phone: string | null
 }
 
-const TEXTO_O_NULO = { type: ['string', 'null'] }
+/**
+ * Un texto que puede no verse. Con `anyOf`, como pide la documentación de
+ * structured outputs: la API rechaza mezclar `enum` con `type: [..., 'null']`
+ * (el 400 del primer intento real, 2026-10-21).
+ */
+const TEXTO_O_NULO = { anyOf: [{ type: 'string' }, { type: 'null' }] }
 
 /** El esquema de salida (structured outputs): cerrado y con todo obligatorio. */
 export const ESQUEMA = {
@@ -51,7 +56,8 @@ export const ESQUEMA = {
   properties: {
     es_comprobante: { type: 'boolean' },
     estado: { type: 'string', enum: ['exitosa', 'rechazada', 'en_proceso', 'no_se_ve'] },
-    metodo: { type: ['string', 'null'], enum: ['pago_movil', 'transferencia', 'otro', null] },
+    // Una lista cerrada no lleva null: «no_se_ve» hace de null.
+    metodo: { type: 'string', enum: ['pago_movil', 'transferencia', 'otro', 'no_se_ve'] },
     banco_origen: TEXTO_O_NULO,
     banco_destino: TEXTO_O_NULO,
     referencia: TEXTO_O_NULO,
@@ -75,7 +81,7 @@ export const INSTRUCCIONES = `Lees capturas y PDF de comprobantes de pago de ban
 Reglas:
 - es_comprobante: true solo si la imagen es el comprobante o la confirmación de un pago o una transferencia hecha desde un banco o su app. Una foto de otra cosa, una factura, un chat o una captura de saldo es false (y el resto de campos va en null).
 - estado: "exitosa" si dice que la operación fue exitosa, aprobada o procesada; "rechazada" si dice fallida, rechazada o anulada; "en_proceso" si dice pendiente o en proceso; "no_se_ve" si no lo dice.
-- metodo: "pago_movil" (Pago Móvil, P2P, C2P), "transferencia" (a una cuenta), "otro" si es otra cosa, null si no se sabe.
+- metodo: "pago_movil" (Pago Móvil, P2P, C2P), "transferencia" (a una cuenta), "otro" si es otra cosa, "no_se_ve" si no se sabe.
 - referencia: el número de referencia, confirmación u operación, solo las cifras y completo, tal como sale. Si hay varios números, el que el banco llama referencia. Si está cortado o no se lee entero, null.
 - monto_texto: el monto pagado tal como sale, con sus puntos y comas (por ejemplo "5.442,41" o "Bs. 1.250,00"). No sumes comisiones ni conviertas monedas.
 - fecha: la del pago en formato AAAA-MM-DD; hora: HH:MM en 24 horas. Si el año sale con dos cifras, es 20XX.

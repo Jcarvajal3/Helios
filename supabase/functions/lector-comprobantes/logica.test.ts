@@ -110,6 +110,15 @@ comprueba(
     ESQUEMA.required.every((k) => k in ESQUEMA.properties),
   'todo obligatorio (structured outputs lo exige)',
 )
+// El 400 del primer intento real: `enum` con `type: ['string', 'null']`. Lo
+// nulo va con `anyOf` y ningún `type` es una lista.
+const propiedades = Object.entries(ESQUEMA.properties) as Array<[string, Record<string, unknown>]>
+const malas = propiedades.filter(([, p]) => {
+  const tipos = [p, ...((p.anyOf as Array<Record<string, unknown>> | undefined) ?? [])]
+  return tipos.some((t) => Array.isArray(t.type)) || ('enum' in p && typeof p.type !== 'string')
+})
+comprueba(malas.length === 0, 'sin listas de tipos ni enum con nulo', malas.map(([k]) => k).join(', '))
+comprueba(normalizar({ ...leido, metodo: 'no_se_ve' }).method === null, '«no_se_ve» en el método → null')
 
 console.log('La descarga')
 comprueba(
