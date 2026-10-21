@@ -93,6 +93,23 @@ comprueba(
   'un mensaje sin id ni remitente se ignora',
 )
 
+const conFoto = {
+  messages: [
+    { id: 'wamid.F', from: '58414', type: 'image', image: { id: 'media-9', mime_type: 'image/jpeg', sha256: 'x' } },
+    { id: 'wamid.D', from: '58414', type: 'document', document: { id: 'media-10', mime_type: 'application/pdf', filename: 'pago.pdf' } },
+  ],
+}
+const [foto, pdf] = extraerEventos(conFoto)
+comprueba(
+  foto.kind === 'message' && foto.adjunto?.id === 'media-9' && foto.adjunto.mime === 'image/jpeg',
+  'una foto trae su adjunto',
+)
+comprueba(pdf.kind === 'message' && pdf.adjunto?.mime === 'application/pdf', 'un PDF también')
+comprueba(
+  extraerEventos(onPremise).every((e) => e.kind === 'message' && e.adjunto === null),
+  'un texto no trae adjunto',
+)
+
 console.log('\nLas decisiones')
 comprueba(decisionDelBoton(`confirmar:${ID}`)?.decision === 'si', 'confirmar es sí')
 comprueba(decisionDelBoton(`rechazar:${ID.toUpperCase()}`)?.chargeId === ID, 'el id va en minúsculas')

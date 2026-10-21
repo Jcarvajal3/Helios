@@ -12,7 +12,9 @@
 //                                    → helios_patient_decision
 //   5. Todo lo demás                 → el bot del paciente (paciente.ts); si
 //                                      se calla, lo atiende una persona desde la
-//                                      app WhatsApp Business (coexistencia)
+//                                      app WhatsApp Business (coexistencia).
+//                                      Una captura de pago la lee además
+//                                      `lector-comprobantes` (docs/03)
 //
 // La URL lleva un secreto propio (?token=…, WHATSAPP_WEBHOOK_TOKEN). Sin él,
 // 401. Cada mensaje se guarda primero (helios_whatsapp_inbound) y su wamid es
@@ -37,6 +39,8 @@ import {
   igualSeguro,
 } from './logica.ts'
 import type { EventoDeMensaje } from './logica.ts'
+
+declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void } | undefined
 
 const TOKEN = Deno.env.get('WHATSAPP_WEBHOOK_TOKEN') ?? ''
 
@@ -110,8 +114,18 @@ async function mensaje(m: EventoDeMensaje): Promise<void> {
   }
 
   // 5. El bot del paciente; si se calla, lo atiende una persona desde la app.
-  const res = await atenderAlPaciente({ rpc, mensaje: m })
+  const res = await atenderAlPaciente({ rpc, mensaje: m, despertarAlLector })
   await listo(res ? 'paciente' : 'nadie', res)
+}
+
+/**
+ * Una captura quedó encolada (docs/03): la base despierta a
+ * `lector-comprobantes`. Sin esperar: 360dialog quiere su 200 ya, y si falla,
+ * el cron de cada minuto lo vuelve a intentar.
+ */
+function despertarAlLector(): void {
+  const p = rpc('helios_lector_despertar', {}).catch((err) => console.warn('whatsapp-webhook lector', err))
+  if (typeof EdgeRuntime !== 'undefined') EdgeRuntime.waitUntil(p)
 }
 
 Deno.serve(async (req) => {

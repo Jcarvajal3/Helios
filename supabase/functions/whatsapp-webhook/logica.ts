@@ -23,6 +23,8 @@ export type EventoDeMensaje = {
   texto: string | null
   /** El id del botón que pulsó (de una plantilla o de un mensaje interactivo). */
   boton: string | null
+  /** Una foto o un documento: su id en 360dialog y su tipo (para el lector de comprobantes). */
+  adjunto: { id: string; mime: string } | null
   raw: Record<string, unknown>
 }
 
@@ -82,6 +84,8 @@ export function extraerEventos(body: unknown): Evento[] {
       const interactivo = fila(msg.interactive)
       const respuesta = fila(interactivo?.button_reply) ?? fila(interactivo?.list_reply)
       const boton = fila(msg.button)
+      const media = fila(msg.image) ?? fila(msg.document)
+      const mediaId = texto(media?.id)
 
       eventos.push({
         kind: 'message',
@@ -91,6 +95,7 @@ export function extraerEventos(body: unknown): Evento[] {
         texto:
           texto(fila(msg.text)?.body) ?? texto(respuesta?.title) ?? texto(boton?.text) ?? null,
         boton: texto(respuesta?.id) ?? texto(boton?.payload) ?? null,
+        adjunto: mediaId ? { id: mediaId, mime: texto(media?.mime_type) ?? '' } : null,
         raw: msg,
       })
     }

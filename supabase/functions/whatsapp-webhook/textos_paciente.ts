@@ -17,6 +17,8 @@
 
 import { bolivares, dinero, dineroEn, monedaDe, nombreDeLaMoneda } from './datos.ts'
 import type { Moneda } from './datos.ts'
+import { formularioDePago, nombrarCampos } from './datos_pago.ts'
+import type { Campo } from './datos_pago.ts'
 
 export type Boton = { id: string; title: string }
 
@@ -208,6 +210,49 @@ export function mensajeYaPague(nombre: string | null): string {
     `¡Gracias${hola(nombre)}! Envíanos por aquí la foto del comprobante 📸 y escribe también el número de referencia del pago. ` +
     'Así lo confirmamos más rápido.'
   )
+}
+
+// ─── El lector de comprobantes (docs/03 §6, con el lector activo) ──────────
+
+/** La captura llegó y la lee el bot. */
+export function mensajeComprobanteLeyendo(nombre: string | null): string {
+  return `📄 ¡Gracias${hola(nombre)}! Recibimos tu comprobante.\nLo estamos verificando y te avisamos por aquí 💙`
+}
+
+/** «Ya pagué» con el lector activo: la foto, o los datos escritos. */
+export function mensajeYaPagueConDatos(nombre: string | null): string {
+  return (
+    `¡Gracias${hola(nombre)}! Envíanos por aquí la foto del comprobante 📸\n` +
+    'Si no la tienes, escribe *datos* y te pido los datos del pago.'
+  )
+}
+
+/** El formulario de los datos de un Pago Móvil (banco, teléfono y referencia completa). */
+export function mensajePedirDatosDePago(): string {
+  return (
+    'Escríbeme los datos de tu Pago Móvil ✍️ Copia este mensaje, completa cada línea y envíamelo:\n\n' +
+    formularioDePago()
+  )
+}
+
+/** Lo que falta del formulario. */
+export function mensajeFaltanDatosDePago(campos: Campo[]): string {
+  return `Me falta ${nombrarCampos(campos)}. Escríbelo así:\n\n${formularioDePago(campos)}`
+}
+
+/** Los datos están completos: se espera al banco. */
+export function mensajeDatosDePagoRecibidos(nombre: string | null): string {
+  return `¡Gracias${hola(nombre)}! Con estos datos buscamos tu pago en el banco y te avisamos por aquí en cuanto lo confirmemos 💙`
+}
+
+/** La referencia que pidió el bot llegó. */
+export function mensajeReferenciaRecibida(nombre: string | null): string {
+  return `¡Gracias${hola(nombre)}! Ya lo estamos verificando y te avisamos por aquí 💙`
+}
+
+/** El bot no pudo seguir: lo revisa una persona. */
+export function mensajeLoRevisaElEquipo(nombre: string | null): string {
+  return `Gracias${hola(nombre)}. Alguien de nuestro equipo lo revisa y te escribe por aquí 💙`
 }
 
 export function mensajeAyuda(nombre: string | null): string {

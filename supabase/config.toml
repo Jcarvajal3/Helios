@@ -429,6 +429,12 @@ verify_jwt = false
 [functions.aviso-bnc]
 verify_jwt = false
 
+# El lector de comprobantes (docs/03): lo despierta la base
+# (`helios_lector_despertar`), sin JWT. Lo protege el encabezado
+# x-helios-clave (secreto LECTOR_CLAVE, el mismo que `lector_clave` del vault).
+[functions.lector-comprobantes]
+verify_jwt = false
+
 # El inbox de WhatsApp del superadmin: lo llama el panel con la sesión de
 # quien lo usa. Se comprueba el JWT, y la función comprueba además que es del
 # equipo (`is_platform_admin`, con el segundo factor).
