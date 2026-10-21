@@ -75,6 +75,7 @@ SUITES=(
   pago_masivo_smoke
   registro_pago_masivo_smoke
   bank_sms_smoke
+  lector_comprobantes_smoke
   datos_de_contrato_smoke
   demo_smoke
   mensajes_paciente_smoke
