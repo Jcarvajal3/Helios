@@ -43,6 +43,11 @@ export type ChargeRow = {
   userStatus: string | null
   merchantId: string
   merchantName: string
+  /**
+   * El médico titular con su título; sin titular, la clínica (20261022110000).
+   * Es como el equipo conoce a la clínica. `undefined` si la base no lo manda.
+   */
+  doctorName?: string
   branchName: string
   /** El consumo es de prueba si lo es la persona o el local. */
   isTest: boolean
@@ -86,6 +91,7 @@ export async function fetchCharges(params: {
     userStatus: textoONulo(row.user_status),
     merchantId: texto(row.merchant_id),
     merchantName: texto(row.merchant_name),
+    doctorName: textoONulo(row.doctor_name) ?? texto(row.merchant_name),
     branchName: texto(row.branch_name),
     isTest: booleano(row.is_test),
     installmentsPaid: numero(row.installments_paid),

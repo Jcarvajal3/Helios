@@ -91,10 +91,12 @@ export const COLUMNAS_CONSUMOS: Array<Column<ChargeRow>> = [
   { key: 'telefono', header: 'Teléfono', hidden: true, csv: (c) => c.phone, cell: (c) => formatPhone(c.phone) },
 
   {
+    // El médico titular y no el nombre de la clínica (2026-10-22): es como lo
+    // conoce el equipo. La clínica queda en su columna, escondida.
     key: 'local',
-    header: 'Clínica',
-    sort: (c) => c.merchantName,
-    csv: (c) => c.merchantName,
+    header: 'Médico',
+    sort: (c) => c.doctorName ?? c.merchantName,
+    csv: (c) => c.doctorName ?? c.merchantName,
     cell: (c) => (
       <span className="flex flex-wrap items-center gap-2">
         <Link
@@ -102,11 +104,20 @@ export const COLUMNAS_CONSUMOS: Array<Column<ChargeRow>> = [
           params={{ id: c.merchantId }}
           className={ENLACE_EN_CELDA}
         >
-          {c.merchantName}
+          {c.doctorName ?? c.merchantName}
         </Link>
         {c.isTest && <Badge tone="neutral">Prueba</Badge>}
       </span>
     ),
+  },
+
+  {
+    key: 'clinica',
+    header: 'Clínica',
+    hidden: true,
+    sort: (c) => c.merchantName,
+    csv: (c) => c.merchantName,
+    cell: (c) => c.merchantName,
   },
 
   {
