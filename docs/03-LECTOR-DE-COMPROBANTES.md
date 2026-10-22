@@ -75,13 +75,13 @@ funciona así.
 
 ### 4.1 El bot del paciente (`paciente.ts`)
 
-Hoy, ante una foto o un documento: acuse y **se calla 24 h** para que la vea
+Hoy, ante una foto o un documento: acuse y **se calla 8 h** (24 h hasta el 2026-10-22) para que la vea
 una persona. Pasa a ser:
 
 | Caso | Hoy | Con el lector |
 |---|---|---|
-| Foto/PDF de un paciente identificado con cuotas pendientes | acuse + calla 24 h | encola la lectura, acuse «lo estamos verificando», **no** se calla |
-| Foto/PDF sin paciente, o de un teléfono con varios pacientes sin elegir | acuse + calla 24 h | igual que hoy |
+| Foto/PDF de un paciente identificado con cuotas pendientes | acuse + calla 8 h | encola la lectura, acuse «lo estamos verificando», **no** se calla |
+| Foto/PDF sin paciente, o de un teléfono con varios pacientes sin elegir | acuse + calla 8 h | igual que hoy |
 | Lector apagado o en sombra | — | igual que hoy (en sombra además encola, §7) |
 | Texto con 6 a 12 cifras mientras espera una referencia | lo lee el equipo | completa la lectura (§4.4) |
 | «Ya pagué» | pide la foto y la referencia | pide la foto **o** los datos del pago escritos (§4.5) |
@@ -337,7 +337,7 @@ plazos de confirmación.
 
 1. **Apagado** (al desplegar). Nada cambia.
 2. **Sombra**. Cada foto se lee y se guarda la lectura, pero el bot se porta
-   como hoy (acuse y calla 24 h) y no se crea ningún reporte. Lo que sí
+   como hoy (acuse y calla 8 h) y no se crea ningún reporte. Lo que sí
    cambia: el formulario del equipo llega relleno. Al cabo de unas semanas
    se compara lo leído con lo que registró el equipo (consulta en
    `supabase/poda/`): aciertos por campo, y cuántos se habrían aprobado solos.
@@ -382,7 +382,7 @@ Cada paso es un cambio de parámetro, no un despliegue.
 | | Pregunta | Decisión |
 |---|---|---|
 | **D1** | ¿Se usa un modelo de IA (Anthropic) para leer las capturas, y cuál? | ✅ Sí, **`claude-sonnet-5-5`** (Javier, 2026-10-21) |
-| **D2** | ¿Después de una foto, el bot sigue atendiendo en vez de callarse 24 h? | ✅ Sí cuando el lector está activo. Si el paciente escribe otra cosa, el equipo lo ve como hoy |
+| **D2** | ¿Después de una foto, el bot sigue atendiendo en vez de callarse (8 h desde el 2026-10-22)? | ✅ Sí cuando el lector está activo. Si el paciente escribe otra cosa, el equipo lo ve como hoy |
 | **D3** | ¿El orden de la puesta en marcha (§7) y cuánto dura la sombra? | ✅ Sombra 2 semanas o 50 comprobantes, lo que llegue antes; luego activo. Fijar `allowed_sender` y quién firma (`actor`) antes de pasar el aviso del BNC a activo |
 | **D4** | ¿El «Pago confirmado» vuelve a salir también por WhatsApp? ¿Y el «Registramos tu pago»? | ✅ Confirmado: también por WhatsApp, solo dentro de la ventana de 24 h, además del correo. «Registramos tu pago»: no, el acuse basta |
 | **D5** | Si el monto no corresponde a cuotas completas (abono, redondeo, tasa de otro día) | ✅ Al equipo con el formulario relleno; el bot no registra pagos que no saldan cuotas completas |

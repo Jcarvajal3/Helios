@@ -70,7 +70,7 @@ async function main() {
   {
     const r = await correr(FOTO, contexto())
     comprueba(!r.fns.includes('bot_comprobante_nuevo'), 'no encola nada')
-    comprueba(r.guardados.some((g) => g.p_humano_horas === 24), 'se calla 24 h')
+    comprueba(r.guardados.some((g) => g.p_humano_horas === 8), 'se calla 8 h')
     comprueba(r.textos[0]?.includes('Lo revisamos'), 'el acuse de siempre', r.textos[0])
   }
   {
@@ -88,7 +88,7 @@ async function main() {
       bot_comprobante_nuevo: { ok: true, id: 'l1', mode: 'sombra' },
     })
     comprueba(r.fns.includes('bot_comprobante_nuevo') && r.despertado === 1, 'encola y despierta al lector')
-    comprueba(r.guardados.some((g) => g.p_humano_horas === 24), 'se calla 24 h como siempre')
+    comprueba(r.guardados.some((g) => g.p_humano_horas === 8), 'se calla 8 h como siempre')
     comprueba(r.textos[0]?.includes('Lo revisamos'), 'el acuse de siempre', r.textos[0])
   }
 
@@ -99,14 +99,14 @@ async function main() {
     })
     const encolada = r.llamadas.find((l) => l.fn === 'bot_comprobante_nuevo')?.args
     comprueba(encolada?.p_media_id === 'media-1' && encolada?.p_mime === 'image/jpeg' && encolada?.p_quiet === false, 'encola la captura con su adjunto')
-    comprueba(!r.guardados.some((g) => g.p_humano_horas === 24), 'no se calla')
+    comprueba(!r.guardados.some((g) => g.p_humano_horas === 8), 'no se calla')
     comprueba(r.textos[0]?.includes('Lo estamos verificando'), 'el acuse dice que lo verifica', r.textos[0])
   }
   {
     const r = await correr(FOTO, contexto({ lector: 'activo' }), {
       bot_comprobante_nuevo: { ok: false, motivo: 'tope', mode: 'activo' },
     })
-    comprueba(r.guardados.some((g) => g.p_humano_horas === 24) && r.despertado === 0, 'pasado el tope, como siempre')
+    comprueba(r.guardados.some((g) => g.p_humano_horas === 8) && r.despertado === 0, 'pasado el tope, como siempre')
   }
   {
     const r = await correr(FOTO, contexto({ lector: 'activo', humano: true }), {
@@ -170,7 +170,7 @@ async function main() {
   }
   {
     const r = await correr({ texto: 'no sé' }, contexto({ lector: 'activo', estado: 'datos_pago', borrador: { intentos: 2 } }))
-    comprueba(r.guardados.some((g) => g.p_humano_horas === 24) && r.textos[0]?.includes('Alguien de nuestro equipo'), 'a la tercera, al equipo', r.textos[0])
+    comprueba(r.guardados.some((g) => g.p_humano_horas === 8) && r.textos[0]?.includes('Alguien de nuestro equipo'), 'a la tercera, al equipo', r.textos[0])
   }
   {
     const r = await correr(
@@ -178,7 +178,7 @@ async function main() {
       contexto({ lector: 'activo', estado: 'datos_pago', borrador: {} }),
       { bot_comprobante_datos: { ok: true, id: 'l9', outcome: 'monto_no_cuadra' } },
     )
-    comprueba(r.guardados.some((g) => g.p_humano_horas === 24), 'si la base no puede, lo ve una persona')
+    comprueba(r.guardados.some((g) => g.p_humano_horas === 8), 'si la base no puede, lo ve una persona')
   }
 
   if (fallos > 0) {

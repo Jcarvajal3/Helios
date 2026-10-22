@@ -15,12 +15,13 @@
 //   · Mi saldo y cuotas → lo disponible para su próxima consulta, los pagos
 //     en cuotas activos (cuotas pagadas y pendientes), lo que falta por
 //     pagar y los terminados;
-//   · Hablar con alguien → «alguien te escribe» y se calla 24 h;
+//   · Hablar con alguien → «alguien te escribe» y se calla 8 h (24 h hasta
+//     el 2026-10-22);
 //   · Ya pagué (botón de los recordatorios) → «envíanos la foto»;
 //   · un «sí» o un «no» cuando su orden ya venció → que pida que se la
 //     reenvíen;
-//   · una foto o un documento (un comprobante) → acuse y se calla 24 h;
-//   · alguien sin pagos en cuotas → un acuse y se calla 24 h;
+//   · una foto o un documento (un comprobante) → acuse y se calla 8 h;
+//   · alguien sin pagos en cuotas → un acuse y se calla 8 h;
 //   · un teléfono de varios pacientes → pide la cédula antes de enseñar nada.
 //
 // El lector de comprobantes (docs/03), según su modo (`ctx.lector`):
@@ -88,7 +89,8 @@ type Contexto = {
 /** Lo que devuelven `bot_comprobante_nuevo` y `bot_comprobante_datos`. */
 type Comprobante = { ok: boolean; id?: string | null; mode?: string; motivo?: string | null; outcome?: string | null }
 
-const HORAS_DE_PERSONA = 24
+/** Lo que se calla el bot cuando atiende una persona (24 h hasta el 2026-10-22; Javier: era excesivo). */
+const HORAS_DE_PERSONA = 8
 const ADJUNTOS = new Set(['image', 'document'])
 /** Veces que se piden los datos del pago antes de pasárselo al equipo. */
 const INTENTOS_DE_DATOS = 2

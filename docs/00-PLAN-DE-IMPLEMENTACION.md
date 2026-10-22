@@ -994,9 +994,9 @@ Decidido por Javier el 2026-10-06. Si un paciente le escribe a Helios (y no es s
 - **Cualquier mensaje** → «💙 Gracias por escribirnos, {nombre}…» con tres botones: **Pagar cuota**, **Mis pagos en cuotas** (antes "Ver financiamientos"), **Ayuda**. Como mucho una vez cada **2 h**; si ya lo vio, el bot se calla y lo ve el equipo en la app.
 - **Pagar cuota** → las cuotas vencidas (o, si no hay, la próxima), con su cargo por atraso, el total en dólares y en bolívares a la tasa BCV de hoy, las cuentas de cobro y «envíanos el comprobante por este chat».
 - **Ver financiamientos** → los activos, con sus cuotas pendientes y el saldo (con el cargo por servicio: es lo que debe).
-- **Ayuda** → «una persona te atenderá» y el bot se calla **24 h** con ese número.
-- **Una foto o un documento** (casi siempre un comprobante) → acuse sin menú y el bot se calla 24 h: lo revisa una persona.
-- **Alguien sin financiamientos** → acuse y 24 h de silencio.
+- **Ayuda** → «una persona te atenderá» y el bot se calla **8 h** con ese número (24 h hasta el 2026-10-22: Javier lo bajó por excesivo).
+- **Una foto o un documento** (casi siempre un comprobante) → acuse sin menú y el bot se calla 8 h: lo revisa una persona.
+- **Alguien sin financiamientos** → acuse y 8 h de silencio.
 - **Un teléfono de varios pacientes** (una familia) → pide la cédula antes de enseñar nada.
 
 Piezas: `paciente.ts` y `textos_paciente.ts` en la Edge Function; en la base, `bot_paciente_contexto`, `bot_paciente_guardar`, `bot_paciente_resumen` y `helios_whatsapp_patient_text` (20261006000100). Lo que recuerda de cada número vive en `whatsapp_contacts` (`bot_menu_at`, `human_until`, `patient_profile_id`, `patient_state`). **Hacen falta las cuentas de cobro** (Ajustes › Cuentas de cobro) para que «Pagar cuota» diga cómo pagar.

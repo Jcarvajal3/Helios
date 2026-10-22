@@ -247,6 +247,9 @@ begin
   if not (public.bot_paciente_contexto(v_tel)->>'humano')::boolean then
     raise exception 'Lo que va al equipo deja que una persona atienda el chat';
   end if;
+  if (select human_until from public.whatsapp_contacts where phone_e164 = v_tel) <> now() + interval '8 hours' then
+    raise exception 'El bot se calla 8 h, no 24 (20261022235500)';
+  end if;
   perform public.bot_paciente_guardar(v_tel, null, 0, null, null);
 
   v_id := (public.bot_comprobante_nuevo('wamid.lec.6', v_tel, v_pac, 'media-6', 'image/jpeg')->>'id')::uuid;
