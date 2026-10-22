@@ -38,6 +38,9 @@ export const MAXIMO_CON_BOTONES = 1024
 /** La frase de los niveles: la misma que `helios_level_reminder()` en la base. */
 export const FRASE_NIVEL = '⭐ Recuerda pagar a tiempo para subir de nivel y disponer de mayores beneficios.'
 
+/** El cierre de «Mi saldo y cuotas» (Javier, 2026-10-22). */
+export const FRASE_SUBIR_DE_NIVEL = '⭐ Si pagas a tiempo, puedes subir de nivel y aumentar tu saldo máximo.'
+
 /** Una cuota pendiente, como la manda `bot_paciente_resumen`. */
 export type CuotaPendiente = {
   sequence: number
@@ -66,12 +69,13 @@ export type FinanciamientoActivo = {
   pagadas?: CuotaPagada[]
 }
 
-export type Terminado = { orden: number; medico: string; moneda?: Moneda; consulta: number }
-
 export type ResumenDelPaciente = {
   nombre: string | null
   financiamientos: FinanciamientoActivo[]
-  terminados?: Terminado[]
+  /** Su nivel (1, 2…), cómo se llama («Nivel 1») y el saldo total que le da, en dólares. */
+  nivel?: number | null
+  nivel_nombre?: string | null
+  limite_usd?: number | null
   /** Lo que puede usar hoy, en dólares (la misma cifra que ve el médico). */
   disponible_usd?: number | null
   /** Por qué no puede usar nada hoy: 'cuota_vencida', 'estado', 'bloqueo'. */
@@ -366,15 +370,34 @@ function lineaDisponible(r: ResumenDelPaciente): string | null {
   return `✨ *Disponible para tu próxima consulta: ${dinero(d)}*`
 }
 
-/** «Mi saldo y cuotas»: lo disponible, los pagos en cuotas activos, lo que falta por pagar y los terminados. */
+/**
+ * Su nivel, su saldo total y lo disponible, en líneas seguidas. Sin nivel
+ * (nivel 0 o tope en 0, o una base que no lo manda), solo lo disponible.
+ */
+function bloqueDelSaldo(r: ResumenDelPaciente): string | null {
+  const lineas: string[] = []
+  const limite = Number(r.limite_usd ?? 0)
+  if (r.nivel && r.nivel > 0 && limite > 0) {
+    lineas.push(`🏅 *${r.nivel_nombre?.trim() || `Nivel ${r.nivel}`}*`)
+    lineas.push(`💰 *Saldo total: ${dinero(limite)}*`)
+  }
+  const disponible = lineaDisponible(r)
+  if (disponible) lineas.push(disponible)
+  return lineas.length > 0 ? lineas.join('\n') : null
+}
+
+/**
+ * «Mi saldo y cuotas»: su nivel, su saldo total y lo disponible; los pagos en
+ * cuotas activos con lo que falta por pagar (si no hay, nada); y que pagando a
+ * tiempo sube de nivel. Sin la lista de pagos terminados: el mensaje se hacía
+ * largo (2026-10-22).
+ */
 export function mensajeFinanciamientos(r: ResumenDelPaciente): string {
   const partes: string[] = ['📋 *Tu cuenta Helios*']
-  const disponible = lineaDisponible(r)
-  if (disponible) partes.push(disponible)
+  const saldo = bloqueDelSaldo(r)
+  if (saldo) partes.push(saldo)
 
-  if (r.financiamientos.length === 0) {
-    partes.push(`No tienes pagos en cuotas activos${hola(r.nombre)}. 💙`)
-  } else {
+  if (r.financiamientos.length > 0) {
     const bloques = r.financiamientos.map((f) => {
       const m = monedaDe(f.moneda)
       const pagadas = (f.pagadas ?? []).map((p) => ({ sequence: p.sequence, linea: `✅ ${ordinal(p.sequence)} ${dineroEn(p.monto, m)} · pagada` }))
@@ -392,12 +415,8 @@ export function mensajeFinanciamientos(r: ResumenDelPaciente): string {
     partes.push(`*Por pagar: ${enSusMonedas(porPagar)}*`)
   }
 
-  const terminados = r.terminados ?? []
-  if (terminados.length > 0) {
-    partes.push(`*Terminados*\n${terminados.map((t) => `✔️ ${t.medico} · orden #${t.orden} · pagado completo`).join('\n')}`)
-  }
-
   if (r.pago_en_revision) partes.push('🔎 Tienes un pago en revisión: aún no aparece descontado.')
+  partes.push(FRASE_SUBIR_DE_NIVEL)
   return partes.join('\n\n')
 }
 

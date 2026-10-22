@@ -1380,8 +1380,9 @@ la pregunta le llega a quien capacita.
   siguen: las usan las plantillas de Meta conectadas.
 - `bot_paciente_resumen(p_profile_id)`: cada orden añade `medico`,
   `medico_ref` y `pagadas[{sequence, due_date, monto}]`; arriba,
-  `terminados[{orden, medico, moneda, consulta, confirmada}]` (las 3
-  últimas), `disponible_usd`, `bloqueo` y `datos_de_pago`.
+  `disponible_usd`, `bloqueo` y `datos_de_pago`. 20261023000100 añade
+  `nivel`, `nivel_nombre` («Nivel 1») y `limite_usd` (el tope mensual de su
+  nivel, de `levels`: el «saldo total») y quita `terminados`.
 - `bot_paciente_contexto(p_phone)` añade `vencida_texto`: la respuesta a un
   «sí»/«no» escrito si su orden venció sin respuesta en las últimas 12 h.
 - `helios_patient_decision` contesta al paciente (si su ventana está

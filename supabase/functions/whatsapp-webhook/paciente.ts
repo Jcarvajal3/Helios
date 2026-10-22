@@ -12,9 +12,10 @@
 //     de su orden (dólares o euros), y el bloque de pago: los bolívares de
 //     hoy, las cuentas (solo bolívares: Pago Móvil o transferencia) y
 //     «envíanos la foto del comprobante»;
-//   · Mi saldo y cuotas → lo disponible para su próxima consulta, los pagos
-//     en cuotas activos (cuotas pagadas y pendientes), lo que falta por
-//     pagar y los terminados;
+//   · Mi saldo y cuotas → su nivel, su saldo total y lo disponible para su
+//     próxima consulta, los pagos en cuotas activos (cuotas pagadas y
+//     pendientes) con lo que falta por pagar, y que pagando a tiempo sube
+//     de nivel;
 //   · Hablar con alguien → «alguien te escribe» y se calla 8 h (24 h hasta
 //     el 2026-10-22);
 //   · Ya pagué (botón de los recordatorios) → «envíanos la foto»;

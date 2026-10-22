@@ -1084,7 +1084,7 @@ Textos aprobados por Javier el 2026-10-19 (20261019000100 y 20261019000200). Lo 
 - **La bienvenida tras el «Sí»** trae las cuotas y cómo pagar la primera.
 - **El paciente recibe respuesta** cuando dice «No», cuando contesta pasadas las 2 h y cuando la orden no se pudo confirmar (si debe una cuota, con el botón «Pagar mi cuota»).
 - **Pago confirmado / rechazado** también por WhatsApp (texto libre, gratis) si la ventana de 24 h está abierta; si no, solo el correo.
-- **El bot**: botones «Pagar mi cuota» · «Mi saldo y cuotas» · «Hablar con alguien». «Mi saldo y cuotas» dice lo disponible para la próxima consulta (`helios_available_now_usd`, la misma cifra que ve el médico), las cuotas pagadas y pendientes, lo que falta por pagar y las 3 últimas órdenes terminadas. Atiende también el botón «Ya pagué» (`paciente:ya_pague`) de las plantillas `_v2`.
+- **El bot**: botones «Pagar mi cuota» · «Mi saldo y cuotas» · «Hablar con alguien». «Mi saldo y cuotas» dice el nivel del paciente, su saldo total (el tope de su nivel, hoy $150) y lo disponible para la próxima consulta (`helios_available_now_usd`, la misma cifra que ve el médico), las cuotas pagadas y pendientes con lo que falta por pagar (si no hay pagos activos, nada de eso), y cierra con «⭐ Si pagas a tiempo, puedes subir de nivel y aumentar tu saldo máximo.» (Javier, 2026-10-22; sin los pagos terminados, para que no sea largo; sin nivel —nivel 0—, ni nivel ni saldo total). Atiende también el botón «Ya pagué» (`paciente:ya_pague`) de las plantillas `_v2`.
 
 **Las plantillas aprobadas siguen conectadas** con sus variables de siempre. Cambió el texto libre (dentro de la ventana de 24 h y el texto plano del correo). Las variables nuevas ya se calculan para las `_v2` de abajo.
 

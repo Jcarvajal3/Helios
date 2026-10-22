@@ -43,7 +43,9 @@ const base: ResumenDelPaciente = {
   pago_en_revision: false,
   disponible_usd: 50,
   bloqueo: null,
-  terminados: [],
+  nivel: 1,
+  nivel_nombre: 'Nivel 1',
+  limite_usd: 150,
   financiamientos: [
     {
       orden: 1042,
@@ -209,7 +211,6 @@ comprueba(
 console.log('\nMi saldo y cuotas')
 const conPagada: ResumenDelPaciente = {
   ...base,
-  terminados: [{ orden: 1007, medico: 'Dr. Jesús Vivas', consulta: 80 }],
   financiamientos: [
     {
       ...base.financiamientos[0],
@@ -222,6 +223,8 @@ const ver = mensajeFinanciamientos(conPagada)
 comprueba(
   ver ===
     '📋 *Tu cuenta Helios*\n\n' +
+      '🏅 *Nivel 1*\n' +
+      '💰 *Saldo total: $150*\n' +
       '✨ *Disponible para tu próxima consulta: $50*\n\n' +
       '*Pagos en cuotas activos*\n' +
       '🩺 Dra. Nadia Khabbaze · orden #1042\n' +
@@ -229,13 +232,13 @@ comprueba(
       '✅ 1.ª cuota $56,96 · pagada\n' +
       '⏳ 2.ª cuota $56,96 · vence el lunes 02/11\n\n' +
       '*Por pagar: $56,96*\n\n' +
-      '*Terminados*\n' +
-      '✔️ Dr. Jesús Vivas · orden #1007 · pagado completo',
-  'el mensaje entero',
+      '⭐ Si pagas a tiempo, puedes subir de nivel y aumentar tu saldo máximo.',
+  'el mensaje entero: nivel, saldo total, disponible, activos y la frase de subir de nivel',
   ver,
 )
 comprueba(ver.length <= MAXIMO_CON_BOTONES && tienePendientes(conPagada), 'cabe con el botón «Pagar mi cuota»')
 comprueba(!ver.includes('Bs '), 'sin bolívares (van solo junto a las cuentas)', ver)
+comprueba(!ver.includes('Terminados') && !ver.includes('pagado completo'), 'sin los pagos terminados', ver)
 const bloqueada = mensajeFinanciamientos({ ...vencida, disponible_usd: 0, bloqueo: 'cuota_vencida', pago_en_revision: false })
 comprueba(
   bloqueada.includes('✨ *Disponible: $0*. Tienes una cuota pendiente; en cuanto la pagues, se reactiva.') &&
@@ -245,13 +248,38 @@ comprueba(
 )
 const sinNada = mensajeFinanciamientos({ ...base, financiamientos: [], disponible_usd: 150 })
 comprueba(
-  sinNada.includes('✨ *Disponible para tu próxima consulta: $150*') && sinNada.includes('No tienes pagos en cuotas activos, María') && !tienePendientes({ ...base, financiamientos: [] }),
-  'sin activos: lo disponible igual',
+  sinNada ===
+    '📋 *Tu cuenta Helios*\n\n' +
+      '🏅 *Nivel 1*\n' +
+      '💰 *Saldo total: $150*\n' +
+      '✨ *Disponible para tu próxima consulta: $150*\n\n' +
+      '⭐ Si pagas a tiempo, puedes subir de nivel y aumentar tu saldo máximo.',
+  'sin activos: solo el nivel, el saldo y la frase (sin «no tienes pagos»)',
   sinNada,
+)
+comprueba(!tienePendientes({ ...base, financiamientos: [] }), 'sin activos: sin botón «Pagar mi cuota»')
+comprueba(
+  bloqueada.startsWith('📋 *Tu cuenta Helios*\n\n🏅 *Nivel 1*\n💰 *Saldo total: $150*\n✨ *Disponible: $0*.'),
+  'con una cuota vencida: el nivel y el saldo total también salen',
+  bloqueada,
+)
+const sinNivel = mensajeFinanciamientos({ ...base, nivel: 0, nivel_nombre: 'Sin nivel', limite_usd: 0 })
+comprueba(!sinNivel.includes('🏅') && !sinNivel.includes('Saldo total') && sinNivel.includes('Disponible'), 'nivel 0: ni nivel ni saldo total', sinNivel)
+const baseVieja = mensajeFinanciamientos({ ...base, nivel: undefined, nivel_nombre: undefined, limite_usd: undefined })
+comprueba(!baseVieja.includes('🏅') && !baseVieja.includes('Saldo total'), 'base vieja (sin nivel): no lo inventa', baseVieja)
+comprueba(
+  mensajeFinanciamientos({ ...base, nivel: 2, nivel_nombre: 'Nivel 2', limite_usd: 500 }).includes('🏅 *Nivel 2*\n💰 *Saldo total: $500*'),
+  'otro nivel: su nombre y su tope',
 )
 comprueba(
   !mensajeFinanciamientos({ ...base, disponible_usd: undefined }).includes('Disponible'),
   'sin lo disponible (base vieja): no lo inventa',
+)
+comprueba(
+  mensajeFinanciamientos({ ...base, pago_en_revision: true }).endsWith(
+    '🔎 Tienes un pago en revisión: aún no aparece descontado.\n\n⭐ Si pagas a tiempo, puedes subir de nivel y aumentar tu saldo máximo.',
+  ),
+  'el pago en revisión va antes de la frase final',
 )
 comprueba(mensajeFinanciamientos({ ...base, pago_en_revision: true }).includes('pago en revisión'), 'el pago en revisión')
 comprueba(fechaLarga('2026-10-12') === '12/10/2026' && diaLargo('2026-10-28') === 'miércoles 28/10', 'las fechas')

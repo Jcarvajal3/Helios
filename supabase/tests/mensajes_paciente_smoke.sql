@@ -265,7 +265,12 @@ begin
      or v_j->'financiamientos'->0->>'medico_ref' <> 'la Dra. Ana Prueba'
      or jsonb_array_length(v_j->'financiamientos'->0->'pagadas') <> 0
      or (v_j->>'disponible_usd')::numeric <> 0 or v_j->>'bloqueo' <> 'cuota_vencida'
-     or v_j->>'datos_de_pago' not like '🏦 *Pago Móvil*%' then
+     or v_j->>'datos_de_pago' not like '🏦 *Pago Móvil*%'
+     -- 2026-10-23: el nivel y el saldo total (el tope de su nivel); ya no
+     -- trae los pagos terminados.
+     or (v_j->>'nivel')::integer <> 1 or v_j->>'nivel_nombre' <> 'Nivel 1'
+     or (v_j->>'limite_usd')::numeric <> (select monthly_limit_usd from public.levels where level = 1)
+     or v_j ? 'terminados' then
     raise exception 'El resumen del bot no trae lo esperado: %', v_j;
   end if;
   raise notice 'TEST MENSAJES 6 OK — el resumen del bot';
