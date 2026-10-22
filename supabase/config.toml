@@ -380,15 +380,14 @@ deno_version = 2
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
-# Helios no tiene las funciones kyc-* de Ronda (no hay KYC). La única Edge
-# Function prevista es el asistente de datos del super admin (fase 5, docs/00
-# §11). Se descomenta cuando se porte `functions/admin-asistente`.
+# Helios no tiene las funciones kyc-* de Ronda (no hay KYC). El asistente de
+# datos del super admin (fase 5, docs/00 §11) llegó el 2026-10-23.
 #
 # El panel la llama con la sesión de quien pregunta, así que el JWT se
 # comprueba; la función comprueba además que es del equipo
 # (`is_platform_admin`) y corre cada RPC con ese mismo JWT.
-# [functions.admin-asistente]
-# verify_jwt = true
+[functions.admin-asistente]
+verify_jwt = true
 
 [analytics]
 enabled = true

@@ -205,7 +205,7 @@ El mismo flujo, conversado. El detalle técnico está en §15.
 | IA del bot | **Ninguna** desde el 2026-10-09 (Javier: Gemini era poco útil). Los datos se leen con código (`datos.ts`) y la intención con botones y palabras clave |
 | Deploy | Vercel (panel, preset Nitro) y Supabase (dos proyectos: `Helios` y `Helios-dev`) |
 | Observabilidad | Sentry (panel) |
-| Asistente IA (fase 5) | Edge Function `admin-asistente` portada de Ronda |
+| Asistente IA (fase 5, 2026-10-23) | Edge Function `admin-asistente` portada de Ronda: solo lectura, con Claude (`claude-sonnet-5-5` y esfuerzo `low`, Javier 2026-10-23; `ASISTENTE_MODELO` lo cambia) y la misma `ANTHROPIC_API_KEY` del lector de comprobantes. Lee las RPC `admin_*` y las vistas `asistente.*` de Helios (`20261023010000`); se enseña con `VITE_ASISTENTE=1` |
 
 ### 3.2 Repositorio: uno solo
 
@@ -653,7 +653,7 @@ Es el único documento que recibe el paciente, así que tiene que estar completo
 | **Clínicas** | Alta (categoría médica, especialidad, RIF, MPPS), perfil, condiciones (incluida la comisión propia), **cuenta de pago**, personal, estado (activa/pausada/terminada), sus alertas. En el personal: **WhatsApp del bot** (registrar o revocar el número de cada persona, ver si tiene PIN y **resetearlo**), con bitácora (§15) |
 | **Financiamientos** | Igual que Consumos: detalle, reversa |
 | **Ajustes** | Se quedan: tasa BCV, parámetros (+ comisión, mínimo, umbrales de alertas, doble control), niveles, feriados, **cuentas de cobro** (varias), **condiciones del comprobante** (en lugar de términos), equipo, seguridad MFA, bitácora, mantenimiento. Nuevo: **Contacto** (WhatsApp, email de soporte, horario, remitente de los correos). Se van: versión de la app, eliminaciones, QA |
-| **Asistente IA** | Fase 5 (opcional) |
+| **Asistente IA** | Portado el 2026-10-23 (fase 5): el cajón, Ctrl J y la charla de Inicio, con `VITE_ASISTENTE=1` |
 
 ### 8.4 Marca
 
@@ -718,7 +718,7 @@ Estimación para una persona con asistencia de IA, en semanas de trabajo efectiv
 | **2 — Panel de la clínica** | `/registrar` completo, `/financiamientos` (con reenviar comprobante), `/comisiones`, `/pagos`, `/personal`, `/metricas` | Una secretaria registra un paciente de principio a fin en dev y el comprobante llega | 1,5 |
 | **3 — Superadmin operativo** | Registrar pago (+ doble control), avisos de hoy (H7), alertas H10, pagos a clínicas con comisiones, ficha de paciente y de clínica adaptadas, Ajustes › Contacto y cuentas de cobro, poda de métricas y vocabulario | Ciclo completo en dev: alta → comprobante → avisos → pago por WhatsApp → conciliación → lunes → transferencia | 2 |
 | **4 — Endurecimiento y piloto** | Prueba de extremo a extremo con fechas simuladas (mora día 1/4/30/60), revisión de RLS y RPC (la clínica no puede leer a pacientes ajenos ni enumerar cédulas), textos legales, `/soporte` y privacidad, carga inicial en prod, formación del equipo y de 1-2 clínicas piloto | Piloto en producción con límites bajos por clínica | 1 |
-| **5 — Asistente IA** (opcional) | Portar `admin-asistente` + vistas `asistente.*` + `mapa.json` | — | 0,5-1 |
+| **5 — Asistente IA** (hecho el 2026-10-23) | Portar `admin-asistente` + vistas `asistente.*` + `mapa.json` | — | 0,5-1 |
 | **6 — WhatsApp y bot del médico** (adelantada al 2026-10-05) | B: orden pendiente y "Sí" (§5.1) con el interruptor en 0. C: panel "Esperando al paciente". D: despacho a 360dialog. E: `whatsapp-webhook`. F: bot del médico (números, PIN, conversación). G: punta a punta en el sandbox y paso a producción cuando Meta apruebe. B y C no esperan a Meta (el "Sí" se simula en las suites SQL) | Con el sandbox: un médico registra por WhatsApp, el paciente (el mismo teléfono de prueba) acepta y le llegan la bienvenida y el comprobante | 2-2,5 |
 | **7 — Recordatorios automáticos** | Plantillas *utility* para `cuota_manana`, `cuota_hoy`, `cuota_vencida_d1`, `cargo_por_atraso_d4`, `pago_recibido`/`pago_rechazado` y `cuenta_congelada`; pasan del canal manual al automático, plantilla a plantilla | La cola de "Avisos de hoy" queda solo para los fallidos | 0,5 |
 
@@ -793,7 +793,7 @@ Ninguna bloquea empezar la fase 0. Se aplica la propuesta mientras no se diga ot
 | D-H10 | ¿Razón social y RIF de Helios (facturación por cuenta de terceros)? | Razón social: **Quarto Latam, C.A.** (2026-10-06). Falta el **RIF**, por definir con el contador |
 | D-H21 | ¿Plazo del "aviso previo" para que un centro cancele? | Por definir en el contrato de afiliación. Hacia fuera solo se dice "con aviso previo" |
 | D-H22 | ¿Número de WhatsApp para "Quiero afiliarme"? | El de Helios (el mismo del bot); falta publicarlo en `panel/src/config/legal.ts`. Mientras tanto el botón lleva a `/soporte` |
-| D-H12 | ¿Se porta el asistente IA en el lanzamiento? | No: fase 5 |
+| D-H12 | ¿Se porta el asistente IA en el lanzamiento? | No: fase 5. Portado el 2026-10-23 con Claude y la clave del lector de comprobantes |
 | D-H13 | ¿Dominio para enviar los correos? | **Resend**, se configura después. Mientras tanto la cola funciona y los correos quedan en `pendiente` sin clave |
 
 ---

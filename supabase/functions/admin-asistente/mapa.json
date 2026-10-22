@@ -1,0 +1,1706 @@
+{
+  "version": 1,
+  "regenerar": false,
+  "pantallas": [
+    {
+      "id": "inicio",
+      "titulo": "Inicio",
+      "descripcion": "Qué hay que hacer hoy: lo que bloquea la operación, las colas de trabajo de todos los equipos y sus números.",
+      "ruta": "/admin",
+      "espacio": "inicio",
+      "search": {}
+    },
+    {
+      "id": "metricas",
+      "titulo": "Métricas",
+      "descripcion": "Todas las cifras del negocio en una pantalla, por semana y por clínica: la semana, los cobros, la mora, la caja, las clínicas, los pacientes y lo global.",
+      "ruta": "/admin/metricas",
+      "espacio": "metricas",
+      "search": {
+        "cuota": [
+          "2"
+        ],
+        "sub": [
+          "cupos",
+          "impago-por-cuota",
+          "proyeccion",
+          "rendimiento"
+        ],
+        "vista": [
+          "caja",
+          "cobros",
+          "gente",
+          "global",
+          "locales",
+          "mora",
+          "semana"
+        ]
+      }
+    },
+    {
+      "id": "metricas-semana",
+      "titulo": "Métricas › Semana",
+      "descripcion": "Lo financiado en una semana (sin comisión), su Comisión Helios y el total a cobrar, y cómo va frente a las anteriores. Es una pestaña de Métricas.",
+      "ruta": "/admin/metricas",
+      "espacio": "metricas",
+      "search": {
+        "cuota": [
+          "2"
+        ],
+        "sub": [
+          "cupos",
+          "impago-por-cuota",
+          "proyeccion",
+          "rendimiento"
+        ],
+        "vista": [
+          "caja",
+          "cobros",
+          "gente",
+          "global",
+          "locales",
+          "mora",
+          "semana"
+        ]
+      }
+    },
+    {
+      "id": "metricas-semana-resumen",
+      "titulo": "Métricas › Semana › Resumen",
+      "descripcion": "Lo financiado en las clínicas (sin comisión), su Comisión Helios + IVA y el total a cobrar, los financiamientos y los pacientes, y la tabla de financiamientos por día y clínica.",
+      "ruta": "/admin/metricas",
+      "espacio": "metricas",
+      "search": {
+        "cuota": [
+          "2"
+        ],
+        "sub": [
+          "cupos",
+          "impago-por-cuota",
+          "proyeccion",
+          "rendimiento"
+        ],
+        "vista": [
+          "caja",
+          "cobros",
+          "gente",
+          "global",
+          "locales",
+          "mora",
+          "semana"
+        ]
+      }
+    },
+    {
+      "id": "metricas-semana-rendimiento",
+      "titulo": "Métricas › Semana › Rendimiento",
+      "descripcion": "Las cifras que mandan, semana a semana, frente a la anterior y a sus metas: financiamiento (sin comisión), Comisión Helios, cobro, riesgo, pacientes y caja.",
+      "ruta": "/admin/metricas",
+      "espacio": "metricas",
+      "search": {
+        "cuota": [
+          "2"
+        ],
+        "sub": [
+          "cupos",
+          "impago-por-cuota",
+          "proyeccion",
+          "rendimiento"
+        ],
+        "vista": [
+          "caja",
+          "cobros",
+          "gente",
+          "global",
+          "locales",
+          "mora",
+          "semana"
+        ]
+      }
+    },
+    {
+      "id": "metricas-cobros",
+      "titulo": "Métricas › Cobros",
+      "descripcion": "Lo que hay que cobrar de los financiamientos de cada semana (financiamiento + comisión), cuánto se cobró, cuánto falta y el impago de cada cuota. Es una pestaña de Métricas.",
+      "ruta": "/admin/metricas",
+      "espacio": "metricas",
+      "search": {
+        "cuota": [
+          "2"
+        ],
+        "sub": [
+          "cupos",
+          "impago-por-cuota",
+          "proyeccion",
+          "rendimiento"
+        ],
+        "vista": [
+          "caja",
+          "cobros",
+          "gente",
+          "global",
+          "locales",
+          "mora",
+          "semana"
+        ]
+      }
+    },
+    {
+      "id": "metricas-cobros-calendario",
+      "titulo": "Métricas › Cobros › Semanas",
+      "descripcion": "Todas las semanas de financiamiento comparadas: lo que hay que cobrar de cada una (financiamiento + comisión) y cómo va, y la curva de cobro y el reparto por clínica de la elegida.",
+      "ruta": "/admin/metricas",
+      "espacio": "metricas",
+      "search": {
+        "cuota": [
+          "2"
+        ],
+        "sub": [
+          "cupos",
+          "impago-por-cuota",
+          "proyeccion",
+          "rendimiento"
+        ],
+        "vista": [
+          "caja",
+          "cobros",
+          "gente",
+          "global",
+          "locales",
+          "mora",
+          "semana"
+        ]
+      }
+    },
+    {
+      "id": "metricas-cobros-impago-por-cuota",
+      "titulo": "Métricas › Cobros › Impago por cuota",
+      "descripcion": "Qué parte de la cuota 1 y de la cuota 2 sigue sin pagar al terminar la gracia, por semana, clínica o nivel.",
+      "ruta": "/admin/metricas",
+      "espacio": "metricas",
+      "search": {
+        "cuota": [
+          "2"
+        ],
+        "sub": [
+          "cupos",
+          "impago-por-cuota",
+          "proyeccion",
+          "rendimiento"
+        ],
+        "vista": [
+          "caja",
+          "cobros",
+          "gente",
+          "global",
+          "locales",
+          "mora",
+          "semana"
+        ]
+      }
+    },
+    {
+      "id": "metricas-mora",
+      "titulo": "Métricas › Riesgo",
+      "descripcion": "Cuánto está vencido y en qué tramo, el cupo ocupado por nivel y lo que recupera la cobranza. Es una pestaña de Métricas.",
+      "ruta": "/admin/metricas",
+      "espacio": "metricas",
+      "search": {
+        "cuota": [
+          "2"
+        ],
+        "sub": [
+          "cupos",
+          "impago-por-cuota",
+          "proyeccion",
+          "rendimiento"
+        ],
+        "vista": [
+          "caja",
+          "cobros",
+          "gente",
+          "global",
+          "locales",
+          "mora",
+          "semana"
+        ]
+      }
+    },
+    {
+      "id": "metricas-mora-resumen",
+      "titulo": "Métricas › Riesgo › Resumen",
+      "descripcion": "Lo vencido al cierre de la semana (financiamiento + comisión) y en qué tramo, lo que vencía frente a lo que entró y el paso entre tramos.",
+      "ruta": "/admin/metricas",
+      "espacio": "metricas",
+      "search": {
+        "cuota": [
+          "2"
+        ],
+        "sub": [
+          "cupos",
+          "impago-por-cuota",
+          "proyeccion",
+          "rendimiento"
+        ],
+        "vista": [
+          "caja",
+          "cobros",
+          "gente",
+          "global",
+          "locales",
+          "mora",
+          "semana"
+        ]
+      }
+    },
+    {
+      "id": "metricas-mora-cupos",
+      "titulo": "Métricas › Riesgo › Cupos",
+      "descripcion": "Cuánto de su cupo usan hoy los pacientes de cada nivel.",
+      "ruta": "/admin/metricas",
+      "espacio": "metricas",
+      "search": {
+        "cuota": [
+          "2"
+        ],
+        "sub": [
+          "cupos",
+          "impago-por-cuota",
+          "proyeccion",
+          "rendimiento"
+        ],
+        "vista": [
+          "caja",
+          "cobros",
+          "gente",
+          "global",
+          "locales",
+          "mora",
+          "semana"
+        ]
+      }
+    },
+    {
+      "id": "metricas-mora-rendimiento",
+      "titulo": "Métricas › Riesgo › Rendimiento",
+      "descripcion": "Lo que consiguió la cobranza en la semana: lo recuperado, las gestiones, las promesas y la cura por tramo.",
+      "ruta": "/admin/metricas",
+      "espacio": "metricas",
+      "search": {
+        "cuota": [
+          "2"
+        ],
+        "sub": [
+          "cupos",
+          "impago-por-cuota",
+          "proyeccion",
+          "rendimiento"
+        ],
+        "vista": [
+          "caja",
+          "cobros",
+          "gente",
+          "global",
+          "locales",
+          "mora",
+          "semana"
+        ]
+      }
+    },
+    {
+      "id": "metricas-caja",
+      "titulo": "Métricas › Caja",
+      "descripcion": "Cuánto dinero hay, lo que entró y salió en la semana, la proyección, el banco y el capital comprometido. Es una pestaña de Métricas.",
+      "ruta": "/admin/metricas",
+      "espacio": "metricas",
+      "search": {
+        "cuota": [
+          "2"
+        ],
+        "sub": [
+          "cupos",
+          "impago-por-cuota",
+          "proyeccion",
+          "rendimiento"
+        ],
+        "vista": [
+          "caja",
+          "cobros",
+          "gente",
+          "global",
+          "locales",
+          "mora",
+          "semana"
+        ]
+      }
+    },
+    {
+      "id": "metricas-caja-balance",
+      "titulo": "Métricas › Caja › Balance",
+      "descripcion": "Lo que entró y salió de la caja en la semana, el balance de hoy según el libro y el capital comprometido.",
+      "ruta": "/admin/metricas",
+      "espacio": "metricas",
+      "search": {
+        "cuota": [
+          "2"
+        ],
+        "sub": [
+          "cupos",
+          "impago-por-cuota",
+          "proyeccion",
+          "rendimiento"
+        ],
+        "vista": [
+          "caja",
+          "cobros",
+          "gente",
+          "global",
+          "locales",
+          "mora",
+          "semana"
+        ]
+      }
+    },
+    {
+      "id": "metricas-caja-proyeccion",
+      "titulo": "Métricas › Caja › Proyección y banco",
+      "descripcion": "Lo que entrará y saldrá día a día hasta que vence lo que hoy está en la calle, y el saldo del banco.",
+      "ruta": "/admin/metricas",
+      "espacio": "metricas",
+      "search": {
+        "cuota": [
+          "2"
+        ],
+        "sub": [
+          "cupos",
+          "impago-por-cuota",
+          "proyeccion",
+          "rendimiento"
+        ],
+        "vista": [
+          "caja",
+          "cobros",
+          "gente",
+          "global",
+          "locales",
+          "mora",
+          "semana"
+        ]
+      }
+    },
+    {
+      "id": "metricas-locales",
+      "titulo": "Métricas › Clínicas",
+      "descripcion": "Dónde se financia y cómo pagan los pacientes de cada clínica, semana a semana. Es una pestaña de Métricas.",
+      "ruta": "/admin/metricas",
+      "espacio": "metricas",
+      "search": {
+        "cuota": [
+          "2"
+        ],
+        "sub": [
+          "cupos",
+          "impago-por-cuota",
+          "proyeccion",
+          "rendimiento"
+        ],
+        "vista": [
+          "caja",
+          "cobros",
+          "gente",
+          "global",
+          "locales",
+          "mora",
+          "semana"
+        ]
+      }
+    },
+    {
+      "id": "metricas-gente",
+      "titulo": "Métricas › Pacientes",
+      "descripcion": "Cuántos pacientes registraron las clínicas y cuántos pagaron en cuotas en la ventana, con los estados de las cuentas y los niveles. Es una pestaña de Métricas.",
+      "ruta": "/admin/metricas",
+      "espacio": "metricas",
+      "search": {
+        "cuota": [
+          "2"
+        ],
+        "sub": [
+          "cupos",
+          "impago-por-cuota",
+          "proyeccion",
+          "rendimiento"
+        ],
+        "vista": [
+          "caja",
+          "cobros",
+          "gente",
+          "global",
+          "locales",
+          "mora",
+          "semana"
+        ]
+      }
+    },
+    {
+      "id": "metricas-global",
+      "titulo": "Métricas › Global",
+      "descripcion": "Lo global del negocio desde el primer día: los pacientes, el financiamiento (sin comisión), lo que se debe, lo cobrado y el riesgo. Es una pestaña de Métricas.",
+      "ruta": "/admin/metricas",
+      "espacio": "metricas",
+      "search": {
+        "cuota": [
+          "2"
+        ],
+        "sub": [
+          "cupos",
+          "impago-por-cuota",
+          "proyeccion",
+          "rendimiento"
+        ],
+        "vista": [
+          "caja",
+          "cobros",
+          "gente",
+          "global",
+          "locales",
+          "mora",
+          "semana"
+        ]
+      }
+    },
+    {
+      "id": "cartera-vencida",
+      "titulo": "Por cobrar",
+      "descripcion": "La cola de cobro: los pacientes con cuotas vencidas o que vencen esta semana, en grupos por prioridad y con lo que hizo cada uno (señales); las semanas de financiamiento, el calendario de cobro y las promesas.",
+      "ruta": "/admin/cobranza",
+      "espacio": "cobranza",
+      "search": {
+        "estado": [
+          "cumplida",
+          "rota"
+        ],
+        "perfil": [
+          "nunca_ha_pagado",
+          "paga_tarde_pero_paga",
+          "promesa_rota",
+          "reincidente",
+          "se_le_paso",
+          "sin_respuesta",
+          "vigilar"
+        ],
+        "tramo": [
+          "plazo_vencido",
+          "por_vencer",
+          "recordar_hoy",
+          "sin_contactar",
+          "vence_hoy"
+        ],
+        "vista": [
+          "calendario",
+          "morosos",
+          "promesas",
+          "semana"
+        ]
+      }
+    },
+    {
+      "id": "por-cobrar-por-semana",
+      "titulo": "Por cobrar › Cohortes",
+      "descripcion": "Cada cohorte (lo financiado una semana: A1, A2…), seguida hasta cobrar sus dos cuotas: total a cobrar, cobrado, vencido y por vencer (financiamiento + comisión), la cuota 1 y la 2, y quién debe de esa semana con sus señales.",
+      "ruta": "/admin/cobranza",
+      "espacio": "cobranza",
+      "search": {
+        "estado": [
+          "cumplida",
+          "rota"
+        ],
+        "perfil": [
+          "nunca_ha_pagado",
+          "paga_tarde_pero_paga",
+          "promesa_rota",
+          "reincidente",
+          "se_le_paso",
+          "sin_respuesta",
+          "vigilar"
+        ],
+        "tramo": [
+          "plazo_vencido",
+          "por_vencer",
+          "recordar_hoy",
+          "sin_contactar",
+          "vence_hoy"
+        ],
+        "vista": [
+          "calendario",
+          "morosos",
+          "promesas",
+          "semana"
+        ]
+      }
+    },
+    {
+      "id": "promesas",
+      "titulo": "Promesas",
+      "descripcion": "Las promesas de pago anotadas en las gestiones: las que vencen hoy, las pendientes, las rotas y las cumplidas. Es una pestaña de Por cobrar.",
+      "ruta": "/admin/cobranza",
+      "espacio": "cobranza",
+      "search": {
+        "estado": [
+          "cumplida",
+          "rota"
+        ],
+        "perfil": [
+          "nunca_ha_pagado",
+          "paga_tarde_pero_paga",
+          "promesa_rota",
+          "reincidente",
+          "se_le_paso",
+          "sin_respuesta",
+          "vigilar"
+        ],
+        "tramo": [
+          "plazo_vencido",
+          "por_vencer",
+          "recordar_hoy",
+          "sin_contactar",
+          "vence_hoy"
+        ],
+        "vista": [
+          "calendario",
+          "morosos",
+          "promesas",
+          "semana"
+        ]
+      }
+    },
+    {
+      "id": "pagos-reportados",
+      "titulo": "Pagos reportados",
+      "descripcion": "Los pagos que el equipo registró con el comprobante que el paciente mandó por WhatsApp, para aprobarlos o rechazarlos.",
+      "ruta": "/admin/cobros",
+      "espacio": "cobranza",
+      "search": {
+        "abonos": [
+          "descartados"
+        ],
+        "importar": [
+          "true"
+        ],
+        "tab": [
+          "pendientes"
+        ],
+        "vista": [
+          "abonos"
+        ]
+      }
+    },
+    {
+      "id": "abonos-sin-dueno",
+      "titulo": "Abonos sin dueño",
+      "descripcion": "El dinero que entró al banco y no corresponde a ningún pago registrado. Es una pestaña de Pagos reportados.",
+      "ruta": "/admin/cobros",
+      "espacio": "cobranza",
+      "search": {
+        "abonos": [
+          "descartados"
+        ],
+        "importar": [
+          "true"
+        ],
+        "tab": [
+          "pendientes"
+        ],
+        "vista": [
+          "abonos"
+        ]
+      }
+    },
+    {
+      "id": "avisos",
+      "titulo": "Avisos",
+      "descripcion": "Los avisos de hoy por WhatsApp a cada paciente y las plantillas de WhatsApp para cobrar.",
+      "ruta": "/admin/avisos",
+      "espacio": "cobranza",
+      "search": {
+        "cola": [
+          "true"
+        ],
+        "estado": [
+          "rebotados"
+        ],
+        "vista": [
+          "correos",
+          "plantillas"
+        ]
+      }
+    },
+    {
+      "id": "pagos-a-locales",
+      "titulo": "Pagos a clínicas",
+      "descripcion": "Lo que se le debe a cada clínica, por día de pago, y las transferencias hechas.",
+      "ruta": "/admin/pagos-clinicas",
+      "espacio": "caja",
+      "search": {}
+    },
+    {
+      "id": "libro-y-cierre",
+      "titulo": "Libro y cierre de mes",
+      "descripcion": "El libro de asientos, el cierre de mes y la exportación para el contador.",
+      "ruta": "/admin/contabilidad",
+      "espacio": "caja",
+      "search": {
+        "vista": [
+          "cierre",
+          "exportacion"
+        ]
+      }
+    },
+    {
+      "id": "alertas",
+      "titulo": "Alertas",
+      "descripcion": "Las señales de riesgo que piden que alguien mire una cuenta.",
+      "ruta": "/admin/alertas",
+      "espacio": "riesgo",
+      "search": {}
+    },
+    {
+      "id": "agenda",
+      "titulo": "Agenda",
+      "descripcion": "Los médicos por afiliar: su teléfono y su dirección, en qué quedó cada uno (mensaje enviado, interesado, visita agendada…) y el calendario de las visitas. Pasan solos a afiliado cuando llenan el formulario.",
+      "ruta": "/admin/agenda",
+      "espacio": "seguimiento",
+      "search": {
+        "vista": [
+          "calendario"
+        ]
+      }
+    },
+    {
+      "id": "seguimiento",
+      "titulo": "Seguimiento",
+      "descripcion": "Cada clínica con su médico, su teléfono, todo su personal con su número y sus órdenes, y el último contacto del equipo: a quién llamar hoy y qué se habló.",
+      "ruta": "/admin/seguimiento",
+      "espacio": "seguimiento",
+      "search": {
+        "vista": [
+          "personas"
+        ]
+      }
+    },
+    {
+      "id": "whatsapp",
+      "titulo": "WhatsApp",
+      "descripcion": "El inbox del número de Helios: leer lo que escriben pacientes y médicos y contestarles, desde el Inbox de 360dialog.",
+      "ruta": "/admin/whatsapp",
+      "espacio": "seguimiento",
+      "search": {}
+    },
+    {
+      "id": "personas",
+      "titulo": "Pacientes",
+      "descripcion": "Todos los pacientes que registraron las clínicas, con su ficha: cupo, datos, financiamientos, pagos e historial.",
+      "ruta": "/admin/pacientes",
+      "espacio": "directorio",
+      "search": {
+        "marca": [
+          "true"
+        ],
+        "prueba": [
+          "true"
+        ],
+        "vista": [
+          "cambios"
+        ]
+      }
+    },
+    {
+      "id": "locales",
+      "titulo": "Clínicas",
+      "descripcion": "Las clínicas aliadas, con lo financiado (sin comisión), lo que se les debe, sus condiciones y su personal.",
+      "ruta": "/admin/clinicas",
+      "espacio": "directorio",
+      "search": {}
+    },
+    {
+      "id": "consumos",
+      "titulo": "Financiamientos",
+      "descripcion": "Cada financiamiento con su número de orden, su clínica, sus cuotas y su estado.",
+      "ruta": "/admin/financiamientos",
+      "espacio": "directorio",
+      "search": {
+        "estado": [
+          "confirmed",
+          "pending"
+        ]
+      }
+    },
+    {
+      "id": "ajustes",
+      "titulo": "Ajustes",
+      "descripcion": "Las reglas del negocio, las condiciones del comprobante, el equipo, la bitácora y el mantenimiento.",
+      "ruta": "/admin/ajustes",
+      "espacio": "ajustes",
+      "search": {
+        "tab": [
+          "bitacora",
+          "cobro",
+          "contacto",
+          "equipo",
+          "feriados",
+          "mantenimiento",
+          "niveles",
+          "parametros",
+          "seguridad",
+          "tasa",
+          "terminos"
+        ]
+      }
+    },
+    {
+      "id": "ajustes-tasa-bcv",
+      "titulo": "Tasa BCV",
+      "descripcion": "Las tasas del dólar y del euro con las que se cobra hoy (cada orden, a la de su moneda), cuándo entraron y su historial.",
+      "ruta": "/admin/ajustes",
+      "espacio": "ajustes",
+      "search": {
+        "tab": [
+          "bitacora",
+          "cobro",
+          "contacto",
+          "equipo",
+          "feriados",
+          "mantenimiento",
+          "niveles",
+          "parametros",
+          "seguridad",
+          "tasa",
+          "terminos"
+        ]
+      }
+    },
+    {
+      "id": "ajustes-parametros",
+      "titulo": "Parámetros",
+      "descripcion": "Las reglas del crédito, los umbrales de color, las metas y el capital, con su historia.",
+      "ruta": "/admin/ajustes",
+      "espacio": "ajustes",
+      "search": {
+        "tab": [
+          "bitacora",
+          "cobro",
+          "contacto",
+          "equipo",
+          "feriados",
+          "mantenimiento",
+          "niveles",
+          "parametros",
+          "seguridad",
+          "tasa",
+          "terminos"
+        ]
+      }
+    },
+    {
+      "id": "niveles-y-cupos",
+      "titulo": "Niveles y cupos",
+      "descripcion": "El cupo de cada nivel y lo que hace falta para subir a él.",
+      "ruta": "/admin/ajustes",
+      "espacio": "ajustes",
+      "search": {
+        "tab": [
+          "bitacora",
+          "cobro",
+          "contacto",
+          "equipo",
+          "feriados",
+          "mantenimiento",
+          "niveles",
+          "parametros",
+          "seguridad",
+          "tasa",
+          "terminos"
+        ]
+      }
+    },
+    {
+      "id": "ajustes-feriados",
+      "titulo": "Feriados",
+      "descripcion": "El calendario de días en que ni el BCV publica ni los bancos operan.",
+      "ruta": "/admin/ajustes",
+      "espacio": "ajustes",
+      "search": {
+        "tab": [
+          "bitacora",
+          "cobro",
+          "contacto",
+          "equipo",
+          "feriados",
+          "mantenimiento",
+          "niveles",
+          "parametros",
+          "seguridad",
+          "tasa",
+          "terminos"
+        ]
+      }
+    },
+    {
+      "id": "ajustes-cuenta-de-cobro",
+      "titulo": "Cuentas de cobro",
+      "descripcion": "Las cuentas a las que pagan los pacientes, en bolívares por Pago Móvil o transferencia (puede haber varias activas, en orden), y las retiradas.",
+      "ruta": "/admin/ajustes",
+      "espacio": "ajustes",
+      "search": {
+        "tab": [
+          "bitacora",
+          "cobro",
+          "contacto",
+          "equipo",
+          "feriados",
+          "mantenimiento",
+          "niveles",
+          "parametros",
+          "seguridad",
+          "tasa",
+          "terminos"
+        ]
+      }
+    },
+    {
+      "id": "ajustes-contacto",
+      "titulo": "Contacto",
+      "descripcion": "El WhatsApp de Helios, el correo y el horario de soporte, y el remitente de los correos: lo que lee el paciente en el comprobante y en los avisos.",
+      "ruta": "/admin/ajustes",
+      "espacio": "ajustes",
+      "search": {
+        "tab": [
+          "bitacora",
+          "cobro",
+          "contacto",
+          "equipo",
+          "feriados",
+          "mantenimiento",
+          "niveles",
+          "parametros",
+          "seguridad",
+          "tasa",
+          "terminos"
+        ]
+      }
+    },
+    {
+      "id": "ajustes-terminos",
+      "titulo": "Términos",
+      "descripcion": "Las versiones de las condiciones del financiamiento que van en el comprobante que recibe el paciente por correo.",
+      "ruta": "/admin/ajustes",
+      "espacio": "ajustes",
+      "search": {
+        "tab": [
+          "bitacora",
+          "cobro",
+          "contacto",
+          "equipo",
+          "feriados",
+          "mantenimiento",
+          "niveles",
+          "parametros",
+          "seguridad",
+          "tasa",
+          "terminos"
+        ]
+      }
+    },
+    {
+      "id": "ajustes-equipo",
+      "titulo": "Equipo",
+      "descripcion": "Quién entra al panel y con qué rol.",
+      "ruta": "/admin/ajustes",
+      "espacio": "ajustes",
+      "search": {
+        "tab": [
+          "bitacora",
+          "cobro",
+          "contacto",
+          "equipo",
+          "feriados",
+          "mantenimiento",
+          "niveles",
+          "parametros",
+          "seguridad",
+          "tasa",
+          "terminos"
+        ]
+      }
+    },
+    {
+      "id": "ajustes-seguridad",
+      "titulo": "Seguridad",
+      "descripcion": "El segundo factor de cada persona del equipo y si el panel lo exige.",
+      "ruta": "/admin/ajustes",
+      "espacio": "ajustes",
+      "search": {
+        "tab": [
+          "bitacora",
+          "cobro",
+          "contacto",
+          "equipo",
+          "feriados",
+          "mantenimiento",
+          "niveles",
+          "parametros",
+          "seguridad",
+          "tasa",
+          "terminos"
+        ]
+      }
+    },
+    {
+      "id": "ajustes-bitacora",
+      "titulo": "Bitácora",
+      "descripcion": "Todo lo que hizo el equipo en el panel: quién, qué, cuándo y sobre qué.",
+      "ruta": "/admin/ajustes",
+      "espacio": "ajustes",
+      "search": {
+        "tab": [
+          "bitacora",
+          "cobro",
+          "contacto",
+          "equipo",
+          "feriados",
+          "mantenimiento",
+          "niveles",
+          "parametros",
+          "seguridad",
+          "tasa",
+          "terminos"
+        ]
+      }
+    },
+    {
+      "id": "ajustes-mantenimiento",
+      "titulo": "Mantenimiento",
+      "descripcion": "El freno de emergencia: para los financiamientos nuevos en todas las clínicas y enseña un aviso.",
+      "ruta": "/admin/ajustes",
+      "espacio": "ajustes",
+      "search": {
+        "tab": [
+          "bitacora",
+          "cobro",
+          "contacto",
+          "equipo",
+          "feriados",
+          "mantenimiento",
+          "niveles",
+          "parametros",
+          "seguridad",
+          "tasa",
+          "terminos"
+        ]
+      }
+    }
+  ],
+  "fichas": [
+    {
+      "id": "ficha-persona",
+      "titulo": "Ficha de un paciente",
+      "ruta": "/admin/pacientes/$id"
+    },
+    {
+      "id": "ficha-local",
+      "titulo": "Ficha de una clínica",
+      "ruta": "/admin/clinicas/$id"
+    },
+    {
+      "id": "ficha-consumo",
+      "titulo": "Ficha de un financiamiento",
+      "ruta": "/admin/financiamientos/$id"
+    },
+    {
+      "id": "ficha-pago",
+      "titulo": "Ficha de un pago reportado",
+      "ruta": "/admin/cobros/$id"
+    }
+  ],
+  "cifras": [
+    {
+      "id": "semaforo-del-cierre",
+      "titulo": "Semáforo del pago a clínicas",
+      "que": "Lo que sale hoy hacia las clínicas (atrasados incluidos) frente al dinero en caja: «Cubre» o «No cubre». Se les paga a diario: cada liquidación, el día siguiente a su vencimiento.",
+      "rpc": "admin_merchant_payables",
+      "pantalla": "inicio"
+    },
+    {
+      "id": "semana-a-semana",
+      "titulo": "Semana a semana",
+      "que": "Financiamiento, ingreso de Helios, cobro, riesgo, pacientes y caja de las últimas 8, 12 o 26 semanas (de lunes a domingo, por día operativo), de todas las clínicas o de una. La semana elegida va al final y se compara con la anterior; si está en curso, con la anterior hasta el mismo momento. El total financiado va sin la Comisión Helios; el importe de las cuotas va con su financiado y su Comisión Helios + IVA en filas aparte.",
+      "rpc": "admin_metricas_semanas",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "cuotas-que-vencian",
+      "titulo": "Cuotas que vencían en la semana (financiado + comisión)",
+      "que": "La suma de las cuotas cuyo vencimiento caía en la semana (hasta hoy si está en curso), pagadas o no: el financiado (sin comisión) más la Comisión Helios + IVA, que se enseñan siempre como dos líneas aparte.",
+      "rpc": "admin_metricas_semanas",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "total-facturado-de-la-semana",
+      "titulo": "Total financiado de la semana (sin comisión)",
+      "que": "Sin la Comisión Helios: la suma de los financiamientos confirmados de la semana (de lunes a domingo, por día operativo; la semana en curso, hasta ahora), de todas las clínicas o de una. Es la fila «Total financiado» de Semana › Rendimiento. Se compara con la semana anterior a la misma altura y va junto a la Comisión Helios + IVA y al total a cobrar, que suman con él.",
+      "rpc": "admin_metricas_semana_resumen",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "service-comisión-e-iva-de-la-semana",
+      "titulo": "Comisión Helios + IVA de la semana",
+      "que": "La Comisión Helios de los financiamientos de la semana con su IVA dentro: el total a cobrar menos el total financiado. Se enseña partido en la Comisión Helios sin IVA (el ingreso de Helios) y el IVA, y siempre entre el total financiado y el total a cobrar, frente a la semana anterior a la misma altura.",
+      "rpc": "admin_metricas_semana_resumen",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "total-a-cobrar-de-la-semana",
+      "titulo": "Total a cobrar de la semana",
+      "que": "Lo que los pacientes pagan en sus dos cuotas por los financiamientos de la semana: el total financiado (sin comisión) más la Comisión Helios y su IVA. No es un total suelto: se enseña siempre con sus dos sumandos al lado, en la tarjeta, en la tabla y en el CSV.",
+      "rpc": "admin_metricas_semana_resumen",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "consumos-de-la-semana",
+      "titulo": "Financiamientos de la semana",
+      "que": "Los financiamientos confirmados de la semana (de lunes a domingo, por día operativo), de todas las clínicas o de una, sin los de prueba. Se compara con la semana anterior a la misma altura.",
+      "rpc": "admin_metricas_semana_resumen",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "usuarios-que-consumieron-en-la-semana",
+      "titulo": "Pacientes que se financiaron en la semana",
+      "que": "Los pacientes distintos con cuota en los financiamientos de la semana, de todas las clínicas o de una. Quien vino dos días o a dos clínicas cuenta una vez. Se compara con la semana anterior a la misma altura.",
+      "rpc": "admin_metricas_semana_resumen",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "total-a-cobrar-de-una-semana",
+      "titulo": "Total a cobrar de una semana",
+      "que": "Para los financiamientos de una semana (de lunes a domingo, por día operativo), lo que hay que cobrar de ellos: la cuota 1 más la cuota 2, cada una con su Comisión Helios (IVA incluido), siempre con sus dos partes a la vista (el financiamiento, sin comisión, y la Comisión Helios). Debajo, cuánto se cobró, cuánto está vencido y cuánto por vencer, cada importe con su desglose.",
+      "rpc": "admin_metricas_cohorte",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "cuotas-de-una-semana",
+      "titulo": "Cuota 1 y cuota 2 de una semana",
+      "que": "Para los financiamientos de una semana (de lunes a domingo, por día operativo), cada cuota en su tarjeta: lo que se cobra en ella con su financiamiento (sin comisión) y su Comisión Helios (IVA incluido), y cuánto está cobrado a tiempo, cobrado tarde, vencido sin pagar, por vencer o dado por perdido, con los pacientes de cada estado. Las dos cuotas suman el total a cobrar de la semana.",
+      "rpc": "admin_metricas_cohorte",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "volvio-del-consumo",
+      "titulo": "Cobrado de una semana",
+      "que": "Lo pagado, a tiempo o tarde, de las dos cuotas de los financiamientos de esa semana, sobre el total a cobrar (financiamiento más Comisión Helios). El importe cobrado va con su desglose: el financiamiento, sin comisión, y la Comisión Helios.",
+      "rpc": "admin_metricas_cohortes",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "curva-de-cobro-de-la-cuota",
+      "titulo": "Cobrado acumulado de la cuota por día desde el vencimiento",
+      "que": "Para cada día desde el vencimiento de cada cuota (antes y después), la parte de lo que se cobra en ella (financiamiento más Comisión Helios) que ya estaba pagada, contando el día en que se registró el pago. Se compara con la media de las cuatro semanas anteriores, solo en los días que todas ya cerraron. El día en que acaba la gracia es lo cobrado a tiempo.",
+      "rpc": "admin_metricas_cohorte",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "cohorte-por-local",
+      "titulo": "Una semana de financiamiento por clínica",
+      "que": "La cohorte de la semana partida por la clínica donde se financió: lo que hay que cobrar (la cuota 1 más la 2, con su financiamiento sin comisión y su Comisión Helios), qué parte se cobró, lo vencido y lo por vencer, cada importe con su desglose, y cómo va cada cuota. Las clínicas suman el total de la semana.",
+      "rpc": "admin_metricas_cohorte",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "cuota-1-semana-a-semana",
+      "titulo": "Total a cobrar por semana de financiamiento, por estado",
+      "que": "Las últimas doce semanas de financiamiento, cada una con su total a cobrar (la cuota 1 más la 2, con su Comisión Helios) partido por estado: cobrado a tiempo, cobrado tarde, vencido, por vencer y dado por perdido. El desglose de cada total (financiamiento sin comisión y Comisión Helios) está en el globo y en la tabla.",
+      "rpc": "admin_metricas_cohortes",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "vencido-sin-pagar-de-la-semana",
+      "titulo": "Vencido en cartera al corte de la semana",
+      "que": "Las cuotas vencidas y sin pagar al cierre de la semana elegida (o ahora, si está en curso), sin lo dado por perdido, y cuántos pacientes las deben. Son cuotas: financiamiento + Comisión Helios, siempre con su desglose a la vista. Se compara con la semana anterior a la misma altura.",
+      "rpc": "admin_metricas_cobranza",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "impago-segunda-cuota",
+      "titulo": "Impago de la segunda cuota",
+      "que": "De la cuota 2 de cada paciente en cada financiamiento, qué parte seguía sin pagar el último día de la gracia; vence una semana después de la 1 y cuenta también a quien tampoco pagó la 1. Se parte por semana, mes, clínica, nivel o primer financiamiento, con la cuota 1 al lado. Los montos son financiamiento, sin la Comisión Helios.",
+      "rpc": "admin_first_payment_default",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "deudores-por-comportamiento",
+      "titulo": "Pacientes con deuda vencida, por perfil de pago",
+      "que": "Cada paciente con algo vencido cae en un solo perfil (ninguna cuota pagada, promesa de pago incumplida, sin respuesta a las gestiones, atrasos repetidos, vencido con pagos previos, atraso de pocos días con buen historial), y aparte los que están al día con riesgo de atraso. Cada perfil con sus pacientes, lo que deben vencido con su desglose, el atraso medio y lo que se ha recuperado de pacientes así. Son las tarjetas de arriba de Por cobrar: pulsar una acota la lista a ese perfil.",
+      "rpc": "admin_deudores_por_perfil",
+      "pantalla": "cartera-vencida"
+    },
+    {
+      "id": "recuperacion-por-perfil-de-deudor",
+      "titulo": "Recuperación por perfil de deudor",
+      "que": "De lo que debían vencido los pacientes cada vez que encajaron en un perfil, la parte que pagaron en el mes siguiente. Solo cuentan las veces con ese mes ya cumplido.",
+      "rpc": "admin_deudores_por_perfil",
+      "pantalla": "cartera-vencida"
+    },
+    {
+      "id": "impago-segunda-cuota-de-quien-pago-la-primera",
+      "titulo": "Cuota 2 sin pagar de quien pagó la 1",
+      "que": "De las cuotas 2 ya maduras de quien había pagado la cuota 1 del mismo financiamiento el día en que se juzga la 2 (al acabar su gracia), qué parte seguía sin pagar. Separa a quien empieza pagando y se cae de quien nunca pagó, que el impago de la cuota 2 cuenta junto. Va sobre cuotas y se parte por semana, mes, clínica, nivel o primer financiamiento. Los montos son financiamiento, sin la Comisión Helios.",
+      "rpc": "admin_first_payment_default",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "entro-de-cuotas",
+      "titulo": "Cobrado en cuotas en la semana (financiamiento + comisión)",
+      "que": "Calculado de las cuotas cuyo pago se aprobó en la semana elegida (no del libro contable): lo que se cobra (el financiamiento más la Comisión Helios, IVA incluido), siempre con sus dos partes. Los cargos por atraso van aparte. Con una clínica, las de sus financiamientos.",
+      "rpc": "admin_metricas_caja",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "salio-a-los-locales",
+      "titulo": "Transferido a clínicas en la semana",
+      "que": "Calculado de las transferencias registradas en Pagos a clínicas en la semana elegida, por el día operativo de su asiento: su neto, sin la Comisión Helios. Con una clínica, lo que se le transfirió a ella.",
+      "rpc": "admin_metricas_caja",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "servicio-ganado-y-cobrado",
+      "titulo": "Comisión Helios ganada y cobrado en la semana",
+      "que": "Calculados de los financiamientos y de las cuotas, no del libro contable. Ganado: la Comisión Helios sin IVA de los financiamientos de la semana. Cobrado: la parte de la Comisión Helios, sin IVA, que iba dentro de las cuotas cobradas esa semana, que son de financiamientos anteriores. Ninguno se suma al financiado.",
+      "rpc": "admin_metricas_caja",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "cargos-por-atraso-cobrados",
+      "titulo": "Cargos por atraso cobrados en la semana",
+      "que": "Los cargos por atraso pagados en la semana elegida. Son ingreso de Helios y van aparte de lo cobrado de cuotas.",
+      "rpc": "admin_metricas_caja",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "caja-al-cierre-de-la-semana",
+      "titulo": "Dinero en caja al cierre de la semana",
+      "que": "Del libro contable: lo cobrado menos lo transferido a las clínicas y los ajustes, al cierre del domingo de la semana elegida (o hoy, si va a medias). Es de todo Helios: no se parte por clínica.",
+      "rpc": "admin_metricas_caja",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "consumo-por-semana-de-cada-local",
+      "titulo": "Financiado por semana y clínica (sin comisión)",
+      "que": "Sin la Comisión Helios: el financiado de cada clínica en las ocho últimas semanas hasta la elegida, con una escala común para que las alturas se comparen. La nota dice cuándo empezó a financiar una clínica nueva o cómo va frente a la semana anterior a la misma altura.",
+      "rpc": "admin_metricas_locales",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "como-paga-la-gente-de-cada-local",
+      "titulo": "Cuota 1 cobrada a tiempo (%), por clínica",
+      "que": "De las cuotas 1 de lo financiado en cada clínica cada semana, las pagadas a tiempo entre las que ya cerraron su plazo (el vencimiento más los días de gracia). Una semana sin financiamientos no es un cero, y una todavía en plazo no tiene veredicto. Es la misma cuenta que Métricas › Cobros.",
+      "rpc": "admin_metricas_locales",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "vencido-de-la-gente-de-un-local",
+      "titulo": "Vencido por clínica (financiamiento + comisión)",
+      "que": "Las cuotas vencidas y sin pagar de lo financiado en cada clínica, al cierre de la semana elegida (hoy, si está en curso), en financiamiento + comisión: su financiamiento y la Comisión Helios (IVA incluido), siempre por separado. Lo dado por perdido no entra. La suma de las clínicas es el vencido de toda la cartera.",
+      "rpc": "admin_metricas_locales",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "se-le-transfiere-el-lunes",
+      "titulo": "Liquidación de la semana, por clínica (neto)",
+      "que": "Por clínica, las liquidaciones de las cuotas que vencen de lunes a domingo, que se le transfieren se paguen o no, cada una el día siguiente a su vencimiento (de martes a lunes): lo ya generado más lo que el cron generará hasta el domingo con las condiciones del día de cada financiamiento. Es su neto, que no lleva la Comisión Helios, y la misma cuenta que Pagos a clínicas. Lo atrasado de semanas anteriores va aparte.",
+      "rpc": "admin_metricas_locales",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "cobrado-a-tiempo-en-la-semana-por-local",
+      "titulo": "Cobrado a tiempo (%) de las cuotas que vencían en la semana, por clínica",
+      "que": "Las cuotas de lo financiado en cada clínica que vencían entre el lunes y el domingo y ya cerraron su plazo, y cuántas se pagaron dentro de él. Las que siguen en plazo todavía no cuentan.",
+      "rpc": "admin_metricas_locales",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "nuevas-en-el-local",
+      "titulo": "Pacientes nuevos en la clínica",
+      "que": "Con una clínica elegida arriba: los pacientes cuya primera cuota en ESA clínica cae en la ventana, se hubieran financiado antes en otra o no. Sale de las cuotas.",
+      "rpc": "admin_growth_overview",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "registros-desde-el-inicio",
+      "titulo": "Registros desde el inicio",
+      "que": "Los pacientes que las clínicas han dado de alta desde el primer día. La secretaria o el administrador registra al paciente en el mismo paso que su primer financiamiento.",
+      "rpc": "admin_metricas_general",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "activos-en-el-ultimo-mes",
+      "titulo": "Pacientes activos (30 días)",
+      "que": "Los pacientes con cuota en algún financiamiento de los últimos treinta días operativos, hoy incluido; con una clínica elegida, en esa clínica. El pie: qué parte son de todos los pacientes.",
+      "rpc": "admin_metricas_general",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "personas-que-repiten",
+      "titulo": "Pacientes que repiten",
+      "que": "Los pacientes con financiamientos en dos días distintos o más, desde el primer día; con una clínica elegida, dos días en esa clínica.",
+      "rpc": "admin_metricas_general",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "consumo-desde-el-inicio",
+      "titulo": "Total financiado desde el inicio (sin comisión)",
+      "que": "Sin la Comisión Helios ni su IVA: todo lo financiado en las clínicas desde el primer día.",
+      "rpc": "admin_metricas_general",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "locales-activos",
+      "titulo": "Clínicas activas (30 días)",
+      "que": "Las clínicas con algún financiamiento en los últimos treinta días operativos, hoy incluido. El pie: cuántas han financiado alguna vez.",
+      "rpc": "admin_metricas_general",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "por-cobrar-en-cuotas",
+      "titulo": "Por cobrar hoy (financiado + comisión)",
+      "que": "Hoy: el importe de las cuotas vencidas o por vencer que siguen sin pagarse, el financiado (sin comisión) más la Comisión Helios + IVA, con las dos partes por separado. No cuenta lo perdido ni los cargos por atraso.",
+      "rpc": "admin_metricas_general",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "total-movido-desde-el-inicio",
+      "titulo": "Total movido desde el inicio (financiado + comisión)",
+      "que": "Todo lo que ha pasado por Helios desde el primer día: el importe de todas las cuotas de todos los financiamientos, cobradas o no, el financiado (sin comisión) más la Comisión Helios + IVA, con las dos partes por separado. Es lo cobrado + lo por cobrar + lo perdido. No cuenta los cargos por atraso.",
+      "rpc": "admin_metricas_general",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "cobrado-en-cuotas",
+      "titulo": "Cobrado desde el inicio (financiado + comisión)",
+      "que": "El importe de todas las cuotas pagadas desde el primer día: el financiado (sin comisión) más la Comisión Helios + IVA, con las dos partes por separado. Los cargos por atraso cobrados van en su cifra.",
+      "rpc": "admin_metricas_general",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "servicio-ganado-desde-el-inicio",
+      "titulo": "Comisión Helios sin IVA desde el inicio",
+      "que": "Lo que Helios ha ganado con la Comisión Helios de todos los financiamientos confirmados desde el primer día, sin el IVA, que se cobra y se remite. Nunca se suma al financiado.",
+      "rpc": "admin_metricas_general",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "cargos-por-atraso-desde-el-inicio",
+      "titulo": "Cargos por atraso desde el inicio",
+      "que": "Los cargos por atraso cargados desde el primer día, sin los condonados. Son ingreso de Helios sin IVA y van aparte de la Comisión Helios. El pie: lo cobrado de ellos.",
+      "rpc": "admin_metricas_general",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "cuotas-a-tiempo-desde-el-inicio",
+      "titulo": "Cuotas a tiempo desde el inicio",
+      "que": "De las cuotas de ese número cuyo plazo ya cerró, el vencimiento más los días de gracia, qué parte se pagó dentro de él, desde el primer día. Lo dado por perdido cuenta como no pagado a tiempo.",
+      "rpc": "admin_metricas_general",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "registros-y-consumo-acumulados",
+      "titulo": "Registros y financiado acumulados",
+      "que": "Los registros y el total financiado (sin comisión) acumulados semana a semana desde el primer día, de lunes a domingo por día operativo. Un registro cuenta la semana en que la clínica dio de alta al paciente. La última semana llega hasta hoy.",
+      "rpc": "admin_metricas_general",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "cobranza-vencido",
+      "titulo": "Vencido de la cola de cobro (financiamiento + comisión)",
+      "que": "La suma de las cuotas vencidas sin pagar de los pacientes de la cola de Por cobrar, incluida la deuda dada por perdida que sigue en la cola (por eso no es el «Vencido» de Métricas › Riesgo), en financiamiento + Comisión Helios con su desglose, y cuántos pacientes la deben; sin los cargos por atraso.",
+      "rpc": "admin_collections",
+      "pantalla": "cartera-vencida"
+    },
+    {
+      "id": "cobranza-vence-pronto",
+      "titulo": "Por vencer en la cola de cobro (financiamiento + comisión)",
+      "que": "La suma de las cuotas sin pagar que vencen de hoy al último día que mira la cola (día operativo) de todos los pacientes de la cola de Por cobrar, en financiamiento + Comisión Helios con su desglose.",
+      "rpc": "admin_collections",
+      "pantalla": "cartera-vencida"
+    },
+    {
+      "id": "cobranza-recordar-hoy",
+      "titulo": "Vence mañana",
+      "que": "Cuántos pacientes sin nada vencido tienen su próxima cuota sin pagar venciendo mañana (día operativo): la cobranza de antes del vencimiento.",
+      "rpc": "admin_collections",
+      "pantalla": "cartera-vencida"
+    },
+    {
+      "id": "cobranza-sin-contactar",
+      "titulo": "Vencidos sin contactar",
+      "que": "Cuántos pacientes de la cola tienen alguna cuota vencida sin pagar y ninguna gestión de cobranza anotada desde el vencimiento de su cuota pendiente más antigua.",
+      "rpc": "admin_collections",
+      "pantalla": "cartera-vencida"
+    },
+    {
+      "id": "cobranza-plazo-vigente",
+      "titulo": "Plazo vigente",
+      "que": "Cuántos pacientes sin nada vencido ni que venza hoy tienen alguna cuota sin pagar que vence en los próximos días que mira la cola (día operativo).",
+      "rpc": "admin_collections",
+      "pantalla": "cartera-vencida"
+    },
+    {
+      "id": "cobranza-vence-hoy",
+      "titulo": "Vence hoy",
+      "que": "Cuántos pacientes sin nada vencido tienen alguna cuota sin pagar que vence hoy (día operativo).",
+      "rpc": "admin_collections",
+      "pantalla": "cartera-vencida"
+    },
+    {
+      "id": "perfil-de-los-morosos",
+      "titulo": "Cómo es quien debe",
+      "que": "De todas las semanas y clínicas, los pacientes que deben algo vencido hoy (los de la lista de Morosos) frente a los que ya tuvieron que pagar alguna cuota y están al día, con los mismos rasgos en las dos columnas. Cada porcentaje va sobre quien tiene ese dato; una ciudad con menos de 3 pacientes no se nombra.",
+      "rpc": "admin_perfil_de_morosos",
+      "pantalla": "cartera-vencida"
+    },
+    {
+      "id": "cobranza-plazo-vencido",
+      "titulo": "Plazo vencido",
+      "que": "Cuántos pacientes de la cola tienen alguna cuota vencida sin pagar, en cualquier tramo de atraso e incluida la deuda dada por perdida; es la suma de los tramos.",
+      "rpc": "admin_collections",
+      "pantalla": "cartera-vencida"
+    },
+    {
+      "id": "cobranza-recuperado",
+      "titulo": "Recuperado (financiamiento + comisión)",
+      "que": "La suma de las cuotas pagadas en el periodo que ya estaban vencidas cuando se pagaron, en financiamiento + Comisión Helios con su desglose; los cargos por atraso cobrados van aparte.",
+      "rpc": "admin_collection_recovered",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "cobranza-recuperacion-de-lo-vencido",
+      "titulo": "Recuperación de lo vencido (%)",
+      "que": "De lo que ya estaba vencido el primer día del periodo (financiamiento + comisión), la parte en dólares que se cobró antes de que terminara; sin nada vencido al empezar, no hay porcentaje.",
+      "rpc": "admin_collection_recovered",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "cobranza-cura-por-tramo",
+      "titulo": "Cura por tramo (%)",
+      "que": "De los pacientes que estaban en un tramo de atraso el lunes anterior, la parte que está al día este lunes.",
+      "rpc": "admin_collection_flow",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "cobranza-efectividad",
+      "titulo": "Gestiones con pago en 72 horas (%)",
+      "que": "La parte de las gestiones seguidas de un pago registrado o de una cuota pagada en las 72 horas siguientes, contando solo las que ya cumplieron ese plazo (es una señal, no una prueba de causa).",
+      "rpc": "admin_contact_effectiveness",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "cobranza-cumplimiento-de-promesas",
+      "titulo": "Promesas cumplidas (%)",
+      "que": "De las promesas cuyo día ya terminó, la parte en la que se registró un pago del paciente antes del final del día operativo prometido; las pendientes no cuentan.",
+      "rpc": "admin_collection_promises",
+      "pantalla": "cartera-vencida"
+    },
+    {
+      "id": "cobranza-promesas-vencen-hoy",
+      "titulo": "Promesas que vencen hoy",
+      "que": "Cuántas promesas de pago tienen como día prometido el día operativo de hoy y todavía no tienen un pago registrado.",
+      "rpc": "admin_collection_promises",
+      "pantalla": "cartera-vencida"
+    },
+    {
+      "id": "cobranza-promesas-rotas",
+      "titulo": "Promesas rotas",
+      "que": "Cuántas promesas de pago llegaron al final de su día operativo sin un pago registrado, o con uno que después se rechazó.",
+      "rpc": "admin_collection_promises",
+      "pantalla": "cartera-vencida"
+    },
+    {
+      "id": "por-cobrar-por-dia",
+      "titulo": "Calendario de cobro",
+      "que": "Por cada día de una semana, lo que vence en cuotas y sigue sin pagar (o, si se pide, también lo ya cobrado), partido en financiado (sin comisión) y Comisión Helios + IVA, con los cargos por atraso aparte y lo de cada clínica; sin lo dado por perdido ni las cuentas de prueba.",
+      "rpc": "admin_receivables_by_day",
+      "pantalla": "cartera-vencida"
+    },
+    {
+      "id": "dinero-en-caja",
+      "titulo": "Dinero en caja",
+      "que": "El saldo de la cuenta de caja del libro de asientos: lo cobrado a los pacientes (cuotas y cargos por atraso) menos lo transferido a las clínicas y los ajustes, que no es el saldo del banco (ese se coteja aparte).",
+      "rpc": "admin_cash_position",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "por-cobrar-a-usuarios",
+      "titulo": "Por cobrar a pacientes",
+      "que": "Lo que los pacientes deben y todavía no han pagado, vencido o no, siempre en sus tres partes (financiado sin comisión, Comisión Helios + IVA y cargos por atraso pendientes) y sin lo dado por perdido.",
+      "rpc": "admin_cash_position",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "consumo-por-cobrar",
+      "titulo": "Financiado por cobrar (sin comisión)",
+      "que": "Sin la Comisión Helios: la parte de las cuotas sin pagar que es financiamiento en las clínicas, el dinero de Helios que está fuera y que se pierde entero si el paciente no paga; sale de las cuotas.",
+      "rpc": "admin_cash_position",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "servicio-por-cobrar",
+      "titulo": "Comisión Helios + IVA por cobrar",
+      "que": "La Comisión Helios y el IVA que lo grava de las cuotas sin pagar (el IVA no es de Helios: se cobra al paciente y se remite).",
+      "rpc": "admin_cash_position",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "por-pagar-a-locales",
+      "titulo": "Por pagar a clínicas",
+      "que": "Lo que Helios les debe a las clínicas (sin las de prueba) por lo que ya se financiaron sus pacientes y todavía no se ha transferido, partido en atrasado, lo que sale hoy y por vencer.",
+      "rpc": "admin_merchant_payables",
+      "pantalla": "pagos-a-locales"
+    },
+    {
+      "id": "caja-tras-pagar-locales",
+      "titulo": "Caja tras pagar a todas las clínicas",
+      "que": "Dinero en caja menos todo lo que se les debe a las clínicas, que sale negativo casi siempre porque a cada clínica se le paga cada consulta en dos partes, el día siguiente a cada cuota del paciente, y la deuda entera nunca vence el mismo día.",
+      "rpc": "admin_cash_position",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "comision-ganada",
+      "titulo": "Comisión Helios sin IVA",
+      "que": "La Comisión Helios sin IVA de todos los financiamientos confirmados que no se han dado por perdidos, cobrado o no (lo devengado); los cargos por atraso van aparte.",
+      "rpc": "admin_cash_position",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "comision-cobrada",
+      "titulo": "Comisión Helios sin IVA cobrado",
+      "que": "La parte de la Comisión Helios sin IVA que los pacientes ya pagaron, sacada de las cuotas pagadas (lo único que sabe repartir un pago entre financiamiento y comisión).",
+      "rpc": "admin_cash_position",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "dado-por-perdido",
+      "titulo": "Perdido (sin comisión)",
+      "que": "Sin la Comisión Helios: el financiamiento de las cuotas declaradas incobrables (al llegar el atraso a los días de expulsión) que sigue sin pagar, que deja de contar en lo que se espera cobrar; su Comisión Helios + IVA y los cargos por atraso perdidos van aparte.",
+      "rpc": "admin_cash_position",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "proyeccion-de-caja",
+      "titulo": "Proyección de caja",
+      "que": "Por día, desde hoy hasta que vence la última cuota de lo que está en la calle: las cuotas que vencen (consulta + Comisión Helios, con su desglose), lo que se espera cobrar de ellas según el cobrado a tiempo histórico, lo que se le paga a las clínicas el día siguiente a cada vencimiento (ya devengado y las mitades que se devengarán, pague o no el paciente) y la caja que resulta a partir de la de hoy.",
+      "rpc": "admin_cash_forecast_days",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "diferencia-con-el-banco",
+      "titulo": "Diferencia con el banco",
+      "que": "Cada saldo del banco apuntado frente a la caja del libro en esa fecha; la diferencia es lo que falta por registrar.",
+      "rpc": "admin_bank_balance_history",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "cotejo-automatico",
+      "titulo": "Pagos cotejados con el extracto (%)",
+      "que": "De los pagos aprobados por pago móvil o transferencia en el periodo (sin los que nacen de asignar un abono), la parte que tiene hoy un movimiento que encaja en el extracto importado.",
+      "rpc": "admin_reconciliation_health",
+      "pantalla": "libro-y-cierre"
+    },
+    {
+      "id": "tiempo-hasta-aprobar",
+      "titulo": "Tiempo hasta aprobar un pago",
+      "que": "La mediana y el percentil noventa del tiempo entre el registro de un pago y su aprobación (ponerlo en revisión no para el reloj).",
+      "rpc": "admin_reconciliation_health",
+      "pantalla": "libro-y-cierre"
+    },
+    {
+      "id": "servicio-devengado-del-mes",
+      "titulo": "Comisión Helios sin IVA del mes",
+      "que": "La Comisión Helios sin IVA de los financiamientos confirmados en el mes, menos lo revertido, aparte de los cargos por atraso y nunca sumado al financiado.",
+      "rpc": "admin_accounting_export",
+      "pantalla": "libro-y-cierre"
+    },
+    {
+      "id": "iva-por-pagar",
+      "titulo": "IVA de la Comisión Helios del mes",
+      "que": "El IVA que grava la Comisión Helios de los financiamientos confirmados en el mes (no es de Helios: se cobra al paciente y se remite).",
+      "rpc": "admin_accounting_export",
+      "pantalla": "libro-y-cierre"
+    },
+    {
+      "id": "cargos-por-atraso-del-mes",
+      "titulo": "Cargos por atraso del mes",
+      "que": "Los cargos por atraso que cayeron en el mes, menos los condonados, en su propia línea y sin sumarse a la Comisión Helios.",
+      "rpc": "admin_accounting_export",
+      "pantalla": "libro-y-cierre"
+    },
+    {
+      "id": "tasa-de-mora",
+      "titulo": "Mora (%)",
+      "que": "Vencido ÷ (vencido + por vencer), en financiamiento + comisión y sin lo dado por perdido.",
+      "rpc": "admin_overview",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "tasa-de-impago",
+      "titulo": "Impago sobre lo financiado (%)",
+      "que": "Sin la Comisión Helios: lo dado por perdido y sin pagar ÷ todo lo financiado desde el primer día, que solo es definitivo en las semanas de financiamiento que ya terminaron su ciclo de cobro.",
+      "rpc": "admin_overview",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "punto-de-empate",
+      "titulo": "Punto de empate del impago (%)",
+      "que": "El impago a partir del cual la Comisión Helios que pagan los que cumplen deja de cubrir lo que se pierde con los que no pagan: el financiamiento ya transferido a la clínica más la comisión que nunca se cobra.",
+      "rpc": "admin_overview",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "cuotas-a-tiempo",
+      "titulo": "Cobrado a tiempo (%)",
+      "que": "De las cuotas cuyo plazo ya terminó (vencimiento + días de gracia), la parte pagada dentro de él, en número de cuotas y por el día en que se registró el pago; lo dado por perdido cuenta como no pagado.",
+      "rpc": "admin_on_time_collection",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "mora-por-tramo",
+      "titulo": "Mora por tramo",
+      "que": "Lo vencido sin pagar (financiamiento + comisión, sin lo dado por perdido) al corte de la semana elegida (ahora, si es la semana en curso), partido por el tramo de atraso de la cuota más antigua de cada paciente, con los cortes de los parámetros.",
+      "rpc": "admin_metricas_cobranza",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "paso-entre-tramos",
+      "titulo": "Paso entre tramos",
+      "que": "El tramo de atraso de cada paciente al empezar y al acabar la semana (del lunes al lunes siguiente, o del lunes a ahora en la semana en curso): cuántos pasaron a un tramo peor, a uno mejor o se pusieron al día.",
+      "rpc": "admin_collection_flow",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "vencia-frente-a-cobrado",
+      "titulo": "Vencía frente a cobrado, por día (financiamiento + comisión)",
+      "que": "Por día, lo que vencía en cuotas (financiamiento + comisión) y la parte de eso mismo que ya se cobró; la diferencia es lo que falta por cobrar de ese día.",
+      "rpc": "admin_due_vs_collected",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "impago-primera-cuota",
+      "titulo": "Impago de la cuota 1 (%)",
+      "que": "De las cuotas 1 que ya pasaron sus días de gracia, la parte que seguía sin pagar el último día de la gracia, en número de cuotas y partida por semana, mes, clínica, nivel o primer financiamiento.",
+      "rpc": "admin_first_payment_default",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "impago-por-cosecha",
+      "titulo": "Cómo acabó lo financiado cada semana",
+      "que": "De lo financiado cada semana, cuánto de su cuota 1 y de su cuota 2 se cobró a tiempo, tarde, sigue vencido o se dio por perdido, cada cuota por separado y con su desglose. Las semanas recientes todavía no han tenido tiempo de enseñar su impago.",
+      "rpc": "admin_metricas_cohortes",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "uso-del-cupo",
+      "titulo": "Uso del cupo",
+      "que": "Sin la Comisión Helios, que no ocupa cupo: lo financiado que todavía ocupa cupo ÷ el cupo de todos los pacientes del nivel, con la exposición (el financiamiento que falta por volver); es la misma cuenta que frena un financiamiento nuevo.",
+      "rpc": "admin_credit_utilization",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "locales-por-volumen",
+      "titulo": "Clínicas por volumen",
+      "que": "Las clínicas de la semana elegida ordenadas por financiado (sin comisión): cuántos pacientes se financiaron (por sus cuotas), qué parte del financiado total representan y cuánto tienen vencido sus pacientes.",
+      "rpc": "admin_metricas_locales",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "alertas-sin-revisar",
+      "titulo": "Alertas sin revisar",
+      "que": "Las señales de riesgo que la base deduce de los datos (cuentas relacionadas, teléfonos o correos repetidos entre pacientes, ráfagas de altas en una clínica, comprobantes que rebotan y financiamientos por encima del cupo, que nunca deberían ocurrir) y que nadie ha marcado como revisadas.",
+      "rpc": "admin_risk_alerts",
+      "pantalla": "alertas"
+    },
+    {
+      "id": "financiado-de-la-semana",
+      "titulo": "Financiado de la semana frente a su meta (sin comisión)",
+      "que": "Sin la Comisión Helios: lo financiado en las clínicas en financiamientos confirmados de la semana operativa (lunes a domingo), frente a la semana anterior a la misma altura y a la meta semanal de los parámetros, si la hay.",
+      "rpc": "admin_metricas_semanas",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "ingreso-por-servicio",
+      "titulo": "Comisión Helios sin IVA de la semana",
+      "que": "La Comisión Helios sin IVA de los financiamientos confirmados de la semana operativa: se gana al confirmar el financiamiento, se cobra con las cuotas y nunca se suma al financiado.",
+      "rpc": "admin_metricas_semanas",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "margen-por-cada-cien",
+      "titulo": "Margen por cada cien dólares financiados",
+      "que": "Desde el primer día, cuánto dejaron la Comisión Helios sin IVA y los cargos por atraso por cada cien dólares financiados (sin comisión), cuánto se le pagó al personal de las clínicas, y el margen que queda después del impago, que se lee en «Impago (%)» frente a su punto de empate.",
+      "rpc": "admin_metricas_general",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "capital-comprometido",
+      "titulo": "Capital comprometido",
+      "que": "El financiado (sin comisión) que los pacientes todavía no han pagado ÷ el capital disponible de los parámetros (lo que se les debe a las clínicas no se suma: sale de lo que se cobra), con las semanas que alcanza al ritmo de las últimas semanas cerradas si no volviera nada.",
+      "rpc": "admin_cash_position",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "metas-del-negocio",
+      "titulo": "Metas",
+      "que": "Las metas de los parámetros del negocio (financiado, mora, cobrado a tiempo, pacientes y clínicas), cada una con lo que lleva la semana; las que no tienen valor dicen «Sin meta».",
+      "rpc": "admin_business_parameters",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "se-registraron",
+      "titulo": "Registros",
+      "que": "Los pacientes que una clínica dio de alta en la ventana elegida (que acaba en la semana de arriba), frente a la ventana anterior a la misma altura. Cada paciente se registra en el mismo paso que su primer financiamiento.",
+      "rpc": "admin_growth_overview",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "primer-consumo",
+      "titulo": "Pacientes con su primer financiamiento",
+      "que": "Los pacientes cuyo primer financiamiento confirmado (por sus cuotas) cae dentro de la ventana elegida. Como la clínica registra al paciente con su primer financiamiento, suele coincidir con los registros.",
+      "rpc": "admin_growth_overview",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "consumieron",
+      "titulo": "Pacientes que se financiaron",
+      "que": "Los pacientes distintos con cuota en al menos un financiamiento confirmado de la ventana elegida.",
+      "rpc": "admin_growth_overview",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "han-comprado-alguna-vez",
+      "titulo": "Registros que se han financiado (%)",
+      "que": "Los pacientes registrados desde el primer día con al menos un financiamiento confirmado ÷ todos los registros; no sigue a la ventana elegida.",
+      "rpc": "admin_growth_overview",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "ticket-medio",
+      "titulo": "Ticket medio (sin comisión)",
+      "que": "Sin la Comisión Helios: lo financiado en la ventana elegida ÷ el número de financiamientos confirmados.",
+      "rpc": "admin_growth_overview",
+      "pantalla": "metricas"
+    },
+    {
+      "id": "rendimiento-de-los-locales",
+      "titulo": "Rendimiento de las clínicas",
+      "que": "Por clínica y en la semana elegida: el financiado (sin comisión), los financiamientos, el ticket medio (sin comisión), los pacientes (contados por sus cuotas) y cuántos eran nuevos en esa clínica, los días con financiamientos y el mejor día, con el cambio frente a la semana anterior a la misma altura; las clínicas activas que no financiaron nada también salen.",
+      "rpc": "admin_metricas_locales",
+      "pantalla": "metricas"
+    }
+  ]
+}
