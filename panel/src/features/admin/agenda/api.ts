@@ -2,7 +2,7 @@ import { queryOptions } from '@tanstack/react-query'
 import type { QueryClient } from '@tanstack/react-query'
 
 import { supabase } from '@/lib/supabase'
-import { comoFila, texto, textoONulo } from '@/lib/json'
+import { comoFila, comoLista, texto, textoONulo } from '@/lib/json'
 import { unoDe } from '@/lib/busqueda'
 import { ESTADOS_DEL_LEAD, aDatos, aParametros, leerAgenda, leerHistoria } from './agenda'
 import type { BorradorDeGestion, BorradorDeLead, CanalDelLead, EstadoDelLead, Resultado } from './agenda'
@@ -37,6 +37,26 @@ export function consultaHistoria(leadId: string) {
       if (error) throw error
       return leerHistoria(data)
     },
+  })
+}
+
+/**
+ * El equipo activo, para elegir quién gestiona a cada médico. Es la lista de
+ * `admin_agenda_team` y no la de Ajustes › Equipo, que el rol de la agenda
+ * no puede leer.
+ */
+export function consultaEquipoDeLaAgenda() {
+  return queryOptions({
+    queryKey: [...CLAVE_AGENDA, 'equipo'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('admin_agenda_team')
+      if (error) throw error
+      return comoLista(data).map((fila) => {
+        const r = comoFila(fila)
+        return { userId: texto(r.user_id), nombre: texto(r.name, 'Sin nombre') }
+      })
+    },
+    staleTime: 5 * 60 * 1000,
   })
 }
 

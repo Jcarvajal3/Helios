@@ -185,12 +185,15 @@ export function FichaDelLead({
   lead,
   hoy,
   ahora,
+  soloAgenda = false,
   onEditar,
   onClose,
 }: {
   lead: Lead
   hoy: string
   ahora: Date
+  /** Quien mira tiene el rol de la agenda: la clínica se nombra, sin enlace. */
+  soloAgenda?: boolean
   onEditar: () => void
   onClose: () => void
 }) {
@@ -237,7 +240,7 @@ export function FichaDelLead({
 
         <Contacto lead={lead} />
 
-        <ProximoPaso lead={lead} hoy={hoy} ahora={ahora} />
+        <ProximoPaso lead={lead} hoy={hoy} ahora={ahora} soloAgenda={soloAgenda} />
 
         <AnotarGestion key={`${lead.id}:${lead.estado}:${lead.reunion ?? ''}`} lead={lead} hoy={hoy} ahora={ahora} />
 
@@ -340,14 +343,26 @@ function Contacto({ lead }: { lead: Lead }) {
 // ── Qué toca ahora ─────────────────────────────────────────────────────────
 
 /** Una tarjeta con lo próximo: la visita, la llamada pendiente o la afiliación. */
-function ProximoPaso({ lead, hoy, ahora }: { lead: Lead; hoy: string; ahora: Date }) {
+function ProximoPaso({
+  lead,
+  hoy,
+  ahora,
+  soloAgenda,
+}: {
+  lead: Lead
+  hoy: string
+  ahora: Date
+  soloAgenda: boolean
+}) {
   if (lead.estado === 'convertido') {
     return (
       <Callout tone="success" titulo="Afiliado">
         {lead.via ? ROTULO_VIA[lead.via] : 'Afiliado'}
         {lead.razon ? ` (se le reconoció ${ROTULO_RAZON[lead.razon]})` : ''}
         {lead.afiliadoEl ? ` el ${formatDateTime(lead.afiliadoEl)}` : ''}.
-        {lead.clinicaId && (
+        {soloAgenda && lead.clinica && <> Su clínica: {lead.clinica}.</>}
+        {soloAgenda && !lead.clinicaId && lead.solicitudEstado === 'pending' && <> Su solicitud está por revisar.</>}
+        {!soloAgenda && lead.clinicaId && (
           <>
             {' '}
             <Link to="/admin/clinicas/$id" params={{ id: lead.clinicaId }} className={ENLACE}>
@@ -355,7 +370,7 @@ function ProximoPaso({ lead, hoy, ahora }: { lead: Lead; hoy: string; ahora: Dat
             </Link>
           </>
         )}
-        {!lead.clinicaId && lead.solicitudEstado === 'pending' && (
+        {!soloAgenda && !lead.clinicaId && lead.solicitudEstado === 'pending' && (
           <>
             {' '}
             <Link to="/admin/clinicas" search={{ estado: 'pendiente' }} className={ENLACE}>

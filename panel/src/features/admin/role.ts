@@ -30,6 +30,23 @@ export function useIsSuperAdmin(): boolean {
   return admin.data?.role === 'super_admin'
 }
 
+/**
+ * Si quien mira tiene el rol de la agenda: solo entra a superadmin › Agenda.
+ * Las pantallas que comparte con el resto (la Agenda) esconden con esto los
+ * enlaces a lo que no puede abrir (el inbox, la ficha de una clínica).
+ */
+export function useSoloAgenda(): boolean {
+  const session = useSession()
+
+  const admin = useQuery({
+    queryKey: ['platform-admin', session?.user.id],
+    queryFn: fetchPlatformAdmin,
+    enabled: !!session,
+  })
+
+  return admin.data?.role === 'agenda'
+}
+
 /** El texto que explica un botón apagado por falta de permiso. Vive en el
  *  kit (`ui.tsx`) para que `Button motivoApagado` no dependa de la sesión. */
 export { SOLO_SUPER_ADMIN } from '@/components/ui'

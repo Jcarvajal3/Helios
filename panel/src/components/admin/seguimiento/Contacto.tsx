@@ -16,18 +16,23 @@ const ICONO =
  * y lo que se le conteste queda a la vista del resto del equipo. Fuera de la
  * ventana de 24 h de WhatsApp el inbox no deja escribir texto libre; para eso
  * está «Desde tu WhatsApp».
+ *
+ * `conInbox={false}` quita el enlace al inbox, para quien no puede abrirlo
+ * (el rol de la agenda).
  */
 export function TelefonoConAcciones({
   telefono,
   nombre,
   conWaMe = false,
+  conInbox = true,
 }: {
   telefono: string
   nombre: string
   conWaMe?: boolean
+  conInbox?: boolean
 }) {
   const llamada = enlaceDeLlamada(telefono)
-  const chat = chatDelInbox(telefono)
+  const chat = conInbox ? chatDelInbox(telefono) : null
   const waMe = whatsappNumber(telefono)
 
   return (

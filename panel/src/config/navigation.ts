@@ -204,6 +204,13 @@ export const superAdminNavGroups: NavGroup[] = MENU_ADMIN.map((bloque) => ({
   items: bloque.pantallas.map(itemDePantalla),
 }))
 
+/**
+ * El menú del rol de la agenda: la Agenda y nada más. Las demás pantallas
+ * le dirían que no a todo (`is_platform_admin()` lo deja fuera), así que no
+ * se le enseñan.
+ */
+export const agendaNavGroups: NavGroup[] = [{ espacio: 'seguimiento', items: [itemDePantalla('agenda')] }]
+
 /** El pie del menú del super admin. */
 export const superAdminNavPie: NavItem[] = PIE_ADMIN.map(itemDePantalla)
 

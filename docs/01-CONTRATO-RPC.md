@@ -847,6 +847,22 @@ RPC:
   historia; la bitácora `doctor_lead.deleted` guarda sus datos. `P0002` si ya
   no existe.
 
+**El rol de la agenda** (2026-10-22, 20261022220000 y 20261022220100).
+`platform_role` gana `agenda`: una cuenta del equipo que solo entra a
+superadmin › Agenda.
+
+- `is_platform_admin()` ahora es `helios_es_del_equipo(['super_admin',
+  'operador'])`: el rol `agenda` no pasa ninguna RPC ni RLS del superadmin.
+- `helios_puede_usar_la_agenda()` = `helios_es_del_equipo` con los tres roles
+  (cuenta activa y, si se exige, sesión `aal2`). Es la guardia de las cinco
+  RPC de la agenda y de `admin_agenda_team()`.
+- `admin_agenda_team() → table(user_id, name, role)`: el equipo activo, para
+  «Gestionado por» (`admin_platform_team` sigue siendo del superadmin).
+- Se da desde Ajustes › Equipo (`admin_set_platform_admin` con `p_role =
+  'agenda'`, super admin). En el panel, ese rol ve un menú con la Agenda sola;
+  cualquier otra ruta de `/admin` lo lleva a ella, y la Agenda le esconde los
+  enlaces al inbox y a la ficha de la clínica.
+
 ---
 
 ## 3. Parámetros nuevos (`business_parameters`)

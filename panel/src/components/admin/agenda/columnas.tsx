@@ -35,8 +35,9 @@ export function EstadoDelLeadBadge({ lead, hoy, ahora }: { lead: Lead; hoy: stri
 /**
  * Una fila por médico: quién es y dónde atiende, cómo llamarlo, en qué quedó,
  * la próxima cita y la última gestión. `hoy` es el día de Caracas.
+ * `soloAgenda`: quien mira tiene el rol de la agenda y no puede abrir el inbox.
  */
-export function columnasDeLaAgenda(hoy: string, ahora: Date): Array<Column<Lead>> {
+export function columnasDeLaAgenda(hoy: string, ahora: Date, soloAgenda = false): Array<Column<Lead>> {
   return [
     {
       key: 'medico',
@@ -60,7 +61,7 @@ export function columnasDeLaAgenda(hoy: string, ahora: Date): Array<Column<Lead>
       csv: (l) => (l.telefono ? formatPhone(l.telefono) : null),
       cell: (l) =>
         l.telefono ? (
-          <TelefonoConAcciones telefono={l.telefono} nombre={l.nombre} conWaMe />
+          <TelefonoConAcciones telefono={l.telefono} nombre={l.nombre} conWaMe conInbox={!soloAgenda} />
         ) : (
           <span className={APAGADO}>Sin teléfono</span>
         ),

@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { createFileRoute, Outlet } from '@tanstack/react-router'
+import { Navigate, Outlet, createFileRoute, useLocation } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 
 import {
@@ -36,7 +36,7 @@ import { Badge, diaOperativo } from '@/components/ui'
 import { PanelShell } from '@/components/layouts/PanelShell'
 import { contadorDeCola, sumarContadores } from '@/components/layouts/contadores'
 import type { Contador } from '@/components/layouts/contadores'
-import { superAdminNavGroups, superAdminNavPie, visibleGroups } from '@/config/navigation'
+import { agendaNavGroups, superAdminNavGroups, superAdminNavPie, visibleGroups } from '@/config/navigation'
 import { consultaCartera, consultaPromesas } from '@/features/admin/cobranza/consultas'
 import { useSession } from '@/features/auth/session'
 import type { PlatformAdmin } from '@/features/admin/api'
@@ -56,13 +56,17 @@ export const Route = createFileRoute('/admin')({
 function SuperAdminLayoutRoute() {
   return (
     <PlatformGate>
-      {(admin) => (
-        // El asistente solo existe con un admin confirmado: su conversación
-        // viaja con el JWT de quien pregunta.
-        <AsistenteProvider>
-          <AdminShell admin={admin} />
-        </AsistenteProvider>
-      )}
+      {(admin) =>
+        admin.role === 'agenda' ? (
+          <ShellDeLaAgenda admin={admin} />
+        ) : (
+          // El asistente solo existe con un admin confirmado: su conversación
+          // viaja con el JWT de quien pregunta.
+          <AsistenteProvider>
+            <AdminShell admin={admin} />
+          </AsistenteProvider>
+        )
+      }
     </PlatformGate>
   )
 }
@@ -125,6 +129,35 @@ function AdminShell({ admin }: { admin: PlatformAdmin }) {
         <PaletaDelPanel />
       )}
       <Outlet />
+    </PanelShell>
+  )
+}
+
+const AGENDA = '/admin/agenda'
+
+/**
+ * El marco del rol de la agenda: la Agenda y nada más. Sin buscador, sin
+ * asistente y sin contadores, que leen colas que la base no le enseña
+ * (`is_platform_admin()` lo deja fuera). Cualquier otra ruta del superadmin,
+ * Inicio incluido, lo lleva a la Agenda.
+ */
+function ShellDeLaAgenda({ admin }: { admin: PlatformAdmin }) {
+  const session = useSession()
+  const { pathname } = useLocation()
+  const enLaAgenda = pathname === AGENDA || pathname.startsWith(`${AGENDA}/`)
+
+  return (
+    <PanelShell
+      groups={agendaNavGroups}
+      sitio="Helios Admin"
+      logo={(plegado) => <LogoDelEquipo plegado={plegado} rol="Agenda" />}
+      account={{
+        name: admin.fullName ?? session?.user.email ?? 'Equipo de Helios',
+        detail: 'Agenda',
+        nombreCompleto: admin.fullName,
+      }}
+    >
+      {enLaAgenda ? <Outlet /> : <Navigate to={AGENDA} replace />}
     </PanelShell>
   )
 }

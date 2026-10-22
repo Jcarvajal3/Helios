@@ -33,13 +33,19 @@ import { SOLO_SUPER_ADMIN, useIsSuperAdmin } from '@/features/admin/role'
 import { useSession } from '@/features/auth/session'
 import { describeError } from '@/lib/supabase'
 
-const ROLES: Array<{ value: RolDelPanel; label: string }> = [
-  { value: 'operador', label: 'Operador' },
-  { value: 'super_admin', label: 'Super admin' },
-]
+const ROTULO_DE_ROL: Record<RolDelPanel, string> = {
+  agenda: 'Agenda',
+  operador: 'Operador',
+  super_admin: 'Super admin',
+}
+
+/** De menos a más poder. */
+const ROLES: Array<{ value: RolDelPanel; label: string }> = (['agenda', 'operador', 'super_admin'] as const).map(
+  (value) => ({ value, label: ROTULO_DE_ROL[value] }),
+)
 
 function rotuloDeRol(rol: RolDelPanel): string {
-  return rol === 'super_admin' ? 'Super admin' : 'Operador'
+  return ROTULO_DE_ROL[rol]
 }
 
 /**
@@ -113,7 +119,7 @@ function DarAcceso({ isSuperAdmin }: { isSuperAdmin: boolean }) {
   return (
     <Seccion
       titulo="Dar acceso"
-      info="Un operador registra y aprueba pagos, manda los avisos y trabaja la cobranza. Un super admin además mueve dinero, cambia las reglas y da acceso a otras personas; crearlo pide motivo y confirmación."
+      info="Agenda solo entra a la Agenda: apunta médicos, anota cada gestión y agenda visitas; no ve pacientes, pagos ni clínicas. Un operador registra y aprueba pagos, manda los avisos y trabaja la cobranza. Un super admin además mueve dinero, cambia las reglas y da acceso a otras personas; crearlo pide motivo y confirmación."
     >
       <Card>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

@@ -9,7 +9,8 @@ import { leerConsultasYComisiones } from '@/features/admin/clinicas/clinicas'
 import type { ConsultasYComisiones } from '@/features/admin/clinicas/clinicas'
 import type { LineaParaGuardar, LineaParaRegistrar } from '@/features/admin/pagoMasivo'
 
-export type PlatformRole = 'operador' | 'super_admin'
+/** `agenda` solo entra a superadmin › Agenda (20261022220100). */
+export type PlatformRole = 'operador' | 'super_admin' | 'agenda'
 
 export type PlatformAdmin = {
   userId: string

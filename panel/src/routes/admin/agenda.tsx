@@ -21,6 +21,7 @@ import {
   hoyCaracas,
 } from '@/components/ui'
 import { consultaAgenda } from '@/features/admin/agenda/api'
+import { useSoloAgenda } from '@/features/admin/role'
 import {
   ESTADOS_DEL_LEAD,
   ESTADO_DEL_LEAD,
@@ -128,7 +129,8 @@ function AgendaPage() {
     () => filtrarAgenda(todos, { texto: search.q, ver: 'todos' }, hoy, ahora),
     [todos, search.q, hoy, ahora],
   )
-  const columnas = useMemo(() => columnasDeLaAgenda(hoy, ahora), [hoy, ahora])
+  const soloAgenda = useSoloAgenda()
+  const columnas = useMemo(() => columnasDeLaAgenda(hoy, ahora, soloAgenda), [hoy, ahora, soloAgenda])
 
   const abierto = search.lead ? todos.find((l) => l.id === search.lead) : undefined
 
@@ -261,6 +263,7 @@ function AgendaPage() {
           lead={abierto}
           hoy={hoy}
           ahora={ahora}
+          soloAgenda={soloAgenda}
           onEditar={() => setEditando(abierto)}
           onClose={() => cambiar({ lead: undefined })}
         />

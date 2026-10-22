@@ -5,6 +5,8 @@
 --
 -- Se comprueba que:
 --   1. Alguien de fuera del equipo no lee la agenda ni apunta (42501).
+--   1b. El rol `agenda` (20261022220100) usa la agenda entera y nada más del
+--       superadmin: `is_platform_admin()` le dice que no.
 --   2. Apuntar normaliza el teléfono, valida y rechaza un teléfono repetido.
 --   3. Las gestiones siguen el árbol del equipo (mensaje, llamada, visita;
 --      20261022210000): el estado sale del resultado, la visita pide fecha y
@@ -27,6 +29,7 @@ do $$
 declare
   v_admin   uuid;
   v_extrano uuid := gen_random_uuid();
+  v_agenda  uuid := gen_random_uuid();
   v_hoy     date := public.helios_business_date(now());
   v_manana  timestamptz := ((public.helios_business_date(now()) + 1)::timestamp + time '10:30') at time zone 'America/Caracas';
   v_res     jsonb;
@@ -55,6 +58,11 @@ declare
     'account_number', '0134 0000 0000 0000 0001');
 begin
   v_admin := pg_temp.prueba_admin();
+  insert into auth.users (id, instance_id, aud, role, email, created_at, updated_at)
+  values (v_agenda, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
+          'agenda-' || v_agenda || '@prueba.helios.test', now(), now());
+  insert into public.platform_admins (user_id, role, full_name, is_active)
+  values (v_agenda, 'agenda', 'Rol de Agenda', true);
 
   -- =========================================================================
   -- 1. Fuera del equipo
@@ -75,6 +83,38 @@ begin
   exception when sqlstate '42501' then v_fallo := true;
   end;
   if not v_fallo then raise exception '1. alguien de fuera del equipo apuntó un médico'; end if;
+
+  v_fallo := false;
+  begin
+    perform public.admin_agenda_team();
+  exception when sqlstate '42501' then v_fallo := true;
+  end;
+  if not v_fallo then raise exception '1. alguien de fuera del equipo leyó el equipo de la agenda'; end if;
+
+  -- 1b. El rol de la agenda: la agenda sí, el resto del superadmin no.
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', v_agenda::text, 'role', 'authenticated', 'aal', 'aal2')::text, true);
+  if public.is_platform_admin() then raise exception '1b. el rol de la agenda pasa por admin del superadmin'; end if;
+  if not public.helios_puede_usar_la_agenda() then raise exception '1b. el rol de la agenda no puede usarla'; end if;
+  perform public.admin_doctor_leads();
+  v_l := public.admin_save_doctor_lead(null, '{"name":"Dra. Rol Agenda","phone":"04147000077"}');
+  perform public.admin_log_doctor_lead_contact((v_l ->> 'id')::uuid, 'mensaje_enviado', 'mensaje');
+  perform public.admin_doctor_lead_activities((v_l ->> 'id')::uuid);
+  if not exists (select 1 from public.admin_agenda_team() t where t.user_id = v_agenda and t.role = 'agenda') then
+    raise exception '1b. el equipo de la agenda no trae al rol de la agenda';
+  end if;
+  v_fallo := false;
+  begin
+    perform public.admin_followups_board();
+  exception when sqlstate '42501' then v_fallo := true;
+  end;
+  if not v_fallo then raise exception '1b. el rol de la agenda leyó el seguimiento de las clínicas'; end if;
+  v_fallo := false;
+  begin
+    perform public.admin_platform_team();
+  exception when sqlstate '42501' then v_fallo := true;
+  end;
+  if not v_fallo then raise exception '1b. el rol de la agenda leyó el equipo con su actividad'; end if;
 
   -- El admin sí, con el rol de la API.
   perform set_config('request.jwt.claims',

@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { useToast } from '@/components/Toast'
 import { Button, ErrorBox, Input, Modal, Select, Textarea } from '@/components/ui'
-import { guardarLead, refrescarAgenda } from '@/features/admin/agenda/api'
+import { consultaEquipoDeLaAgenda, guardarLead, refrescarAgenda } from '@/features/admin/agenda/api'
 import type { LeadGuardado } from '@/features/admin/agenda/api'
 import {
   NOTA_MAXIMA,
@@ -11,7 +11,6 @@ import {
   motivoParaNoGuardar,
 } from '@/features/admin/agenda/agenda'
 import type { BorradorDeLead, Lead } from '@/features/admin/agenda/agenda'
-import { fetchTeam } from '@/features/admin/ops'
 import { describeError } from '@/lib/supabase'
 
 const SIN = 'ninguno'
@@ -36,7 +35,7 @@ export function FormularioDeLead({
   const client = useQueryClient()
   const avisar = useToast()
   const [borrador, setBorrador] = useState(() => borradorDeLead(lead))
-  const equipo = useQuery({ queryKey: ['admin-team'], queryFn: fetchTeam })
+  const equipo = useQuery(consultaEquipoDeLaAgenda())
 
   const guardar = useMutation({
     mutationFn: (b: BorradorDeLead) => guardarLead(lead?.id ?? null, b),
@@ -57,9 +56,7 @@ export function FormularioDeLead({
 
   const opcionesEquipo = [
     { value: SIN, label: 'Nadie' },
-    ...(equipo.data ?? [])
-      .filter((m) => m.isActive || m.userId === lead?.responsableId)
-      .map((m) => ({ value: m.userId, label: m.fullName ?? m.email ?? 'Sin nombre' })),
+    ...(equipo.data ?? []).map((m) => ({ value: m.userId, label: m.nombre })),
   ]
   const bloqueo = motivoParaNoGuardar(borrador)
 
