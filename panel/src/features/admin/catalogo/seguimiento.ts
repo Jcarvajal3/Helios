@@ -1,14 +1,38 @@
-import { Contact, MessageCircle } from 'lucide-react'
+import { CalendarDays, Contact, MessageCircle } from 'lucide-react'
 
 import type { Entrada } from './tipos'
 
 /**
  * Seguimiento: el contacto del equipo con los médicos y su personal. A quién
  * llamar, con qué número, qué se habló la última vez y quién usa más Helios;
- * y el inbox de WhatsApp, donde se les contesta.
+ * y el inbox de WhatsApp, donde se les contesta. La Agenda es el contacto con los
+ * médicos que todavía no lo son: va en el menú justo debajo de Métricas.
  */
 export const seguimiento = [
   // ── Pantallas ────────────────────────────────────────────────────────────
+  {
+    tipo: 'pantalla',
+    id: 'agenda',
+    titulo: 'Agenda',
+    descripcion:
+      'Los médicos por afiliar: su teléfono y su dirección, en qué quedó cada uno (contactado, respondió, reunión agendada…) y el calendario de las reuniones. Pasan solos a afiliado cuando llenan el formulario.',
+    espacio: 'seguimiento',
+    sinonimos: [
+      'leads',
+      'prospectos',
+      'médicos por afiliar',
+      'captación',
+      'ventas',
+      'reuniones',
+      'calendario de reuniones',
+      'citas',
+      'embudo',
+      'pipeline',
+      'afiliar médicos',
+    ],
+    destino: { to: '/admin/agenda' },
+    icono: CalendarDays,
+  },
   {
     tipo: 'pantalla',
     id: 'seguimiento',
@@ -55,6 +79,25 @@ export const seguimiento = [
   },
 
   // ── Acciones ─────────────────────────────────────────────────────────────
+  {
+    tipo: 'accion',
+    id: 'apuntar-medico-agenda',
+    titulo: 'Apuntar un médico por afiliar',
+    descripcion:
+      'Añadir a la agenda un médico con su teléfono y su dirección, para llamarlo, anotar cada gestión y agendarle una reunión.',
+    espacio: 'seguimiento',
+    sinonimos: ['nuevo lead', 'nuevo prospecto', 'agendar reunión', 'apuntar médico'],
+    destino: { to: '/admin/agenda' },
+  },
+  {
+    tipo: 'accion',
+    id: 'ver-calendario-de-reuniones',
+    titulo: 'Ver el calendario de reuniones',
+    descripcion: 'El mes con las reuniones con médicos por afiliar y los días de volver a llamarlos.',
+    espacio: 'seguimiento',
+    sinonimos: ['próximas reuniones', 'agenda del mes', 'citas con médicos'],
+    destino: { to: '/admin/agenda', search: { vista: 'calendario' } },
+  },
   {
     tipo: 'accion',
     id: 'anotar-contacto-clinica',

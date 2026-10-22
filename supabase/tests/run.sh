@@ -81,6 +81,7 @@ SUITES=(
   demo_smoke
   mensajes_paciente_smoke
   seguimiento_smoke
+  agenda_smoke
 )
 if [ "$#" -gt 0 ]; then SUITES=("$@"); fi
 

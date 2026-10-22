@@ -70,6 +70,11 @@ export const ACCION_VERBO: Record<string, string | undefined> = {
   'merchant.staff_removed': 'dio de baja a alguien del personal de una clínica',
   // Seguimiento (20261021100000).
   'merchant.followup': 'anotó un contacto de seguimiento con una clínica',
+  // Agenda de médicos por afiliar (20261022200000).
+  'doctor_lead.created': 'apuntó un médico en la agenda',
+  'doctor_lead.updated': 'corrigió los datos de un médico de la agenda',
+  'doctor_lead.contact': 'anotó una gestión con un médico de la agenda',
+  'doctor_lead.deleted': 'borró un médico de la agenda',
   'merchant.staff_password_reset': 'reinició la contraseña de alguien del personal de una clínica',
 
   // ── Pagos a locales ──────────────────────────────────────────────────────
@@ -193,6 +198,11 @@ export const FILTROS_BITACORA: ReadonlyArray<TemaBitacora> = [
       'merchant.staff_password_reset',
       'merchant.followup',
     ],
+  },
+  {
+    value: 'agenda',
+    label: 'Agenda de médicos',
+    acciones: ['doctor_lead.created', 'doctor_lead.updated', 'doctor_lead.contact', 'doctor_lead.deleted'],
   },
   {
     value: 'reglas',

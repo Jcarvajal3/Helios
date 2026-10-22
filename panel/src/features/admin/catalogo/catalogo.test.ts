@@ -96,8 +96,8 @@ console.log('\n── El menú sale del catálogo ──────────
   comprueba(
     arriba !== undefined &&
       arriba.title === undefined &&
-      arriba.items.map((i) => i.label).join(', ') === 'Inicio, Métricas',
-    'Inicio y Métricas van sueltas arriba, sin rótulo',
+      arriba.items.map((i) => i.label).join(', ') === 'Inicio, Métricas, Agenda',
+    'Inicio, Métricas y Agenda van sueltas arriba, sin rótulo',
     JSON.stringify(arriba?.items.map((i) => i.label)),
   )
 

@@ -764,6 +764,72 @@ soporte | capacitacion`), `note` (3–2000), `next_contact_on`, `actor`.
   una persona que nunca fue de esa clínica o una fecha anterior al día
   operativo. Bitácora `merchant.followup` (target: la clínica).
 
+### 2.9 Agenda de médicos por afiliar (2026-10-22, 20261022200000)
+
+Superadmin › Agenda: los médicos que el equipo quiere afiliar, sus gestiones y
+sus reuniones. Todo con `is_platform_admin()` (los dos roles, como el
+seguimiento) y bitácora en cada escritura.
+
+Tablas (sin RLS de lectura: solo por estas RPC):
+
+- `doctor_leads`: `name` (3–120; `name_key` generada para comparar), `clinic_name,
+  specialty, phone` (E.164 venezolano), `email, address, city, source`
+  (`referido | redes | visita | evento | base_de_datos | otro`), `notes`,
+  `status` (`nuevo | contactado | respondio | no_respondio | reunion |
+  convertido | descartado`), `meeting_at, meeting_mode` (`presencial |
+  videollamada | llamada`), `meeting_place, next_contact_on, assigned_to`
+  (alguien del equipo), y la afiliación: `merchant_application_id,
+  merchant_id, converted_at, converted_via` (`formulario | alta | agenda |
+  manual`), `match_reason` (`telefono | correo | nombre`).
+- `doctor_lead_activities` (solo se añade; se borra con su lead): `kind`
+  (`creado | gestion | conversion`), `channel` (`llamada | whatsapp | visita |
+  correo | redes`), `status_from, status_to, meeting_at, note, actor` (null =
+  el sistema).
+
+El cruce con la afiliación (disparadores, nunca tumban la afiliación: si fallan
+dejan un `warning`):
+
+- Al insertar en `merchant_applications`, y al insertar una clínica que no es
+  de prueba en `merchants`, los leads con el mismo teléfono, el mismo correo o
+  el mismo nombre (`helios_lead_name_key`: sin tildes ni «Dr./Dra.», de al
+  menos dos palabras) pasan a `convertido` y se enlazan con la solicitud o la
+  clínica. Un lead ya enlazado con otra clínica no se toca.
+- Al ponerle `merchant_id` a una solicitud (aprobación), sus leads quedan con
+  esa clínica.
+- Al apuntar o corregir un lead, si ya hay una clínica real o una solicitud no
+  rechazada que coincide, sale afiliado (`converted_via = 'agenda'`).
+
+RPC:
+
+- `admin_doctor_leads() → jsonb` (un arreglo, el más nuevo primero): `id, name,
+  clinic_name, specialty, phone, email, address, city, source, notes, status,
+  meeting_at, meeting_mode, meeting_place, next_contact_on, assigned_to,
+  assigned_name, converted_at, converted_via, match_reason, application_id,
+  application_status, merchant_id, merchant_name, created_at, updated_at,
+  activities_count, last_activity` (`created_at, kind, channel, status_to,
+  note, actor_name` o null).
+- `admin_doctor_lead_activities(p_lead_id uuid) → table(id, created_at, kind,
+  channel, status_from, status_to, meeting_at, note, actor_name)`, la última
+  primero (tope 200).
+- `admin_save_doctor_lead(p_lead_id uuid, p jsonb) → jsonb {id, status,
+  merchant_name}`. `p_lead_id` null crea; si no, reemplaza los datos (`name,
+  clinic_name, specialty, phone, email, address, city, source, notes,
+  assigned_to`). `22023` con un dato que no vale; `23505` si otro lead tiene
+  ese teléfono o ese correo; `P0002` si el lead ya no existe. Bitácora
+  `doctor_lead.created` / `doctor_lead.updated` (target: el lead).
+- `admin_log_doctor_lead_contact(p_lead_id uuid, p_status text, p_channel text
+  default null, p_note text default null, p_meeting_at timestamptz default
+  null, p_meeting_mode text default null, p_meeting_place text default null,
+  p_next_contact_on date default null) → uuid`. `p_status` es el estado en que
+  queda. `reunion` pide `p_meeting_at` si no tenía una reunión por venir;
+  salir de `reunion` antes de la hora la anula (lo dice la nota). Una fecha de
+  reunión o de volver a llamar anterior a hoy, o una gestión sin nada que
+  anotar, dan `22023`. `next_contact_on` se reemplaza en cada gestión (y se
+  borra al afiliar o descartar). Bitácora `doctor_lead.contact`.
+- `admin_delete_doctor_lead(p_lead_id uuid) → void`. Borra el lead y su
+  historia; la bitácora `doctor_lead.deleted` guarda sus datos. `P0002` si ya
+  no existe.
+
 ---
 
 ## 3. Parámetros nuevos (`business_parameters`)

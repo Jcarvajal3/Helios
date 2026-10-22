@@ -160,8 +160,9 @@ const MENU_ADMIN: ReadonlyArray<{
   pantallas: ReadonlyArray<IdPantalla>
 }> = [
   // Inicio es por donde se entra, y desde ella se salta a lo que toca.
-  // Métricas, justo debajo: es la otra pregunta de cada mañana.
-  { espacio: 'inicio', pantallas: ['inicio', 'metricas'] },
+  // Métricas, justo debajo: es la otra pregunta de cada mañana. Y la Agenda:
+  // los médicos por afiliar y sus reuniones.
+  { espacio: 'inicio', pantallas: ['inicio', 'metricas', 'agenda'] },
   // El dinero que entra, de punta a punta, y a quién se le da crédito.
   // Promesas es una pestaña de Por cobrar, y Abonos sin dueño una de Pagos
   // reportados.

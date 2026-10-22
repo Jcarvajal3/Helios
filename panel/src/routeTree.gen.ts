@@ -31,6 +31,7 @@ import { Route as ComercioPagosRouteImport } from './routes/_comercio/pagos'
 import { Route as ComercioPersonalRouteImport } from './routes/_comercio/personal'
 import { Route as ComercioRegistrarRouteImport } from './routes/_comercio/registrar'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as AdminAgendaRouteImport } from './routes/admin/agenda'
 import { Route as AdminAjustesRouteImport } from './routes/admin/ajustes'
 import { Route as AdminAlertasRouteImport } from './routes/admin/alertas'
 import { Route as AdminAvisosRouteImport } from './routes/admin/avisos'
@@ -161,6 +162,11 @@ const ComercioRegistrarRoute = ComercioRegistrarRouteImport.update({
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAgendaRoute = AdminAgendaRouteImport.update({
+  id: '/agenda',
+  path: '/agenda',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminAjustesRoute = AdminAjustesRouteImport.update({
@@ -297,6 +303,7 @@ export interface FileRoutesByFullPath {
   '/pagos': typeof ComercioPagosRoute
   '/personal': typeof ComercioPersonalRoute
   '/registrar': typeof ComercioRegistrarRoute
+  '/admin/agenda': typeof AdminAgendaRoute
   '/admin/ajustes': typeof AdminAjustesRoute
   '/admin/alertas': typeof AdminAlertasRoute
   '/admin/avisos': typeof AdminAvisosRoute
@@ -341,6 +348,7 @@ export interface FileRoutesByTo {
   '/pagos': typeof ComercioPagosRoute
   '/personal': typeof ComercioPersonalRoute
   '/registrar': typeof ComercioRegistrarRoute
+  '/admin/agenda': typeof AdminAgendaRoute
   '/admin/ajustes': typeof AdminAjustesRoute
   '/admin/alertas': typeof AdminAlertasRoute
   '/admin/avisos': typeof AdminAvisosRoute
@@ -388,6 +396,7 @@ export interface FileRoutesById {
   '/_comercio/pagos': typeof ComercioPagosRoute
   '/_comercio/personal': typeof ComercioPersonalRoute
   '/_comercio/registrar': typeof ComercioRegistrarRoute
+  '/admin/agenda': typeof AdminAgendaRoute
   '/admin/ajustes': typeof AdminAjustesRoute
   '/admin/alertas': typeof AdminAlertasRoute
   '/admin/avisos': typeof AdminAvisosRoute
@@ -435,6 +444,7 @@ export interface FileRouteTypes {
     | '/pagos'
     | '/personal'
     | '/registrar'
+    | '/admin/agenda'
     | '/admin/ajustes'
     | '/admin/alertas'
     | '/admin/avisos'
@@ -479,6 +489,7 @@ export interface FileRouteTypes {
     | '/pagos'
     | '/personal'
     | '/registrar'
+    | '/admin/agenda'
     | '/admin/ajustes'
     | '/admin/alertas'
     | '/admin/avisos'
@@ -525,6 +536,7 @@ export interface FileRouteTypes {
     | '/_comercio/pagos'
     | '/_comercio/personal'
     | '/_comercio/registrar'
+    | '/admin/agenda'
     | '/admin/ajustes'
     | '/admin/alertas'
     | '/admin/avisos'
@@ -725,6 +737,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/agenda': {
+      id: '/admin/agenda'
+      path: '/agenda'
+      fullPath: '/admin/agenda'
+      preLoaderRoute: typeof AdminAgendaRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/ajustes': {
       id: '/admin/ajustes'
       path: '/ajustes'
@@ -909,6 +928,7 @@ const ComercioRouteWithChildren = ComercioRoute._addFileChildren(
 )
 
 interface AdminRouteChildren {
+  AdminAgendaRoute: typeof AdminAgendaRoute
   AdminAjustesRoute: typeof AdminAjustesRoute
   AdminAlertasRoute: typeof AdminAlertasRoute
   AdminAvisosRoute: typeof AdminAvisosRoute
@@ -932,6 +952,7 @@ interface AdminRouteChildren {
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminAgendaRoute: AdminAgendaRoute,
   AdminAjustesRoute: AdminAjustesRoute,
   AdminAlertasRoute: AdminAlertasRoute,
   AdminAvisosRoute: AdminAvisosRoute,
