@@ -29,6 +29,7 @@ import {
   filtrarAgenda,
   ordenarAgenda,
   pendienteDe,
+  tieneVisita,
 } from '@/features/admin/agenda/agenda'
 import type { EstadoDelLead, Lead, QueSeVe } from '@/features/admin/agenda/agenda'
 import { comoBooleano, comoDia, comoId, comoTexto, unoDe } from '@/lib/busqueda'
@@ -45,8 +46,8 @@ type AgendaSearch = {
   lead?: string
   /** El día 1 del mes del calendario. */
   mes?: string
-  /** En el calendario, solo las reuniones (sin los días de volver a llamar). */
-  soloReuniones?: true
+  /** En el calendario, solo las visitas (sin los días de volver a llamar). */
+  soloVisitas?: true
 }
 
 export const Route = createFileRoute('/admin/agenda')({
@@ -61,7 +62,7 @@ export const Route = createFileRoute('/admin/agenda')({
       q: comoTexto(search.q),
       lead: comoId(search.lead),
       mes: mes ? `${mes.slice(0, 7)}-01` : undefined,
-      soloReuniones: comoBooleano(search.soloReuniones),
+      soloVisitas: comoBooleano(search.soloVisitas),
     }
   },
 })
@@ -76,9 +77,9 @@ const OPCIONES_ESTADO: Array<{ value: EstadoDelLead | 'todos'; label: string }> 
   ...ESTADOS_DEL_LEAD.map((value) => ({ value, label: ESTADO_DEL_LEAD[value].label })),
 ]
 
-const OPCIONES_CALENDARIO: Array<{ value: 'todo' | 'reuniones'; label: string }> = [
-  { value: 'todo', label: 'Reuniones y llamadas' },
-  { value: 'reuniones', label: 'Solo reuniones' },
+const OPCIONES_CALENDARIO: Array<{ value: 'todo' | 'visitas'; label: string }> = [
+  { value: 'todo', label: 'Visitas y llamadas' },
+  { value: 'visitas', label: 'Solo visitas' },
 ]
 
 function opcionesVer(leads: ReadonlyArray<Lead>, hoy: string, ahora: Date): Array<{ value: QueSeVe; label: string }> {
@@ -98,7 +99,7 @@ function opcionesVer(leads: ReadonlyArray<Lead>, hoy: string, ahora: Date): Arra
  * «Listado» es la lista de trabajo: cada médico con su teléfono, su
  * dirección, en qué quedó y su próxima cita, en el orden en que hay que
  * atenderlos (lo atrasado, lo de hoy y los que nadie ha llamado, arriba).
- * «Calendario» es el mes con las reuniones y los días de volver a llamar.
+ * «Calendario» es el mes con las visitas y los días de volver a llamar.
  * Las dos abren la misma ficha, donde se anota cada gestión. Cuando un médico
  * llena el formulario de afiliación de la portada, su lead pasa solo a
  * «Afiliado» (migración 20261022200000).
@@ -122,7 +123,7 @@ function AgendaPage() {
     () => ordenarAgenda(filtrarAgenda(todos, { texto: search.q, ver, estado: search.estado }, hoy, ahora), hoy, ahora),
     [todos, search.q, ver, search.estado, hoy, ahora],
   )
-  // El calendario no filtra por estado: una reunión es una reunión. Sí por la búsqueda.
+  // El calendario no filtra por estado: una visita es una visita. Sí por la búsqueda.
   const delCalendario = useMemo(
     () => filtrarAgenda(todos, { texto: search.q, ver: 'todos' }, hoy, ahora),
     [todos, search.q, hoy, ahora],
@@ -177,8 +178,8 @@ function AgendaPage() {
           <Filtro label="En el calendario">
             <Segmented
               options={OPCIONES_CALENDARIO}
-              value={search.soloReuniones ? 'reuniones' : 'todo'}
-              onChange={(v) => cambiar({ soloReuniones: v === 'reuniones' ? true : undefined })}
+              value={search.soloVisitas ? 'visitas' : 'todo'}
+              onChange={(v) => cambiar({ soloVisitas: v === 'visitas' ? true : undefined })}
             />
           </Filtro>
         )}
@@ -203,7 +204,7 @@ function AgendaPage() {
         <EmptyState
           icon={<UserPlus size={40} />}
           title="La agenda está vacía"
-          description="Apunta a los médicos que quieres afiliar con su teléfono y su dirección, y lleva aquí cada llamada y cada reunión. Cuando uno llene el formulario de afiliación, pasará solo a «Afiliado»."
+          description="Apunta a los médicos que quieres afiliar con su teléfono y su dirección, y lleva aquí cada mensaje, cada llamada y cada visita. Cuando uno llene el formulario de afiliación, pasará solo a «Afiliado»."
           action={
             <Button size="sm" onClick={() => setApuntando(true)}>
               <Plus size={14} aria-hidden /> Apuntar el primero
@@ -218,7 +219,7 @@ function AgendaPage() {
           title={ver === 'para_hoy' && !search.q && !search.estado ? 'Nada pendiente para hoy' : 'Nada coincide'}
           description={
             ver === 'para_hoy' && !search.q && !search.estado
-              ? 'Ninguna llamada ni reunión vence hoy, y todos los médicos de la agenda ya tienen un primer contacto.'
+              ? 'Ninguna llamada ni visita vence hoy, y todos los médicos de la agenda ya tienen un primer contacto.'
               : 'Prueba con otra parte del nombre o del teléfono, u otro filtro.'
           }
         />
@@ -233,8 +234,8 @@ function AgendaPage() {
           summary={<Resumen leads={todos} hoy={hoy} ahora={ahora} />}
           rowTone={(l) => {
             const p = pendienteDe(l, hoy, ahora)
-            if (p === 'reunion_pasada' || p === 'llamar_atrasado') return 'error'
-            if (p === 'reunion_hoy' || p === 'llamar_hoy') return 'warning'
+            if (p === 'visita_pasada' || p === 'llamar_atrasado') return 'error'
+            if (p === 'visita_hoy' || p === 'llamar_hoy') return 'warning'
             return undefined
           }}
           exportar={{ archivo: 'agenda-medicos' }}
@@ -247,7 +248,7 @@ function AgendaPage() {
           leads={delCalendario}
           mes={mes}
           hoy={hoy}
-          conLlamadas={!search.soloReuniones}
+          conLlamadas={!search.soloVisitas}
           onMes={(m) => cambiar({ mes: m === `${hoy.slice(0, 7)}-01` ? undefined : m })}
           onAbrir={abrir}
         />
@@ -286,12 +287,12 @@ function AgendaPage() {
 /** Lo que hay que hacer hoy, lo agendado y cuántos se afiliaron. */
 function Resumen({ leads, hoy, ahora }: { leads: ReadonlyArray<Lead>; hoy: string; ahora: Date }) {
   const paraHoy = leads.filter((l) => pendienteDe(l, hoy, ahora) !== null).length
-  const proximas = leads.filter((l) => l.estado === 'reunion' && l.reunion && new Date(l.reunion) >= ahora).length
+  const proximas = leads.filter((l) => tieneVisita(l) && l.reunion !== null && new Date(l.reunion) >= ahora).length
   const cuenta = cuentaPorEstado(leads)
   const trabajados = leads.length - cuenta.nuevo
   return (
     <>
-      {paraHoy} para hoy · {proximas} {proximas === 1 ? 'reunión agendada' : 'reuniones agendadas'} ·{' '}
+      {paraHoy} para hoy · {proximas} {proximas === 1 ? 'visita agendada' : 'visitas agendadas'} ·{' '}
       {cuenta.convertido} {cuenta.convertido === 1 ? 'afiliado' : 'afiliados'} de {leads.length}
       {trabajados > 0 && ` (${Math.round((cuenta.convertido / leads.length) * 100)} %)`}
     </>

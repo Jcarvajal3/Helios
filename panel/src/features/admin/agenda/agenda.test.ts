@@ -3,20 +3,25 @@
  *
  *   npx tsx src/features/admin/agenda/agenda.test.ts
  *
- * Lo que se vigila: que el tablero se lea, que las horas de las reuniones
- * sean las de Caracas (una reunión a las 9 de la noche no salta al día
+ * Lo que se vigila: que el tablero se lea, que las horas de las visitas
+ * sean las de Caracas (una visita a las 9 de la noche no salta al día
  * siguiente), que el orden de trabajo ponga arriba lo atrasado y lo de hoy,
  * que la búsqueda encuentre un teléfono escrito a la venezolana, que el
- * calendario cuadre las semanas y que una gestión no se pueda anotar sin
- * fecha de reunión, con una fecha pasada o sin nada que contar.
+ * calendario cuadre las semanas, que el árbol de la gestión (mensaje,
+ * llamada, visita) dé el resultado y el estado que da la base, y que una
+ * gestión no se pueda anotar sin fecha de visita, con una fecha pasada o sin
+ * nada que contar.
  */
 import {
+  SIN_ELEGIR,
   aParametros,
-  anulaLaReunion,
+  anulaLaVisita,
   borradorDeGestion,
+  canalDe,
   casillasDelMes,
   citasDe,
   diaDeCaracas,
+  estadoDelResultado,
   filtrarAgenda,
   horaDeCaracas,
   instanteDeCaracas,
@@ -27,8 +32,9 @@ import {
   ordenarAgenda,
   pendienteDe,
   borradorDeLead,
+  resultadoDe,
 } from './agenda'
-import type { Lead } from './agenda'
+import type { Eleccion, Lead } from './agenda'
 
 let fallos = 0
 
@@ -88,7 +94,7 @@ console.log('\n── Las horas de Caracas ────────────�
 {
   const nueveDeLaNoche = instanteDeCaracas('2026-10-23', '21:00')
   igual('el instante lleva el desfase de Caracas', nueveDeLaNoche, '2026-10-23T21:00:00-04:00')
-  igual('una reunión a las 9 de la noche es de ese día', diaDeCaracas(nueveDeLaNoche), '2026-10-23')
+  igual('una visita a las 9 de la noche es de ese día', diaDeCaracas(nueveDeLaNoche), '2026-10-23')
   igual('y a esa hora', horaDeCaracas(nueveDeLaNoche), '21:00')
   igual('lo que llega de la base en UTC se lee en Caracas', horaDeCaracas('2026-10-23T14:30:00+00:00'), '10:30')
 }
@@ -104,8 +110,8 @@ console.log('\n── Qué toca hoy y el orden ───────────
   const semana = lead('semana', { next_contact_on: '2026-10-29' })
   const afiliado = lead('afiliado', { status: 'convertido', next_contact_on: '2026-10-20' })
 
-  igual('una reunión que ya pasó pide anotar cómo fue', pendienteDe(pasada, HOY, AHORA), 'reunion_pasada')
-  igual('una reunión a las 4 de la tarde de hoy es de hoy', pendienteDe(hoyReunion, HOY, AHORA), 'reunion_hoy')
+  igual('una visita que ya pasó pide anotar cómo fue', pendienteDe(pasada, HOY, AHORA), 'visita_pasada')
+  igual('una visita a las 4 de la tarde de hoy es de hoy', pendienteDe(hoyReunion, HOY, AHORA), 'visita_hoy')
   igual('un afiliado no tiene pendientes', pendienteDe(afiliado, HOY, AHORA), null)
 
   const orden = ordenarAgenda([afiliado, semana, manana, nuevo, hoyLlamar, hoyReunion, atrasada, pasada], HOY, AHORA)
@@ -126,10 +132,10 @@ console.log('\n── Qué toca hoy y el orden ───────────
 
 console.log('\n── La búsqueda ──────────────────────────────────────────────')
 {
-  const ana = lead('ana', { name: 'Dra. Ana Pérez', city: 'Mérida', phone: '+584141234567' })
+  const ana = lead('ana', { name: 'Dra. Ana Pérez', address: 'Torre Sur, Mérida', phone: '+584141234567' })
   const luis = lead('luis', { name: 'Dr. Luis Gómez', phone: '+582125550002' })
   igual('sin tildes', filtrarAgenda([ana, luis], { texto: 'perez', ver: 'todos' }, HOY, AHORA).map((l) => l.id), ['ana'])
-  igual('por la ciudad', filtrarAgenda([ana, luis], { texto: 'merida', ver: 'todos' }, HOY, AHORA).map((l) => l.id), ['ana'])
+  igual('por la dirección', filtrarAgenda([ana, luis], { texto: 'merida', ver: 'todos' }, HOY, AHORA).map((l) => l.id), ['ana'])
   igual(
     'un teléfono a la venezolana',
     filtrarAgenda([ana, luis], { texto: '0414 123', ver: 'todos' }, HOY, AHORA).map((l) => l.id),
@@ -154,9 +160,34 @@ console.log('\n── El calendario ──────────────�
   const r = lead('r', { status: 'reunion', meeting_at: '2026-10-24T01:00:00Z', next_contact_on: '2026-10-23' })
   const cerrado = lead('c', { status: 'descartado', next_contact_on: '2026-10-25' })
   igual(
-    'la reunión a las 9 de la noche cae en su día de Caracas, y la llamada detrás',
+    'la visita a las 9 de la noche cae en su día de Caracas, y la llamada detrás',
     citasDe([r, cerrado]).map((c) => `${c.tipo}:${c.dia}:${c.hora ?? ''}`),
-    ['reunion:2026-10-23:21:00', 'llamada:2026-10-23:'],
+    ['visita:2026-10-23:21:00', 'llamada:2026-10-23:'],
+  )
+}
+
+console.log('\n── El árbol de la gestión ───────────────────────────────────')
+{
+  const r = (e: Partial<Eleccion>, conVisita = false) => resultadoDe({ ...SIN_ELEGIR, ...e }, conVisita)
+  igual('mensaje › enviado', r({ tipo: 'mensaje', respuesta: 'enviado' }), 'mensaje_enviado')
+  igual('mensaje › contestó, sin decir si le interesa, aún no', r({ tipo: 'mensaje', respuesta: 'contesto' }), null)
+  igual('mensaje › contestó › interesado', r({ tipo: 'mensaje', respuesta: 'contesto', interesado: true }), 'interesado')
+  igual('llamada › contestó › no interesado', r({ tipo: 'llamada', respuesta: 'contesto', interesado: false }), 'no_interesado')
+  igual('llamada › ocupado', r({ tipo: 'llamada', respuesta: 'ocupado' }), 'ocupado')
+  igual('visita sin una agendada: agendarla', r({ tipo: 'visita' }), 'visita_agendada')
+  igual('visita con una agendada: falta decir qué pasó', r({ tipo: 'visita' }, true), null)
+  igual('visita › pospuesta', r({ tipo: 'visita', respuesta: 'pospuesta' }, true), 'visita_pospuesta')
+  igual('solo una nota', r({ tipo: 'nota' }), 'nota')
+  igual('el canal de una llamada', canalDe({ ...SIN_ELEGIR, tipo: 'llamada' }), 'llamada')
+  igual('una nota no tiene canal', canalDe({ ...SIN_ELEGIR, tipo: 'nota' }), null)
+
+  const c = lead('c')
+  igual(
+    'el estado que deja cada resultado (el de la base)',
+    (['mensaje_enviado', 'interesado', 'no_interesado', 'ocupado', 'visita_realizada', 'visita_cancelada', 'nota'] as const).map(
+      (x) => estadoDelResultado(x, c),
+    ),
+    ['contactado', 'respondio', 'descartado', 'no_respondio', 'visitado', 'respondio', 'contactado'],
   )
 }
 
@@ -164,42 +195,48 @@ console.log('\n── Anotar una gestión ────────────�
 {
   const contactado = lead('c')
   const b = borradorDeGestion(contactado)
-  igual('desde «contactado» se propone «respondió»', b.estado, 'respondio')
 
+  igual('sin elegir qué pasó no se anota', motivoParaNoAnotar(null, b, contactado, HOY), 'Elige qué pasó.')
   igual(
-    'una reunión sin día no se anota',
-    motivoParaNoAnotar({ ...b, estado: 'reunion', reunionDia: '' }, contactado, HOY, AHORA),
-    'Pon el día y la hora de la reunión.',
+    'una visita sin día no se anota',
+    motivoParaNoAnotar('visita_agendada', b, contactado, HOY),
+    'Pon el día y la hora de la visita.',
   )
   igual(
     'ni en una fecha pasada',
-    motivoParaNoAnotar({ ...b, estado: 'reunion', reunionDia: '2026-10-21' }, contactado, HOY, AHORA),
-    'La fecha de la reunión ya pasó.',
+    motivoParaNoAnotar('visita_agendada', { ...b, visitaDia: '2026-10-21' }, contactado, HOY),
+    'La fecha de la visita ya pasó.',
   )
+  igual('una nota vacía no se anota', motivoParaNoAnotar('nota', b, contactado, HOY), 'Escribe la nota.')
+  igual('«no contestó» basta', motivoParaNoAnotar('no_contesto', b, contactado, HOY), undefined)
+
+  const p = aParametros('c', 'visita_agendada', 'visita', { ...b, visitaDia: '2026-10-23', visitaHora: '10:30' })
+  igual('la visita se manda en hora de Caracas', p.p_meeting_at, '2026-10-23T10:30:00-04:00')
+  igual('con su resultado y su canal', [p.p_result, p.p_channel], ['visita_agendada', 'visita'])
   igual(
-    'sin cambio y sin nada que contar, no',
-    motivoParaNoAnotar({ ...b, estado: 'contactado', canal: '', nota: '' }, contactado, HOY, AHORA),
-    'Cuenta qué pasó o cambia el estado.',
+    'una llamada no manda fecha de visita',
+    aParametros('c', 'no_contesto', 'llamada', { ...b, visitaDia: '2026-10-23' }).p_meeting_at,
+    undefined,
   )
-  igual('cambiar el estado basta', motivoParaNoAnotar({ ...b, canal: '' }, contactado, HOY, AHORA), undefined)
 
-  const p = aParametros('c', { ...b, estado: 'reunion', reunionDia: '2026-10-23', reunionHora: '10:30' }, contactado)
-  igual('la reunión se manda en hora de Caracas', p.p_meeting_at, '2026-10-23T10:30:00-04:00')
-
-  const conReunion = lead('r', { status: 'reunion', meeting_at: '2026-10-23T14:30:00Z', meeting_mode: 'videollamada' })
-  const misma = borradorDeGestion(conReunion)
-  igual('el borrador trae la reunión que tenía', [misma.reunionDia, misma.reunionHora, misma.modo], [
-    '2026-10-23',
-    '10:30',
-    'videollamada',
-  ])
-  igual('la misma reunión no se vuelve a mandar', aParametros('r', { ...misma, nota: 'Confirmó' }, conReunion).p_meeting_at, undefined)
-  comprueba(anulaLaReunion({ ...misma, estado: 'descartado' }, conReunion, AHORA), 'descartar antes de la reunión la anula')
+  const conVisita = lead('r', { status: 'reunion', meeting_at: '2026-10-23T14:30:00Z', meeting_mode: 'videollamada' })
+  const misma = borradorDeGestion(conVisita)
+  igual('el borrador trae la hora y el modo de la visita', [misma.visitaHora, misma.modo], ['10:30', 'videollamada'])
+  igual(
+    'posponer a la misma hora no vale',
+    motivoParaNoAnotar('visita_pospuesta', { ...misma, visitaDia: '2026-10-23' }, conVisita, HOY),
+    'Pon la nueva fecha de la visita.',
+  )
+  comprueba(anulaLaVisita('no_interesado', conVisita, AHORA), '«no interesado» antes de la visita la anula')
+  comprueba(anulaLaVisita('visita_cancelada', conVisita, AHORA), 'cancelarla, también')
+  comprueba(!anulaLaVisita('nota', conVisita, AHORA), 'una nota, no')
+  comprueba(!anulaLaVisita('visita_realizada', conVisita, AHORA), 'darla por realizada, no')
   comprueba(
-    !anulaLaReunion({ ...misma, estado: 'descartado' }, conReunion, new Date('2026-10-24T00:00:00Z')),
-    'después de la reunión, no',
+    !anulaLaVisita('no_interesado', conVisita, new Date('2026-10-24T00:00:00Z')),
+    'después de la visita, nada se anula',
   )
 }
+
 
 console.log('\n── Apuntar ──────────────────────────────────────────────────')
 {

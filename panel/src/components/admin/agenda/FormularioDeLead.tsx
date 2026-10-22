@@ -7,21 +7,14 @@ import { guardarLead, refrescarAgenda } from '@/features/admin/agenda/api'
 import type { LeadGuardado } from '@/features/admin/agenda/api'
 import {
   NOTA_MAXIMA,
-  ORIGENES_DEL_LEAD,
-  ROTULO_ORIGEN,
   borradorDeLead,
   motivoParaNoGuardar,
 } from '@/features/admin/agenda/agenda'
-import type { BorradorDeLead, Lead, OrigenDelLead } from '@/features/admin/agenda/agenda'
+import type { BorradorDeLead, Lead } from '@/features/admin/agenda/agenda'
 import { fetchTeam } from '@/features/admin/ops'
 import { describeError } from '@/lib/supabase'
 
 const SIN = 'ninguno'
-
-const OPCIONES_ORIGEN: Array<{ value: OrigenDelLead | typeof SIN; label: string }> = [
-  { value: SIN, label: 'Sin indicar' },
-  ...ORIGENES_DEL_LEAD.map((value) => ({ value, label: ROTULO_ORIGEN[value] })),
-]
 
 /** Las especialidades de Helios, como sugerencias: se puede escribir otra. */
 const ESPECIALIDADES = ['Medicina general', 'Odontología', 'Cosmetología', 'Pediatría', 'Ginecología', 'Dermatología']
@@ -122,14 +115,6 @@ export function FormularioDeLead({
             onChange={(telefono) => cambiar({ telefono })}
           />
           <Input
-            id="lead-correo"
-            label="Correo (opcional)"
-            type="email"
-            value={borrador.correo}
-            autoComplete="off"
-            onChange={(correo) => cambiar({ correo })}
-          />
-          <Input
             id="lead-consultorio"
             label="Consultorio o centro (opcional)"
             value={borrador.consultorio}
@@ -138,32 +123,17 @@ export function FormularioDeLead({
             onChange={(consultorio) => cambiar({ consultorio })}
           />
           <Input
-            id="lead-ciudad"
-            label="Ciudad (opcional)"
-            value={borrador.ciudad}
-            placeholder="Caracas"
-            autoComplete="off"
-            onChange={(ciudad) => cambiar({ ciudad })}
-          />
-          <Input
             id="lead-direccion"
             label="Dirección"
             value={borrador.direccion}
-            placeholder="Torre, piso y consultorio"
+            placeholder="Torre, piso, consultorio y ciudad"
             autoComplete="off"
             onChange={(direccion) => cambiar({ direccion })}
             className="sm:col-span-2"
           />
           <Select
-            id="lead-origen"
-            label="De dónde salió"
-            value={borrador.origen || SIN}
-            options={OPCIONES_ORIGEN}
-            onChange={(v) => cambiar({ origen: v === SIN ? '' : v })}
-          />
-          <Select
             id="lead-responsable"
-            label="Lo lleva"
+            label="Gestionado por"
             value={borrador.responsableId || SIN}
             options={opcionesEquipo}
             onChange={(v) => cambiar({ responsableId: v === SIN ? '' : v })}

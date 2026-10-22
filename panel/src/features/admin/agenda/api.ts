@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { comoFila, texto, textoONulo } from '@/lib/json'
 import { unoDe } from '@/lib/busqueda'
 import { ESTADOS_DEL_LEAD, aDatos, aParametros, leerAgenda, leerHistoria } from './agenda'
-import type { BorradorDeGestion, BorradorDeLead, EstadoDelLead, Lead } from './agenda'
+import type { BorradorDeGestion, BorradorDeLead, CanalDelLead, EstadoDelLead, Resultado } from './agenda'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Las lecturas y las escrituras de la Agenda, con sus claves de caché.
@@ -53,8 +53,10 @@ export type LeadGuardado = {
  * están en la agenda; y si el médico ya es cliente, lo deja afiliado.
  */
 export async function guardarLead(leadId: string | null, borrador: BorradorDeLead): Promise<LeadGuardado> {
+  // `p_lead_id` va en null y no en `undefined`: sin la clave, PostgREST busca
+  // una función que solo recibe `p`, y no existe.
   const { data, error } = await supabase.rpc('admin_save_doctor_lead', {
-    p_lead_id: leadId ?? undefined,
+    p_lead_id: leadId,
     p: aDatos(borrador),
   })
   if (error) throw error
@@ -66,9 +68,14 @@ export async function guardarLead(leadId: string | null, borrador: BorradorDeLea
   }
 }
 
-/** Anota una gestión: un contacto, un cambio de estado o una reunión. */
-export async function anotarGestion(lead: Lead, borrador: BorradorDeGestion): Promise<void> {
-  const { error } = await supabase.rpc('admin_log_doctor_lead_contact', aParametros(lead.id, borrador, lead))
+/** Anota una gestión con su resultado (mensaje, llamada o visita). El estado sale de él. */
+export async function anotarGestion(
+  leadId: string,
+  resultado: Resultado,
+  canal: CanalDelLead | null,
+  borrador: BorradorDeGestion,
+): Promise<void> {
+  const { error } = await supabase.rpc('admin_log_doctor_lead_contact', aParametros(leadId, resultado, canal, borrador))
   if (error) throw error
 }
 

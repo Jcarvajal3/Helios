@@ -6,9 +6,10 @@
 -- Se comprueba que:
 --   1. Alguien de fuera del equipo no lee la agenda ni apunta (42501).
 --   2. Apuntar normaliza el teléfono, valida y rechaza un teléfono repetido.
---   3. Las gestiones: la reunión pide fecha, una fecha pasada no vale, salir
---      de «reunión agendada» antes de tiempo la anula, y todo queda en la
---      historia y en audit.admin_actions.
+--   3. Las gestiones siguen el árbol del equipo (mensaje, llamada, visita;
+--      20261022210000): el estado sale del resultado, la visita pide fecha y
+--      se pospone, se realiza o se cancela, volver atrás antes de la visita la
+--      anula, y todo queda en la historia y en audit.admin_actions.
 --   4. Cuando el médico llena el formulario de afiliación, su lead pasa solo a
 --      afiliado (por teléfono o por nombre, con o sin «Dra.»), y al aprobarse
 --      la solicitud queda enlazado con su clínica.
@@ -145,71 +146,145 @@ begin
   end if;
 
   -- =========================================================================
-  -- 3. Gestiones
+  -- 3. Gestiones (el árbol: mensaje, llamada, visita)
   -- =========================================================================
   v_fallo := false;
   begin
-    perform public.admin_log_doctor_lead_contact(v_ana, 'reunion', 'llamada', 'Quiere conocernos');
+    perform public.admin_log_doctor_lead_contact(v_ana, 'reunion', 'llamada');
   exception when sqlstate '22023' then v_fallo := true;
   end;
-  if not v_fallo then raise exception '3. agendó una reunión sin fecha'; end if;
+  if not v_fallo then raise exception '3. aceptó un resultado desconocido'; end if;
 
   v_fallo := false;
   begin
-    perform public.admin_log_doctor_lead_contact(v_ana, 'reunion', 'llamada', null, now() - interval '2 days');
+    perform public.admin_log_doctor_lead_contact(v_ana, 'visita_agendada', 'visita', 'Quiere conocernos');
   exception when sqlstate '22023' then v_fallo := true;
   end;
-  if not v_fallo then raise exception '3. agendó una reunión en el pasado'; end if;
+  if not v_fallo then raise exception '3. agendó una visita sin fecha'; end if;
 
   v_fallo := false;
   begin
-    perform public.admin_log_doctor_lead_contact(v_ana, 'nuevo');
+    perform public.admin_log_doctor_lead_contact(v_ana, 'visita_agendada', 'visita', null, now() - interval '2 days');
   exception when sqlstate '22023' then v_fallo := true;
   end;
-  if not v_fallo then raise exception '3. aceptó una gestión sin nada que anotar'; end if;
+  if not v_fallo then raise exception '3. agendó una visita en el pasado'; end if;
 
   v_fallo := false;
   begin
-    perform public.admin_log_doctor_lead_contact(v_ana, 'contactado', 'llamada', null, null, null, null, v_hoy - 1);
+    perform public.admin_log_doctor_lead_contact(v_ana, 'visita_realizada', 'visita');
+  exception when sqlstate '22023' then v_fallo := true;
+  end;
+  if not v_fallo then raise exception '3. dio por realizada una visita que no estaba agendada'; end if;
+
+  v_fallo := false;
+  begin
+    perform public.admin_log_doctor_lead_contact(v_ana, 'nota');
+  exception when sqlstate '22023' then v_fallo := true;
+  end;
+  if not v_fallo then raise exception '3. aceptó una nota vacía'; end if;
+
+  v_fallo := false;
+  begin
+    perform public.admin_log_doctor_lead_contact(v_ana, 'no_contesto', 'llamada', null, null, null, null, v_hoy - 1);
   exception when sqlstate '22023' then v_fallo := true;
   end;
   if not v_fallo then raise exception '3. aceptó volver a llamar ayer'; end if;
 
-  perform public.admin_log_doctor_lead_contact(v_luis, 'no_respondio', 'llamada', null, null, null, null, v_hoy + 2);
+  v_fallo := false;
+  begin
+    perform public.admin_log_doctor_lead_contact(v_ana, 'no_contesto', 'llamada', null, v_manana);
+  exception when sqlstate '22023' then v_fallo := true;
+  end;
+  if not v_fallo then raise exception '3. aceptó una fecha de visita en una llamada'; end if;
+
+  -- Llamada: no contestó y ocupado; mensaje: contestó, interesado.
+  perform public.admin_log_doctor_lead_contact(v_luis, 'no_contesto', 'llamada', null, null, null, null, v_hoy + 2);
+  select * into v_lead from public.doctor_leads where id = v_luis;
+  if v_lead.status <> 'no_respondio' or v_lead.next_contact_on <> v_hoy + 2 then
+    raise exception '3. «no contestó» no dejó el lead en no respondió: %', row_to_json(v_lead);
+  end if;
+  perform public.admin_log_doctor_lead_contact(v_luis, 'ocupado', 'llamada');
+  perform public.admin_log_doctor_lead_contact(v_luis, 'interesado', 'mensaje', 'Quiere saber más');
+  if (select status from public.doctor_leads where id = v_luis) <> 'respondio' then
+    raise exception '3. «interesado» no dejó el lead en respondió';
+  end if;
+
+  -- Visita: agendada, una nota, pospuesta y realizada.
   perform public.admin_log_doctor_lead_contact(
-    v_luis, 'reunion', 'whatsapp', 'Nos vemos en su consultorio', v_manana, 'presencial', 'Torre Médica, piso 3');
+    v_luis, 'visita_agendada', 'visita', 'Nos vemos en su consultorio', v_manana, 'presencial', 'Torre Médica, piso 3');
   select * into v_lead from public.doctor_leads where id = v_luis;
   if v_lead.status <> 'reunion' or v_lead.meeting_at <> v_manana or v_lead.meeting_place <> 'Torre Médica, piso 3'
      or v_lead.next_contact_on is not null then
-    raise exception '3. la reunión no quedó agendada: %', row_to_json(v_lead);
+    raise exception '3. la visita no quedó agendada: %', row_to_json(v_lead);
   end if;
 
-  -- Sigue en reunión: una nota no la toca.
-  perform public.admin_log_doctor_lead_contact(v_luis, 'reunion', 'whatsapp', 'Confirmó la hora');
-  if (select meeting_at from public.doctor_leads where id = v_luis) <> v_manana then
-    raise exception '3. una nota sin fecha cambió la reunión';
-  end if;
-
-  -- Descartado antes de la reunión: se anula.
-  perform public.admin_log_doctor_lead_contact(v_luis, 'descartado', 'llamada', 'Ya trabaja con otra empresa');
+  perform public.admin_log_doctor_lead_contact(v_luis, 'nota', null, 'Confirmó la hora');
   select * into v_lead from public.doctor_leads where id = v_luis;
-  if v_lead.meeting_at is not null or v_lead.meeting_place is not null then
-    raise exception '3. la reunión no se anuló al descartar: %', row_to_json(v_lead);
+  if v_lead.meeting_at <> v_manana or v_lead.status <> 'reunion' then
+    raise exception '3. una nota cambió la visita: %', row_to_json(v_lead);
+  end if;
+
+  v_fallo := false;
+  begin
+    perform public.admin_log_doctor_lead_contact(v_luis, 'visita_pospuesta', 'visita', null, v_manana);
+  exception when sqlstate '22023' then v_fallo := true;
+  end;
+  if not v_fallo then raise exception '3. pospuso la visita a la misma hora'; end if;
+
+  perform public.admin_log_doctor_lead_contact(v_luis, 'visita_pospuesta', 'visita', null, v_manana + interval '1 day');
+  select * into v_lead from public.doctor_leads where id = v_luis;
+  if v_lead.meeting_at <> v_manana + interval '1 day' or v_lead.meeting_place <> 'Torre Médica, piso 3' then
+    raise exception '3. la visita no se pospuso: %', row_to_json(v_lead);
+  end if;
+  if not exists (
+    select 1 from public.admin_doctor_lead_activities(v_luis) h
+     where h.result = 'visita_pospuesta' and h.note like '(Antes era el %'
+  ) then
+    raise exception '3. la historia no dice cuándo era la visita pospuesta';
+  end if;
+
+  perform public.admin_log_doctor_lead_contact(v_luis, 'visita_realizada', 'visita', 'Le gustó');
+  select * into v_lead from public.doctor_leads where id = v_luis;
+  if v_lead.status <> 'visitado' or v_lead.meeting_at <> v_manana + interval '1 day' then
+    raise exception '3. la visita realizada no quedó: %', row_to_json(v_lead);
+  end if;
+
+  -- Otra visita, cancelada: vuelve a interesado y sin visita.
+  perform public.admin_log_doctor_lead_contact(v_luis, 'visita_agendada', 'visita', null, v_manana);
+  perform public.admin_log_doctor_lead_contact(v_luis, 'visita_cancelada', 'visita', 'Se enfermó');
+  select * into v_lead from public.doctor_leads where id = v_luis;
+  if v_lead.status <> 'respondio' or v_lead.meeting_at is not null then
+    raise exception '3. la visita cancelada no se quitó: %', row_to_json(v_lead);
+  end if;
+
+  -- Y otra: «no interesado» antes de la visita la anula.
+  perform public.admin_log_doctor_lead_contact(v_luis, 'visita_agendada', 'visita', null, v_manana);
+  perform public.admin_log_doctor_lead_contact(v_luis, 'no_interesado', 'llamada', 'Ya trabaja con otra empresa');
+  select * into v_lead from public.doctor_leads where id = v_luis;
+  if v_lead.status <> 'descartado' or v_lead.meeting_at is not null or v_lead.meeting_place is not null then
+    raise exception '3. la visita no se anuló al quedar no interesado: %', row_to_json(v_lead);
   end if;
 
   select count(*) into v_n from public.admin_doctor_lead_activities(v_luis);
-  if v_n <> 5 then raise exception '3. la historia de Luis debía tener 5 líneas, tiene %', v_n; end if;
+  if v_n <> 12 then raise exception '3. la historia de Luis debía tener 12 líneas, tiene %', v_n; end if;
   if not exists (
     select 1 from public.admin_doctor_lead_activities(v_luis) h
-     where h.status_to = 'descartado' and h.note like 'Ya trabaja con otra empresa (Se anuló la reunión del %'
+     where h.result = 'no_interesado' and h.status_to = 'descartado'
+       and h.note like 'Ya trabaja con otra empresa (Se anuló la visita del %'
   ) then
-    raise exception '3. la historia no dice que se anuló la reunión';
+    raise exception '3. la historia no dice que se anuló la visita';
   end if;
   select count(*) into v_n from audit.admin_actions
    where target_id = v_luis and action = 'doctor_lead.contact';
-  if v_n <> 4 then raise exception '3. la bitácora debía tener 4 gestiones de Luis, tiene %', v_n; end if;
+  if v_n <> 11 then raise exception '3. la bitácora debía tener 11 gestiones de Luis, tiene %', v_n; end if;
 
-  perform public.admin_log_doctor_lead_contact(v_ana, 'respondio', 'whatsapp', 'Le interesa');
+  v_j := public.admin_doctor_leads();
+  select e into v_l from jsonb_array_elements(v_j) e where e ->> 'id' = v_luis::text;
+  if v_l -> 'last_activity' ->> 'result' <> 'no_interesado' then
+    raise exception '3. el tablero no trae el resultado de la última gestión: %', v_l -> 'last_activity';
+  end if;
+
+  perform public.admin_log_doctor_lead_contact(v_ana, 'interesado', 'mensaje', 'Le interesa');
 
   -- =========================================================================
   -- 4. El formulario de afiliación

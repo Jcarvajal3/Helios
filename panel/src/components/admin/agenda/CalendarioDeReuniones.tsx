@@ -1,13 +1,12 @@
 import { useMemo } from 'react'
 import { CalendarDays, ChevronLeft, ChevronRight, Phone, Users } from 'lucide-react'
 
-import { Button, EmptyState, IconButton, formatDayShort } from '@/components/ui'
-import { MESES_LARGOS, sumarDias } from '@/components/kit/rango'
-import { ROTULO_MODO, casillasDelMes, citasDe, mesDeAlLado } from '@/features/admin/agenda/agenda'
+import { Button, EmptyState, IconButton } from '@/components/ui'
+import { MESES_LARGOS } from '@/components/kit/rango'
+import { ROTULO_MODO, casillasDelMes, citasDe, mesDeAlLado, rotuloDelDia } from '@/features/admin/agenda/agenda'
 import type { Cita, Lead } from '@/features/admin/agenda/agenda'
 
 const INICIALES = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
-const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado']
 
 /** Lo que cabe en una casilla antes de «+2 más». */
 const POR_CASILLA = 3
@@ -21,15 +20,6 @@ function nombreDelMes(mes: string): string {
   return `${nombre.charAt(0).toUpperCase()}${nombre.slice(1)} ${y}`
 }
 
-/** 'Jueves 23 oct', o 'Hoy' / 'Mañana'. */
-function rotuloDelDia(dia: string, hoy: string, manana: string): string {
-  if (dia === hoy) return 'Hoy'
-  if (dia === manana) return 'Mañana'
-  const [y = 0, m = 1, d = 1] = dia.split('-').map(Number)
-  const semana = DIAS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()] ?? ''
-  return `${semana.charAt(0).toUpperCase()}${semana.slice(1)} ${formatDayShort(dia)}`
-}
-
 function claseDeCita(c: Cita, hoy: string): string {
   const pasada = c.dia < hoy
   if (c.tipo === 'llamada') return 'bg-on-surface/6 text-on-surface-variant'
@@ -37,7 +27,7 @@ function claseDeCita(c: Cita, hoy: string): string {
 }
 
 /**
- * La agenda en calendario: el mes con cada reunión (a su hora) y cada día de
+ * La agenda en calendario: el mes con cada visita (a su hora) y cada día de
  * volver a llamar, y al lado las próximas citas en orden. Un clic en una cita
  * abre la ficha del médico. El mes va en la URL (`?mes=`).
  */
@@ -59,7 +49,7 @@ export function CalendarioDeReuniones({
   onAbrir: (lead: Lead) => void
 }) {
   const citas = useMemo(
-    () => citasDe(leads).filter((c) => conLlamadas || c.tipo === 'reunion'),
+    () => citasDe(leads).filter((c) => conLlamadas || c.tipo === 'visita'),
     [leads, conLlamadas],
   )
   const porDia = useMemo(() => {
@@ -70,10 +60,9 @@ export function CalendarioDeReuniones({
 
   const casillas = casillasDelMes(mes)
   const mesHoy = `${hoy.slice(0, 7)}-01`
-  const manana = sumarDias(hoy, 1)
   const proximas = citas.filter((c) => c.dia >= hoy).slice(0, PROXIMAS)
   const delMes = citas.filter((c) => c.dia.startsWith(mes.slice(0, 7)))
-  const reunionesDelMes = delMes.filter((c) => c.tipo === 'reunion').length
+  const visitasDelMes = delMes.filter((c) => c.tipo === 'visita').length
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
@@ -82,8 +71,8 @@ export function CalendarioDeReuniones({
           <div>
             <h2 className="type-panel-section text-on-surface">{nombreDelMes(mes)}</h2>
             <p className="type-panel-caption text-on-surface-variant">
-              {reunionesDelMes} {reunionesDelMes === 1 ? 'reunión' : 'reuniones'}
-              {conLlamadas ? ` · ${delMes.length - reunionesDelMes} para llamar` : ''}
+              {visitasDelMes} {visitasDelMes === 1 ? 'visita' : 'visitas'}
+              {conLlamadas ? ` · ${delMes.length - visitasDelMes} para llamar` : ''}
             </p>
           </div>
           <div className="flex items-center gap-1">
@@ -134,8 +123,8 @@ export function CalendarioDeReuniones({
                       <button
                         key={`${c.lead.id}:${c.tipo}`}
                         type="button"
-                        aria-label={`${c.tipo === 'reunion' ? 'Reunión' : 'Llamar a'} ${c.lead.nombre}`}
-                        className={`size-2 rounded-full ${c.tipo === 'reunion' ? 'bg-primary' : 'bg-on-surface-variant'}`}
+                        aria-label={`${c.tipo === 'visita' ? 'Visita a' : 'Llamar a'} ${c.lead.nombre}`}
+                        className={`size-2 rounded-full ${c.tipo === 'visita' ? 'bg-primary' : 'bg-on-surface-variant'}`}
                         onClick={() => onAbrir(c.lead)}
                       />
                     ))}
@@ -173,13 +162,13 @@ export function CalendarioDeReuniones({
           <EmptyState
             icon={<CalendarDays size={32} />}
             title="Nada agendado"
-            description="Agenda una reunión desde la ficha de un médico: «Queda en» › Reunión agendada."
+            description="Agenda una visita desde la ficha de un médico: «Anotar gestión» › Visita."
           />
         ) : (
           <ol className="flex flex-col gap-4">
             {agruparPorDia(proximas).map(([dia, delDia]) => (
               <li key={dia} className="flex flex-col gap-1.5">
-                <p className="type-panel-caption font-semibold text-on-surface">{rotuloDelDia(dia, hoy, manana)}</p>
+                <p className="type-panel-caption font-semibold text-on-surface">{rotuloDelDia(dia, hoy)}</p>
                 <ul className="flex flex-col gap-1.5">
                   {delDia.map((c) => (
                     <li key={`${c.lead.id}:${c.tipo}`}>
@@ -188,7 +177,7 @@ export function CalendarioDeReuniones({
                         className="flex w-full items-start gap-2 rounded-panel-control border border-panel-hairline px-3 py-2 text-left hover:bg-panel-raised"
                         onClick={() => onAbrir(c.lead)}
                       >
-                        {c.tipo === 'reunion' ? (
+                        {c.tipo === 'visita' ? (
                           <Users size={15} aria-hidden className="mt-0.5 shrink-0 text-primary" />
                         ) : (
                           <Phone size={15} aria-hidden className="mt-0.5 shrink-0 text-on-surface-variant" />
@@ -196,7 +185,7 @@ export function CalendarioDeReuniones({
                         <span className="min-w-0">
                           <span className="block truncate type-panel-body text-on-surface">{c.lead.nombre}</span>
                           <span className="block truncate type-panel-caption text-on-surface-variant">
-                            {c.tipo === 'reunion'
+                            {c.tipo === 'visita'
                               ? [c.hora, c.lead.modo ? ROTULO_MODO[c.lead.modo] : null, c.lead.lugar]
                                   .filter(Boolean)
                                   .join(' · ')

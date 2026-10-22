@@ -7,9 +7,10 @@ import {
   PENDIENTE,
   ROTULO_CANAL,
   ROTULO_MODO,
-  ROTULO_ORIGEN,
+  ROTULO_RESULTADO,
   estaCerrado,
   pendienteDe,
+  tieneVisita,
 } from '@/features/admin/agenda/agenda'
 import type { Lead } from '@/features/admin/agenda/agenda'
 import { csvInstante } from '@/lib/csv'
@@ -61,21 +62,18 @@ export function columnasDeLaAgenda(hoy: string, ahora: Date): Array<Column<Lead>
         l.telefono ? (
           <TelefonoConAcciones telefono={l.telefono} nombre={l.nombre} conWaMe />
         ) : (
-          <span className={APAGADO}>{l.correo ?? 'Sin teléfono'}</span>
+          <span className={APAGADO}>Sin teléfono</span>
         ),
     },
 
     {
       key: 'direccion',
       header: 'Dirección',
-      sort: (l) => l.ciudad ?? l.direccion,
-      csv: (l) => [l.direccion, l.ciudad].filter(Boolean).join(', ') || null,
+      sort: (l) => l.direccion,
+      csv: (l) => l.direccion,
       cell: (l) =>
-        l.direccion || l.ciudad ? (
-          <span className="block max-w-64">
-            {l.direccion ?? l.ciudad}
-            {l.direccion && l.ciudad && <span className={PIE}>{l.ciudad}</span>}
-          </span>
+        l.direccion ? (
+          <span className="block max-w-64">{l.direccion}</span>
         ) : (
           <span className={APAGADO}>—</span>
         ),
@@ -84,7 +82,7 @@ export function columnasDeLaAgenda(hoy: string, ahora: Date): Array<Column<Lead>
     {
       key: 'estado',
       header: 'Estado',
-      info: '«Afiliado» se pone solo cuando el médico llena el formulario de afiliación de la portada o se da de alta su clínica: se le reconoce por su teléfono, su correo o su nombre.',
+      info: '«Afiliado» se pone solo cuando el médico llena el formulario de afiliación de la portada o se da de alta su clínica: se le reconoce por su teléfono o su nombre.',
       sort: (l) => l.estado,
       csv: (l) => ESTADO_DEL_LEAD[l.estado].label,
       cell: (l) => (
@@ -101,17 +99,17 @@ export function columnasDeLaAgenda(hoy: string, ahora: Date): Array<Column<Lead>
     {
       key: 'proxima',
       header: 'Próxima cita',
-      info: 'La reunión agendada, con su hora, o el día de volver a llamar.',
-      sort: (l) => (l.estado === 'reunion' && l.reunion ? l.reunion.slice(0, 10) : l.volverEl),
+      info: 'La visita agendada, con su hora, o el día de volver a llamar.',
+      sort: (l) => (tieneVisita(l) && l.reunion ? l.reunion.slice(0, 10) : l.volverEl),
       csv: (l) =>
-        l.estado === 'reunion' && l.reunion ? csvInstante(l.reunion) : l.volverEl ? formatDay(l.volverEl) : null,
+        tieneVisita(l) && l.reunion ? csvInstante(l.reunion) : l.volverEl ? formatDay(l.volverEl) : null,
       cell: (l) => {
-        if (l.estado === 'reunion' && l.reunion) {
+        if (tieneVisita(l) && l.reunion) {
           return (
             <span className="tabular-nums">
               {formatDateTime(l.reunion)}
               <span className={PIE}>
-                {l.modo ? ROTULO_MODO[l.modo] : 'Reunión'}
+                {l.modo ? `Visita ${ROTULO_MODO[l.modo].toLowerCase()}` : 'Visita'}
                 {l.lugar ? ` · ${l.lugar}` : ''}
               </span>
             </span>
@@ -133,15 +131,19 @@ export function columnasDeLaAgenda(hoy: string, ahora: Date): Array<Column<Lead>
       key: 'ultima',
       header: 'Última gestión',
       sort: (l) => l.ultima?.cuando ?? null,
-      csv: (l) => l.ultima?.nota ?? null,
+      csv: (l) =>
+        [l.ultima?.resultado ? ROTULO_RESULTADO[l.ultima.resultado] : null, l.ultima?.nota].filter(Boolean).join(': ') || null,
       cell: (l) => {
         const u = l.ultima
         if (!u || u.tipo === 'creado') return <span className={APAGADO}>Ninguna</span>
         return (
           <span className="block max-w-72">
-            <span className="line-clamp-2">
-              {u.nota ?? (u.estado ? ESTADO_DEL_LEAD[u.estado].label : 'Sin nota')}
-            </span>
+            {u.resultado && <span className="block font-medium text-on-surface">{ROTULO_RESULTADO[u.resultado]}</span>}
+            {(u.nota ?? !u.resultado) && (
+              <span className="line-clamp-2">
+                {u.nota ?? (u.estado ? ESTADO_DEL_LEAD[u.estado].label : 'Sin nota')}
+              </span>
+            )}
             <span className={PIE}>
               {haceCuanto(u.cuando, ahora)}
               {u.canal ? ` · ${ROTULO_CANAL[u.canal]}` : ''}
@@ -154,19 +156,10 @@ export function columnasDeLaAgenda(hoy: string, ahora: Date): Array<Column<Lead>
 
     {
       key: 'responsable',
-      header: 'Lo lleva',
+      header: 'Gestionado por',
       sort: (l) => l.responsable,
       csv: (l) => l.responsable,
       cell: (l) => l.responsable ?? <span className={APAGADO}>Nadie</span>,
-    },
-
-    {
-      key: 'origen',
-      header: 'Origen',
-      hidden: true,
-      sort: (l) => l.origen,
-      csv: (l) => (l.origen ? ROTULO_ORIGEN[l.origen] : null),
-      cell: (l) => (l.origen ? ROTULO_ORIGEN[l.origen] : <span className={APAGADO}>—</span>),
     },
 
     {

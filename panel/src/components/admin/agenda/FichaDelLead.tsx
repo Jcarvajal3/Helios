@@ -1,68 +1,159 @@
 import { useState } from 'react'
+import type { ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CalendarPlus, MapPin, NotebookPen, Pencil, Store, Trash2 } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+import {
+  BadgeCheck,
+  CalendarCheck,
+  CalendarClock,
+  CalendarPlus,
+  CalendarX,
+  MapPin,
+  MessageCircle,
+  NotebookPen,
+  Pencil,
+  Phone,
+  PhoneMissed,
+  PhoneOff,
+  Send,
+  Sparkles,
+  Store,
+  ThumbsDown,
+  ThumbsUp,
+  Trash2,
+  UserPlus,
+  Video,
+} from 'lucide-react'
 
 import { useToast } from '@/components/Toast'
 import { ErrorConReintento } from '@/components/admin/ErrorConReintento'
-import { TelefonoConAcciones } from '@/components/admin/seguimiento/Contacto'
-import { EstadoDelLeadBadge } from '@/components/admin/agenda/columnas'
 import {
+  Badge,
   Button,
   Callout,
+  Chip,
   ConfirmDialog,
   ErrorBox,
   Input,
+  Menu,
   Modal,
-  Select,
   SkeletonList,
   Textarea,
+  claseDeBoton,
   formatDateTime,
   formatDay,
+  formatPhone,
+  formatTime,
+  whatsappNumber,
 } from '@/components/ui'
+import { MESES_CORTOS, sumarDias } from '@/components/kit/rango'
+import { haceCuanto } from '@/features/admin/cobranza/senales'
 import { anotarGestion, borrarLead, consultaHistoria, refrescarAgenda } from '@/features/admin/agenda/api'
 import {
-  CANALES_DEL_LEAD,
-  ESTADOS_DEL_LEAD,
   ESTADO_DEL_LEAD,
-  MODOS_DE_REUNION,
+  MODOS_DE_VISITA,
   NOTA_MAXIMA,
+  RESPUESTAS,
   ROTULO_CANAL,
   ROTULO_MODO,
-  ROTULO_ORIGEN,
   ROTULO_RAZON,
+  ROTULO_RESPUESTA,
+  ROTULO_RESULTADO,
   ROTULO_VIA,
-  anulaLaReunion,
+  SIN_ELEGIR,
+  anulaLaVisita,
   borradorDeGestion,
+  canalDe,
+  diaDeCaracas,
+  estadoDelResultado,
   motivoParaNoAnotar,
-  reunionSinResultado,
+  pasoDelEmbudo,
+  pideFechaDeVisita,
+  pideVolver,
+  resultadoDe,
+  rotuloDelDia,
+  tieneVisita,
+  visitaSinResultado,
+  volverPropuesto,
 } from '@/features/admin/agenda/agenda'
-import type { BorradorDeGestion, CanalDelLead, EstadoDelLead, Lead } from '@/features/admin/agenda/agenda'
+import type {
+  BorradorDeGestion,
+  CanalDelLead,
+  Eleccion,
+  EstadoDelLead,
+  Gestion,
+  Lead,
+  ModoDeVisita,
+  Resultado,
+  TipoDeGestion,
+} from '@/features/admin/agenda/agenda'
 import { describeError } from '@/lib/supabase'
-
-const OPCIONES_ESTADO = ESTADOS_DEL_LEAD.map((value) => ({ value, label: ESTADO_DEL_LEAD[value].label }))
-const OPCIONES_CANAL: Array<{ value: CanalDelLead | 'ninguno'; label: string }> = [
-  ...CANALES_DEL_LEAD.map((value) => ({ value, label: ROTULO_CANAL[value] })),
-  { value: 'ninguno', label: 'Sin contacto (solo una nota)' },
-]
-const OPCIONES_MODO = MODOS_DE_REUNION.map((value) => ({ value, label: ROTULO_MODO[value] }))
 
 const ENLACE =
   'inline-flex items-center gap-1 type-panel-caption text-on-surface-variant underline-offset-2 hover:text-on-surface hover:underline'
 
-/** Lo que conviene contar según el estado al que se pasa: el ejemplo de la nota. */
-const EJEMPLO_DE_NOTA: Record<EstadoDelLead, string> = {
-  nuevo: 'Algo sobre el médico que conviene saber antes de llamarlo.',
-  contactado: 'Con quién se habló (el médico, la secretaria) y qué se le contó de Helios.',
-  respondio: '¿Qué le interesó? ¿Qué dudas tiene? ¿Cuántos pacientes ve al mes?',
-  no_respondio: 'Cuántas veces se le llamó y a qué hora conviene volver a intentar.',
-  reunion: 'Quién va, qué llevar y qué quiere saber el médico.',
-  convertido: 'Cómo se cerró la afiliación.',
-  descartado: 'Por qué no le interesa, para no volver a llamarlo por lo mismo.',
+const ICONO_RESULTADO: Record<Resultado, LucideIcon> = {
+  mensaje_enviado: Send,
+  interesado: ThumbsUp,
+  no_interesado: ThumbsDown,
+  no_contesto: PhoneMissed,
+  ocupado: PhoneOff,
+  visita_agendada: CalendarPlus,
+  visita_realizada: CalendarCheck,
+  visita_pospuesta: CalendarClock,
+  visita_cancelada: CalendarX,
+  afiliado: BadgeCheck,
+  nota: NotebookPen,
 }
 
+const ICONO_CANAL: Record<CanalDelLead, LucideIcon> = {
+  mensaje: MessageCircle,
+  llamada: Phone,
+  whatsapp: MessageCircle,
+  visita: MapPin,
+  correo: Send,
+  redes: Sparkles,
+}
+
+const ICONO_TIPO: Record<TipoDeGestion, LucideIcon> = {
+  mensaje: MessageCircle,
+  llamada: Phone,
+  visita: CalendarClock,
+}
+
+const ROTULO_TIPO: Record<TipoDeGestion, string> = {
+  mensaje: 'Mensaje',
+  llamada: 'Llamada',
+  visita: 'Visita',
+}
+
+const ICONO_MODO: Record<ModoDeVisita, LucideIcon> = {
+  presencial: MapPin,
+  videollamada: Video,
+  llamada: Phone,
+}
+
+/** Lo que conviene contar según lo que pasó: el ejemplo de la nota. */
+const EJEMPLO_DE_NOTA: Record<Resultado, string> = {
+  mensaje_enviado: 'Qué se le mandó y por dónde.',
+  interesado: '¿Qué le interesó? ¿Qué dudas tiene? ¿Cuántos pacientes ve al mes?',
+  no_interesado: 'Por qué no le interesa, para no volver a llamarlo por lo mismo.',
+  no_contesto: 'A qué hora se le intentó y si conviene probar por otro lado.',
+  ocupado: 'A qué hora conviene volver a intentar.',
+  visita_agendada: 'Quién va, qué llevar y qué quiere saber el médico.',
+  visita_realizada: 'Cómo fue, qué le gustó y qué quedó pendiente.',
+  visita_pospuesta: 'Por qué se movió.',
+  visita_cancelada: 'Por qué se canceló y si quiere otra fecha.',
+  afiliado: 'Cómo se cerró la afiliación.',
+  nota: 'Lo que conviene que sepa el equipo.',
+}
+
+/** Los pasos del embudo, del primero al último (`pasoDelEmbudo`). */
+const PASOS = ['Sin contactar', 'Contactado', 'Interesado', 'Visita', 'Afiliado']
+
 /**
- * El enlace para añadir la reunión al Google Calendar de quien va. Las fechas
+ * El enlace para añadir la visita al Google Calendar de quien va. Las fechas
  * van en UTC, como pide Google (`20261023T143000Z`), y dura una hora.
  */
 function enlaceAGoogleCalendar(l: Lead): string | null {
@@ -72,7 +163,7 @@ function enlaceAGoogleCalendar(l: Lead): string | null {
   const utc = (d: Date) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')
   const params = new URLSearchParams({
     action: 'TEMPLATE',
-    text: `Helios · Reunión con ${l.nombre}`,
+    text: `Helios · Visita a ${l.nombre}`,
     dates: `${utc(inicio)}/${utc(fin)}`,
     details: [l.consultorio, l.telefono, l.notas].filter(Boolean).join('\n'),
     location: l.lugar ?? l.direccion ?? '',
@@ -85,8 +176,10 @@ function enlaceAlMapa(direccion: string): string {
 }
 
 /**
- * La ficha de un médico por afiliar: sus datos y cómo contactarlo, su
- * reunión, su afiliación si ya llegó, anotar una gestión y toda su historia.
+ * La ficha de un médico por afiliar, de arriba abajo en el orden en que se
+ * usa: quién es y en qué va (el embudo), cómo contactarlo (a un toque), qué
+ * toca ahora (la visita o la llamada pendiente), anotar lo que pasó siguiendo
+ * el árbol del equipo (mensaje, llamada o visita), y la historia.
  */
 export function FichaDelLead({
   lead,
@@ -114,109 +207,41 @@ export function FichaDelLead({
     },
   })
 
-  const calendario = enlaceAGoogleCalendar(lead)
-  const direccion = [lead.direccion, lead.ciudad].filter(Boolean).join(', ')
+  const quien = [lead.especialidad, lead.consultorio].filter(Boolean).join(' · ')
 
   return (
     <Modal title={lead.nombre} width="lg" onClose={onClose}>
-      <div className="flex flex-col gap-6">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="type-panel-body text-on-surface-variant">
-            <p className="text-on-surface">
-              {[lead.especialidad, lead.consultorio].filter(Boolean).join(' · ') || 'Sin especialidad ni consultorio'}
-            </p>
-            <p className="type-panel-caption">
-              {lead.origen ? `${ROTULO_ORIGEN[lead.origen]} · ` : ''}
+      <div className="flex flex-col gap-5">
+        <header className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="type-panel-body text-on-surface">{quien || 'Sin especialidad ni consultorio'}</p>
+            <p className="type-panel-caption text-on-surface-variant">
               Apuntado el {formatDay(lead.creado.slice(0, 10))}
-              {lead.responsable ? ` · Lo lleva ${lead.responsable}` : ''}
+              {lead.responsable ? ` · Gestionado por ${lead.responsable}` : ''}
             </p>
           </div>
-          <div className="flex flex-col items-end gap-2">
-            <EstadoDelLeadBadge lead={lead} hoy={hoy} ahora={ahora} />
-            <div className="flex gap-1">
-              <Button size="sm" variant="text" onClick={onEditar}>
-                <Pencil size={14} aria-hidden /> Editar
-              </Button>
-              <Button size="sm" variant="text" onClick={() => setBorrando(true)}>
-                <Trash2 size={14} aria-hidden /> Eliminar
-              </Button>
-            </div>
+          <div className="flex shrink-0 items-center gap-1">
+            <Badge tone={ESTADO_DEL_LEAD[lead.estado].tone}>{ESTADO_DEL_LEAD[lead.estado].label}</Badge>
+            <Menu
+              etiqueta="Más acciones"
+              items={[
+                { label: 'Editar datos', icon: Pencil, onSelect: onEditar },
+                'separador',
+                { label: 'Eliminar de la agenda', icon: Trash2, peligro: true, onSelect: () => setBorrando(true) },
+              ]}
+            />
           </div>
-        </div>
+        </header>
 
-        <section className="flex flex-col gap-2">
-          <h3 className="type-panel-label text-on-surface-variant">Datos de contacto</h3>
-          <dl className="grid gap-x-6 gap-y-2 type-panel-body sm:grid-cols-[max-content_1fr]">
-            <dt className="text-on-surface-variant">Teléfono</dt>
-            <dd>
-              {lead.telefono ? (
-                <TelefonoConAcciones telefono={lead.telefono} nombre={lead.nombre} conWaMe />
-              ) : (
-                '—'
-              )}
-            </dd>
-            <dt className="text-on-surface-variant">Correo</dt>
-            <dd>{lead.correo ? <a href={`mailto:${lead.correo}`} className="hover:underline">{lead.correo}</a> : '—'}</dd>
-            <dt className="text-on-surface-variant">Dirección</dt>
-            <dd>
-              {direccion ? (
-                <a href={enlaceAlMapa(direccion)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 hover:underline">
-                  <MapPin size={14} aria-hidden /> {direccion}
-                </a>
-              ) : (
-                '—'
-              )}
-            </dd>
-          </dl>
-          {lead.notas && <p className="whitespace-pre-line type-panel-body text-on-surface">{lead.notas}</p>}
-        </section>
+        <Embudo estado={lead.estado} />
 
-        {lead.estado === 'convertido' && (
-          <Callout tone="success" titulo="Afiliado">
-            {lead.via ? ROTULO_VIA[lead.via] : 'Afiliado'}
-            {lead.razon ? ` (se le reconoció ${ROTULO_RAZON[lead.razon]})` : ''}
-            {lead.afiliadoEl ? ` el ${formatDateTime(lead.afiliadoEl)}` : ''}.
-            {lead.clinicaId && (
-              <>
-                {' '}
-                <Link to="/admin/clinicas/$id" params={{ id: lead.clinicaId }} className={ENLACE}>
-                  <Store size={13} aria-hidden /> {lead.clinica ?? 'Abrir la clínica'}
-                </Link>
-              </>
-            )}
-            {!lead.clinicaId && lead.solicitudEstado === 'pending' && (
-              <>
-                {' '}
-                <Link to="/admin/clinicas" search={{ estado: 'pendiente' }} className={ENLACE}>
-                  Su solicitud está por revisar
-                </Link>
-              </>
-            )}
-          </Callout>
-        )}
+        <Contacto lead={lead} />
 
-        {lead.reunion && (
-          <section className="flex flex-wrap items-center justify-between gap-3 rounded-panel-card border border-panel-hairline px-4 py-3">
-            <div className="type-panel-body">
-              <p className="text-on-surface">
-                {lead.estado === 'reunion' ? 'Reunión' : 'Última reunión'}: {formatDateTime(lead.reunion)}
-              </p>
-              <p className="type-panel-caption text-on-surface-variant">
-                {lead.modo ? ROTULO_MODO[lead.modo] : 'Reunión'}
-                {lead.lugar ? ` · ${lead.lugar}` : ''}
-              </p>
-            </div>
-            {calendario && lead.estado === 'reunion' && !reunionSinResultado(lead, ahora) && (
-              <a href={calendario} target="_blank" rel="noreferrer" className={ENLACE}>
-                <CalendarPlus size={14} aria-hidden /> Añadir a Google Calendar
-              </a>
-            )}
-          </section>
-        )}
+        <ProximoPaso lead={lead} hoy={hoy} ahora={ahora} />
 
         <AnotarGestion key={`${lead.id}:${lead.estado}:${lead.reunion ?? ''}`} lead={lead} hoy={hoy} ahora={ahora} />
 
-        <Historia leadId={lead.id} />
+        <Historia leadId={lead.id} ahora={ahora} />
       </div>
 
       {borrando && (
@@ -235,16 +260,268 @@ export function FichaDelLead({
   )
 }
 
+// ── En qué va ──────────────────────────────────────────────────────────────
+
+/** El embudo en una tira: lo recorrido, en color, y el paso actual con su estado. */
+function Embudo({ estado }: { estado: EstadoDelLead }) {
+  const paso = pasoDelEmbudo(estado)
+  const apagado = estado === 'descartado'
+  return (
+    <div aria-label={`En qué va: ${ESTADO_DEL_LEAD[estado].label}`}>
+      <ol className="grid grid-cols-5 gap-1.5">
+        {PASOS.map((p, i) => {
+          const hecho = !apagado && i <= paso
+          const actual = !apagado && i === paso
+          return (
+            <li key={p} className="flex min-w-0 flex-col gap-1.5">
+              <span
+                className={`h-1.5 rounded-full ${
+                  hecho ? (estado === 'convertido' ? 'bg-success' : 'bg-primary') : 'bg-on-surface/10'
+                }`}
+              />
+              <span
+                className={`truncate type-panel-caption ${
+                  actual ? 'font-semibold text-on-surface' : hecho ? 'text-on-surface-variant' : 'text-panel-muted'
+                }`}
+              >
+                {actual ? ESTADO_DEL_LEAD[estado].label : p}
+              </span>
+            </li>
+          )
+        })}
+      </ol>
+    </div>
+  )
+}
+
+// ── Cómo contactarlo ───────────────────────────────────────────────────────
+
+/** Los botones para contactarlo, a un toque, y debajo su dirección y sus notas. */
+function Contacto({ lead }: { lead: Lead }) {
+  const wa = whatsappNumber(lead.telefono)
+  const boton = claseDeBoton('tonal', 'sm')
+
+  return (
+    <section className="flex flex-col gap-2">
+      {!lead.telefono && !lead.direccion ? (
+        <p className="type-panel-body text-on-surface-variant">
+          Sin teléfono ni dirección. Añádelos desde «⋯ › Editar datos».
+        </p>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {lead.telefono && wa && (
+            <a href={`tel:+${wa}`} className={boton}>
+              <Phone size={15} aria-hidden /> Llamar
+              <span className="tabular-nums text-on-surface-variant">{formatPhone(lead.telefono)}</span>
+            </a>
+          )}
+          {wa && (
+            <a href={`https://wa.me/${wa}`} target="_blank" rel="noreferrer" className={boton}>
+              <MessageCircle size={15} aria-hidden /> WhatsApp
+            </a>
+          )}
+          {lead.direccion && (
+            <a href={enlaceAlMapa(lead.direccion)} target="_blank" rel="noreferrer" className={boton}>
+              <MapPin size={15} aria-hidden /> Cómo llegar
+            </a>
+          )}
+        </div>
+      )}
+      {lead.direccion && <p className="type-panel-caption text-on-surface-variant">{lead.direccion}</p>}
+      {lead.notas && (
+        <p className="whitespace-pre-line rounded-panel-control bg-panel-raised px-3 py-2 type-panel-body text-on-surface">
+          {lead.notas}
+        </p>
+      )}
+    </section>
+  )
+}
+
+// ── Qué toca ahora ─────────────────────────────────────────────────────────
+
+/** Una tarjeta con lo próximo: la visita, la llamada pendiente o la afiliación. */
+function ProximoPaso({ lead, hoy, ahora }: { lead: Lead; hoy: string; ahora: Date }) {
+  if (lead.estado === 'convertido') {
+    return (
+      <Callout tone="success" titulo="Afiliado">
+        {lead.via ? ROTULO_VIA[lead.via] : 'Afiliado'}
+        {lead.razon ? ` (se le reconoció ${ROTULO_RAZON[lead.razon]})` : ''}
+        {lead.afiliadoEl ? ` el ${formatDateTime(lead.afiliadoEl)}` : ''}.
+        {lead.clinicaId && (
+          <>
+            {' '}
+            <Link to="/admin/clinicas/$id" params={{ id: lead.clinicaId }} className={ENLACE}>
+              <Store size={13} aria-hidden /> {lead.clinica ?? 'Abrir la clínica'}
+            </Link>
+          </>
+        )}
+        {!lead.clinicaId && lead.solicitudEstado === 'pending' && (
+          <>
+            {' '}
+            <Link to="/admin/clinicas" search={{ estado: 'pendiente' }} className={ENLACE}>
+              Su solicitud está por revisar
+            </Link>
+          </>
+        )}
+      </Callout>
+    )
+  }
+
+  if (tieneVisita(lead) && lead.reunion) {
+    const dia = diaDeCaracas(lead.reunion)
+    const paso = visitaSinResultado(lead, ahora)
+    const calendario = enlaceAGoogleCalendar(lead)
+    const IconoModo = lead.modo ? ICONO_MODO[lead.modo] : CalendarClock
+    return (
+      <Tarjeta
+        tono={paso ? 'error' : dia === hoy ? 'warning' : 'brand'}
+        fecha={dia}
+        titulo={`Visita: ${rotuloDelDia(dia, hoy).toLowerCase()}, ${formatTime(lead.reunion)}`}
+        subtitulo={
+          paso ? (
+            'La hora ya pasó: anota abajo si se realizó, se pospuso o se canceló.'
+          ) : (
+            <span className="inline-flex items-center gap-1">
+              <IconoModo size={13} aria-hidden />
+              {[lead.modo ? ROTULO_MODO[lead.modo] : null, lead.lugar].filter(Boolean).join(' · ')}
+            </span>
+          )
+        }
+        accion={
+          calendario && !paso ? (
+            <a href={calendario} target="_blank" rel="noreferrer" className={claseDeBoton('outlined', 'sm')}>
+              <CalendarPlus size={14} aria-hidden /> Google Calendar
+            </a>
+          ) : null
+        }
+      />
+    )
+  }
+
+  if (lead.estado === 'descartado') {
+    return (
+      <p className="type-panel-caption text-on-surface-variant">
+        No le interesa. Si cambia de idea, anota abajo lo que pasó y vuelve al embudo.
+      </p>
+    )
+  }
+
+  if (lead.volverEl) {
+    const atrasado = lead.volverEl < hoy
+    return (
+      <Tarjeta
+        tono={atrasado ? 'error' : lead.volverEl === hoy ? 'warning' : 'neutral'}
+        fecha={lead.volverEl}
+        titulo={`Volver a llamar: ${rotuloDelDia(lead.volverEl, hoy).toLowerCase()}`}
+        subtitulo={atrasado ? 'Se pasó la fecha.' : 'Lo anotó la última gestión.'}
+      />
+    )
+  }
+
+  if (lead.estado === 'visitado') {
+    return (
+      <Tarjeta
+        tono="neutral"
+        icono={CalendarCheck}
+        titulo="Visita realizada"
+        subtitulo="Falta que se afilie: anota si se afilió o cuándo volver a llamarlo."
+      />
+    )
+  }
+
+  if (lead.estado === 'nuevo') {
+    return (
+      <Tarjeta
+        tono="warning"
+        icono={UserPlus}
+        titulo="Falta el primer contacto"
+        subtitulo="Escríbele o llámalo, y anota abajo qué pasó."
+      />
+    )
+  }
+
+  return null
+}
+
+const TONO_TARJETA = {
+  brand: 'border-primary/30 bg-primary/6',
+  warning: 'border-warning/40 bg-warning/8',
+  error: 'border-error/40 bg-error/8',
+  neutral: 'border-panel-hairline bg-panel-raised',
+} as const
+
+function Tarjeta({
+  tono,
+  fecha,
+  icono: Icono,
+  titulo,
+  subtitulo,
+  accion,
+}: {
+  tono: keyof typeof TONO_TARJETA
+  /** 'YYYY-MM-DD': se pinta como una hoja de calendario. */
+  fecha?: string
+  icono?: LucideIcon
+  titulo: string
+  subtitulo: ReactNode
+  accion?: ReactNode
+}) {
+  return (
+    <section className={`flex flex-wrap items-center gap-3 rounded-panel-card border px-4 py-3 ${TONO_TARJETA[tono]}`}>
+      {fecha ? (
+        <span className="flex w-12 shrink-0 flex-col items-center overflow-hidden rounded-panel-control border border-panel-hairline bg-panel-card">
+          <span className="w-full bg-on-surface/6 py-0.5 text-center type-panel-caption uppercase text-on-surface-variant">
+            {MESES_CORTOS[Number(fecha.slice(5, 7)) - 1]}
+          </span>
+          <span className="py-0.5 type-panel-section tabular-nums text-on-surface">{Number(fecha.slice(8, 10))}</span>
+        </span>
+      ) : Icono ? (
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-panel-card text-on-surface-variant">
+          <Icono size={18} aria-hidden />
+        </span>
+      ) : null}
+      <div className="min-w-44 flex-1">
+        <p className="type-panel-body font-semibold text-on-surface">{titulo}</p>
+        <p className="type-panel-caption text-on-surface-variant">{subtitulo}</p>
+      </div>
+      {accion}
+    </section>
+  )
+}
+
+// ── Anotar lo que pasó ─────────────────────────────────────────────────────
+
+/** Para elegir un día sin teclear la fecha. */
+function atajosDeVolver(hoy: string): Array<{ label: string; dia: string }> {
+  return [
+    { label: 'Mañana', dia: sumarDias(hoy, 1) },
+    { label: 'En 3 días', dia: sumarDias(hoy, 3) },
+    { label: 'En una semana', dia: sumarDias(hoy, 7) },
+  ]
+}
+
+/**
+ * Anotar una gestión siguiendo el árbol del equipo: primero por dónde fue
+ * (mensaje, llamada o visita), después qué pasó y, si contestó, si le
+ * interesa. Solo entonces aparece lo que ese resultado pide —la fecha de la
+ * visita, cuándo volver a llamar— con la nota al final.
+ */
 function AnotarGestion({ lead, hoy, ahora }: { lead: Lead; hoy: string; ahora: Date }) {
   const client = useQueryClient()
   const avisar = useToast()
+  const [eleccion, setEleccion] = useState<Eleccion>(SIN_ELEGIR)
   const [borrador, setBorrador] = useState(() => borradorDeGestion(lead))
 
+  const conVisita = tieneVisita(lead)
+  const resultado = resultadoDe(eleccion, conVisita)
+
   const anotar = useMutation({
-    mutationFn: (b: BorradorDeGestion) => anotarGestion(lead, b),
-    onSuccess: () => {
+    mutationFn: ({ r, b }: { r: Resultado; b: BorradorDeGestion }) => anotarGestion(lead.id, r, canalDe(eleccion), b),
+    onSuccess: (_, { r }) => {
       refrescarAgenda(client)
-      avisar(`Gestión con ${lead.nombre} anotada.`)
+      avisar(`${ROTULO_RESULTADO[r]}: anotado.`)
+      setEleccion(SIN_ELEGIR)
+      setBorrador(borradorDeGestion(lead))
     },
   })
 
@@ -252,119 +529,287 @@ function AnotarGestion({ lead, hoy, ahora }: { lead: Lead; hoy: string; ahora: D
     setBorrador((b) => ({ ...b, ...parte }))
   }
 
-  const bloqueo = motivoParaNoAnotar(borrador, lead, hoy, ahora)
-  const anula = anulaLaReunion(borrador, lead, ahora)
-  const enReunion = borrador.estado === 'reunion'
+  /** Elige una rama y propone lo que el resultado suele llevar. */
+  function elegir(e: Eleccion) {
+    setEleccion(e)
+    const r = resultadoDe(e, conVisita)
+    if (r === null) return
+    const dias = volverPropuesto(r)
+    cambiar({
+      // Una nota no mueve la llamada pendiente.
+      volverEl: r === 'nota' ? (lead.volverEl ?? '') : dias !== null ? sumarDias(hoy, dias) : '',
+      visitaDia: r === 'visita_pospuesta' ? '' : borrador.visitaDia,
+    })
+  }
+
+  const bloqueo = resultado ? motivoParaNoAnotar(resultado, borrador, lead, hoy) : undefined
+  const anula = anulaLaVisita(resultado, lead, ahora)
+  const visitaPasada = visitaSinResultado(lead, ahora)
 
   return (
-    <section className="flex flex-col gap-3 rounded-panel-card bg-panel-raised p-4">
-      <h3 className="type-panel-label text-on-surface-variant">Anotar una gestión</h3>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Select
-          id="agenda-estado"
-          label="Queda en"
-          value={borrador.estado}
-          options={OPCIONES_ESTADO}
-          onChange={(estado) => cambiar({ estado })}
-        />
-        <Select
-          id="agenda-canal"
-          label="Por dónde"
-          value={borrador.canal || 'ninguno'}
-          options={OPCIONES_CANAL}
-          onChange={(v) => cambiar({ canal: v === 'ninguno' ? '' : v })}
-        />
+    <section className="flex flex-col gap-4 rounded-panel-card border border-panel-hairline p-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h3 className="type-panel-section text-on-surface">Anotar gestión</h3>
+        <div className="flex gap-1">
+          <Chip selected={eleccion.tipo === 'afiliado'} onClick={() => elegir({ ...SIN_ELEGIR, tipo: 'afiliado' })}>
+            <BadgeCheck size={14} aria-hidden /> Se afilió
+          </Chip>
+          <Chip selected={eleccion.tipo === 'nota'} onClick={() => elegir({ ...SIN_ELEGIR, tipo: 'nota' })}>
+            <NotebookPen size={14} aria-hidden /> Solo una nota
+          </Chip>
+        </div>
       </div>
 
-      {enReunion && (
-        <div className="grid gap-3 sm:grid-cols-[1fr_8rem_1fr]">
-          <Input
-            id="agenda-reunion-dia"
-            label="Día de la reunión"
-            type="date"
-            min={hoy}
-            value={borrador.reunionDia}
-            onChange={(reunionDia) => cambiar({ reunionDia })}
-          />
-          <Input
-            id="agenda-reunion-hora"
-            label="Hora"
-            type="time"
-            value={borrador.reunionHora}
-            onChange={(reunionHora) => cambiar({ reunionHora })}
-          />
-          <Select
-            id="agenda-reunion-modo"
-            label="Cómo"
-            value={borrador.modo}
-            options={OPCIONES_MODO}
-            onChange={(modo) => cambiar({ modo })}
-          />
-          <Input
-            id="agenda-reunion-lugar"
-            label={borrador.modo === 'videollamada' ? 'Enlace (opcional)' : 'Dónde (opcional)'}
-            value={borrador.lugar}
-            placeholder={borrador.modo === 'videollamada' ? 'https://meet.google.com/…' : 'Su consultorio'}
-            onChange={(lugar) => cambiar({ lugar })}
-            className="sm:col-span-3"
-          />
+      <div className="grid grid-cols-3 gap-2">
+        {(['mensaje', 'llamada', 'visita'] as const).map((t) => {
+          const Icono = ICONO_TIPO[t]
+          const elegido = eleccion.tipo === t
+          const ayuda =
+            t === 'visita'
+              ? conVisita && lead.reunion
+                ? `La del ${formatDateTime(lead.reunion)}`
+                : 'Agendar con fecha'
+              : t === 'mensaje'
+                ? 'WhatsApp o SMS'
+                : 'Por teléfono'
+          return (
+            <button
+              key={t}
+              type="button"
+              aria-pressed={elegido}
+              onClick={() => elegir({ ...SIN_ELEGIR, tipo: t })}
+              className={`flex flex-col items-start gap-1 rounded-panel-control border px-3 py-2.5 text-left transition-colors ${
+                elegido
+                  ? 'border-primary bg-primary/8 ring-1 ring-primary'
+                  : t === 'visita' && visitaPasada
+                    ? 'border-error/50 bg-error/6 hover:bg-error/10'
+                    : 'border-panel-hairline hover:border-panel-hairline-strong hover:bg-panel-raised'
+              }`}
+            >
+              <Icono size={18} aria-hidden className={elegido ? 'text-primary' : 'text-on-surface-variant'} />
+              <span className="type-panel-control text-on-surface">{ROTULO_TIPO[t]}</span>
+              <span className="truncate type-panel-caption text-on-surface-variant">{ayuda}</span>
+            </button>
+          )
+        })}
+      </div>
+
+      {eleccion.tipo !== null && (
+        <div className="flex flex-col gap-4 border-t border-panel-hairline pt-4">
+          {(eleccion.tipo === 'mensaje' || eleccion.tipo === 'llamada' || (eleccion.tipo === 'visita' && conVisita)) && (
+            <Fila etiqueta={eleccion.tipo === 'visita' ? 'La visita' : 'Qué pasó'}>
+              {RESPUESTAS[eleccion.tipo].map((r) => (
+                <Chip
+                  key={r}
+                  selected={eleccion.respuesta === r}
+                  onClick={() => elegir({ ...eleccion, respuesta: r, interesado: null })}
+                >
+                  {ROTULO_RESPUESTA[r]}
+                </Chip>
+              ))}
+            </Fila>
+          )}
+
+          {eleccion.respuesta === 'contesto' && (
+            <Fila etiqueta="¿Le interesa?">
+              <Chip selected={eleccion.interesado === true} onClick={() => elegir({ ...eleccion, interesado: true })}>
+                <ThumbsUp size={14} aria-hidden /> Interesado
+              </Chip>
+              <Chip selected={eleccion.interesado === false} onClick={() => elegir({ ...eleccion, interesado: false })}>
+                <ThumbsDown size={14} aria-hidden /> No interesado
+              </Chip>
+              {eleccion.interesado === true && !conVisita && (
+                <button
+                  type="button"
+                  className="ml-1 type-panel-caption text-primary underline-offset-2 hover:underline"
+                  onClick={() => elegir({ ...SIN_ELEGIR, tipo: 'visita' })}
+                >
+                  ¿Ya quedaron en una visita? Agéndala
+                </button>
+              )}
+            </Fila>
+          )}
+
+          {pideFechaDeVisita(resultado) && (
+            <>
+              <Fila etiqueta={resultado === 'visita_pospuesta' ? 'Nueva fecha' : 'Fecha'}>
+                {[
+                  { label: 'Hoy', dia: hoy },
+                  { label: 'Mañana', dia: sumarDias(hoy, 1) },
+                  { label: 'Pasado mañana', dia: sumarDias(hoy, 2) },
+                ].map((a) => (
+                  <Chip key={a.label} selected={borrador.visitaDia === a.dia} onClick={() => cambiar({ visitaDia: a.dia })}>
+                    {a.label}
+                  </Chip>
+                ))}
+                <Input
+                  id="agenda-visita-dia"
+                  type="date"
+                  min={hoy}
+                  value={borrador.visitaDia}
+                  onChange={(visitaDia) => cambiar({ visitaDia })}
+                  className="w-44"
+                />
+                <Input
+                  id="agenda-visita-hora"
+                  type="time"
+                  value={borrador.visitaHora}
+                  onChange={(visitaHora) => cambiar({ visitaHora })}
+                  className="w-32"
+                />
+              </Fila>
+              <Fila etiqueta="Cómo">
+                {MODOS_DE_VISITA.map((m) => {
+                  const Icono = ICONO_MODO[m]
+                  return (
+                    <Chip key={m} selected={borrador.modo === m} onClick={() => cambiar({ modo: m })}>
+                      <Icono size={14} aria-hidden /> {ROTULO_MODO[m]}
+                    </Chip>
+                  )
+                })}
+              </Fila>
+              <Input
+                id="agenda-visita-lugar"
+                label={borrador.modo === 'videollamada' ? 'Enlace (opcional)' : 'Dónde (opcional)'}
+                value={borrador.lugar}
+                placeholder={borrador.modo === 'videollamada' ? 'https://meet.google.com/…' : 'Su consultorio'}
+                onChange={(lugar) => cambiar({ lugar })}
+              />
+            </>
+          )}
+
+          {resultado && pideVolver(resultado) && (
+            <Fila etiqueta="Volver a llamar">
+              {atajosDeVolver(hoy).map((a) => (
+                <Chip key={a.label} selected={borrador.volverEl === a.dia} onClick={() => cambiar({ volverEl: a.dia })}>
+                  {a.label}
+                </Chip>
+              ))}
+              <Input
+                id="agenda-volver"
+                type="date"
+                min={hoy}
+                value={borrador.volverEl}
+                onChange={(volverEl) => cambiar({ volverEl })}
+                className="w-44"
+              />
+              <Chip selected={borrador.volverEl === ''} onClick={() => cambiar({ volverEl: '' })}>
+                Sin fecha
+              </Chip>
+            </Fila>
+          )}
+
+          {resultado && (
+            <Textarea
+              id="agenda-nota"
+              label={resultado === 'nota' ? 'Nota' : 'Nota (opcional)'}
+              rows={2}
+              maxLength={NOTA_MAXIMA}
+              value={borrador.nota}
+              placeholder={EJEMPLO_DE_NOTA[resultado]}
+              onChange={(nota) => cambiar({ nota })}
+            />
+          )}
+
+          {anula && lead.reunion && (
+            <Callout
+              tone="warning"
+              titulo={
+                resultado === 'visita_cancelada'
+                  ? `Se cancela la visita del ${formatDateTime(lead.reunion)}`
+                  : `Se anula la visita del ${formatDateTime(lead.reunion)}`
+              }
+            >
+              {resultado === 'visita_cancelada'
+                ? 'El médico queda como interesado, sin visita.'
+                : 'Para dejar solo un comentario, usa «Solo una nota».'}
+            </Callout>
+          )}
+
+          {anotar.isError && <ErrorBox title="No se pudo anotar" detail={describeError(anotar.error)} />}
+
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            {resultado && (
+              <span className="mr-auto inline-flex items-center gap-1.5 type-panel-caption text-on-surface-variant">
+                Queda como
+                <Badge tone={ESTADO_DEL_LEAD[estadoDelResultado(resultado, lead)].tone}>
+                  {ESTADO_DEL_LEAD[estadoDelResultado(resultado, lead)].label}
+                </Badge>
+              </span>
+            )}
+            {bloqueo && <span className="type-panel-caption text-on-surface-variant">{bloqueo}</span>}
+            <Button size="sm" variant="text" onClick={() => setEleccion(SIN_ELEGIR)}>
+              Cancelar
+            </Button>
+            <Button
+              size="md"
+              disabled={resultado === null || !!bloqueo || anotar.isPending}
+              onClick={() => {
+                if (resultado && !bloqueo) anotar.mutate({ r: resultado, b: borrador })
+              }}
+            >
+              {anotar.isPending ? 'Guardando…' : 'Guardar'}
+            </Button>
+          </div>
         </div>
       )}
-
-      <Textarea
-        id="agenda-nota"
-        label="Qué pasó (opcional)"
-        rows={3}
-        maxLength={NOTA_MAXIMA}
-        value={borrador.nota}
-        placeholder={EJEMPLO_DE_NOTA[borrador.estado]}
-        onChange={(nota) => cambiar({ nota })}
-      />
-
-      {anula && lead.reunion && (
-        <Callout tone="warning" titulo={`Se anula la reunión del ${formatDateTime(lead.reunion)}`}>
-          Si solo quieres dejar una nota, deja «Reunión agendada».
-        </Callout>
-      )}
-
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        {borrador.estado === 'convertido' || borrador.estado === 'descartado' ? (
-          <span />
-        ) : (
-          <Input
-            id="agenda-volver"
-            label="Volver a llamar el (opcional)"
-            type="date"
-            min={hoy}
-            value={borrador.volverEl}
-            onChange={(volverEl) => cambiar({ volverEl })}
-            className="w-56"
-          />
-        )}
-        <Button
-          size="sm"
-          disabled={!!bloqueo || anotar.isPending}
-          title={bloqueo}
-          onClick={() => {
-            if (!bloqueo) anotar.mutate(borrador)
-          }}
-        >
-          <NotebookPen size={15} aria-hidden /> {anotar.isPending ? 'Anotando…' : 'Anotar'}
-        </Button>
-      </div>
-      {bloqueo && borrador.estado === 'reunion' && (
-        <p className="type-panel-caption text-on-surface-variant">{bloqueo}</p>
-      )}
-      {anotar.isError && <ErrorBox title="No se pudo anotar" detail={describeError(anotar.error)} />}
     </section>
   )
 }
 
-function Historia({ leadId }: { leadId: string }) {
+/** Un rótulo a la izquierda y sus opciones en fila. */
+function Fila({ etiqueta, children }: { etiqueta: string; children: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
+      <span className="w-32 shrink-0 type-panel-label text-on-surface-variant">{etiqueta}</span>
+      <div className="flex flex-wrap items-center gap-1.5">{children}</div>
+    </div>
+  )
+}
+
+// ── La historia ────────────────────────────────────────────────────────────
+
+function iconoDeGestion(h: Gestion): LucideIcon {
+  if (h.tipo === 'creado') return UserPlus
+  if (h.tipo === 'conversion') return BadgeCheck
+  if (h.resultado) return ICONO_RESULTADO[h.resultado]
+  if (h.canal) return ICONO_CANAL[h.canal]
+  return NotebookPen
+}
+
+/** Lo que dice una línea: el resultado, o (en las de antes del árbol) el cambio de estado. */
+function queDice(h: Gestion): ReactNode {
+  if (h.tipo === 'creado') return 'Lo apuntó en la agenda'
+  if (h.resultado) {
+    const deLaVisita =
+      h.reunion && (h.resultado === 'visita_agendada' || h.resultado === 'visita_pospuesta')
+        ? ` para el ${formatDateTime(h.reunion)}`
+        : h.reunion && (h.resultado === 'visita_realizada' || h.resultado === 'visita_cancelada')
+          ? ` (la del ${formatDateTime(h.reunion)})`
+          : ''
+    return (
+      <>
+        <span className="font-semibold">{ROTULO_RESULTADO[h.resultado]}</span>
+        {deLaVisita && <span className="text-on-surface-variant">{deLaVisita}</span>}
+      </>
+    )
+  }
+  if (h.despues && h.antes !== h.despues) {
+    return (
+      <>
+        {h.antes && <span className="text-on-surface-variant">{ESTADO_DEL_LEAD[h.antes].label} → </span>}
+        <span className="font-semibold">{ESTADO_DEL_LEAD[h.despues].label}</span>
+      </>
+    )
+  }
+  return <span className="text-on-surface-variant">{h.canal ? ROTULO_CANAL[h.canal] : 'Nota'}</span>
+}
+
+function Historia({ leadId, ahora }: { leadId: string; ahora: Date }) {
   const historia = useQuery(consultaHistoria(leadId))
 
   return (
-    <section className="flex flex-col gap-2">
+    <section className="flex flex-col gap-3">
       <h3 className="type-panel-label text-on-surface-variant">Historia</h3>
       {historia.isPending && <SkeletonList rows={3} />}
       {historia.isError && (
@@ -375,29 +820,25 @@ function Historia({ leadId }: { leadId: string }) {
         />
       )}
       {historia.isSuccess && historia.data.length > 0 && (
-        <ol className="flex flex-col gap-3">
-          {historia.data.map((h) => (
-            <li key={h.id} className="border-l-2 border-panel-hairline-strong pl-3">
-              <p className="type-panel-caption text-on-surface-variant">
-                {formatDateTime(h.cuando)} · {h.quien ?? 'Helios'}
-                {h.canal ? ` · ${ROTULO_CANAL[h.canal]}` : ''}
-              </p>
-              <p className="type-panel-body text-on-surface">
-                {h.tipo === 'creado' && 'Lo apuntó en la agenda.'}
-                {h.tipo !== 'creado' && h.despues && h.antes !== h.despues && (
-                  <>
-                    {h.antes ? `${ESTADO_DEL_LEAD[h.antes].label} → ` : ''}
-                    <strong className="font-medium">{ESTADO_DEL_LEAD[h.despues].label}</strong>
-                    {h.reunion ? `, el ${formatDateTime(h.reunion)}` : ''}
-                  </>
-                )}
-                {h.tipo !== 'creado' && h.despues === 'reunion' && h.antes === 'reunion' && h.reunion && (
-                  <>Reunión el {formatDateTime(h.reunion)}</>
-                )}
-              </p>
-              {h.nota && <p className="whitespace-pre-line type-panel-body text-on-surface">{h.nota}</p>}
-            </li>
-          ))}
+        <ol className="relative flex flex-col gap-4 before:absolute before:top-2 before:bottom-2 before:left-[13px] before:w-px before:bg-panel-hairline">
+          {historia.data.map((h) => {
+            const Icono = iconoDeGestion(h)
+            return (
+              <li key={h.id} className="relative flex gap-3">
+                <span className="z-10 flex size-7 shrink-0 items-center justify-center rounded-full border border-panel-hairline bg-panel-card text-on-surface-variant">
+                  <Icono size={14} aria-hidden />
+                </span>
+                <div className="min-w-0 flex-1 pt-0.5">
+                  <p className="type-panel-body text-on-surface">{queDice(h)}</p>
+                  {h.nota && <p className="mt-0.5 whitespace-pre-line type-panel-body text-on-surface">{h.nota}</p>}
+                  <p className="mt-0.5 type-panel-caption text-on-surface-variant" title={formatDateTime(h.cuando)}>
+                    {haceCuanto(h.cuando, ahora)} · {h.quien ?? 'Helios'}
+                    {h.canal && h.resultado ? ` · ${ROTULO_CANAL[h.canal]}` : ''}
+                  </p>
+                </div>
+              </li>
+            )
+          })}
         </ol>
       )}
     </section>

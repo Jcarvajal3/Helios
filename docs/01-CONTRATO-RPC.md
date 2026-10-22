@@ -817,15 +817,32 @@ RPC:
   assigned_to`). `22023` con un dato que no vale; `23505` si otro lead tiene
   ese teléfono o ese correo; `P0002` si el lead ya no existe. Bitácora
   `doctor_lead.created` / `doctor_lead.updated` (target: el lead).
-- `admin_log_doctor_lead_contact(p_lead_id uuid, p_status text, p_channel text
+- `admin_log_doctor_lead_contact(p_lead_id uuid, p_result text, p_channel text
   default null, p_note text default null, p_meeting_at timestamptz default
   null, p_meeting_mode text default null, p_meeting_place text default null,
-  p_next_contact_on date default null) → uuid`. `p_status` es el estado en que
-  queda. `reunion` pide `p_meeting_at` si no tenía una reunión por venir;
-  salir de `reunion` antes de la hora la anula (lo dice la nota). Una fecha de
-  reunión o de volver a llamar anterior a hoy, o una gestión sin nada que
-  anotar, dan `22023`. `next_contact_on` se reemplaza en cada gestión (y se
-  borra al afiliar o descartar). Bitácora `doctor_lead.contact`.
+  p_next_contact_on date default null) → uuid` (desde 20261022210000: recibe el
+  resultado, no el estado). El árbol del equipo: mensaje (`mensaje_enviado`,
+  contestó `interesado` / `no_interesado`, `no_contesto`), llamada
+  (`interesado` / `no_interesado`, `no_contesto`, `ocupado`) y visita
+  (`visita_agendada`, y con una agendada `visita_realizada`,
+  `visita_pospuesta`, `visita_cancelada`); además `afiliado` y `nota`. El estado
+  sale del resultado: `mensaje_enviado → contactado`, `interesado → respondio`,
+  `no_interesado → descartado`, `no_contesto | ocupado → no_respondio`,
+  `visita_agendada | visita_pospuesta → reunion`, `visita_realizada →
+  visitado`, `visita_cancelada → respondio` (sin visita), `afiliado →
+  convertido`, `nota` → el que tenía. `p_channel`: `mensaje | llamada | visita`
+  (y los de antes). `visita_agendada` y `visita_pospuesta` piden `p_meeting_at`
+  (de hoy en adelante; la pospuesta, distinta de la que había); realizada,
+  pospuesta y cancelada piden una visita agendada; `nota` pide la nota; una
+  fecha de visita con otro resultado, o volver a llamar antes de hoy, dan
+  `22023`. Volver a un estado de antes de la visita mientras hay una por venir
+  la anula (lo dice la nota). `next_contact_on` se reemplaza en cada gestión
+  (y se borra al afiliar o con `no_interesado`). Bitácora `doctor_lead.contact`
+  con `result`. Las líneas guardan `result`; el tablero lo devuelve en
+  `last_activity.result` y la historia en su columna `result`. Estado nuevo
+  `visitado` (visita realizada).
+- El panel ya no pide el correo ni la ciudad (las columnas siguen; al
+  corregir un lead desde el panel quedan vacías).
 - `admin_delete_doctor_lead(p_lead_id uuid) → void`. Borra el lead y su
   historia; la bitácora `doctor_lead.deleted` guarda sus datos. `P0002` si ya
   no existe.
