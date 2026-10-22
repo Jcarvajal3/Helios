@@ -28,6 +28,7 @@ declare
   v_ch_usd  uuid;
   v_ch_eur  uuid;
   v_j       jsonb;
+  v_p       jsonb;
   v_row     record;
   v_num     numeric;
   v_failed  boolean;
@@ -121,8 +122,23 @@ begin
       where x->>'reason' = 'staff_commission' and (x->>'run_date')::date = v_bdate + 8) <> 2 then
     raise exception 'Las dos comisiones debían salir el día 8: %', public.admin_merchant_settlements(v_m);
   end if;
+  -- La lista de Pagos a clínicas: el médico y el próximo pago (20261022100000),
+  -- que es el del día 8 con las dos primeras mitades y las dos comisiones.
+  v_p := public.admin_merchant_payables(v_m);
+  select sum((x->>'amount_usd')::numeric) into v_num
+  from jsonb_array_elements(public.admin_merchant_upcoming_settlements(v_m)) x
+  where (x->>'run_date')::date = v_bdate + 8;
   reset role;
-  raise notice 'TEST 3 OK — la comisión sale el día 8, con la primera mitad';
+  if v_p->0->>'doctor_name' is distinct from public.helios_doctor_name(v_m)
+     or (v_p->0->>'next_pay_date')::date is distinct from v_bdate + 8
+     or (v_p->0->>'next_pay_consultas_usd')::numeric <> v_num
+     or (v_p->0->>'next_pay_comisiones_usd')::numeric <> 1.00
+     or (v_p->0->>'next_pay_usd')::numeric <> v_num + 1.00
+     or (v_p->0->>'next_run_usd')::numeric <> 0
+     or (v_p->0->>'next_run_comisiones_usd')::numeric <> 0 then
+    raise exception 'El próximo pago debía ser el día 8: consultas %, comisiones 1.00: %', v_num, v_p;
+  end if;
+  raise notice 'TEST 3 OK — la comisión sale el día 8, con la primera mitad, y es el próximo pago';
 
   -- =========================================================================
   -- 4. El cron crea la mitad: deja de ser «por vencer» y vale lo mismo

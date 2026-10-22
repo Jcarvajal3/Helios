@@ -24,14 +24,16 @@ import { describeError } from '@/lib/supabase'
 
 /**
  * Qué clínicas se ven: las que cobran hoy, las que tienen algo atrasado o
- * todas. Sin elegir, las que cobran hoy: es la tarea del día.
+ * todas. Sin elegir, todas: con su próximo pago a la vista el equipo se
+ * organiza antes de que toque (2026-10-22). Antes era «Cobran hoy», y un día
+ * sin pagos dejaba la lista vacía.
  */
 export type SoloLocales = 'atrasados' | 'este-cierre' | 'todos'
 
 export const OPCIONES_SOLO: ReadonlyArray<{ value: SoloLocales; label: string }> = [
+  { value: 'todos', label: 'Todas' },
   { value: 'este-cierre', label: 'Cobran hoy' },
   { value: 'atrasados', label: 'Con atraso' },
-  { value: 'todos', label: 'Todas' },
 ]
 
 function futuroDe(m: MerchantPayable): number {
@@ -47,6 +49,10 @@ function futuroDe(m: MerchantPayable): number {
  *
  * Las cifras de arriba son puertas: pulsar «atrasado» deja solo los locales
  * con atraso. Los locales de prueba salen, con su etiqueta, y no suman.
+ *
+ * Cada fila es un médico titular (la clínica va debajo, en pequeño) con lo que
+ * sale hoy y su próximo pago: el siguiente día con algo que transferirle, con
+ * las mitades de la consulta y las comisiones de ese día sumadas.
  */
 export function LoQueSeDebeHoy({
   solo,
@@ -87,12 +93,19 @@ export function LoQueSeDebeHoy({
   const totals = payablesTotals(todos)
   const prueba = todos.filter((m) => m.isTest).reduce((sum, m) => sum + m.totalPendingUsd, 0)
 
-  // Sin elegir: lo de hoy, que es la tarea del día.
-  const vista: SoloLocales = solo ?? 'este-cierre'
+  // Sin elegir: todas, con lo de hoy delante y luego el próximo pago más cercano.
+  const vista: SoloLocales = solo ?? 'todos'
 
-  const rows = todos.filter((m) =>
-    vista === 'atrasados' ? m.overdueUsd > 0.005 : vista === 'este-cierre' ? m.nextRunUsd > 0.005 : true,
-  )
+  const rows = todos
+    .filter((m) =>
+      vista === 'atrasados' ? m.overdueUsd > 0.005 : vista === 'este-cierre' ? m.nextRunUsd > 0.005 : true,
+    )
+    .sort(
+      (a, b) =>
+        b.nextRunUsd - a.nextRunUsd ||
+        (a.proximoPago?.fecha ?? '9999').localeCompare(b.proximoPago?.fecha ?? '9999') ||
+        (a.doctorName ?? a.merchantName).localeCompare(b.doctorName ?? b.merchantName, 'es'),
+    )
 
   const resumen = (
     <>
@@ -182,12 +195,28 @@ function Puerta({
   )
 }
 
+/** El médico titular, o la clínica si no tiene. */
+function medicoDe(m: MerchantPayable): string {
+  return m.doctorName ?? m.merchantName
+}
+
+/** «consultas $X + comisiones $Y», o nada si no hay comisiones que separar. */
+function Partido({ consultasUsd, comisionesUsd }: { consultasUsd: number; comisionesUsd: number }) {
+  if (comisionesUsd <= 0.005) return null
+  return (
+    <span className="block whitespace-nowrap type-panel-caption font-normal text-on-surface-variant">
+      consultas {formatUsd(consultasUsd)} + comisiones {formatUsd(comisionesUsd)}
+    </span>
+  )
+}
+
 const COLUMNAS: Array<Column<MerchantPayable>> = [
   {
+    // El médico es el dato principal; la clínica, debajo (2026-10-22).
     key: 'local',
-    header: 'Clínica',
+    header: 'Médico',
     identity: true,
-    sort: (m) => m.merchantName,
+    sort: medicoDe,
     cell: (m) => (
       <span className="block">
         <span className="flex items-center gap-2">
@@ -196,13 +225,23 @@ const COLUMNAS: Array<Column<MerchantPayable>> = [
             params={{ id: m.merchantId }}
             className={ENLACE_EN_CELDA}
           >
-            {m.merchantName}
+            {medicoDe(m)}
           </Link>
           {m.isTest && <Badge tone="neutral">Prueba</Badge>}
         </span>
-        <span className="type-panel-caption text-on-surface-variant">{m.taxId ?? 'Sin RIF'}</span>
+        <span className="type-panel-caption text-on-surface-variant">
+          {medicoDe(m) !== m.merchantName ? `${m.merchantName} · ` : ''}
+          {m.taxId ?? 'Sin RIF'}
+        </span>
       </span>
     ),
+  },
+  {
+    key: 'clinica',
+    header: 'Clínica',
+    hidden: true,
+    sort: (m) => m.merchantName,
+    cell: (m) => m.merchantName,
   },
   {
     key: 'rif',
@@ -217,16 +256,41 @@ const COLUMNAS: Array<Column<MerchantPayable>> = [
     info: 'Lo que hay que transferirle hoy: lo que venció ayer más lo atrasado de días anteriores. Arriba, «que toca pagar hoy» no lleva lo atrasado. Son sus consultas (financiado sin comisión, menos su comisión) más las comisiones de su personal; debajo, partido.',
     sort: (m) => m.nextRunUsd,
     sortDir: 'desc',
-    cell: (m) => (
-      <>
-        <span className="font-semibold">{formatUsd(m.nextRunUsd)}</span>
-        {m.desglose && m.desglose.comisionesUsd > 0 && (
+    cell: (m) =>
+      m.nextRunUsd > 0.005 ? (
+        <>
+          <span className="font-semibold">{formatUsd(m.nextRunUsd)}</span>
+          {m.desglose && <Partido {...m.desglose} />}
+        </>
+      ) : (
+        <span className="text-on-surface-variant">—</span>
+      ),
+  },
+  {
+    key: 'proximo',
+    header: 'Próximo pago',
+    type: 'number',
+    info: 'El siguiente día, después de hoy, con algo que transferirle: las mitades de la consulta que vencen (aunque todavía no sean liquidaciones) y las comisiones de su personal de ese día, sumadas. Para tenerlo listo antes de que toque.',
+    sort: (m) => m.proximoPago?.fecha ?? null,
+    cell: (m) =>
+      m.proximoPago ? (
+        <>
+          <span className="font-semibold">{formatUsd(m.proximoPago.usd)}</span>
           <span className="block whitespace-nowrap type-panel-caption font-normal text-on-surface-variant">
-            consultas {formatUsd(m.desglose.consultasUsd)} + comisiones {formatUsd(m.desglose.comisionesUsd)}
+            el {formatDay(m.proximoPago.fecha)}
           </span>
-        )}
-      </>
-    ),
+          <Partido {...m.proximoPago} />
+        </>
+      ) : (
+        <span className="text-on-surface-variant">—</span>
+      ),
+  },
+  {
+    key: 'proximo-fecha',
+    header: 'Próximo pago: día',
+    hidden: true,
+    sort: (m) => m.proximoPago?.fecha ?? null,
+    cell: (m) => (m.proximoPago ? formatDay(m.proximoPago.fecha) : '—'),
   },
   {
     key: 'consultas',

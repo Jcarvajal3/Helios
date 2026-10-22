@@ -128,8 +128,8 @@ function PorPagar({
           <Filtro label="Clínicas">
             <Segmented
               options={[...OPCIONES_SOLO]}
-              value={solo ?? 'este-cierre'}
-              onChange={(value) => onCambiar({ solo: value === 'este-cierre' ? undefined : value })}
+              value={solo ?? 'todos'}
+              onChange={(value) => onCambiar({ solo: value === 'todos' ? undefined : value })}
             />
           </Filtro>
         )}

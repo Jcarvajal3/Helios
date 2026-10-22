@@ -17,7 +17,8 @@ import { describeError } from '@/lib/supabase'
  *
  * Tres bloques, en el orden de la conversación cuando llama el gerente:
  *
- *   1. Cuánto se le debe        las tres cifras que pregunta, en el carril.
+ *   1. Cuánto se le debe        lo de hoy, lo atrasado, el próximo pago y lo
+ *                               de los días siguientes, en el carril.
  *   2. Por qué                  las liquidaciones por día de pago, y desde
  *                               aquí se le paga (`LiquidacionesDelLocal`).
  *   3. Qué se le ha pagado      el histórico de transferencias.
@@ -46,6 +47,9 @@ export function PaginaPagosComercio({
   // `nextRunUsd` ya lleva dentro lo atrasado: no se resta dos veces.
   const futuro = payable ? comprometidoFuturoDe(payable) : 0
   const atrasado = payable?.overdueUsd ?? 0
+  const proximo = payable?.proximoPago ?? null
+  // El médico titular es el dato principal; la clínica va debajo (2026-10-22).
+  const medico = payable?.doctorName ?? merchant?.name ?? ''
 
   return (
     <>
@@ -73,7 +77,7 @@ export function PaginaPagosComercio({
               identidad={<LogoLocal name={merchant.name} logoUrl={merchant.logoUrl} size="lg" />}
               nombre={
                 <Link to="/admin/clinicas/$id" params={{ id: merchantId }} className="hover:underline">
-                  {merchant.name}
+                  {medico}
                 </Link>
               }
               insignias={
@@ -82,7 +86,7 @@ export function PaginaPagosComercio({
                   {merchant.isTest && <Badge>Prueba</Badge>}
                 </>
               }
-              datos={[merchant.taxId ?? 'Sin RIF']}
+              datos={[medico !== merchant.name ? merchant.name : null, merchant.taxId ?? 'Sin RIF']}
             >
               {merchant.isTest && (
                 <p className="type-panel-caption text-panel-muted">
@@ -92,7 +96,7 @@ export function PaginaPagosComercio({
             </CabeceraDeFicha>
           }
           carril={
-            // Tres cifras y no una: mezclarlas es lo que hacía pagar de más.
+            // Cifras separadas y no una: mezclarlas es lo que hacía pagar de más.
             <ResumenDeFicha
               titulo="Lo que se le debe"
               cifras={[
@@ -113,6 +117,16 @@ export function PaginaPagosComercio({
                   value: formatUsd(atrasado),
                   senal: atrasado > 0 ? { tone: 'error', texto: 'Atrasado' } : undefined,
                   hint: payable?.oldestDueDate ? `Desde el ${formatDay(payable.oldestDueDate)}` : undefined,
+                  estado,
+                  onReintentar: reintentar,
+                },
+                {
+                  label: proximo ? `Próximo pago (${formatDay(proximo.fecha)})` : 'Próximo pago',
+                  info: 'El siguiente día, después de hoy, con algo que transferirle: las mitades de la consulta que vencen (aunque todavía no sean liquidaciones) y las comisiones de su personal de ese día, sumadas. Para tenerlo listo antes de que toque.',
+                  value: proximo ? formatUsd(proximo.usd) : '—',
+                  hint: proximo
+                    ? `Consultas ${formatUsd(proximo.consultasUsd)} + Comisiones del personal ${formatUsd(proximo.comisionesUsd)}`
+                    : 'No hay nada más adelante',
                   estado,
                   onReintentar: reintentar,
                 },

@@ -469,6 +469,12 @@ export async function fetchMerchants(): Promise<MerchantRow[]> {
 export type MerchantPayable = {
   merchantId: string
   merchantName: string
+  /**
+   * El médico titular con su título («Dra. Nadia Khabbaze»): es como lo conoce
+   * el equipo y va delante del nombre de la clínica. Sin titular, el nombre de
+   * la clínica. `undefined` si la base no lo manda.
+   */
+  doctorName?: string
   taxId: string | null
   /** Local de prueba: su fila se ve, con etiqueta, pero no suma en las cifras. */
   isTest: boolean
@@ -495,6 +501,13 @@ export type MerchantPayable = {
    * (contrato §2.5). `null` si la base no lo manda.
    */
   desglose?: ConsultasYComisiones | null
+  /**
+   * El próximo pago, el primer día DESPUÉS del de hoy con algo que
+   * transferirle: las mitades de la consulta (también las que el cron todavía
+   * no ha creado) y las comisiones de ese día, sumadas (20261022100000).
+   * `null` si no hay nada más adelante.
+   */
+  proximoPago?: ({ fecha: string; usd: number } & ConsultasYComisiones) | null
 }
 
 export async function fetchMerchantPayables(): Promise<MerchantPayable[]> {
@@ -505,6 +518,7 @@ export async function fetchMerchantPayables(): Promise<MerchantPayable[]> {
   return (data as Array<Record<string, unknown>>).map((row) => ({
     merchantId: row.merchant_id as string,
     merchantName: row.merchant_name as string,
+    doctorName: (row.doctor_name as string | null) ?? (row.merchant_name as string),
     taxId: (row.tax_id as string | null) ?? null,
     isTest: Boolean(row.is_test),
     todayDate: String(row.today_date),
@@ -518,7 +532,22 @@ export async function fetchMerchantPayables(): Promise<MerchantPayable[]> {
     totalPendingUsd: Number(row.total_pending_usd ?? 0),
     lastPayoutOn: (row.last_payout_on as string | null) ?? null,
     lastPayoutUsd: row.last_payout_usd == null ? null : Number(row.last_payout_usd),
-    desglose: leerConsultasYComisiones(row),
+    // Lo de HOY partido: `consultas_usd`/`comisiones_usd` son todo lo devengado
+    // (también lo que sale otro día) y bajo «Sale hoy» enseñaban comisiones
+    // que no tocaban.
+    desglose: leerConsultasYComisiones({
+      consultas_usd: row.next_run_consultas_usd,
+      comisiones_usd: row.next_run_comisiones_usd,
+    }),
+    proximoPago:
+      row.next_pay_date == null
+        ? null
+        : {
+            fecha: String(row.next_pay_date),
+            usd: Number(row.next_pay_usd ?? 0),
+            consultasUsd: Number(row.next_pay_consultas_usd ?? 0),
+            comisionesUsd: Number(row.next_pay_comisiones_usd ?? 0),
+          },
   }))
 }
 
