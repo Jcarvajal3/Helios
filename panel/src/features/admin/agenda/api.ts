@@ -53,7 +53,7 @@ export function consultaEquipoDeLaAgenda() {
       if (error) throw error
       return comoLista(data).map((fila) => {
         const r = comoFila(fila)
-        return { userId: texto(r.user_id), nombre: texto(r.name, 'Sin nombre') }
+        return { userId: texto(r.user_id), nombre: texto(r.name, 'Sin nombre'), rol: texto(r.role) }
       })
     },
     staleTime: 5 * 60 * 1000,

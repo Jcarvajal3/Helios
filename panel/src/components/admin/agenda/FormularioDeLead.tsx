@@ -54,9 +54,17 @@ export function FormularioDeLead({
     setBorrador((b) => ({ ...b, ...parte }))
   }
 
+  // Solo quien tiene el rol de la agenda: es quien sale a buscar médicos. Si
+  // ya lo gestionaba otra persona, se queda en la lista, marcada, para que
+  // guardar otro dato no se lo quite.
+  const deLaAgenda = (equipo.data ?? []).filter((m) => m.rol === 'agenda')
+  const otro = lead?.responsableId
+    ? (equipo.data ?? []).find((m) => m.userId === lead.responsableId && m.rol !== 'agenda')
+    : undefined
   const opcionesEquipo = [
     { value: SIN, label: 'Nadie' },
-    ...(equipo.data ?? []).map((m) => ({ value: m.userId, label: m.nombre })),
+    ...deLaAgenda.map((m) => ({ value: m.userId, label: m.nombre })),
+    ...(otro ? [{ value: otro.userId, label: `${otro.nombre} (no tiene el rol Agenda)` }] : []),
   ]
   const bloqueo = motivoParaNoGuardar(borrador)
 
@@ -128,13 +136,20 @@ export function FormularioDeLead({
             onChange={(direccion) => cambiar({ direccion })}
             className="sm:col-span-2"
           />
-          <Select
-            id="lead-responsable"
-            label="Gestionado por"
-            value={borrador.responsableId || SIN}
-            options={opcionesEquipo}
-            onChange={(v) => cambiar({ responsableId: v === SIN ? '' : v })}
-          />
+          <div>
+            <Select
+              id="lead-responsable"
+              label="Gestionado por"
+              value={borrador.responsableId || SIN}
+              options={opcionesEquipo}
+              onChange={(v) => cambiar({ responsableId: v === SIN ? '' : v })}
+            />
+            {equipo.isSuccess && deLaAgenda.length === 0 && (
+              <p className="mt-1 type-panel-caption text-on-surface-variant">
+                Nadie tiene todavía el rol Agenda. Se da en Ajustes › Equipo.
+              </p>
+            )}
+          </div>
         </div>
         <Textarea
           id="lead-notas"
