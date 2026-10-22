@@ -8,7 +8,15 @@ import assert from 'node:assert/strict';
 
 import type Anthropic from 'npm:@anthropic-ai/sdk@1';
 
-import { aHerramientas, aMensajes, bloquesDelTurno, motivoDeFin, paraReenviar } from '../anthropic/conversion.ts';
+import {
+  aHerramientas,
+  aMensajes,
+  bloquesDelTurno,
+  ESTRICTAS,
+  MAX_ESTRICTAS,
+  motivoDeFin,
+  paraReenviar,
+} from '../anthropic/conversion.ts';
 import { leerModelo, MODELO_POR_DEFECTO, parametrosDelModelo } from '../anthropic/modelo.ts';
 import { definiciones } from '../herramientas/index.ts';
 import { leerMapa } from '../mapa.ts';
@@ -34,10 +42,15 @@ Deno.test('los tres piensan con esfuerzo low; el respaldo del servidor solo en O
   assert.deepEqual(parametrosDelModelo('claude-haiku-5-5'), comunes);
 });
 
-Deno.test('las herramientas van con strict y los resultados como tool_result', () => {
+Deno.test('como mucho 20 estrictas (tope de la API): la consulta y las de presentación; los resultados como tool_result', () => {
   const tools = aHerramientas(definiciones());
   assert.equal(tools.length, 31);
-  assert.ok(tools.every((t) => t.strict === true && t.input_schema.type === 'object'));
+  assert.ok(tools.every((t) => t.input_schema.type === 'object'));
+  const estrictas = tools.filter((t) => t.strict === true).map((t) => t.name);
+  assert.ok(estrictas.length <= MAX_ESTRICTAS);
+  assert.deepEqual(estrictas.sort(), ['consultar_datos', 'mostrar_enlace', 'mostrar_grafico', 'mostrar_tabla']);
+  // Cada nombre de ESTRICTAS existe: un nombre mal escrito dejaría una sin strict sin avisar.
+  assert.ok([...ESTRICTAS].every((n) => tools.some((t) => t.name === n)));
 
   assert.deepEqual(aMensajes([
     { rol: 'persona', bloques: [{ tipo: 'texto', texto: 'Hola' }] },

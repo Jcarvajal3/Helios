@@ -28,17 +28,30 @@ type Bloque = Anthropic.Beta.Messages.BetaContentBlock;
 export type NativoAnthropic = Bloque[];
 
 /**
- * Las herramientas con `strict: true`: la API solo deja pasar entradas que
- * cumplen el esquema. Sin `eager_input_streaming`: las entradas son pequeñas y
- * el panel no enseña la entrada a medio escribir, así que no hay espera que
- * ahorrar, y con él la API dejaría de validar el esquema.
+ * Las que van con `strict: true` (la API solo deja pasar entradas que cumplen
+ * el esquema). La API admite 20 como mucho y el asistente tiene 31, así que
+ * solo van estrictas las de entrada con forma: la consulta SQL y las de
+ * presentación, cuyas tablas y gráficos se arman con lo que llega. Las demás
+ * leen su entrada con `herramientas/esquema.ts`, que recorta los rangos y
+ * devuelve al modelo un error si falta algo (2026-10-23: con las 31 estrictas,
+ * la API contestaba 400).
+ */
+export const ESTRICTAS: ReadonlySet<string> = new Set(['consultar_datos', 'mostrar_enlace', 'mostrar_grafico', 'mostrar_tabla']);
+
+/** El tope de herramientas estrictas por petición de la API. */
+export const MAX_ESTRICTAS = 20;
+
+/**
+ * Las herramientas para la API. Sin `eager_input_streaming`: las entradas son
+ * pequeñas y el panel no enseña la entrada a medio escribir, así que no hay
+ * espera que ahorrar, y con él la API dejaría de validar el esquema.
  */
 export function aHerramientas(definiciones: ReadonlyArray<DefinicionDeHerramienta>): Anthropic.Beta.Messages.BetaTool[] {
   return definiciones.map((d) => ({
     name: d.nombre,
     description: d.descripcion,
     input_schema: d.esquema,
-    strict: true,
+    ...(ESTRICTAS.has(d.nombre) ? { strict: true } : {}),
   }));
 }
 
