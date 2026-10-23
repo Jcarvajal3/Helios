@@ -12,6 +12,8 @@
 -- 7. Rechazar exige motivo; una revisada no se vuelve a revisar.
 -- 8. `admin_create_clinic` crea igual, sin RIF.
 -- 9. `admin_set_merchant_owner` corrige el titular.
+-- La red social (20261023130000) va en 1, 4, 6 y 8: opcional, la red y el
+-- usuario juntos.
 -- ============================================================================
 
 begin;
@@ -38,6 +40,8 @@ declare
     'address', 'Av. Principal, Torre Médica, piso 3',
     'phone', '0212 555 1234',
     'email', 'Ana.Prueba.Afiliacion@Example.com',
+    'social_network', ' Instagram ',
+    'social_user', '  @dra.ana.prueba  ',
     'account_holder', 'Ana María Pérez',
     'holder_document', 'V12345678',
     'bank', 'Banesco',
@@ -103,6 +107,29 @@ begin
   end;
   if not v_failed then raise exception 'Un correo inválido debía rechazarse'; end if;
 
+  v_failed := false;
+  begin
+    perform public.helios_solicitar_afiliacion(v_datos - 'social_network');
+  exception when invalid_parameter_value then
+    v_failed := sqlerrm like '%qué red social%';
+  end;
+  if not v_failed then raise exception 'Un usuario sin su red social debía rechazarse'; end if;
+
+  v_failed := false;
+  begin
+    perform public.helios_solicitar_afiliacion(v_datos || '{"social_network":"myspace"}');
+  exception when invalid_parameter_value then v_failed := true;
+  end;
+  if not v_failed then raise exception 'Una red social fuera de la lista debía rechazarse'; end if;
+
+  v_failed := false;
+  begin
+    perform public.helios_solicitar_afiliacion(v_datos || '{"social_user":"  "}');
+  exception when invalid_parameter_value then
+    v_failed := sqlerrm like '%usuario o el enlace%';
+  end;
+  if not v_failed then raise exception 'Una red social sin usuario debía rechazarse'; end if;
+
   -- --- 5. Quién lee y quién aprueba --------------------------------------
   v_failed := false;
   begin
@@ -129,6 +156,7 @@ begin
                  and email = 'ana.prueba.afiliacion@example.com' and tax_id is null
                  and account_number = '01340000000000000001' and bank = 'Banesco'
                  and holder_document = 'V12345678' and pago_movil_phone is null
+                 and social_network = 'instagram' and social_user = '@dra.ana.prueba'
                  and ip = '203.0.113.9') then
     raise exception 'La solicitud no se guardó normalizada';
   end if;
@@ -154,7 +182,8 @@ begin
   select * into v_m from public.merchants where id = v_merchant;
   if v_m.name <> 'Consultorio Dental Ana Pérez' or v_m.owner_name <> 'Ana María Pérez'
      or v_m.owner_document <> 'V12345678' or v_m.college_number <> 'COV-1234'
-     or v_m.category <> 'odontologia' or v_m.tax_id is not null or v_m.status <> 'active' then
+     or v_m.category <> 'odontologia' or v_m.tax_id is not null or v_m.status <> 'active'
+     or v_m.social_network <> 'instagram' or v_m.social_user <> '@dra.ana.prueba' then
     raise exception 'La clínica no nació con los datos de la solicitud: %', to_jsonb(v_m);
   end if;
   select * into v_cuenta from public.merchant_payout_accounts where merchant_id = v_merchant;
@@ -196,10 +225,10 @@ begin
 
   -- --- 8. El alta desde el panel -----------------------------------------
   -- El equipo: solo Pago Móvil, con el titular por RIF.
-  v_res := public.admin_create_clinic((v_datos - 'account_number' - 'bank') || '{"clinic_name":"Clínica Prueba Panel","tax_id":"J501234567","specialty":"Pediatría","account_holder":"Clínica Prueba Panel C.A.","holder_document":"J501234567","owner_document":"V11222333","email":"panel.prueba@example.com"}');
+  v_res := public.admin_create_clinic((v_datos - 'account_number' - 'bank' - 'social_network' - 'social_user') ||'{"clinic_name":"Clínica Prueba Panel","tax_id":"J501234567","specialty":"Pediatría","account_holder":"Clínica Prueba Panel C.A.","holder_document":"J501234567","owner_document":"V11222333","email":"panel.prueba@example.com"}');
   reset role;
   select * into v_m from public.merchants where id = (v_res->>'merchant_id')::uuid;
-  if v_m.category <> 'consultorio' or v_m.tax_id <> 'J-501234567' then
+  if v_m.category <> 'consultorio' or v_m.tax_id <> 'J-501234567' or v_m.social_network is not null then
     raise exception 'El alta del panel no guardó la categoría o el RIF: %', to_jsonb(v_m);
   end if;
   select * into v_cuenta from public.merchant_payout_accounts where merchant_id = v_m.id;

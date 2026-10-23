@@ -52,6 +52,8 @@ const alta: AltaDeClinica = {
   address: 'Av. Principal, piso 3',
   phone: '0212 555 12 34',
   email: 'demo@consultorio.com',
+  socialNetwork: '',
+  socialUser: '',
   accountHolder: 'Ana Pérez',
   holderDocument: 'V12345678',
   bank: 'Banesco',
@@ -76,6 +78,24 @@ igual('sin consultorio no', motivoDeAlta({ ...alta, clinicName: '' }), 'Falta el
 igual('sin dirección no', motivoDeAlta({ ...alta, address: '' }), 'Falta la dirección del consultorio.')
 igual('sin teléfono no', motivoDeAlta({ ...alta, phone: '' }) !== null, true)
 igual('un correo raro no', motivoDeAlta({ ...alta, email: 'demo@' }), 'El correo no parece un correo.')
+igual(
+  'con su red social pasa',
+  motivoDeAlta({ ...alta, socialNetwork: 'instagram', socialUser: '@consultorio.demo' }),
+  null,
+)
+igual('un usuario sin la red no', motivoDeAlta({ ...alta, socialUser: '@consultorio.demo' }), 'Elige qué red social es.')
+igual(
+  'la red sin usuario no',
+  motivoDeAlta({ ...alta, socialNetwork: 'tiktok', socialUser: '  ' }),
+  'Escribe el usuario o el enlace de la red social.',
+)
+igual(
+  'la red social se manda limpia',
+  ((d) => [d.social_network, d.social_user])(
+    datosDeAlta({ ...alta, socialNetwork: 'instagram', socialUser: ' @consultorio.demo ' }, 'portada'),
+  ),
+  ['instagram', '@consultorio.demo'],
+)
 igual('sin titular no', motivoDeAlta({ ...alta, accountHolder: '' }), 'Falta el titular de la cuenta.')
 igual('el titular con RIF vale', motivoDeAlta({ ...alta, holderDocument: 'J123456789' }), null)
 igual('sin banco de la cuenta no', motivoDeAlta({ ...alta, bank: '' }), 'Elige el banco de la cuenta.')
@@ -118,6 +138,8 @@ const solicitud = leerSolicitud({
   address: 'Av. Principal, piso 3',
   phone: '+582125551234',
   email: 'demo@consultorio.com',
+  social_network: 'facebook',
+  social_user: 'Consultorio Demo',
   account_holder: 'Ana Pérez',
   holder_document: 'J-123456789',
   bank: 'Banesco',
@@ -128,6 +150,8 @@ const solicitud = leerSolicitud({
 })
 igual('la solicitud se lee pendiente', solicitud.status, 'pending')
 igual('el RIF vuelve sin guion', solicitud.alta.holderDocument, 'J123456789')
+igual('la red social se lee', [solicitud.alta.socialNetwork, solicitud.alta.socialUser], ['facebook', 'Consultorio Demo'])
+igual('una red desconocida se lee vacía', leerSolicitud({ social_network: 'myspace' }).alta.socialNetwork, '')
 igual('la solicitud leída es un alta válida', motivoDeAlta(solicitud.alta), null)
 igual('sin cambios no hay correcciones', correccionesDeSolicitud(solicitud.alta, solicitud.alta), null)
 igual(

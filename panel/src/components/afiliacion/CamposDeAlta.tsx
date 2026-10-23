@@ -3,8 +3,8 @@ import type { ReactNode } from 'react'
 import { CampoDocumento } from '@/components/CampoDocumento'
 import { Input, Select } from '@/components/ui'
 import { BANKS } from '@/features/admin/banks'
-import { cuentaDeOtroBanco, digitosDeCuenta, formatoCuenta } from '@/features/admin/clinicas/clinicas'
-import type { AltaDeClinica, ModoDeAlta } from '@/features/admin/clinicas/clinicas'
+import { REDES_SOCIALES, cuentaDeOtroBanco, digitosDeCuenta, formatoCuenta } from '@/features/admin/clinicas/clinicas'
+import type { AltaDeClinica, ModoDeAlta, RedSocial } from '@/features/admin/clinicas/clinicas'
 import { LETRAS_CEDULA, LETRAS_RIF, LETRAS_TITULAR } from '@/lib/documento'
 
 const OPCIONES_BANCO = BANKS.map((b) => ({ value: b.name, label: b.name }))
@@ -15,6 +15,9 @@ const OPCIONES_BANCO = BANKS.map((b) => ({ value: b.name, label: b.name }))
  * alta del equipo y en la revisión de una solicitud, para que lo que pide uno
  * sea lo que ve el otro. La portada (`modo="portada"`) solo pide la
  * transferencia; el equipo ve también el Pago Móvil.
+ *
+ * La red social, opcional, va con el contacto del consultorio: qué red es y
+ * el usuario o el enlace.
  *
  * Las cédulas y el RIF van con `CampoDocumento` (la letra en un selector y
  * solo números), y la cuenta se escribe en bloques de 4 y se guarda sin
@@ -37,6 +40,8 @@ export function CamposDeAlta({
   const campo = (k: keyof AltaDeClinica) => (v: string) => onChange({ ...valor, [k]: v })
   const portada = modo === 'portada'
   const otroBanco = cuentaDeOtroBanco(valor.bank, valor.accountNumber)
+  // «Otra» no dice cuál: el rótulo solo nombra la red cuando se sabe.
+  const red = valor.socialNetwork === 'otra' ? null : REDES_SOCIALES.find((r) => r.value === valor.socialNetwork)?.label
 
   return (
     <div className="flex flex-col gap-6">
@@ -123,6 +128,22 @@ export function CamposDeAlta({
           onChange={campo('email')}
           autoComplete="email"
           placeholder="consultorio@correo.com"
+        />
+        <Select<RedSocial>
+          id={`${id}-red-social`}
+          label="Red social (opcional)"
+          value={valor.socialNetwork}
+          placeholder="Ninguna"
+          options={[...REDES_SOCIALES]}
+          onChange={(v) => onChange({ ...valor, socialNetwork: v })}
+        />
+        <Input
+          id={`${id}-red-social-usuario`}
+          label={red ? `Usuario o enlace en ${red} (opcional)` : 'Usuario o enlace (opcional)'}
+          value={valor.socialUser}
+          onChange={campo('socialUser')}
+          autoComplete="off"
+          placeholder="@consultorio.perez"
         />
       </Bloque>
 

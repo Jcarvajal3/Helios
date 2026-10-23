@@ -532,6 +532,14 @@ letras)`: el panel manda la letra pegada al número (`V12345678`,
 `J123456789`, `PAB1234567`) y se guardan como cédula `V12345678` o RIF
 `J-123456789`; sin letra válida, `22023`.
 
+**Desde 20261023130000** `p` lleva también la red social, opcional:
+`social_network` (`instagram`, `tiktok`, `facebook`, `x`, `linkedin`,
+`youtube` u `otra`: `helios_redes_sociales()`) y `social_user` (usuario o
+enlace, hasta 150). Van las dos o ninguna (`22023`). Se guardan en
+`merchant_applications` y, al crear la clínica, en `merchants`
+(`social_network`, `social_user`); `merchants.social_url`, heredada de
+Ronda, no se toca.
+
 - **Al aprobar (20261013000400)**, el panel encadena, si se deja marcado:
   `merchant_staff_add` (administrador, con el correo y el nombre de la
   solicitud y una contraseña generada) → `admin_set_staff_whatsapp` (su

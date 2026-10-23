@@ -32,6 +32,9 @@ import { comoFila, filaONula, numeroONulo, textoONulo } from '@/lib/json'
  * El pago: el titular con su cédula o RIF, y la transferencia (banco y cuenta
  * de 20 dígitos) y/o el Pago Móvil (banco y celular). La portada solo pide la
  * transferencia; el equipo pone una, otra o las dos.
+ *
+ * La red social es opcional, pero va entera: qué red es y el usuario o el
+ * enlace.
  */
 export type AltaDeClinica = {
   ownerName: string
@@ -44,6 +47,8 @@ export type AltaDeClinica = {
   address: string
   phone: string
   email: string
+  socialNetwork: RedSocial | ''
+  socialUser: string
   accountHolder: string
   holderDocument: string
   bank: string
@@ -54,6 +59,23 @@ export type AltaDeClinica = {
 
 /** Quién llena el alta: el equipo (transferencia y/o Pago Móvil) o el médico en la portada (solo transferencia). */
 export type ModoDeAlta = 'equipo' | 'portada'
+
+/** Las redes que se pueden elegir en el alta: las mismas que `helios_redes_sociales()` en la base. */
+export const REDES_SOCIALES = [
+  { value: 'instagram', label: 'Instagram' },
+  { value: 'tiktok', label: 'TikTok' },
+  { value: 'facebook', label: 'Facebook' },
+  { value: 'x', label: 'X (Twitter)' },
+  { value: 'linkedin', label: 'LinkedIn' },
+  { value: 'youtube', label: 'YouTube' },
+  { value: 'otra', label: 'Otra' },
+] as const
+
+export type RedSocial = (typeof REDES_SOCIALES)[number]['value']
+
+function comoRedSocial(v: string): RedSocial | '' {
+  return REDES_SOCIALES.find((r) => r.value === v)?.value ?? ''
+}
 
 export const ALTA_VACIA: AltaDeClinica = {
   ownerName: '',
@@ -66,6 +88,8 @@ export const ALTA_VACIA: AltaDeClinica = {
   address: '',
   phone: '',
   email: '',
+  socialNetwork: '',
+  socialUser: '',
   accountHolder: '',
   holderDocument: '',
   bank: '',
@@ -130,6 +154,11 @@ export function motivoDeAlta(a: AltaDeClinica, modo: ModoDeAlta = 'equipo'): str
   if (!telefonoAE164(a.phone)) return 'El teléfono no parece venezolano: 0212 5551234 o 0414 1234567.'
   if (!pareceCorreo(a.email)) return 'El correo no parece un correo.'
 
+  const usuario = a.socialUser.trim()
+  if (usuario && !a.socialNetwork) return 'Elige qué red social es.'
+  if (a.socialNetwork && !usuario) return 'Escribe el usuario o el enlace de la red social.'
+  if (usuario.length > 150) return 'El usuario o el enlace de la red social es demasiado largo.'
+
   if (a.accountHolder.trim().length < 3) return 'Falta el titular de la cuenta.'
   if (!documentoValido(a.holderDocument, LETRAS_TITULAR)) return 'Falta la cédula o el RIF del titular.'
 
@@ -167,6 +196,8 @@ export function datosDeAlta(a: AltaDeClinica, modo: ModoDeAlta = 'equipo'): Reco
     address: a.address.trim(),
     phone: a.phone.trim(),
     email: a.email.trim().toLowerCase(),
+    social_network: a.socialNetwork,
+    social_user: a.socialUser.trim(),
     account_holder: a.accountHolder.trim(),
     holder_document: documentoParaEnviar(a.holderDocument, LETRAS_TITULAR),
     bank: cuenta ? a.bank : '',
@@ -214,6 +245,8 @@ export function leerSolicitud(raw: unknown): SolicitudDeAfiliacion {
       // La base los guarda en E.164; el formulario los enseña como se escriben.
       phone: telefonoLocal(textoONulo(r.phone)),
       email: t(r.email),
+      socialNetwork: comoRedSocial(t(r.social_network)),
+      socialUser: t(r.social_user),
       accountHolder: t(r.account_holder),
       // La base guarda el RIF con guion (`J-123456789`); el campo, pegado.
       holderDocument: documentoParaEnviar(t(r.holder_document), LETRAS_TITULAR),
