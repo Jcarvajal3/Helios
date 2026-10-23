@@ -100,7 +100,17 @@ comprueba(
   'todos los campos',
   JSON.stringify(n),
 )
-comprueba(normalizar({ ...leido, metodo: 'otro' }).method === null, 'otro método → null')
+comprueba(normalizar({ ...leido, metodo: 'otro', telefono_destino: null }).method === null, 'otro método, sin teléfono de destino → null')
+
+console.log('El método por el teléfono de destino (2026-10-23)')
+// El comprobante de Cora Luisa Baralt: método «no_se_ve» con el teléfono de Helios.
+const sinMetodo: Comprobante = { ...leido, metodo: 'no_se_ve', telefono_destino: '04121714930' }
+comprueba(normalizar(sinMetodo).method === 'pago_movil', 'sin método y con teléfono de destino → Pago Móvil')
+comprueba(normalizar({ ...sinMetodo, telefono_destino: '0412***4930' }).method === 'pago_movil', 'también enmascarado')
+comprueba(normalizar({ ...sinMetodo, telefono_destino: '+58 412-1714930' }).method === 'pago_movil', 'también con +58')
+comprueba(normalizar({ ...sinMetodo, telefono_destino: null }).method === null, 'sin método ni teléfono → null (al equipo)')
+comprueba(normalizar({ ...sinMetodo, telefono_destino: '0212-1234567' }).method === null, 'un fijo no es un Pago Móvil')
+comprueba(normalizar({ ...sinMetodo, metodo: 'transferencia' }).method === 'transferencia', 'si el modelo dice transferencia, manda él')
 comprueba(esComprobante(leido) && !esComprobante({ hola: 1 }) && !esComprobante(null), 'la forma mínima')
 
 console.log('El esquema')
@@ -118,7 +128,7 @@ const malas = propiedades.filter(([, p]) => {
   return tipos.some((t) => Array.isArray(t.type)) || ('enum' in p && typeof p.type !== 'string')
 })
 comprueba(malas.length === 0, 'sin listas de tipos ni enum con nulo', malas.map(([k]) => k).join(', '))
-comprueba(normalizar({ ...leido, metodo: 'no_se_ve' }).method === null, '«no_se_ve» en el método → null')
+comprueba(normalizar({ ...leido, metodo: 'no_se_ve', telefono_destino: null }).method === null, '«no_se_ve» en el método, sin teléfono de destino → null')
 
 console.log('La descarga')
 comprueba(

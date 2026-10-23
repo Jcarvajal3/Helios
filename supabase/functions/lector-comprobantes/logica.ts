@@ -81,7 +81,7 @@ export const INSTRUCCIONES = `Lees capturas y PDF de comprobantes de pago de ban
 Reglas:
 - es_comprobante: true solo si la imagen es el comprobante o la confirmación de un pago o una transferencia hecha desde un banco o su app. Una foto de otra cosa, una factura, un chat o una captura de saldo es false (y el resto de campos va en null).
 - estado: "exitosa" si dice que la operación fue exitosa, aprobada o procesada; "rechazada" si dice fallida, rechazada o anulada; "en_proceso" si dice pendiente o en proceso; "no_se_ve" si no lo dice.
-- metodo: "pago_movil" (Pago Móvil, P2P, C2P), "transferencia" (a una cuenta), "otro" si es otra cosa, "no_se_ve" si no se sabe.
+- metodo: "pago_movil" (Pago Móvil, PagoMóvil, P2P, C2P), "transferencia" (a una cuenta), "otro" si es otra cosa, "no_se_ve" si no se sabe. Si el comprobante enseña el teléfono de quien recibe, es "pago_movil": una transferencia va a un número de cuenta, no a un teléfono.
 - referencia: el número de referencia, confirmación u operación, solo las cifras y completo, tal como sale. Si hay varios números, el que el banco llama referencia. Si está cortado o no se lee entero, null.
 - monto_texto: el monto pagado tal como sale, con sus puntos y comas (por ejemplo "5.442,41" o "Bs. 1.250,00"). No sumes comisiones ni conviertas monedas.
 - fecha: la del pago en formato AAAA-MM-DD; hora: HH:MM en 24 horas. Si el año sale con dos cifras, es 20XX.
@@ -184,10 +184,30 @@ export function leerMovil(v: string | null | undefined): string | null {
   return /^04(12|14|16|22|24|26)\d{7}$/.test(d) ? d : null
 }
 
+/**
+ * ¿Es un móvil venezolano (0412…, +58 414…), aunque venga enmascarado
+ * («0412***4930»)? Para saber si el destino de un pago es un teléfono.
+ */
+export function pareceMovil(v: string | null | undefined): boolean {
+  const d = (v ?? '').replace(/\D/g, '').replace(/^58(?=4)/, '0')
+  return /^04(12|14|16|22|24|26)/.test(d) && d.length >= 7
+}
+
+/**
+ * El método: el que dijo el modelo si dijo uno de los dos; si no, un destino
+ * con teléfono es un Pago Móvil (Javier, 2026-10-23: una transferencia va a
+ * un número de cuenta, no a un teléfono). El primer pago real fue al equipo
+ * por eso: método «no_se_ve» con el 0412-1714930 de Helios a la vista.
+ */
+export function metodoDe(c: Comprobante): DatosLeidos['method'] {
+  if (c.metodo === 'pago_movil' || c.metodo === 'transferencia') return c.metodo
+  return pareceMovil(c.telefono_destino) ? 'pago_movil' : null
+}
+
 /** De lo que leyó el modelo a lo que entiende la base. */
 export function normalizar(c: Comprobante): DatosLeidos {
   return {
-    method: c.metodo === 'pago_movil' || c.metodo === 'transferencia' ? c.metodo : null,
+    method: metodoDe(c),
     bank: nombreDelBanco(c.banco_origen),
     reference: leerReferencia(c.referencia),
     amount_ves: leerMontoBs(c.monto_texto),
