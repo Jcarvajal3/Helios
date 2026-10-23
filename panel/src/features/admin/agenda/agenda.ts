@@ -576,6 +576,42 @@ export function cuentaPorEstado(leads: ReadonlyArray<Lead>): Record<EstadoDelLea
   return cuenta
 }
 
+// ── Las cifras de arriba ───────────────────────────────────────────────────
+
+export type CifrasDeLaAgenda = {
+  /** Todos los médicos de la agenda. */
+  apuntados: number
+  /** Los que ya salieron de «Sin contactar». */
+  contactados: number
+  /** Los que tienen una visita agendada o ya la tuvieron. */
+  citas: number
+  /** De esas, las que todavía no han sido. */
+  citasPorVenir: number
+  /** Los afiliados. */
+  activados: number
+  /** De esos, los que ya tienen su clínica dada de alta. */
+  conClinica: number
+}
+
+/**
+ * Las tres cifras del embudo de la Agenda, sobre todos los médicos (no sobre
+ * lo filtrado): cuántos se contactaron, cuántos llegaron a una visita y
+ * cuántos se activaron. Una visita cancelada se borra del médico, así que no
+ * cuenta como cita.
+ */
+export function cifrasDeLaAgenda(leads: ReadonlyArray<Lead>, ahora: Date): CifrasDeLaAgenda {
+  const conCita = leads.filter((l) => l.reunion !== null || l.estado === 'reunion' || l.estado === 'visitado')
+  const activados = leads.filter((l) => l.estado === 'convertido')
+  return {
+    apuntados: leads.length,
+    contactados: leads.filter((l) => l.estado !== 'nuevo').length,
+    citas: conCita.length,
+    citasPorVenir: conCita.filter((l) => tieneVisita(l) && l.reunion !== null && new Date(l.reunion) >= ahora).length,
+    activados: activados.length,
+    conClinica: activados.filter((l) => l.clinicaId !== null).length,
+  }
+}
+
 // ── El calendario ──────────────────────────────────────────────────────────
 
 export type Cita = {

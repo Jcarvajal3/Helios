@@ -20,6 +20,7 @@ import {
   borradorDeGestion,
   canalDe,
   casillasDelMes,
+  cifrasDeLaAgenda,
   citasDe,
   diaDeCaracas,
   esCapacitacion,
@@ -265,6 +266,29 @@ console.log('\n── Anotar una gestión ────────────�
   )
 }
 
+console.log('\n── Las cifras de arriba ─────────────────────────────────────')
+{
+  const cifras = cifrasDeLaAgenda(
+    [
+      lead('nuevo', { status: 'nuevo' }),
+      lead('mensaje', { status: 'contactado' }),
+      lead('porVenir', { status: 'reunion', meeting_at: '2026-10-23T14:00:00Z' }),
+      lead('realizada', { status: 'visitado', meeting_at: '2026-10-20T14:00:00Z' }),
+      lead('cancelada', { status: 'respondio' }),
+      lead('afiliado', { status: 'convertido', merchant_id: 'm1' }),
+      lead('solicitud', { status: 'convertido' }),
+    ],
+    AHORA,
+  )
+  igual('contactados, citas (por venir o no) y activados (con clínica o no)', cifras, {
+    apuntados: 7,
+    contactados: 6,
+    citas: 2,
+    citasPorVenir: 1,
+    activados: 2,
+    conClinica: 1,
+  })
+}
 
 console.log('\n── Apuntar ──────────────────────────────────────────────────')
 {

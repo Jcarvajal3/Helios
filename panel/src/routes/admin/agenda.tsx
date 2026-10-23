@@ -18,6 +18,10 @@ import {
   Segmented,
   Select,
   SkeletonTable,
+  Stat,
+  StatGrid,
+  estadoDeConsulta,
+  formatPorcentaje,
   hoyCaracas,
 } from '@/components/ui'
 import { consultaAgenda } from '@/features/admin/agenda/api'
@@ -26,6 +30,7 @@ import {
   ESTADOS_DEL_LEAD,
   ESTADO_DEL_LEAD,
   VALORES_QUE_SE_VE,
+  cifrasDeLaAgenda,
   cuentaPorEstado,
   filtrarAgenda,
   ordenarAgenda,
@@ -145,6 +150,13 @@ function AgendaPage() {
 
   return (
     <>
+      <CifrasDeArriba
+        leads={todos}
+        ahora={ahora}
+        estado={estadoDeConsulta(agenda)}
+        onReintentar={() => void agenda.refetch()}
+      />
+
       <FilterBar>
         <BuscadorEnUrl
           id="buscar-agenda"
@@ -284,6 +296,63 @@ function AgendaPage() {
         />
       )}
     </>
+  )
+}
+
+/** «12 % de los contactados», o nada si no hay de dónde sacarlo. */
+function porcentaje(parte: number, total: number, de = ''): string | null {
+  return total > 0 ? `${formatPorcentaje((parte / total) * 100)}${de}` : null
+}
+
+/** Las partes de un pie, separadas por « · ». */
+function pie(...partes: Array<string | null>): string {
+  return partes.filter(Boolean).join(' · ')
+}
+
+/**
+ * Las tres cifras del embudo, arriba del todo y sobre toda la agenda (no
+ * sobre lo filtrado): médicos contactados, citas agendadas y médicos
+ * activados. Cada pie dice de cuántos sale.
+ */
+function CifrasDeArriba({
+  leads,
+  ahora,
+  estado,
+  onReintentar,
+}: {
+  leads: ReadonlyArray<Lead>
+  ahora: Date
+  estado: ReturnType<typeof estadoDeConsulta>
+  onReintentar: () => void
+}) {
+  const c = useMemo(() => cifrasDeLaAgenda(leads, ahora), [leads, ahora])
+  return (
+    <StatGrid cols={3} className="mb-6">
+      <Stat
+        label="Médicos contactados"
+        value={String(c.contactados)}
+        hint={pie(`de ${c.apuntados} en la agenda`, porcentaje(c.contactados, c.apuntados))}
+        info="Los médicos de la agenda que ya no están «Sin contactar»: se les escribió, se les llamó o se les visitó, contestaran o no."
+        estado={estado}
+        onReintentar={onReintentar}
+      />
+      <Stat
+        label="Citas agendadas"
+        value={String(c.citas)}
+        hint={pie(`${c.citasPorVenir} por venir`, porcentaje(c.citas, c.contactados, ' de los contactados'))}
+        info="Los médicos con una visita agendada o ya realizada. Una visita cancelada deja de contar."
+        estado={estado}
+        onReintentar={onReintentar}
+      />
+      <Stat
+        label="Médicos activados"
+        value={String(c.activados)}
+        hint={pie(`${c.conClinica} con su clínica dada de alta`, porcentaje(c.activados, c.contactados, ' de los contactados'))}
+        info="Los médicos de la agenda que se afiliaron: llenaron el formulario de afiliación, se dio de alta su clínica o se marcaron a mano como afiliados."
+        estado={estado}
+        onReintentar={onReintentar}
+      />
+    </StatGrid>
   )
 }
 
