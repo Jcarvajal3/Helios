@@ -666,3 +666,12 @@ html:has(.portada-raiz) {
     transition: none;
   }
 }
+
+/* ── El login (`/login`) ──────────────────────────────────────────────────── */
+
+/* Los campos marcan el foco con su borde y su halo, no con el contorno en
+   píldora del resto de la portada. */
+.portada-raiz .login-entrada:focus-visible {
+  outline: none;
+  border-radius: 1rem;
+}
