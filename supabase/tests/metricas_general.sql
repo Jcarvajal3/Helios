@@ -49,7 +49,7 @@ $$;
 -- Ahora, un admin activo (con aal2, por si el segundo factor está exigido).
 reset role;
 select set_config('request.jwt.claims',
-  json_build_object('sub', (select user_id::text from public.platform_admins where is_active limit 1),
+  json_build_object('sub', (select user_id::text from public.platform_admins where is_active and role in ('super_admin', 'operador') limit 1),
                     'role', 'authenticated', 'aal', 'aal2')::text, true);
 set local role authenticated;
 

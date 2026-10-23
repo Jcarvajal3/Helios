@@ -19,7 +19,7 @@ begin;
 select pg_temp.prueba_admin() is not null as admin_de_prueba;
 
 select set_config('request.jwt.claims',
-  json_build_object('sub', (select user_id::text from public.platform_admins where is_active limit 1),
+  json_build_object('sub', (select user_id::text from public.platform_admins where is_active and role in ('super_admin', 'operador') limit 1),
                     'role', 'authenticated', 'aal', 'aal2')::text, true) is not null as admin,
        set_config('role', 'authenticated', true) as rol;
 
