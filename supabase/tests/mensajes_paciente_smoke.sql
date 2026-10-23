@@ -293,7 +293,8 @@ begin
 
   if not exists (select 1 from public.outbound_messages
                   where profile_id = v_p1 and template_key = 'bot_paciente'
-                    and rendered_text like E'✅ ¡Pago confirmado, José!\nRecibimos $56,96 de tu orden #% con la Dra. Ana Prueba.\n\nTe queda: 2.ª cuota de $56,96 · %') then
+                    -- Con las gracias y la frase de niveles (20261023120000).
+                    and rendered_text like E'✅ ¡Gracias por tu pago, José! Ya está confirmado 💙\nRecibimos $56,96 de tu orden #% con la Dra. Ana Prueba.\n\nTe queda: 2.ª cuota de $56,96 · %\n\n⭐ Si pagas a tiempo, puedes subir de nivel y aumentar tu saldo máximo.') then
     raise exception 'El pago confirmado debía llegar por WhatsApp: %',
       (select string_agg(rendered_text, ' | ') from public.outbound_messages where profile_id = v_p1 and template_key = 'bot_paciente');
   end if;

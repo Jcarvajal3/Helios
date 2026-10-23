@@ -33,7 +33,9 @@ docs/       plan, contrato, reglas
   mayores beneficios.» (`helios_level_reminder()` y `FRASE_NIVEL` en el
   bot), y «Mi saldo y cuotas» enseña el nivel y el saldo total y cierra con
   «⭐ Si pagas a tiempo, puedes subir de nivel y aumentar tu saldo máximo.»
-  (2026-10-22, `FRASE_SUBIR_DE_NIVEL`); lo de los niveles se resuelve después.
+  (2026-10-22, `FRASE_SUBIR_DE_NIVEL`), igual que el aviso de pago
+  confirmado por WhatsApp y por correo (2026-10-23,
+  `helios_level_up_phrase()`); lo de los niveles se resuelve después.
 - Médico o centro: recibe el **100%** de la consulta en dos mitades, **a los
   8 y 15 días** (cada mitad, el día siguiente al vencimiento de su cuota:
   `helios_settlement_run_for(d) = d + 1`; se paga a diario, ya no los
