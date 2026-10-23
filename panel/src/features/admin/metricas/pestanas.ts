@@ -15,8 +15,8 @@
 // Puro, sin React ni Supabase: se prueba con `npx tsx`.
 // ═══════════════════════════════════════════════════════════════════════════
 
-/** Las siete pestañas, en su orden. La primera es la de por defecto. */
-export const IDS_PESTANA = ['semana', 'cobros', 'mora', 'caja', 'locales', 'gente', 'global'] as const
+/** Las ocho pestañas, en su orden. La primera es la de por defecto. */
+export const IDS_PESTANA = ['juan-pablo', 'semana', 'cobros', 'mora', 'caja', 'locales', 'gente', 'global'] as const
 
 export type IdPestana = (typeof IDS_PESTANA)[number]
 
@@ -27,6 +27,7 @@ export type IdPestana = (typeof IDS_PESTANA)[number]
  * cambian al mover una sub-pestaña de sitio.
  */
 export type CarpetaDeMetricas =
+  | 'juan-pablo'
   | 'semana'
   | 'cohortes'
   | 'cobranza'
@@ -49,8 +50,11 @@ export type TonoDePestana = 'neutro' | 'cobranza' | 'caja' | 'gerencia'
  *   desde-el-inicio  todo desde el primer día: el selector de la semana se
  *                    cambia por la etiqueta «Desde el inicio»
  *   hoy              la foto de hoy: el selector se cambia por «Hoy»
+ *   propio           la pestaña elige su periodo (un día, una semana, un mes
+ *                    o un rango): el marco pinta su selector en el hueco de
+ *                    la semana (Juan Pablo)
  */
-export type Periodo = 'semana' | 'desde-el-inicio' | 'hoy'
+export type Periodo = 'semana' | 'desde-el-inicio' | 'hoy' | 'propio'
 
 /** Cómo se parte por el local de arriba. */
 export type ModoLocal = 'filtra' | 'parcial' | 'ignora'
@@ -96,6 +100,19 @@ type Registro = {
 }
 
 const REGISTRO = {
+  // Javier, 2026-10-23: las cifras que mira Juan Pablo, para el periodo que
+  // se elija (por defecto, hoy). Es la primera y la de por defecto.
+  'juan-pablo': {
+    titulo: 'Juan Pablo',
+    tono: 'gerencia',
+    periodo: 'propio',
+    local: 'ignora',
+    pregunta: '¿Cuántas órdenes, cuánto GTV y cuánto revenue hubo, y cuántos médicos las generaron?',
+    descripcion:
+      'Órdenes, GTV y revenue del periodo, cuántos médicos generaron órdenes y la parte de cada uno.',
+    carpeta: 'juan-pablo',
+    subpestanas: [],
+  },
   semana: {
     titulo: 'Semana',
     tono: 'gerencia',
@@ -252,10 +269,10 @@ export type DefinicionPestana = Registro & { id: IdPestana }
 export const PESTANAS: ReadonlyArray<DefinicionPestana> = IDS_PESTANA.map((id) => ({ id, ...REGISTRO[id] }))
 
 /**
- * La pestaña que se ve sin `?vista=`: Semana, la primera. Es lo que más se
- * mira (el progreso semana a semana) y se abre en la semana en curso.
+ * La pestaña que se ve sin `?vista=`: Juan Pablo, la primera (Javier,
+ * 2026-10-23). Se abre en el día de hoy.
  */
-export const PESTANA_POR_DEFECTO = 'semana' satisfies IdPestana
+export const PESTANA_POR_DEFECTO = 'juan-pablo' satisfies IdPestana
 
 /** La definición de una pestaña. Siempre existe: el tipo del id lo garantiza. */
 export function definicionDe(id: IdPestana): DefinicionPestana {

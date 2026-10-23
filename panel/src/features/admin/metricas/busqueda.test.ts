@@ -74,18 +74,19 @@ const LOCAL = UUID.toLowerCase()
 console.log('── El registro (Javier, 27-09) ───────────────────────────────')
 igual(
   IDS_PESTANA,
-  ['semana', 'cobros', 'mora', 'caja', 'locales', 'gente', 'global'],
-  'las siete pestañas, en su orden',
+  ['juan-pablo', 'semana', 'cobros', 'mora', 'caja', 'locales', 'gente', 'global'],
+  'las ocho pestañas, en su orden',
 )
 igual(
   PESTANAS.map((p) => p.titulo),
-  ['Semana', 'Cobros', 'Riesgo', 'Caja', 'Clínicas', 'Pacientes', 'Global'],
+  ['Juan Pablo', 'Semana', 'Cobros', 'Riesgo', 'Caja', 'Clínicas', 'Pacientes', 'Global'],
   'con sus rótulos',
 )
-igual(PESTANA_POR_DEFECTO, 'semana', 'Semana es la de por defecto')
+igual(PESTANA_POR_DEFECTO, 'juan-pablo', 'Juan Pablo es la de por defecto')
 igual(
   Object.fromEntries(IDS_PESTANA.map((id) => [id, idsDeSubpestanas(id)])),
   {
+    'juan-pablo': [],
     semana: ['resumen', 'rendimiento'],
     cobros: ['calendario', 'impago-por-cuota'],
     mora: ['resumen', 'cupos', 'rendimiento'],
@@ -99,6 +100,7 @@ igual(
 igual(
   IDS_PESTANA.map((id) => subpestanasDe(id).map((s) => s.titulo).join(' · ')),
   [
+    '',
     'Resumen · Rendimiento',
     'Semanas · Impago por cuota',
     'Resumen · Cupos · Rendimiento',
@@ -111,8 +113,8 @@ igual(
 )
 igual(
   IDS_PESTANA.map((id) => subPorDefecto(id) ?? null),
-  ['resumen', 'calendario', 'resumen', 'balance', null, null, null],
-  'la primera es la de por defecto; Clínicas, Pacientes y Global no tienen',
+  [null, 'resumen', 'calendario', 'resumen', 'balance', null, null, null],
+  'la primera es la de por defecto; Juan Pablo, Clínicas, Pacientes y Global no tienen',
 )
 {
   const sinDescripcion = PESTANAS.flatMap((p) =>
@@ -130,7 +132,7 @@ igual(
 }
 igual(
   PESTANAS.map((p) => p.tono),
-  ['gerencia', 'cobranza', 'cobranza', 'caja', 'gerencia', 'gerencia', 'gerencia'],
+  ['gerencia', 'gerencia', 'cobranza', 'cobranza', 'caja', 'gerencia', 'gerencia', 'gerencia'],
   'cada pestaña en el tono de su área',
 )
 igual(
@@ -149,6 +151,7 @@ igual(periodoDe('mora', 'cupos'), 'hoy', 'Riesgo › Cupos, hoy')
 igual(periodoDe('cobros', 'impago-por-cuota'), 'semana', 'Cobros › Impago por cuota, hasta la semana elegida')
 igual(periodoDe('caja', 'proyeccion'), 'hoy', 'Caja › Proyección, desde hoy')
 igual(periodoDe('locales'), 'semana', 'Clínicas, la semana')
+igual(periodoDe('juan-pablo'), 'propio', 'Juan Pablo, el suyo')
 
 console.log('\n── El nombre de un sitio ─────────────────────────────────────')
 igual(nombreDelLugar({ vista: 'cobros', sub: 'impago-por-cuota' }), 'Cobros › Impago por cuota', 'pestaña › sub-pestaña')
@@ -185,13 +188,22 @@ igual(
 igual(semanaElegida(undefined, '2026-09-21').lunes, '2026-09-21', 'el lunes (día operativo) ya es la semana nueva')
 
 console.log('\n── La vista, la sub-pestaña y la clínica ───────────────────────')
-igual(vistaDeLaUrl(undefined), 'semana', 'sin vista, Semana')
+igual(vistaDeLaUrl(undefined), 'juan-pablo', 'sin vista, Juan Pablo')
 igual(vistaDeLaUrl('caja'), 'caja', 'una vista que existe')
-igual(vistaDeLaUrl('dinero'), 'semana', 'una que no existe, Semana')
+igual(vistaDeLaUrl('dinero'), 'juan-pablo', 'una que no existe, Juan Pablo')
 
-igual(url({ vista: 'semana' }), {}, '?vista=semana no se escribe: es la de por defecto')
-igual(url({ vista: 'semana', sub: 'resumen' }), {}, 'ni su primera sub-pestaña')
-igual(url({ sub: 'rendimiento' }), { sub: 'rendimiento' }, 'Semana › Rendimiento es solo ?sub=rendimiento')
+igual(url({ vista: 'juan-pablo' }), {}, '?vista=juan-pablo no se escribe: es la de por defecto')
+igual(url({ vista: 'semana' }), { vista: 'semana' }, 'Semana ya sí se escribe')
+igual(url({ vista: 'semana', sub: 'resumen' }), { vista: 'semana' }, 'pero no su primera sub-pestaña')
+igual(url({ vista: 'semana', sub: 'rendimiento' }), { sub: 'rendimiento', vista: 'semana' }, 'Semana › Rendimiento')
+igual(url({ sub: 'rendimiento' }), {}, 'una sub suelta sin vista se cae: Juan Pablo no tiene sub-pestañas')
+igual(
+  url({ desde: '2026-10-01', hasta: '2026-10-23' }),
+  { desde: '2026-10-01', hasta: '2026-10-23' },
+  'el periodo de Juan Pablo',
+)
+igual(url({ desde: '2026-10-23', hasta: '2026-10-01' }), {}, 'un periodo al revés se cae')
+igual(url({ vista: 'semana', desde: '2026-10-01', hasta: '2026-10-23' }), { vista: 'semana' }, 'y no es de Semana')
 igual(url({ vista: 'cobros', sub: 'impago-por-cuota' }), { sub: 'impago-por-cuota', vista: 'cobros' }, 'una sub-pestaña que no es la primera, sí')
 igual(url({ vista: 'cobros', sub: 'avisos' }), { vista: 'cobros' }, 'Avisos ya no es de Cobros (la ruta la lleva antes a Notificaciones › Rendimiento)')
 igual(url({ vista: 'mora', sub: 'resumen' }), { vista: 'mora' }, 'la primera no se escribe')
@@ -270,13 +282,13 @@ console.log('\n── Armar y desarmar ─────────────�
     { local: LOCAL, semana: '2026-09-14', vista: 'caja' },
     'cambiar de pestaña conserva la semana y la clínica y suelta lo de la anterior',
   )
-  igual(limpia(busquedaDeMetricas('semana', VALIDADORES.semana({}), {})), {}, 'Semana sin nada es la URL desnuda')
+  igual(limpia(busquedaDeMetricas('juan-pablo', VALIDADORES['juan-pablo']({}), {})), {}, 'Juan Pablo sin nada es la URL desnuda')
   igual(
     limpia(busquedaDeMetricas('semana', VALIDADORES.semana({}), {}, 'resumen')),
-    {},
-    'Semana › Resumen, también: la primera sub-pestaña no se escribe',
+    { vista: 'semana' },
+    'Semana › Resumen: la primera sub-pestaña no se escribe',
   )
-  igual(lugarDe(validarBusquedaMetricas({}, HOY)), { vista: 'semana', sub: 'resumen' }, 'sin nada, Semana › Resumen')
+  igual(lugarDe(validarBusquedaMetricas({}, HOY)), { vista: 'juan-pablo' }, 'sin nada, Juan Pablo')
   igual(lugarDe(validarBusquedaMetricas({ vista: 'locales' }, HOY)), { vista: 'locales' }, 'Clínicas, sin sub')
   igual(
     limpia(busquedaDelLugar({ vista: 'mora', sub: 'cupos' }, { local: LOCAL })),

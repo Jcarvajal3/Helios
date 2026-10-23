@@ -108,8 +108,11 @@ export function lugarEscrito(lugar: Lugar): LugarEscrito {
   }
 }
 
-/** Lo que dice el hueco de la semana cuando lo que se ve no la mira. */
-export function motivoSinSemana(nombre: string, periodo: Exclude<Periodo, 'semana'>): string {
+/**
+ * Lo que dice el hueco de la semana cuando lo que se ve no la mira. Una
+ * pestaña con periodo `propio` pinta ahí su selector: no lleva motivo.
+ */
+export function motivoSinSemana(nombre: string, periodo: Exclude<Periodo, 'semana' | 'propio'>): string {
   return periodo === 'hoy'
     ? `${nombre} es de hoy: la semana no la cambia.`
     : `${nombre} mira todo desde el primer día: la semana no aplica aquí.`

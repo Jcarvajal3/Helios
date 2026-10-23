@@ -12,6 +12,8 @@ import { validarGeneral } from './general/busqueda'
 import type { BusquedaGeneral } from './general/busqueda'
 import { validarGente } from './gente/busqueda'
 import type { BusquedaGente } from './gente/busqueda'
+import { validarJuanPablo } from './juan-pablo/busqueda'
+import type { BusquedaJuanPablo } from './juan-pablo/busqueda'
 import { validarLocales } from './locales/busqueda'
 import type { BusquedaLocales } from './locales/busqueda'
 import { validarSemana } from './semana/busqueda'
@@ -28,8 +30,8 @@ import type { BusquedaSemana } from './semana/busqueda'
 // claves. Así dos pestañas pueden usar la misma palabra (`cuota`, `dim`) con
 // valores distintos, y lo de una pestaña no se arrastra a otra.
 //
-// La forma canónica no escribe lo que vale por defecto: ni la pestaña Semana,
-// ni la primera sub-pestaña, ni la semana en curso. Un enlace viejo
+// La forma canónica no escribe lo que vale por defecto: ni la pestaña Juan
+// Pablo, ni la primera sub-pestaña, ni la semana en curso. Un enlace viejo
 // (`vista=cohortes`, `vista=cobranza&sub=cupos`…) se traduce a su sitio nuevo
 // en `traducirEnlaceViejo`, y el router reescribe la URL en su forma nueva.
 //
@@ -52,6 +54,7 @@ export function validarCobros(raw: Record<string, unknown>): BusquedaCobros {
  * `vista`, `sub`, `semana` ni `local`, que son del marco.
  */
 export type BusquedasDePestana = {
+  'juan-pablo': BusquedaJuanPablo
   semana: BusquedaSemana
   cobros: BusquedaCobros
   mora: BusquedaCobranza
@@ -65,6 +68,7 @@ type ValidadorDe<TId extends IdPestana> = (raw: Record<string, unknown>) => Busq
 
 /** El validador de cada pestaña. Una pestaña sin validador no compila. */
 export const VALIDADORES: { readonly [TId in IdPestana]: ValidadorDe<TId> } = {
+  'juan-pablo': validarJuanPablo,
   semana: validarSemana,
   cobros: validarCobros,
   mora: validarCobranza,

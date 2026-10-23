@@ -894,6 +894,34 @@ superadmin › Agenda.
   cualquier otra ruta de `/admin` lo lleva a ella, y la Agenda le esconde los
   enlaces al inbox y a la ficha de la clínica.
 
+### 2.10 Métricas › Juan Pablo (2026-10-23, 20261023160000)
+
+La primera pestaña de Métricas (y la de por defecto): las cifras que mira Juan
+Pablo para un periodo propio (un día, una semana, un mes o un rango; por
+defecto, hoy). No se parte por clínica. Guardia: `is_platform_admin()`.
+
+`admin_metricas_juan_pablo(p_desde date default null, p_hasta date default null) → jsonb`
+
+- Sin fechas, hoy (`metricas.hoy()`). El `hasta` no pasa de hoy y el `desde`
+  no pasa del `hasta`.
+- `{ hoy, desde, hasta, dias, ordenes, gtv_usd, revenue_usd, revenue_pct,
+  ticket_medio_usd, medicos: { afiliados, con_ordenes, con_ordenes_pct,
+  ordenes_por_medico }, por_medico: [{ merchant_id, medico, clinica, ordenes,
+  pct, gtv_usd, revenue_usd }] }`.
+- Las órdenes son las de `metricas.consumos` (confirmadas, sin las de prueba,
+  por su día operativo), las mismas que cuenta Semana. `gtv_usd` es lo que
+  suman sus consultas sin la comisión (`financed_usd`); `revenue_usd` es la
+  Comisión Helios sin IVA (`consumer_fee_usd`).
+- Un médico es una clínica (`helios_doctor_name`). `afiliados`: activas, no de
+  prueba, dadas de alta antes del cierre y con sus accesos
+  (`helios_clinica_tiene_accesos`), más cualquiera con órdenes en el periodo.
+  `con_ordenes_pct` = con órdenes ÷ afiliados; `ordenes_por_medico` = órdenes
+  ÷ médicos con órdenes; cada `pct` de `por_medico` = sus órdenes ÷ las del
+  periodo. Orden: más órdenes primero.
+- En el panel: `?vista` se omite (es la de por defecto) y el periodo va en
+  `?desde=…&hasta=…` (hoy no se escribe). Suite:
+  `supabase/tests/metricas_juan_pablo.sql`.
+
 ---
 
 ## 3. Parámetros nuevos (`business_parameters`)

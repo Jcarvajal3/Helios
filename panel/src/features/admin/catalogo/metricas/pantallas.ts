@@ -13,6 +13,7 @@ import {
   ShieldAlert,
   Sprout,
   Store,
+  Target,
   TrendingUp,
   Wallet,
 } from 'lucide-react'
@@ -20,7 +21,7 @@ import {
 import type { Entrada } from '../tipos'
 
 /**
- * Métricas: la pantalla, sus siete pestañas y cada sub-pestaña
+ * Métricas: la pantalla, sus ocho pestañas y cada sub-pestaña
  * (`features/admin/metricas/pestanas.ts`), con el mismo nombre que en la
  * pantalla: «Métricas › Cobros › Calendario».
  *
@@ -44,7 +45,7 @@ export const pantallasDeMetricas = [
     id: 'metricas',
     titulo: 'Métricas',
     descripcion:
-      'Todas las cifras del negocio en una pantalla, por semana y por clínica: la semana, los cobros, la mora, la caja, las clínicas, los pacientes y lo global.',
+      'Todas las cifras del negocio en una pantalla, por semana y por clínica: Juan Pablo, la semana, los cobros, la mora, la caja, las clínicas, los pacientes y lo global.',
     espacio: 'metricas',
     sinonimos: [
       'estadísticas',
@@ -60,6 +61,19 @@ export const pantallasDeMetricas = [
     ],
     destino: { to: '/admin/metricas' },
     icono: ChartColumn,
+  },
+
+  // ── Juan Pablo ───────────────────────────────────────────────────────────
+  {
+    tipo: 'pantalla',
+    id: 'metricas-juan-pablo',
+    titulo: 'Métricas › Juan Pablo',
+    descripcion:
+      'Órdenes, GTV y revenue de un día, una semana, un mes o un rango, cuántos médicos generaron órdenes y la parte de cada uno. Es la primera pestaña de Métricas.',
+    espacio: 'metricas',
+    sinonimos: ['juan pablo', 'gtv', 'revenue', 'órdenes generadas', 'consumo por médico', 'hoy'],
+    destino: { to: '/admin/metricas', search: { vista: 'juan-pablo' } },
+    icono: Target,
   },
 
   // ── Semana ───────────────────────────────────────────────────────────────

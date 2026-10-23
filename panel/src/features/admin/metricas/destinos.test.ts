@@ -25,7 +25,7 @@ import { fileURLToPath } from 'node:url'
 import { pastillasDeLaCharla } from '@/components/admin/inicio/charla'
 import { CATALOGO, PANTALLAS } from '@/features/admin/catalogo'
 import { validarBusquedaMetricas } from './busqueda'
-import { IDS_PESTANA, definicionDe, idsDeSubpestanas, nombreDelLugar, subpestanasDe } from './pestanas'
+import { IDS_PESTANA, PESTANA_POR_DEFECTO, definicionDe, idsDeSubpestanas, nombreDelLugar, subpestanasDe } from './pestanas'
 import type { IdPestana, Lugar } from './pestanas'
 import { GRUPOS_DE_FILAS, busquedaDeDestino } from './semana/filas'
 
@@ -53,12 +53,12 @@ function url(o: object): string {
  * Si una búsqueda de `/admin/metricas` es canónica: el marco la valida y
  * sale igual. Si no, qué cambia.
  *
- * `vista: 'semana'` se tolera escrita: es la pestaña por defecto, el marco
- * la quita sin cambiar de sitio y en un destino se lee mejor que nada.
+ * La `vista` de la pestaña por defecto se tolera escrita: el marco la quita
+ * sin cambiar de sitio y en un destino se lee mejor que nada.
  */
 function problemaDe(search: object | undefined): string | null {
   const { vista, ...resto } = { ...search } as Record<string, unknown>
-  const dada = url(vista === 'semana' ? resto : { vista, ...resto })
+  const dada = url(vista === PESTANA_POR_DEFECTO ? resto : { vista, ...resto })
   const validada = url(validarBusquedaMetricas({ ...search }, HOY))
   return dada === validada ? null : `${dada} → ${validada}`
 }
@@ -87,7 +87,7 @@ console.log('── 1. Cada sitio del registro está en Ctrl K ─────�
         continue
       }
       const llega = validarBusquedaMetricas({ ...p.destino.search }, HOY)
-      const vista = llega.vista ?? 'semana'
+      const vista = llega.vista ?? PESTANA_POR_DEFECTO
       const sub = 'sub' in llega ? llega.sub : undefined
       const esperada = lugar.sub === idsDeSubpestanas(lugar.vista)[0] ? undefined : lugar.sub
       if (vista !== lugar.vista || sub !== esperada) {

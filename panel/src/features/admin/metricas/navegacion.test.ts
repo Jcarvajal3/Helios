@@ -43,34 +43,35 @@ console.log('── Nivel 1: las pestañas ────────────�
   const pestanas = enlacesDePestanas(aqui)
   igual(
     pestanas.map((p) => p.rotulo),
-    ['Semana', 'Cobros', 'Riesgo', 'Caja', 'Clínicas', 'Pacientes', 'Global'],
-    'las siete, en su orden',
+    ['Juan Pablo', 'Semana', 'Cobros', 'Riesgo', 'Caja', 'Clínicas', 'Pacientes', 'Global'],
+    'las ocho, en su orden',
   )
   igual(
     pestanas.map((p) => p.actual),
-    [null, 'seccion', null, null, null, null, null],
+    [null, null, 'seccion', null, null, null, null, null],
     'Cobros es la sección en la que se está (se ve otra sub-pestaña que la suya por defecto)',
   )
   igual(
-    limpia(pestanas[2].busqueda),
+    limpia(pestanas[3].busqueda),
     { local: LOCAL, semana: '2026-09-14', vista: 'mora' },
     'Riesgo: su primera sub-pestaña, con la misma semana y clínica, sin la cuota de Cobros',
   )
-  igual(limpia(pestanas[0].busqueda), { local: LOCAL, semana: '2026-09-14' }, 'Semana no escribe su vista')
+  igual(limpia(pestanas[0].busqueda), { local: LOCAL, semana: '2026-09-14' }, 'Juan Pablo no escribe su vista')
+  igual(limpia(pestanas[1].busqueda), { local: LOCAL, semana: '2026-09-14', vista: 'semana' }, 'Semana sí')
   igual(
-    limpia(pestanas[1].busqueda),
+    limpia(pestanas[2].busqueda),
     { local: LOCAL, semana: '2026-09-14', vista: 'cobros' },
     'la activa lleva a su primera sub-pestaña',
   )
-  igual(pestanas.map((p) => p.tono), ['gerencia', 'cobranza', 'cobranza', 'caja', 'gerencia', 'gerencia', 'gerencia'], 'cada una con su tono')
+  igual(pestanas.map((p) => p.tono), ['gerencia', 'gerencia', 'cobranza', 'cobranza', 'caja', 'gerencia', 'gerencia', 'gerencia'], 'cada una con su tono')
 }
 {
   const enResumen = enlacesDePestanas(validarBusquedaMetricas({ vista: 'mora' }, HOY))
-  igual(enResumen[2].actual, 'pagina', 'en la primera sub-pestaña, la pestaña es la página')
+  igual(enResumen[3].actual, 'pagina', 'en la primera sub-pestaña, la pestaña es la página')
   const enLocales = enlacesDePestanas(validarBusquedaMetricas({ vista: 'locales' }, HOY))
-  igual(enLocales[4].actual, 'pagina', 'una pestaña sin sub-pestañas, también')
+  igual(enLocales[5].actual, 'pagina', 'una pestaña sin sub-pestañas, también')
   const sinNada = enlacesDePestanas(validarBusquedaMetricas({}, HOY))
-  igual(sinNada.map((p) => p.actual), ['pagina', null, null, null, null, null, null], 'sin nada, Semana')
+  igual(sinNada.map((p) => p.actual), ['pagina', null, null, null, null, null, null, null], 'sin nada, Juan Pablo')
 }
 
 console.log('\n── Nivel 2: las sub-pestañas ─────────────────────────────────')
@@ -96,10 +97,11 @@ console.log('\n── Nivel 2: las sub-pestañas ──────────�
 }
 igual(enlacesDeSubpestanas(validarBusquedaMetricas({ vista: 'locales' }, HOY)), [], 'Clínicas no tiene banda')
 igual(
-  enlacesDeSubpestanas(validarBusquedaMetricas({}, HOY)).map((s) => `${s.rotulo}:${s.actual ?? '-'}`),
+  enlacesDeSubpestanas(validarBusquedaMetricas({ vista: 'semana' }, HOY)).map((s) => `${s.rotulo}:${s.actual ?? '-'}`),
   ['Resumen:pagina', 'Rendimiento:-'],
   'Semana, en Resumen',
 )
+igual(enlacesDeSubpestanas(validarBusquedaMetricas({}, HOY)), [], 'sin nada, Juan Pablo: sin banda')
 igual(
   enlacesDeSubpestanas(validarBusquedaMetricas({ vista: 'cobros', sub: 'impago-por-cuota', dim: 'local' }, HOY)).map((s) =>
     limpia(s.busqueda),

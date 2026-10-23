@@ -5,7 +5,7 @@ import type { LucideIcon } from 'lucide-react'
 
 import { ErrorConReintento } from '@/components/admin/ErrorConReintento'
 import { SelectorDeSemana } from '@/components/admin/tableros/SelectorDeSemana'
-import { Filtro, SkeletonBlock, SkeletonList, SkeletonStats } from '@/components/ui'
+import { Filtro, Periodo, SkeletonBlock, SkeletonList, SkeletonStats } from '@/components/ui'
 import {
   VALIDADORES,
   busquedaDeMetricas,
@@ -23,10 +23,11 @@ import {
   motivoSinSemana,
 } from '@/features/admin/metricas/navegacion'
 import { iconoDeMetricas } from '@/features/admin/metricas/iconos'
+import { atajosDeJuanPablo, busquedaDelRango, rangoElegido } from '@/features/admin/metricas/juan-pablo/periodo'
 import type { EnlaceDeNavegacion } from '@/features/admin/metricas/navegacion'
 import { nombreDelLocal } from '@/features/admin/metricas/opcionesDeLocal'
 import { definicionDe, nombreDelLugar } from '@/features/admin/metricas/pestanas'
-import type { IdPestana, IdSubpestana, Lugar, Periodo } from '@/features/admin/metricas/pestanas'
+import type { IdPestana, IdSubpestana, Lugar, Periodo as PeriodoDeLaPestana } from '@/features/admin/metricas/pestanas'
 import type { OpcionesDeCambio, PropsPestana } from '@/features/admin/metricas/tipos'
 import { reportarError } from '@/lib/sentry'
 import { BandaDeSubpestanas, LineaDelLugar, PestanasConTono } from './NavegacionDeMetricas'
@@ -49,6 +50,9 @@ const PestanaCobranza = lazy(() =>
 const PestanaCaja = lazy(() => import('./caja/PestanaCaja').then((m) => ({ default: m.PestanaCaja })))
 const PestanaLocales = lazy(() => import('./locales/PestanaLocales').then((m) => ({ default: m.PestanaLocales })))
 const PestanaGente = lazy(() => import('./gente/PestanaGente').then((m) => ({ default: m.PestanaGente })))
+const PestanaJuanPablo = lazy(() =>
+  import('./juan-pablo/PestanaJuanPablo').then((m) => ({ default: m.PestanaJuanPablo })),
+)
 const PestanaGeneral = lazy(() => import('./general/PestanaGeneral').then((m) => ({ default: m.PestanaGeneral })))
 const ImpagoPorCuotaDeLaSemana = lazy(() =>
   import('./cobranza/SubvistasDeRiesgo').then((m) => ({ default: m.ImpagoPorCuotaDeLaSemana })),
@@ -72,8 +76,9 @@ function comoEnlace(e: EnlaceDeNavegacion, icono: LucideIcon | undefined): Enlac
  * De arriba abajo:
  *
  *   1. los dos controles que valen para todas las pestañas: la semana (o lo
- *      que mire en su lugar lo que se ve: «Desde el inicio», «Hoy») y el local
- *   2. las siete pestañas (nivel 1), cada una en el tono de su área
+ *      que mire en su lugar lo que se ve: «Desde el inicio», «Hoy», o el
+ *      periodo propio de Juan Pablo) y el local
+ *   2. las ocho pestañas (nivel 1), cada una en el tono de su área
  *   3. las sub-pestañas de la activa (nivel 2), en su banda
  *   4. «Pestaña › Sub-pestaña — lo que contesta»
  *   5. lo que pinta la sub-pestaña, con sus filtros (nivel 3)
@@ -151,6 +156,17 @@ export function MarcoMetricas({
               onLunes={(lunes) => cambiarComun({ semana: lunes === semana.lunesHoy ? undefined : lunes })}
             />
           </Filtro>
+        ) : escrito.periodo === 'propio' ? (
+          // Solo Juan Pablo elige su periodo: un día, una semana, un mes o un
+          // rango, de sus propias claves (`desde`, `hasta`). Hoy no se escribe.
+          <Filtro label="Periodo">
+            <Periodo
+              rango={rangoElegido(propiaDe('juan-pablo', busqueda), hoy)}
+              hoy={hoy}
+              atajos={atajosDeJuanPablo(hoy)}
+              onChange={(r) => cambiarPropia('juan-pablo')(busquedaDelRango(r, hoy), { reemplazar: true })}
+            />
+          </Filtro>
         ) : (
           <Filtro label="Periodo">
             <SinSemana periodo={escrito.periodo} motivo={motivoSinSemana(nombre, escrito.periodo)} />
@@ -217,6 +233,14 @@ function LoQueSeVe({
   ) => (parcial: Partial<BusquedasDePestana[TId]>, opciones?: OpcionesDeCambio) => void
 }) {
   switch (lugar.vista) {
+    case 'juan-pablo':
+      return (
+        <PestanaJuanPablo
+          {...comunes}
+          busqueda={propiaDe('juan-pablo', busqueda)}
+          cambiarBusqueda={cambiarPropia('juan-pablo')}
+        />
+      )
     case 'semana': {
       const props = { ...comunes, busqueda: propiaDe('semana', busqueda), cambiarBusqueda: cambiarPropia('semana') }
       // Resumen: lo nuevo del 27-09. Rendimiento: la pestaña Semana de antes.
@@ -295,7 +319,13 @@ function LoQueSeVe({
  * la proyección). El motivo va en el `title` y, para el lector de pantalla,
  * escrito a continuación.
  */
-function SinSemana({ periodo, motivo }: { periodo: Exclude<Periodo, 'semana'>; motivo: string }) {
+function SinSemana({
+  periodo,
+  motivo,
+}: {
+  periodo: Exclude<PeriodoDeLaPestana, 'semana' | 'propio'>
+  motivo: string
+}) {
   const Icono = periodo === 'hoy' ? CalendarClock : History
   return (
     <span

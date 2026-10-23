@@ -36,7 +36,7 @@ console.log('\n── Sin repetir dentro de una banda ────────�
 igual(
   new Set(IDS_PESTANA.map((id) => iconoDeMetricas(id))).size,
   IDS_PESTANA.length,
-  'las siete pestañas, cada una con el suyo',
+  'las ocho pestañas, cada una con el suyo',
 )
 igual(
   IDS_PESTANA.filter((id) => {

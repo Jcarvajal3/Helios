@@ -8,7 +8,7 @@
  * el menú, o una búsqueda que deja de encontrar lo que la gente teclea.
  */
 import { superAdminNavGroups, superAdminNavPie } from '@/config/navigation'
-import { IDS_PESTANA } from '@/features/admin/metricas/pestanas'
+import { IDS_PESTANA, PESTANA_POR_DEFECTO } from '@/features/admin/metricas/pestanas'
 import { CATALOGO, PANTALLAS, buscarEnCatalogo, normalizar } from './index'
 import { ajustes } from './ajustes'
 import { caja } from './caja'
@@ -152,7 +152,7 @@ console.log('\n── Métricas ────────────────
   // Cada sub-pestaña, su nombre y su destino: `metricas/destinos.test.ts`.
   for (const id of IDS_PESTANA) {
     const p = PANTALLAS.find((x) => x.id === `metricas-${id}`)
-    const vista = p?.destino.to === '/admin/metricas' ? (p.destino.search?.vista ?? 'semana') : null
+    const vista = p?.destino.to === '/admin/metricas' ? (p.destino.search?.vista ?? PESTANA_POR_DEFECTO) : null
     comprueba(vista === id, `la pestaña ${id} tiene su pantalla y lleva a su vista`, JSON.stringify(p?.destino))
   }
   comprueba(

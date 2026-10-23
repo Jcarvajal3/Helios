@@ -56,6 +56,7 @@ SUITES=(
   metricas_general
   metricas_semana
   metricas_semana_resumen
+  metricas_juan_pablo
   metricas_locales
   metricas_cobranza
   email_dispatch_smoke
