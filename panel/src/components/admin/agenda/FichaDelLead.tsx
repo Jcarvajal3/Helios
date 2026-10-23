@@ -9,6 +9,7 @@ import {
   CalendarClock,
   CalendarPlus,
   CalendarX,
+  KeyRound,
   MapPin,
   MessageCircle,
   NotebookPen,
@@ -60,12 +61,15 @@ import {
   ROTULO_RAZON,
   ROTULO_RESPUESTA,
   ROTULO_RESULTADO,
+  ROTULO_AFILIACION_EN_CURSO,
   ROTULO_VIA,
   SIN_ELEGIR,
+  afiliacionEnCurso,
   anulaLaVisita,
   borradorDeGestion,
   canalDe,
   diaDeCaracas,
+  esCapacitacion,
   estadoDelResultado,
   motivoParaNoAnotar,
   pasoDelEmbudo,
@@ -240,6 +244,8 @@ export function FichaDelLead({
 
         <Contacto lead={lead} />
 
+        <AfiliacionEnCurso lead={lead} soloAgenda={soloAgenda} />
+
         <ProximoPaso lead={lead} hoy={hoy} ahora={ahora} soloAgenda={soloAgenda} />
 
         <AnotarGestion key={`${lead.id}:${lead.estado}:${lead.reunion ?? ''}`} lead={lead} hoy={hoy} ahora={ahora} />
@@ -342,6 +348,67 @@ function Contacto({ lead }: { lead: Lead }) {
 
 // ── Qué toca ahora ─────────────────────────────────────────────────────────
 
+/**
+ * Lo que le falta para afiliarse, si ya empezó: su solicitud por revisar o,
+ * aprobada, darle sus accesos (al tenerlos pasa solo a afiliado).
+ */
+function AfiliacionEnCurso({ lead, soloAgenda }: { lead: Lead; soloAgenda: boolean }) {
+  const enCurso = afiliacionEnCurso(lead)
+
+  if (enCurso === 'falta_dar_accesos' && lead.clinicaId) {
+    return (
+      <Tarjeta
+        tono="warning"
+        icono={KeyRound}
+        titulo={ROTULO_AFILIACION_EN_CURSO[enCurso]}
+        subtitulo={
+          soloAgenda ? (
+            `${lead.clinica ?? 'Su clínica'} ya está dada de alta. Cuando tenga su usuario, queda afiliado solo.`
+          ) : (
+            <>
+              Créale su usuario en{' '}
+              <Link
+                to="/admin/clinicas/$id"
+                params={{ id: lead.clinicaId }}
+                search={{ tab: 'personal' }}
+                className={ENLACE}
+              >
+                <Store size={13} aria-hidden /> {lead.clinica ?? 'su clínica'}
+              </Link>
+              : al tenerlo, queda afiliado solo.
+            </>
+          )
+        }
+      />
+    )
+  }
+
+  if (enCurso === 'solicitud_por_revisar' && lead.estado !== 'convertido') {
+    return (
+      <Tarjeta
+        tono="neutral"
+        icono={Store}
+        titulo={ROTULO_AFILIACION_EN_CURSO[enCurso]}
+        subtitulo={
+          soloAgenda ? (
+            'Llenó el formulario de afiliación: falta que el equipo lo apruebe en Clínicas.'
+          ) : (
+            <>
+              Llenó el formulario de afiliación:{' '}
+              <Link to="/admin/clinicas" search={{ estado: 'pendiente' }} className={ENLACE}>
+                revísala en Clínicas
+              </Link>
+              .
+            </>
+          )
+        }
+      />
+    )
+  }
+
+  return null
+}
+
 /** Una tarjeta con lo próximo: la visita, la llamada pendiente o la afiliación. */
 function ProximoPaso({
   lead,
@@ -360,6 +427,7 @@ function ProximoPaso({
         {lead.via ? ROTULO_VIA[lead.via] : 'Afiliado'}
         {lead.razon ? ` (se le reconoció ${ROTULO_RAZON[lead.razon]})` : ''}
         {lead.afiliadoEl ? ` el ${formatDateTime(lead.afiliadoEl)}` : ''}.
+        {lead.conAccesos && <> Ya tiene sus accesos.</>}
         {soloAgenda && lead.clinica && <> Su clínica: {lead.clinica}.</>}
         {soloAgenda && !lead.clinicaId && lead.solicitudEstado === 'pending' && <> Su solicitud está por revisar.</>}
         {!soloAgenda && lead.clinicaId && (
@@ -391,7 +459,7 @@ function ProximoPaso({
       <Tarjeta
         tono={paso ? 'error' : dia === hoy ? 'warning' : 'brand'}
         fecha={dia}
-        titulo={`Visita: ${rotuloDelDia(dia, hoy).toLowerCase()}, ${formatTime(lead.reunion)}`}
+        titulo={`${esCapacitacion(lead) ? 'Capacitación presencial' : 'Visita'}: ${rotuloDelDia(dia, hoy).toLowerCase()}, ${formatTime(lead.reunion)}`}
         subtitulo={
           paso ? (
             'La hora ya pasó: anota abajo si se realizó, se pospuso o se canceló.'

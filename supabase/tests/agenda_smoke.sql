@@ -12,10 +12,14 @@
 --      20261022210000): el estado sale del resultado, la visita pide fecha y
 --      se pospone, se realiza o se cancela, volver atrás antes de la visita la
 --      anula, y todo queda en la historia y en audit.admin_actions.
---   4. Cuando el médico llena el formulario de afiliación, su lead pasa solo a
---      afiliado (por teléfono o por nombre, con o sin «Dra.»), y al aprobarse
---      la solicitud queda enlazado con su clínica.
---   5. Apuntar a alguien que ya es cliente lo deja afiliado de entrada.
+--   4. Cuando el médico llena el formulario de afiliación (20261023140000),
+--      su lead se enlaza (por teléfono o por nombre, con o sin «Dra.») y,
+--      con capacitación, queda con la visita a esa hora; sin lead, nace uno
+--      de origen `formulario` (sin capacitación, interesado: 20261023150000).
+--      Al aprobarse queda con su clínica, y solo
+--      pasa a afiliado cuando la clínica tiene sus accesos.
+--   5. Apuntar a alguien que ya es cliente (con accesos) lo deja afiliado de
+--      entrada.
 --   6. Borrar quita el lead y su historia y deja la bitácora.
 --
 -- No manda nada: no llama a `helios_dispatch_*`.
@@ -40,6 +44,9 @@ declare
   v_eva     uuid;
   v_app     uuid;
   v_m       uuid;
+  v_pedro   uuid;
+  v_titular uuid := gen_random_uuid();
+  v_capa    timestamptz := ((public.helios_business_date(now()) + 3)::timestamp + time '09:00') at time zone 'America/Caracas';
   v_n       integer;
   v_fallo   boolean;
   v_lead    public.doctor_leads%rowtype;
@@ -333,24 +340,68 @@ begin
   set local role anon;
   perform set_config('request.jwt.claims', '{"role":"anon"}', true);
   perform set_config('request.headers', '{"x-forwarded-for":"203.0.113.77","user-agent":"agenda"}', true);
-  v_res := public.helios_solicitar_afiliacion(v_datos);
-  -- Eva llena el formulario con otro teléfono: se la reconoce por el nombre.
+  -- Ana pide su capacitación.
+  v_res := public.helios_solicitar_afiliacion(v_datos || jsonb_build_object('training_at', v_capa::text));
+  -- Eva llena el formulario con otro teléfono, sin capacitación: se la
+  -- reconoce por el nombre.
   perform set_config('request.headers', '{"x-forwarded-for":"203.0.113.78","user-agent":"agenda"}', true);
   perform public.helios_solicitar_afiliacion(v_datos || jsonb_build_object(
     'owner_name', 'Dra. Eva Rojas Agenda', 'owner_document', 'V12345602', 'holder_document', 'V12345602',
     'account_holder', 'Eva Rojas Agenda', 'clinic_name', 'Consultorio Eva Agenda',
     'phone', '0212 555 9999', 'email', 'eva.agenda@example.com'));
+  -- Pedro no estaba en la agenda: entra con su capacitación.
+  perform set_config('request.headers', '{"x-forwarded-for":"203.0.113.79","user-agent":"agenda"}', true);
+  perform public.helios_solicitar_afiliacion(v_datos || jsonb_build_object(
+    'owner_name', 'Pedro Nuevo Agenda', 'owner_document', 'V12345603', 'holder_document', 'V12345603',
+    'account_holder', 'Pedro Nuevo Agenda', 'clinic_name', 'Consultorio Pedro Agenda',
+    'phone', '0414 700 0055', 'email', 'pedro.agenda@example.com', 'training_at', v_capa::text));
+  -- Rosa tampoco estaba, y no pide capacitación: entra interesada
+  -- (20261023150000).
+  perform set_config('request.headers', '{"x-forwarded-for":"203.0.113.80","user-agent":"agenda"}', true);
+  perform public.helios_solicitar_afiliacion(v_datos || jsonb_build_object(
+    'owner_name', 'Rosa Nueva Agenda', 'owner_document', 'V12345604', 'holder_document', 'V12345604',
+    'account_holder', 'Rosa Nueva Agenda', 'clinic_name', 'Consultorio Rosa Agenda',
+    'phone', '0414 700 0066', 'email', 'rosa.agenda@example.com'));
   reset role;
 
   select id into v_app from public.merchant_applications where email = 'ana.agenda@example.com';
   select * into v_lead from public.doctor_leads where id = v_ana;
-  if v_lead.status <> 'convertido' or v_lead.merchant_application_id <> v_app
-     or v_lead.converted_via <> 'formulario' or v_lead.match_reason <> 'telefono' then
-    raise exception '4. Ana no quedó afiliada por el formulario: %', row_to_json(v_lead);
+  if v_lead.status <> 'reunion' or v_lead.merchant_application_id <> v_app
+     or v_lead.meeting_at <> v_capa or v_lead.meeting_mode <> 'presencial'
+     or v_lead.meeting_place <> 'Av. Principal, Torre Médica, piso 3'
+     or v_lead.converted_at is not null or v_lead.match_reason <> 'telefono' then
+    raise exception '4. Ana no quedó con su capacitación y su solicitud: %', row_to_json(v_lead);
   end if;
   select * into v_lead from public.doctor_leads where id = v_eva;
-  if v_lead.status <> 'convertido' or v_lead.match_reason <> 'nombre' then
-    raise exception '4. Eva no se reconoció por el nombre: %', row_to_json(v_lead);
+  if v_lead.status <> 'respondio' or v_lead.match_reason <> 'nombre' or v_lead.merchant_application_id is null then
+    raise exception '4. Eva no se reconoció por el nombre o no quedó interesada: %', row_to_json(v_lead);
+  end if;
+  select * into v_lead from public.doctor_leads where phone = '+584147000055';
+  v_pedro := v_lead.id;
+  if v_pedro is null or v_lead.source <> 'formulario' or v_lead.status <> 'reunion' or v_lead.meeting_at <> v_capa
+     or v_lead.name <> 'Pedro Nuevo Agenda' or v_lead.merchant_application_id is null then
+    raise exception '4. Pedro no entró a la agenda con su capacitación: %', row_to_json(v_lead);
+  end if;
+  if not exists (select 1 from public.doctor_lead_activities
+                  where lead_id = v_pedro and kind = 'creado' and meeting_at = v_capa
+                    and note like 'Llenó el formulario de afiliación y pidió su capacitación presencial: %') then
+    raise exception '4. la historia de Pedro no cuenta su capacitación';
+  end if;
+  select * into v_lead from public.doctor_leads where phone = '+584147000066';
+  if v_lead.id is null or v_lead.source <> 'formulario' or v_lead.status <> 'respondio'
+     or v_lead.meeting_at is not null then
+    raise exception '4. Rosa, sin capacitación, no entró interesada: %', row_to_json(v_lead);
+  end if;
+  if not exists (select 1 from public.doctor_lead_activities
+                  where lead_id = v_lead.id and kind = 'creado' and status_to = 'respondio') then
+    raise exception '4. la historia de Rosa no la apunta interesada';
+  end if;
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', v_admin::text, 'role', 'authenticated', 'aal', 'aal2')::text, true);
+  v_j := public.admin_doctor_leads();
+  select e into v_l from jsonb_array_elements(v_j) e where e ->> 'id' = v_pedro::text;
+  if (v_l ->> 'application_training_at')::timestamptz <> v_capa or (v_l ->> 'merchant_has_access')::boolean then
+    raise exception '4. el tablero no trae la capacitación de Pedro: %', v_l;
   end if;
   -- Luis no llenó nada.
   if (select status from public.doctor_leads where id = v_luis) <> 'descartado' then
@@ -364,16 +415,43 @@ begin
     raise exception '4. la historia de Ana no cuenta la afiliación';
   end if;
 
-  -- Se aprueba: el lead queda con su clínica.
+  -- Se aprueba: el lead queda con su clínica, todavía sin afiliar.
   perform set_config('request.jwt.claims',
     json_build_object('sub', v_admin::text, 'role', 'authenticated', 'aal', 'aal2')::text, true);
   v_res := public.admin_approve_merchant_application(v_app);
   select merchant_id into v_m from public.merchant_applications where id = v_app;
-  if (select merchant_id from public.doctor_leads where id = v_ana) is distinct from v_m then
-    raise exception '4. el lead de Ana no quedó enlazado con su clínica';
+  select * into v_lead from public.doctor_leads where id = v_ana;
+  if v_lead.merchant_id is distinct from v_m or v_lead.status <> 'reunion' then
+    raise exception '4. el lead de Ana no quedó enlazado con su clínica sin afiliar: %', row_to_json(v_lead);
   end if;
-  select count(*) into v_n from public.doctor_lead_activities where lead_id = v_ana and kind = 'conversion';
-  if v_n <> 2 then raise exception '4. Ana debía tener 2 líneas de afiliación (solicitud y alta), tiene %', v_n; end if;
+  if not exists (select 1 from public.doctor_lead_activities
+                  where lead_id = v_ana and kind = 'conversion' and note like '%Falta darle sus accesos.') then
+    raise exception '4. la historia de Ana no dice que faltan sus accesos';
+  end if;
+
+  -- Recibe sus accesos: afiliada.
+  insert into auth.users (id, instance_id, aud, role, email, created_at, updated_at)
+  values (v_titular, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
+          'titular-' || v_titular || '@prueba.helios.test', now(), now());
+  insert into public.merchant_users (user_id, merchant_id, role, is_active) values (v_titular, v_m, 'gerente', true);
+  select * into v_lead from public.doctor_leads where id = v_ana;
+  if v_lead.status <> 'convertido' or v_lead.converted_via <> 'formulario' or v_lead.converted_at is null then
+    raise exception '4. Ana no quedó afiliada al tener sus accesos: %', row_to_json(v_lead);
+  end if;
+  if not exists (select 1 from public.doctor_lead_activities
+                  where lead_id = v_ana and kind = 'conversion' and status_to = 'convertido'
+                    and note like 'Ya tiene sus accesos a Helios: %') then
+    raise exception '4. la historia de Ana no cuenta sus accesos';
+  end if;
+  v_j := public.admin_doctor_leads();
+  select e into v_l from jsonb_array_elements(v_j) e where e ->> 'id' = v_ana::text;
+  if not (v_l ->> 'merchant_has_access')::boolean then
+    raise exception '4. el tablero no dice que Ana tiene sus accesos: %', v_l;
+  end if;
+  -- Eva y Pedro siguen sin clínica.
+  if exists (select 1 from public.doctor_leads where id in (v_eva, v_pedro) and status = 'convertido') then
+    raise exception '4. Eva o Pedro quedaron afiliados sin clínica';
+  end if;
 
   -- =========================================================================
   -- 5. Ya era cliente

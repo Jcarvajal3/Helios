@@ -807,6 +807,29 @@ dejan un `warning`):
 - Al apuntar o corregir un lead, si ya hay una clínica real o una solicitud no
   rechazada que coincide, sale afiliado (`converted_via = 'agenda'`).
 
+**Desde 20261023140000** (la capacitación y los accesos):
+
+- `helios_solicitar_afiliacion` acepta `p.training_at` (opcional): el día y
+  la hora de la capacitación presencial con su desfase
+  (`2026-10-30T10:00:00-04:00`), de mañana a 90 días (`22023`). Se guarda en
+  `merchant_applications.training_at` y `admin_merchant_applications` lo
+  devuelve.
+- Toda solicitud entra a la agenda: los leads que coinciden se enlazan (la
+  solicitud enlazada solo se cambia si la de antes se rechazó); si no hay
+  ninguno, nace uno con `source = 'formulario'` (valor nuevo). Con
+  capacitación, el lead queda `reunion` con `meeting_at = training_at`,
+  presencial, en la dirección del consultorio; sin ella, queda `respondio`
+  («Interesado»): el lead nuevo nace así (20261023150000) y uno que ya estaba
+  pasa a ese estado si no estaba en una visita.
+- **«Afiliado» (`convertido`) es que la clínica del lead tenga sus accesos**
+  (`helios_clinica_tiene_accesos`: alguien activo en `merchant_users`). Llegar
+  la solicitud, aprobarla o nacer la clínica solo enlazan (la historia dice
+  «Falta darle sus accesos»); el disparador de `merchant_users` (alta o
+  reactivación) lo pasa a afiliado con `converted_via` `formulario` (si tiene
+  solicitud) o `alta`. Marcarlo a mano (`afiliado`) sigue igual.
+- `admin_doctor_leads()` añade `application_training_at` y
+  `merchant_has_access`.
+
 RPC:
 
 - `admin_doctor_leads() → jsonb` (un arreglo, el más nuevo primero): `id, name,

@@ -4,12 +4,20 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { useMutation } from '@tanstack/react-query'
 import { CircleCheck } from 'lucide-react'
 
+import { CampoDeCapacitacion } from '@/components/afiliacion/CampoDeCapacitacion'
 import { CamposDeAlta } from '@/components/afiliacion/CamposDeAlta'
 import { HeliosLogo } from '@/components/HeliosLogo'
-import { Button, Card, ErrorBox } from '@/components/ui'
+import { Button, Card, ErrorBox, formatDateTime, hoyCaracas } from '@/components/ui'
 import { cabeceraPublica } from '@/config/sitio'
-import { ALTA_VACIA, datosDeAlta, motivoDeAlta } from '@/features/admin/clinicas/clinicas'
-import type { AltaDeClinica } from '@/features/admin/clinicas/clinicas'
+import {
+  ALTA_VACIA,
+  SIN_CAPACITACION,
+  capacitacionParaEnviar,
+  datosDeAlta,
+  motivoDeAlta,
+  motivoDeCapacitacion,
+} from '@/features/admin/clinicas/clinicas'
+import type { AltaDeClinica, Capacitacion } from '@/features/admin/clinicas/clinicas'
 import { describeError, supabase } from '@/lib/supabase'
 
 export const Route = createFileRoute('/afiliacion')({
@@ -35,9 +43,15 @@ export const Route = createFileRoute('/afiliacion')({
  * (`CamposDeAlta`). La solicitud queda pendiente en Clínicas › Pendientes
  * del superadmin; al aprobarla nace la clínica. La base valida lo mismo que
  * aquí y frena el abuso (`helios_solicitar_afiliacion`).
+ *
+ * Si quiere, pide además su capacitación presencial: entra a la agenda del
+ * equipo como su visita.
  */
 function Afiliacion() {
   const [alta, setAlta] = useState<AltaDeClinica>(ALTA_VACIA)
+  const [capacitacion, setCapacitacion] = useState<Capacitacion>(SIN_CAPACITACION)
+  const hoy = hoyCaracas()
+  const instanteDeCapacitacion = capacitacionParaEnviar(capacitacion)
   // El campo que no se ve: si llega con algo, lo rellenó un robot.
   const [sitioWeb, setSitioWeb] = useState('')
   const [intentado, setIntentado] = useState(false)
@@ -45,13 +59,13 @@ function Afiliacion() {
   const envio = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.rpc('helios_solicitar_afiliacion', {
-        p: { ...datosDeAlta(alta, 'portada'), sitio_web: sitioWeb },
+        p: { ...datosDeAlta(alta, 'portada'), training_at: instanteDeCapacitacion, sitio_web: sitioWeb },
       })
       if (error) throw error
     },
   })
 
-  const motivo = motivoDeAlta(alta, 'portada')
+  const motivo = motivoDeAlta(alta, 'portada') ?? motivoDeCapacitacion(capacitacion, hoy)
 
   function enviar(e: FormEvent) {
     e.preventDefault()
@@ -84,6 +98,9 @@ function Afiliacion() {
               <p className="type-body-medium text-on-surface-variant">
                 La revisamos y te escribimos a {alta.email.trim().toLowerCase()} o al {alta.phone.trim()} para
                 activar tu cuenta.
+                {instanteDeCapacitacion && (
+                  <> Anotamos tu capacitación presencial para el {formatDateTime(instanteDeCapacitacion)}.</>
+                )}
               </p>
               <Link to="/" className="type-body-medium text-primary underline-offset-4 hover:underline">
                 Volver a la portada
@@ -95,6 +112,7 @@ function Afiliacion() {
             <Card className="mt-[var(--spacing-shell-gap-block)]">
               <div className="flex flex-col gap-6">
                 <CamposDeAlta id="afiliacion" modo="portada" valor={alta} onChange={setAlta} />
+                <CampoDeCapacitacion id="afiliacion" valor={capacitacion} hoy={hoy} onChange={setCapacitacion} />
 
                 {/* Fuera de la vista y del tabulador: solo lo rellena un robot. */}
                 <div aria-hidden className="absolute -left-[9999px] h-px w-px overflow-hidden">

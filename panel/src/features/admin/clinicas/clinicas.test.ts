@@ -9,7 +9,9 @@
  * le paga a la clínica se parta en consultas y comisiones del personal.
  */
 import {
+  SIN_CAPACITACION,
   cambioDeCuenta,
+  capacitacionParaEnviar,
   celularAE164,
   comisionEfectiva,
   correccionesDeSolicitud,
@@ -21,6 +23,7 @@ import {
   leerCuentaDePago,
   lineasParaCopiar,
   motivoDeAlta,
+  motivoDeCapacitacion,
   normalizarDocumento,
   partirPorMotivo,
   telefonoAE164,
@@ -160,6 +163,33 @@ igual(
   { clinic_name: 'Consultorio Ana Pérez' },
 )
 igual('un fijo a E.164', telefonoAE164('0212-5551234'), '+582125551234')
+
+// ── La capacitación presencial ─────────────────────────────────────────────
+
+igual('sin capacitación vale', motivoDeCapacitacion(SIN_CAPACITACION, '2026-10-23'), null)
+igual(
+  'el día sin la hora no',
+  motivoDeCapacitacion({ dia: '2026-10-30', hora: '' }, '2026-10-23'),
+  'Pon el día y la hora de la capacitación.',
+)
+igual(
+  'hoy no: de mañana en adelante',
+  motivoDeCapacitacion({ dia: '2026-10-23', hora: '10:00' }, '2026-10-23'),
+  'La capacitación tiene que ser de mañana en adelante.',
+)
+igual('mañana sí', motivoDeCapacitacion({ dia: '2026-10-24', hora: '10:00' }, '2026-10-23'), null)
+igual(
+  'a más de 90 días no',
+  motivoDeCapacitacion({ dia: '2027-01-22', hora: '10:00' }, '2026-10-23'),
+  'La capacitación tiene que ser en los próximos 90 días.',
+)
+igual('se manda con la hora de Caracas', capacitacionParaEnviar({ dia: '2026-10-30', hora: '10:00' }), '2026-10-30T10:00:00-04:00')
+igual('sin capacitación no se manda', capacitacionParaEnviar(SIN_CAPACITACION), null)
+igual(
+  'la solicitud trae la capacitación',
+  leerSolicitud({ training_at: '2026-10-30T14:00:00+00:00' }).capacitacion,
+  '2026-10-30T14:00:00+00:00',
+)
 
 // ── La cuenta de pago ──────────────────────────────────────────────────────
 

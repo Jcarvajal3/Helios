@@ -130,6 +130,30 @@ begin
   end;
   if not v_failed then raise exception 'Una red social sin usuario debía rechazarse'; end if;
 
+  -- La capacitación (20261023140000): de mañana a 90 días.
+  v_failed := false;
+  begin
+    perform public.helios_solicitar_afiliacion(v_datos || jsonb_build_object('training_at', now()::text));
+  exception when invalid_parameter_value then
+    v_failed := sqlerrm like '%de mañana en adelante%';
+  end;
+  if not v_failed then raise exception 'Una capacitación para hoy debía rechazarse'; end if;
+
+  v_failed := false;
+  begin
+    perform public.helios_solicitar_afiliacion(v_datos || jsonb_build_object('training_at', (now() + interval '120 days')::text));
+  exception when invalid_parameter_value then
+    v_failed := sqlerrm like '%90 días%';
+  end;
+  if not v_failed then raise exception 'Una capacitación a 120 días debía rechazarse'; end if;
+
+  v_failed := false;
+  begin
+    perform public.helios_solicitar_afiliacion(v_datos || '{"training_at":"el martes"}');
+  exception when invalid_parameter_value then v_failed := true;
+  end;
+  if not v_failed then raise exception 'Una capacitación ilegible debía rechazarse'; end if;
+
   -- --- 5. Quién lee y quién aprueba --------------------------------------
   v_failed := false;
   begin

@@ -5,9 +5,12 @@ import { haceCuanto } from '@/features/admin/cobranza/senales'
 import {
   ESTADO_DEL_LEAD,
   PENDIENTE,
+  ROTULO_AFILIACION_EN_CURSO,
   ROTULO_CANAL,
   ROTULO_MODO,
   ROTULO_RESULTADO,
+  afiliacionEnCurso,
+  esCapacitacion,
   estaCerrado,
   pendienteDe,
   tieneVisita,
@@ -83,18 +86,27 @@ export function columnasDeLaAgenda(hoy: string, ahora: Date, soloAgenda = false)
     {
       key: 'estado',
       header: 'Estado',
-      info: '«Afiliado» se pone solo cuando el médico llena el formulario de afiliación de la portada o se da de alta su clínica: se le reconoce por su teléfono o su nombre.',
+      info: '«Afiliado» se pone solo cuando su clínica, aprobada en Clínicas o dada de alta por el equipo, tiene sus accesos. Al médico se le reconoce por su teléfono, su correo o su nombre.',
       sort: (l) => l.estado,
-      csv: (l) => ESTADO_DEL_LEAD[l.estado].label,
-      cell: (l) => (
-        <>
-          <EstadoDelLeadBadge lead={l} hoy={hoy} ahora={ahora} />
-          {l.estado === 'convertido' && l.clinica && <span className={PIE}>{l.clinica}</span>}
-          {l.estado === 'convertido' && !l.clinica && l.solicitudEstado === 'pending' && (
-            <span className={PIE}>Solicitud por revisar</span>
-          )}
-        </>
-      ),
+      csv: (l) => {
+        const enCurso = afiliacionEnCurso(l)
+        return [ESTADO_DEL_LEAD[l.estado].label, enCurso ? ROTULO_AFILIACION_EN_CURSO[enCurso] : null]
+          .filter(Boolean)
+          .join(' · ')
+      },
+      cell: (l) => {
+        const enCurso = afiliacionEnCurso(l)
+        return (
+          <>
+            <EstadoDelLeadBadge lead={l} hoy={hoy} ahora={ahora} />
+            {enCurso ? (
+              <span className={PIE}>{ROTULO_AFILIACION_EN_CURSO[enCurso]}</span>
+            ) : (
+              l.estado === 'convertido' && l.clinica && <span className={PIE}>{l.clinica}</span>
+            )}
+          </>
+        )
+      },
     },
 
     {
@@ -110,7 +122,11 @@ export function columnasDeLaAgenda(hoy: string, ahora: Date, soloAgenda = false)
             <span className="tabular-nums">
               {formatDateTime(l.reunion)}
               <span className={PIE}>
-                {l.modo ? `Visita ${ROTULO_MODO[l.modo].toLowerCase()}` : 'Visita'}
+                {esCapacitacion(l)
+                  ? 'Capacitación presencial'
+                  : l.modo
+                    ? `Visita ${ROTULO_MODO[l.modo].toLowerCase()}`
+                    : 'Visita'}
                 {l.lugar ? ` · ${l.lugar}` : ''}
               </span>
             </span>

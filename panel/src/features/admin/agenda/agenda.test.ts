@@ -15,12 +15,14 @@
 import {
   SIN_ELEGIR,
   aParametros,
+  afiliacionEnCurso,
   anulaLaVisita,
   borradorDeGestion,
   canalDe,
   casillasDelMes,
   citasDe,
   diaDeCaracas,
+  esCapacitacion,
   estadoDelResultado,
   filtrarAgenda,
   horaDeCaracas,
@@ -164,6 +166,32 @@ console.log('\n── El calendario ──────────────�
     citasDe([r, cerrado]).map((c) => `${c.tipo}:${c.dia}:${c.hora ?? ''}`),
     ['visita:2026-10-23:21:00', 'llamada:2026-10-23:'],
   )
+
+  // La capacitación que pidió en el formulario es su visita mientras no se mueva.
+  const capa = lead('k', {
+    status: 'reunion',
+    meeting_at: '2026-10-30T14:00:00+00:00',
+    application_training_at: '2026-10-30T10:00:00-04:00',
+    application_status: 'pending',
+  })
+  igual('la capacitación sale marcada en el calendario', citasDe([capa]).map((c) => c.capacitacion), [true])
+  igual('si el equipo mueve la visita, deja de serlo', esCapacitacion({ ...capa, reunion: '2026-10-31T14:00:00Z' }), false)
+}
+
+console.log('\n── La afiliación en curso ──────────────────────────────────')
+{
+  igual('solicitud pendiente', afiliacionEnCurso(lead('p', { application_status: 'pending' })), 'solicitud_por_revisar')
+  igual(
+    'aprobada, sin accesos',
+    afiliacionEnCurso(lead('s', { application_status: 'approved', merchant_id: 'm1', merchant_has_access: false })),
+    'falta_dar_accesos',
+  )
+  igual(
+    'con accesos ya no falta nada',
+    afiliacionEnCurso(lead('c', { status: 'convertido', merchant_id: 'm1', merchant_has_access: true })),
+    null,
+  )
+  igual('sin formulario, nada', afiliacionEnCurso(lead('n')), null)
 }
 
 console.log('\n── El árbol de la gestión ───────────────────────────────────')

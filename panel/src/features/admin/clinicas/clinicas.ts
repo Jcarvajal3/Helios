@@ -1,3 +1,5 @@
+import { sumarDias } from '@/components/kit/rango'
+import { instanteDeCaracas } from '@/features/admin/agenda/agenda'
 import { BANKS } from '@/features/admin/banks'
 import {
   LETRAS_CEDULA,
@@ -209,6 +211,33 @@ export function datosDeAlta(a: AltaDeClinica, modo: ModoDeAlta = 'equipo'): Reco
   }
 }
 
+// ── La capacitación presencial ─────────────────────────────────────────────
+
+/**
+ * El día y la hora que pide el médico en la portada para su capacitación
+ * presencial, en Caracas. Opcional: los dos vacíos es «sin capacitación».
+ */
+export type Capacitacion = { dia: string; hora: string }
+
+export const SIN_CAPACITACION: Capacitacion = { dia: '', hora: '' }
+
+/** Hasta cuántos días adelante se puede pedir (lo mismo que la base). */
+export const CAPACITACION_HASTA_DIAS = 90
+
+/** Qué falta o está mal en la capacitación, o `null`. `hoy` es el día de Caracas. */
+export function motivoDeCapacitacion(c: Capacitacion, hoy: string): string | null {
+  if (!c.dia && !c.hora) return null
+  if (!c.dia || !c.hora) return 'Pon el día y la hora de la capacitación.'
+  if (c.dia <= hoy) return 'La capacitación tiene que ser de mañana en adelante.'
+  if (c.dia > sumarDias(hoy, CAPACITACION_HASTA_DIAS)) return 'La capacitación tiene que ser en los próximos 90 días.'
+  return null
+}
+
+/** El `training_at` de la solicitud, o `null` sin capacitación. */
+export function capacitacionParaEnviar(c: Capacitacion): string | null {
+  return c.dia && c.hora ? instanteDeCaracas(c.dia, c.hora) : null
+}
+
 // ── Las solicitudes de afiliación ──────────────────────────────────────────
 
 export type EstadoSolicitud = 'pending' | 'approved' | 'rejected'
@@ -218,6 +247,8 @@ export type SolicitudDeAfiliacion = {
   status: EstadoSolicitud
   /** Los datos tal cual los mandó el médico (ya normalizados por la base). */
   alta: AltaDeClinica
+  /** La capacitación presencial que pidió (instante ISO), o `null`. */
+  capacitacion: string | null
   createdAt: string
   merchantId: string | null
   reviewedAt: string | null
@@ -255,6 +286,7 @@ export function leerSolicitud(raw: unknown): SolicitudDeAfiliacion {
       pagoMovilBank: t(r.pago_movil_bank),
       pagoMovilPhone: telefonoLocal(textoONulo(r.pago_movil_phone)),
     },
+    capacitacion: textoONulo(r.training_at),
     createdAt: t(r.created_at),
     merchantId: textoONulo(r.merchant_id),
     reviewedAt: textoONulo(r.reviewed_at),

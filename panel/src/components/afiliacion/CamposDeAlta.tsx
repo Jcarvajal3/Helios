@@ -215,7 +215,8 @@ export function CamposDeAlta({
   )
 }
 
-function Bloque({ titulo, nota, children }: { titulo: string; nota?: string; children: ReactNode }) {
+/** Un grupo del alta: su título, una nota opcional y los campos en dos columnas. */
+export function Bloque({ titulo, nota, children }: { titulo: string; nota?: string; children: ReactNode }) {
   return (
     <fieldset className="flex flex-col gap-3">
       <legend className="mb-3 type-panel-section text-on-surface">

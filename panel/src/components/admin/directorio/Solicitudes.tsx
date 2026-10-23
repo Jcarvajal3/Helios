@@ -159,6 +159,9 @@ export function RevisarSolicitud({ solicitud, onClose }: { solicitud: SolicitudD
         <p className="type-panel-caption text-on-surface-variant">
           Recibida el {formatDateTime(solicitud.createdAt)}. Revisa los datos y corrige lo que haga falta antes de
           aprobar: al aprobar nace la clínica, activa y con esta cuenta de pago. Si quieres, añade su Pago Móvil.
+          {solicitud.capacitacion && (
+            <> Pidió su capacitación presencial para el {formatDateTime(solicitud.capacitacion)}: está en la Agenda.</>
+          )}
         </p>
 
         <CamposDeAlta id={`solicitud-${solicitud.id}`} valor={alta} onChange={setAlta} />

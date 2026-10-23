@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { CalendarDays, ChevronLeft, ChevronRight, Phone, Users } from 'lucide-react'
+import { CalendarDays, ChevronLeft, ChevronRight, GraduationCap, Phone, Users } from 'lucide-react'
 
 import { Button, EmptyState, IconButton } from '@/components/ui'
 import { MESES_LARGOS } from '@/components/kit/rango'
@@ -28,8 +28,9 @@ function claseDeCita(c: Cita, hoy: string): string {
 
 /**
  * La agenda en calendario: el mes con cada visita (a su hora) y cada día de
- * volver a llamar, y al lado las próximas citas en orden. Un clic en una cita
- * abre la ficha del médico. El mes va en la URL (`?mes=`).
+ * volver a llamar, y al lado las próximas citas en orden. La capacitación
+ * presencial que pidió un médico en el formulario sale con su birrete. Un
+ * clic en una cita abre la ficha del médico. El mes va en la URL (`?mes=`).
  */
 export function CalendarioDeReuniones({
   leads,
@@ -123,7 +124,7 @@ export function CalendarioDeReuniones({
                       <button
                         key={`${c.lead.id}:${c.tipo}`}
                         type="button"
-                        aria-label={`${c.tipo === 'visita' ? 'Visita a' : 'Llamar a'} ${c.lead.nombre}`}
+                        aria-label={`${c.capacitacion ? 'Capacitación de' : c.tipo === 'visita' ? 'Visita a' : 'Llamar a'} ${c.lead.nombre}`}
                         className={`size-2 rounded-full ${c.tipo === 'visita' ? 'bg-primary' : 'bg-on-surface-variant'}`}
                         onClick={() => onAbrir(c.lead)}
                       />
@@ -134,11 +135,12 @@ export function CalendarioDeReuniones({
                       <li key={`${c.lead.id}:${c.tipo}`}>
                         <button
                           type="button"
-                          title={`${c.hora ? `${c.hora} · ` : 'Llamar · '}${c.lead.nombre}`}
+                          title={`${c.hora ? `${c.hora} · ` : 'Llamar · '}${c.capacitacion ? 'Capacitación · ' : ''}${c.lead.nombre}`}
                           className={`w-full truncate rounded px-1.5 py-0.5 text-left type-panel-caption hover:brightness-95 ${claseDeCita(c, hoy)}`}
                           onClick={() => onAbrir(c.lead)}
                         >
                           {c.hora ? <span className="tabular-nums">{c.hora} </span> : <Phone size={11} aria-hidden className="mr-1 inline" />}
+                          {c.capacitacion && <GraduationCap size={11} aria-label="Capacitación" className="mr-1 inline" />}
                           {c.lead.nombre}
                         </button>
                       </li>
@@ -177,7 +179,9 @@ export function CalendarioDeReuniones({
                         className="flex w-full items-start gap-2 rounded-panel-control border border-panel-hairline px-3 py-2 text-left hover:bg-panel-raised"
                         onClick={() => onAbrir(c.lead)}
                       >
-                        {c.tipo === 'visita' ? (
+                        {c.capacitacion ? (
+                          <GraduationCap size={15} aria-hidden className="mt-0.5 shrink-0 text-primary" />
+                        ) : c.tipo === 'visita' ? (
                           <Users size={15} aria-hidden className="mt-0.5 shrink-0 text-primary" />
                         ) : (
                           <Phone size={15} aria-hidden className="mt-0.5 shrink-0 text-on-surface-variant" />
@@ -186,7 +190,11 @@ export function CalendarioDeReuniones({
                           <span className="block truncate type-panel-body text-on-surface">{c.lead.nombre}</span>
                           <span className="block truncate type-panel-caption text-on-surface-variant">
                             {c.tipo === 'visita'
-                              ? [c.hora, c.lead.modo ? ROTULO_MODO[c.lead.modo] : null, c.lead.lugar]
+                              ? [
+                                  c.hora,
+                                  c.capacitacion ? 'Capacitación presencial' : c.lead.modo ? ROTULO_MODO[c.lead.modo] : null,
+                                  c.lead.lugar,
+                                ]
                                   .filter(Boolean)
                                   .join(' · ')
                               : 'Volver a llamar'}

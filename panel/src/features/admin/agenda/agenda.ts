@@ -297,8 +297,12 @@ export type Lead = {
   razon: PorQueSeReconocio | null
   solicitudId: string | null
   solicitudEstado: 'pending' | 'approved' | 'rejected' | null
+  /** La capacitación presencial que pidió en el formulario (instante ISO). */
+  capacitacion: string | null
   clinicaId: string | null
   clinica: string | null
+  /** Su clínica ya tiene sus accesos: es lo que lo deja afiliado. */
+  conAccesos: boolean
   creado: string
   gestiones: number
   ultima: UltimaGestion | null
@@ -345,8 +349,10 @@ export function leerAgenda(raw: unknown): Lead[] {
       razon: unoDe(RAZONES, r.match_reason) ?? null,
       solicitudId: textoONulo(r.application_id),
       solicitudEstado: unoDe(ESTADOS_SOLICITUD, r.application_status) ?? null,
+      capacitacion: textoONulo(r.application_training_at),
       clinicaId: textoONulo(r.merchant_id),
       clinica: textoONulo(r.merchant_name),
+      conAccesos: r.merchant_has_access === true,
       creado: texto(r.created_at),
       gestiones: numero(r.activities_count),
       ultima: leerUltima(r.last_activity),
@@ -426,6 +432,35 @@ export function estaCerrado(l: Pick<Lead, 'estado'>): boolean {
 /** Tiene una visita agendada (haya pasado su hora o no). */
 export function tieneVisita(l: Pick<Lead, 'estado' | 'reunion'>): boolean {
   return l.estado === 'reunion' && l.reunion !== null
+}
+
+/**
+ * Si su visita es la capacitación presencial que pidió en el formulario:
+ * la misma hora. Si el equipo la cambia, vuelve a ser una visita.
+ */
+export function esCapacitacion(l: Pick<Lead, 'reunion' | 'capacitacion'>): boolean {
+  return (
+    l.reunion !== null &&
+    l.capacitacion !== null &&
+    new Date(l.reunion).getTime() === new Date(l.capacitacion).getTime()
+  )
+}
+
+/**
+ * En qué va su afiliación mientras le falta algo: la solicitud por revisar,
+ * o la clínica aprobada sin sus accesos. Afiliarse (20261023140000) es que
+ * su clínica tenga sus accesos.
+ */
+export function afiliacionEnCurso(
+  l: Pick<Lead, 'solicitudEstado' | 'clinicaId' | 'conAccesos'>,
+): 'solicitud_por_revisar' | 'falta_dar_accesos' | null {
+  if (l.clinicaId !== null) return l.conAccesos ? null : 'falta_dar_accesos'
+  return l.solicitudEstado === 'pending' ? 'solicitud_por_revisar' : null
+}
+
+export const ROTULO_AFILIACION_EN_CURSO: Record<NonNullable<ReturnType<typeof afiliacionEnCurso>>, string> = {
+  solicitud_por_revisar: 'Solicitud por revisar',
+  falta_dar_accesos: 'Aprobada: falta darle sus accesos',
 }
 
 /** Una visita agendada cuya hora ya pasó y nadie anotó cómo fue. */
@@ -550,6 +585,8 @@ export type Cita = {
   dia: string
   /** 'HH:MM' de la visita; las llamadas no tienen hora. */
   hora: string | null
+  /** La visita es la capacitación que pidió en el formulario (`esCapacitacion`). */
+  capacitacion: boolean
 }
 
 /**
@@ -560,8 +597,18 @@ export type Cita = {
 export function citasDe(leads: ReadonlyArray<Lead>): Cita[] {
   const citas: Cita[] = []
   for (const l of leads) {
-    if (l.reunion) citas.push({ lead: l, tipo: 'visita', dia: diaDeCaracas(l.reunion), hora: horaDeCaracas(l.reunion) })
-    if (l.volverEl && !estaCerrado(l)) citas.push({ lead: l, tipo: 'llamada', dia: l.volverEl, hora: null })
+    if (l.reunion) {
+      citas.push({
+        lead: l,
+        tipo: 'visita',
+        dia: diaDeCaracas(l.reunion),
+        hora: horaDeCaracas(l.reunion),
+        capacitacion: esCapacitacion(l),
+      })
+    }
+    if (l.volverEl && !estaCerrado(l)) {
+      citas.push({ lead: l, tipo: 'llamada', dia: l.volverEl, hora: null, capacitacion: false })
+    }
   }
   return citas.sort(
     (a, b) =>
