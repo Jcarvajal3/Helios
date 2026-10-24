@@ -137,7 +137,8 @@ begin
   v_bloque := public.helios_payment_block(45568.00, '$56,96', 'dólar');
   if v_bloque <> E'💵 *Monto en bolívares hoy: Bs 45.568,00*\n'
                 || E'Es el equivalente a $56,96 a la tasa BCV del dólar de hoy. Si pagas otro día, paga el equivalente a la tasa BCV de ese día.\n\n'
-                || E'🏦 *Pago Móvil*\nBanco: BNC (0191)\nTeléfono: 0412-1714930\nRIF: J-50496786-6\nTitular: Quarto Latam, C.A.\n\n'
+                -- Sin el titular de la cuenta (2026-10-23).
+                || E'🏦 *Pago Móvil*\nBanco: BNC (0191)\nTeléfono: 0412-1714930\nRIF: J-50496786-6\n\n'
                 || E'📸 Cuando pagues, envíanos la foto del comprobante por este chat.\n\n'
                 || '⭐ Recuerda pagar a tiempo para subir de nivel y disponer de mayores beneficios.' then
     raise exception 'El bloque de pago no es el esperado: %', v_bloque;
@@ -147,6 +148,10 @@ begin
   end if;
   if public.helios_message_builtins(null)->>'pago_movil_rif' <> 'J-50496786-6' then
     raise exception 'Las variables sueltas del Pago Móvil (para las plantillas _v2) no salen';
+  end if;
+  if public.helios_payment_accounts_text() <> '• Pago Móvil: BNC (0191) · J504967866 · 0412-1714930'
+     or public.helios_message_builtins(null)->>'cuentas_de_cobro' like '%Quarto%' then
+    raise exception 'La línea de cuentas no debía decir el titular: %', public.helios_payment_accounts_text();
   end if;
   raise notice 'TEST MENSAJES 2 OK — el bloque de pago';
 

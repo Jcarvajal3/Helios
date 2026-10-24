@@ -1449,3 +1449,7 @@ la pregunta le llega a quien capacita.
   `notify_payment_result`, además del correo, le escribe con la ventana
   abierta (`helios_payment_result_whatsapp`). Ambos por `helios_tell_patient`,
   que nunca tumba lo que lo llamó.
+- 20261023200000: `helios_payment_accounts_block()` y
+  `helios_payment_accounts_text()` ya no dicen el titular de la cuenta.
+  `pago_movil_titular` sigue en `helios_message_builtins` solo para las
+  plantillas `_v2` de Meta conectadas (docs/00 §15.9).

@@ -1180,3 +1180,44 @@ update public.notification_templates
 ```
 
 Los botones (`wa_buttons`) se ponen **solo junto con las `_v2`**: una plantilla aprobada sin botones rechaza el envío si se le mandan.
+
+### 15.9 Sin el titular de la cuenta de cobro (2026-10-23)
+
+Pedido por Javier el 2026-10-23 (20261023200000): ningún mensaje dice el titular de la cuenta de cobro. Los datos de pago son el banco, el teléfono (o la cuenta) y el RIF. Ya sale así en el texto libre (el bot, la bienvenida, los recordatorios con la ventana abierta) y en los correos.
+
+**Las 4 plantillas de recordatorio de Meta todavía dicen «Titular: {{10}}»**: es texto aprobado, y Meta no admite una variable vacía. Hasta que se aprueben las de abajo, fuera de la ventana de 24 h siguen diciéndolo. Son las `_v2` sin la línea «Titular» (9 variables). Todas: **Utility** · **`es`** · variables numéricas · botones de respuesta rápida **Ya pagué** · **Hablar con alguien**.
+
+Bloque común ({{5}} a {{9}}):
+
+> 💵 *Monto en bolívares hoy: {{5}}*
+> Es el equivalente a la tasa BCV del {{6}} de hoy. Si pagas otro día, paga el equivalente a la tasa BCV de ese día.
+>
+> 🏦 *Pago Móvil*
+> Banco: {{7}}
+> Teléfono: {{8}}
+> RIF: {{9}}
+>
+> 📸 Cuando pagues, envíanos la foto del comprobante por este chat.
+>
+> ⭐ Recuerda pagar a tiempo para subir de nivel y disponer de mayores beneficios.
+
+- **`helios_cuota_en_3_dias_v3`** → `cuota_en_3_dias`: «Hola, {{1}} 👋 Te recordamos que tu cuota de {{2}} de la consulta con {{3}} vence el {{4}}.» + bloque.
+- **`helios_cuota_vence_manana_v3`** → `cuota_manana`: «Hola, {{1}} 👋 Mañana, {{4}}, vence tu cuota de {{2}} de la consulta con {{3}}.» + bloque.
+- **`helios_cuota_vence_hoy_v3`** → `cuota_hoy`: «¡Buenos días, {{1}}! ☀️ Hoy, {{4}}, vence tu cuota de {{2}} de la consulta con {{3}}.» + bloque + «Si ya pagaste, ¡gracias! Puedes ignorar este mensaje.»
+- **`helios_cuota_vencida_v2`** → `cuota_vencida_d1`: «Hola, {{1}}. Tu cuota de {{2}} de la consulta con {{3}} venció ayer, {{4}}, y sigue pendiente. Sabemos que a veces pasa 💙 Mientras esté pendiente no podrás pagar nuevas consultas en cuotas; en cuanto pagues, se reactiva.» + bloque + «Si tienes algún inconveniente, escríbenos por este chat y lo resolvemos juntos.»
+
+Ejemplo: María · $56,96 · la Dra. Nadia Andi Khabbaze Alfaro · lunes 26/10 · Bs 10.624,18 · dólar · BNC (0191) · 0412-1714930 · J-50496786-6.
+
+**Al aprobarse** (leerlas antes en vivo de 360dialog):
+
+```sql
+update public.notification_templates t
+   set wa_template_name = v.nombre, wa_template_lang = 'es',
+       wa_template_params = array['nombre','monto','medico','fecha','monto_bs','moneda',
+                                  'pago_movil_banco','pago_movil_telefono','pago_movil_rif']
+  from (values ('cuota_en_3_dias', 'helios_cuota_en_3_dias_v3'), ('cuota_manana', 'helios_cuota_vence_manana_v3'),
+               ('cuota_hoy', 'helios_cuota_vence_hoy_v3'), ('cuota_vencida_d1', 'helios_cuota_vencida_v2')) as v(key, nombre)
+ where t.key = v.key;
+```
+
+Después, `pago_movil_titular` puede salir de `helios_message_builtins`.

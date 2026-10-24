@@ -33,7 +33,8 @@ function comprueba(ok: boolean, titulo: string, detalle = '') {
   console.log(`${ok ? '  ok  ' : ' FALLA'}  ${titulo}${ok ? '' : ` — ${detalle}`}`)
 }
 
-const DATOS_DE_PAGO = '🏦 *Pago Móvil*\nBanco: BNC (0191)\nTeléfono: 0412-1714930\nRIF: J-50496786-6\nTitular: Quarto Latam'
+// Como lo manda `helios_payment_accounts_block`: sin el titular (2026-10-23).
+const DATOS_DE_PAGO = '🏦 *Pago Móvil*\nBanco: BNC (0191)\nTeléfono: 0412-1714930\nRIF: J-50496786-6'
 
 const base: ResumenDelPaciente = {
   nombre: 'María',
@@ -154,7 +155,8 @@ comprueba(
   'el orden del bloque: monto, cuentas, comprobante, nivel',
   pagar,
 )
-comprueba(pagar.includes('Titular: Quarto Latam'), 'las cuentas, cada dato en su línea', pagar)
+comprueba(pagar.includes('Teléfono: 0412-1714930\nRIF: J-50496786-6'), 'las cuentas, cada dato en su línea', pagar)
+comprueba(!pagar.includes('Titular'), 'sin el titular de la cuenta', pagar)
 comprueba(
   mensajePagar({ ...base, datos_de_pago: undefined }).includes('• Pago Móvil: Banesco'),
   'sin `datos_de_pago` (base vieja): las cuentas de antes',
