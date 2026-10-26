@@ -10,10 +10,21 @@ import { leerTablero } from './directorioDeMedicos'
 
 const CLAVE = ['admin-directorio-medicos'] as const
 
-/** Cada clínica con su tarjeta, su ficha y sus clics, y el total por día. */
+/** Cuánto tarda en verse un clic nuevo con la pantalla abierta. */
+export const RELECTURA_MS = 30_000
+
+/**
+ * Cada clínica con su tarjeta, su ficha y sus clics, y el total por día.
+ *
+ * Se relee sola cada 30 s con la pestaña delante, y en el acto al volver a
+ * ella: los clics llegan mientras se mira. Con la pestaña oculta no pregunta
+ * (el panel apaga por defecto el refresco al volver, ver `__root.tsx`).
+ */
 export function consultaDirectorio() {
   return queryOptions({
     queryKey: [...CLAVE, 'tablero'],
+    refetchInterval: RELECTURA_MS,
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       const { data, error } = await supabase.rpc('admin_directorio')
       if (error) throw error

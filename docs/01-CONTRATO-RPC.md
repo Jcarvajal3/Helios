@@ -999,7 +999,8 @@ pausarla desaparece sola y vuelve sola al reactivarla.
   30 clics en 24 h. Un `p_visitante` mal formado se guarda como null.
 - `admin_directorio() → jsonb`: `{ hoy, desde, totales: { clics_total,
   clics_7d, clics_30d, clics_30d_anteriores, visitantes_30d,
-  medicos_contactados_30d }, por_dia: [{ dia, clics, visitantes }] (30),
+  medicos_contactados_30d, clics_internos_30d, ultimo_interno }, por_dia:
+  [{ dia, clics, visitantes }] (30),
   medicos: [{ merchant_id, clinic_name, status, is_test, is_visible,
   blocked_reason, published_at, updated_at, listing: {name, specialty,
   specialty_key, address, city, whatsapp, social_network, social_user}, base:
@@ -1007,7 +1008,11 @@ pausarla desaparece sola y vuelve sola al reactivarla.
   clics: { total, d7, d30, visitantes_30d, ultimo, por_dia: [30 enteros] } }]
   }`. Todas las clínicas (de prueba incluidas), las visibles primero y luego
   por clics de 30 días. Días operativos de Caracas; 7 días = hoy y los seis
-  anteriores.
+  anteriores. `clics_internos_30d` y `ultimo_interno` (20261026230000) son
+  los clics del equipo y del personal de las clínicas, que no cuentan en las
+  demás cifras: la pestaña los dice aparte para que una prueba con la sesión
+  abierta no parezca un fallo. La pestaña se relee sola cada 30 s con la
+  pestaña delante y al volver a ella.
 - `admin_directorio_guardar(p_merchant_id uuid, p_cambios jsonb) → void`.
   `p_cambios` lleva solo lo que cambia: `visible` (boolean), `name`,
   `specialty`, `specialty_key`, `address`, `city`, `whatsapp`,
@@ -1026,7 +1031,8 @@ pausarla desaparece sola y vuelve sola al reactivarla.
 En la página, la búsqueda y la especialidad van en `?q=…&especialidad=…`
 (se comparte un filtro), el botón abre `wa.me` con el mensaje «Hola, {nombre}.
 Vi su perfil en el directorio de Helios y quisiera agendar una consulta.» y
-el clic se apunta sin esperar. La red social sale debajo de la dirección
+el clic se apunta sin esperar, con `fetch` y `keepalive` (en el teléfono la
+página se suspende al abrirse WhatsApp) y la sesión si la hay. La red social sale debajo de la dirección
 como «@usuario · Instagram», con el enlace que arma el panel
 (`enlaceDeRed`: instagram.com/…, tiktok.com/@…, linkedin.com/in/…; si el
 médico escribió un enlace, ese, siempre con https; con «Otra», solo un

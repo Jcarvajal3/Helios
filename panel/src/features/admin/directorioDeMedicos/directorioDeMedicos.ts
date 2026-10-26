@@ -73,6 +73,9 @@ export type TotalesDelDirectorio = {
   clics30dAnteriores: number
   visitantes30d: number
   medicosContactados30d: number
+  /** Los del equipo y del personal de las clínicas en 30 días: no cuentan arriba. */
+  clicsInternos30d: number
+  ultimoInterno: string | null
 }
 
 export type TableroDelDirectorio = {
@@ -114,6 +117,8 @@ export function leerTablero(raw: unknown): TableroDelDirectorio {
       clics30dAnteriores: numero(t.clics_30d_anteriores),
       visitantes30d: numero(t.visitantes_30d),
       medicosContactados30d: numero(t.medicos_contactados_30d),
+      clicsInternos30d: numero(t.clics_internos_30d),
+      ultimoInterno: textoONulo(t.ultimo_interno),
     },
     porDia: comoLista(r.por_dia).map((d) => {
       const f = comoFila(d)

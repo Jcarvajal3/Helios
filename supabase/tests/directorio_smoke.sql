@@ -268,6 +268,11 @@ begin
     raise exception '5. el clic del equipo no quedó marcado como del equipo';
   end if;
 
+  -- El del equipo no cuenta, pero la pestaña dice que lo hubo.
+  if (v_j -> 'totales' ->> 'clics_internos_30d')::int < 1 or v_j -> 'totales' ->> 'ultimo_interno' is null then
+    raise exception '5. la pestaña no dice cuántos clics del equipo dejó fuera: %', v_j -> 'totales';
+  end if;
+
   select e into v_c from jsonb_array_elements(v_j -> 'medicos') e where e ->> 'merchant_id' = v_m::text;
   if v_c is null then raise exception '5. el médico no sale en la pestaña'; end if;
   if (v_c -> 'clics' ->> 'd30')::int <> 3 or (v_c -> 'clics' ->> 'd7')::int <> 3

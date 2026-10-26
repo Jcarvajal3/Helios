@@ -13,6 +13,7 @@ import { BarChart } from '@/components/charts/barras'
 import { PageAction } from '@/components/layouts/PageAction'
 import {
   Button,
+  Callout,
   EmptyState,
   ErrorBox,
   FilterBar,
@@ -22,10 +23,17 @@ import {
   SkeletonTable,
   Stat,
   StatGrid,
+  formatDateTime,
   formatDayShort,
+  formatTime,
 } from '@/components/ui'
 import { SITIO_URL } from '@/config/sitio'
-import { consultaDirectorio, guardarTarjeta, refrescarDirectorio } from '@/features/admin/directorioDeMedicos/api'
+import {
+  RELECTURA_MS,
+  consultaDirectorio,
+  guardarTarjeta,
+  refrescarDirectorio,
+} from '@/features/admin/directorioDeMedicos/api'
 import {
   VALORES_QUE_SE_VE,
   cambioFrenteAlAnterior,
@@ -183,6 +191,21 @@ function DirectorioPage() {
               footnote="Una barra por día operativo (Caracas). Cada clic es un toque al botón «Escribir por WhatsApp» de una tarjeta; no se cuentan los del equipo ni los del personal de las clínicas."
               empty="Todavía nadie ha tocado un botón de WhatsApp del directorio."
             />
+
+            {t.clicsInternos30d > 0 && (
+              <Callout
+                tone="info"
+                titulo={`${t.clicsInternos30d} ${t.clicsInternos30d === 1 ? 'clic del equipo no cuenta' : 'clics del equipo no cuentan'} en estas cifras`}
+              >
+                Se hicieron con una sesión del superadmin o de una clínica abierta en el mismo navegador
+                {t.ultimoInterno ? ` (el último, ${formatDateTime(t.ultimoInterno)})` : ''}. Para probar como un
+                paciente, abre /directorio en una ventana privada o en otro teléfono.
+              </Callout>
+            )}
+
+            <p className="type-panel-caption text-on-surface-variant">
+              Se actualiza sola cada {RELECTURA_MS / 1000} s · leído a las {formatTime(new Date(tablero.dataUpdatedAt).toISOString())}
+            </p>
           </>
         )}
 
