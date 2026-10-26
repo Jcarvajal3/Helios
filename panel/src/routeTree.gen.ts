@@ -21,6 +21,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as MedicosRouteImport } from './routes/medicos'
 import { Route as OdontologiaEnCuotasRouteImport } from './routes/odontologia-en-cuotas'
 import { Route as PacientesRouteImport } from './routes/pacientes'
+import { Route as QrRouteImport } from './routes/qr'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SoporteRouteImport } from './routes/soporte'
@@ -114,6 +115,11 @@ const OdontologiaEnCuotasRoute = OdontologiaEnCuotasRouteImport.update({
 const PacientesRoute = PacientesRouteImport.update({
   id: '/pacientes',
   path: '/pacientes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const QrRoute = QrRouteImport.update({
+  id: '/qr',
+  path: '/qr',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
@@ -306,6 +312,7 @@ export interface FileRoutesByFullPath {
   '/medicos': typeof MedicosRoute
   '/odontologia-en-cuotas': typeof OdontologiaEnCuotasRoute
   '/pacientes': typeof PacientesRoute
+  '/qr': typeof QrRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/soporte': typeof SoporteRoute
@@ -353,6 +360,7 @@ export interface FileRoutesByTo {
   '/medicos': typeof MedicosRoute
   '/odontologia-en-cuotas': typeof OdontologiaEnCuotasRoute
   '/pacientes': typeof PacientesRoute
+  '/qr': typeof QrRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/soporte': typeof SoporteRoute
@@ -403,6 +411,7 @@ export interface FileRoutesById {
   '/medicos': typeof MedicosRoute
   '/odontologia-en-cuotas': typeof OdontologiaEnCuotasRoute
   '/pacientes': typeof PacientesRoute
+  '/qr': typeof QrRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/soporte': typeof SoporteRoute
@@ -453,6 +462,7 @@ export interface FileRouteTypes {
     | '/medicos'
     | '/odontologia-en-cuotas'
     | '/pacientes'
+    | '/qr'
     | '/robots.txt'
     | '/sitemap.xml'
     | '/soporte'
@@ -500,6 +510,7 @@ export interface FileRouteTypes {
     | '/medicos'
     | '/odontologia-en-cuotas'
     | '/pacientes'
+    | '/qr'
     | '/robots.txt'
     | '/sitemap.xml'
     | '/soporte'
@@ -549,6 +560,7 @@ export interface FileRouteTypes {
     | '/medicos'
     | '/odontologia-en-cuotas'
     | '/pacientes'
+    | '/qr'
     | '/robots.txt'
     | '/sitemap.xml'
     | '/soporte'
@@ -599,6 +611,7 @@ export interface RootRouteChildren {
   MedicosRoute: typeof MedicosRoute
   OdontologiaEnCuotasRoute: typeof OdontologiaEnCuotasRoute
   PacientesRoute: typeof PacientesRoute
+  QrRoute: typeof QrRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   SoporteRoute: typeof SoporteRoute
@@ -690,6 +703,13 @@ declare module '@tanstack/react-router' {
       path: '/pacientes'
       fullPath: '/pacientes'
       preLoaderRoute: typeof PacientesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/qr': {
+      id: '/qr'
+      path: '/qr'
+      fullPath: '/qr'
+      preLoaderRoute: typeof QrRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/robots.txt': {
@@ -1031,6 +1051,7 @@ const rootRouteChildren: RootRouteChildren = {
   MedicosRoute: MedicosRoute,
   OdontologiaEnCuotasRoute: OdontologiaEnCuotasRoute,
   PacientesRoute: PacientesRoute,
+  QrRoute: QrRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   SoporteRoute: SoporteRoute,
