@@ -86,7 +86,6 @@ export function FormularioDeAfiliacion({
   // «Cédula o RIF»: con J o G se pide además la cédula (`alta.ownerDocument`).
   const [documento, setDocumento] = useState('')
   const [cuentaPropia, setCuentaPropia] = useState(true)
-  const [quiereCapacitacion, setQuiereCapacitacion] = useState(false)
   const [capacitacion, setCapacitacion] =
     useState<Capacitacion>(SIN_CAPACITACION)
   // El campo que no se ve: si llega con algo, lo rellenó un robot.
@@ -99,14 +98,11 @@ export function FormularioDeAfiliacion({
   const tarjeta = useRef<HTMLDivElement>(null)
   const titulo = useRef<HTMLHeadingElement>(null)
 
-  const capacitacionPedida = quiereCapacitacion
-    ? capacitacion
-    : SIN_CAPACITACION
   const borrador = {
     alta,
     documento,
     cuentaPropia,
-    capacitacion: capacitacionPedida,
+    capacitacion: capacitacion,
   }
   const errores = erroresDelPaso(paso, borrador, hoy)
   const final = altaParaEnviar(borrador)
@@ -171,12 +167,11 @@ export function FormularioDeAfiliacion({
 
     // El freno final: el mismo que el alta del equipo y que la base.
     const motivo =
-      motivoDeAlta(final, 'portada') ??
-      motivoDeCapacitacion(capacitacionPedida, hoy)
+      motivoDeAlta(final, 'portada') ?? motivoDeCapacitacion(capacitacion, hoy)
     setMotivoFinal(motivo)
     if (motivo) return
 
-    const instante = capacitacionParaEnviar(capacitacionPedida)
+    const instante = capacitacionParaEnviar(capacitacion)
     envio.mutate(
       {
         ...datosDeAlta(final, 'portada'),
@@ -481,49 +476,55 @@ export function FormularioDeAfiliacion({
               placeholder="0134 0000 0000 0000 0000"
             />
 
+            {/* A la vista y no detrás de una casilla (Javier, 2026-10-26):
+                día y hora vacíos son «sin capacitación». */}
             <div className="flex flex-col gap-4 border-t border-portada-linea pt-6">
-              <Opcion
-                tipo="checkbox"
-                nombre="capacitacion"
-                marcada={quiereCapacitacion}
-                onChange={setQuiereCapacitacion}
-                titulo={
-                  <>
-                    Quiero que me enseñen a usar Helios en persona{' '}
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[0.97rem] font-medium leading-snug tracking-[-0.01em] text-portada-tinta">
+                    ¿Quieres que te enseñemos a usar Helios en persona?{' '}
                     <span className="font-normal text-portada-tinta-3">
                       (opcional)
                     </span>
-                  </>
-                }
-                nota="Elige el día y la hora que te queden mejor."
-              />
-              {quiereCapacitacion && (
-                <div className="grid gap-5 sm:grid-cols-2">
-                  <CampoDeTexto
-                    id={idDe('capacitacionDia')}
-                    etiqueta="Día"
-                    type="date"
-                    min={sumarDias(hoy, 1)}
-                    max={sumarDias(hoy, CAPACITACION_HASTA_DIAS)}
-                    value={capacitacion.dia}
-                    onChange={(dia) => setCapacitacion((c) => ({ ...c, dia }))}
-                    alSalir={tocar('capacitacionDia')}
-                    error={error('capacitacionDia')}
-                  />
-                  <CampoDeTexto
-                    id={idDe('capacitacionHora')}
-                    etiqueta="Hora"
-                    type="time"
-                    step={900}
-                    value={capacitacion.hora}
-                    onChange={(hora) =>
-                      setCapacitacion((c) => ({ ...c, hora }))
-                    }
-                    alSalir={tocar('capacitacionHora')}
-                    error={error('capacitacionHora')}
-                  />
+                  </p>
+                  <p className="mt-1 text-[0.88rem] leading-snug text-portada-tinta-2">
+                    Elige el día y la hora que te queden mejor. Si no, déjalo en
+                    blanco.
+                  </p>
                 </div>
-              )}
+                {(capacitacion.dia || capacitacion.hora) && (
+                  <button
+                    type="button"
+                    onClick={() => setCapacitacion(SIN_CAPACITACION)}
+                    className="shrink-0 text-[0.88rem] font-medium text-portada-azul underline-offset-4 hover:underline"
+                  >
+                    Borrar
+                  </button>
+                )}
+              </div>
+              <div className="grid gap-5 sm:grid-cols-2">
+                <CampoDeTexto
+                  id={idDe('capacitacionDia')}
+                  etiqueta="Día"
+                  type="date"
+                  min={sumarDias(hoy, 1)}
+                  max={sumarDias(hoy, CAPACITACION_HASTA_DIAS)}
+                  value={capacitacion.dia}
+                  onChange={(dia) => setCapacitacion((c) => ({ ...c, dia }))}
+                  alSalir={tocar('capacitacionDia')}
+                  error={error('capacitacionDia')}
+                />
+                <CampoDeTexto
+                  id={idDe('capacitacionHora')}
+                  etiqueta="Hora"
+                  type="time"
+                  step={900}
+                  value={capacitacion.hora}
+                  onChange={(hora) => setCapacitacion((c) => ({ ...c, hora }))}
+                  alSalir={tocar('capacitacionHora')}
+                  error={error('capacitacionHora')}
+                />
+              </div>
             </div>
           </>
         )}

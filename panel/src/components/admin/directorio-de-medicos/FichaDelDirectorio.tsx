@@ -19,6 +19,8 @@ import {
   formatDayShort,
   formatPhone,
 } from '@/components/ui'
+import { REDES_SOCIALES } from '@/features/admin/clinicas/clinicas'
+import type { RedSocial } from '@/features/admin/clinicas/clinicas'
 import { guardarTarjeta, refrescarDirectorio } from '@/features/admin/directorioDeMedicos/api'
 import {
   ROTULO_BLOQUEO,
@@ -33,6 +35,12 @@ import { ESPECIALIDADES, nombreDeEspecialidad } from '@/features/directorio/espe
 import { describeError } from '@/lib/supabase'
 
 const cuenta = (n: number) => String(Math.round(n))
+
+const OPCIONES_RED = REDES_SOCIALES.map((r) => ({ value: r.value, label: r.label }))
+
+function nombreDeRed(red: RedSocial | null): string {
+  return REDES_SOCIALES.find((r) => r.value === red)?.label ?? 'sin red'
+}
 
 /**
  * La ficha de un médico en el directorio: si sale, los datos de su tarjeta
@@ -173,6 +181,29 @@ export function FichaDelDirectorio({
                 placeholder="0414-1234567"
                 error={!!borrador.whatsapp.trim() && motivo !== null && motivo.startsWith('El WhatsApp')}
                 hint={deLaFicha(m.ficha.whatsapp ? formatPhone(m.ficha.whatsapp) : null)}
+              />
+            </div>
+            <div className="grid gap-3 sm:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+              <Select
+                id="ficha-directorio-red"
+                label="Red social"
+                value={borrador.red}
+                options={OPCIONES_RED}
+                placeholder="Sin red social"
+                onChange={(red) => cambiar({ red })}
+              />
+              <Input
+                id="ficha-directorio-usuario-red"
+                label="Usuario o enlace"
+                value={borrador.usuarioDeRed}
+                onChange={(usuarioDeRed) => cambiar({ usuarioDeRed })}
+                placeholder="@draperez"
+                autoComplete="off"
+                hint={
+                  m.ficha.usuarioDeRed
+                    ? deLaFicha(`${m.ficha.usuarioDeRed} (${nombreDeRed(m.ficha.red)})`)
+                    : 'La ficha no tiene ninguna.'
+                }
               />
             </div>
 

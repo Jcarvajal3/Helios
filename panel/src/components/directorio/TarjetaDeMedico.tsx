@@ -1,7 +1,12 @@
-import { MapPin } from 'lucide-react'
+import { AtSign, MapPin } from 'lucide-react'
 
 import { IconoDeEspecialidad } from './IconoDeEspecialidad'
-import { enlaceDeWhatsApp, especialidadDeTarjeta, lugarDeTarjeta } from '@/features/directorio/directorio'
+import {
+  enlaceDeRed,
+  enlaceDeWhatsApp,
+  especialidadDeTarjeta,
+  lugarDeTarjeta,
+} from '@/features/directorio/directorio'
 import type { MedicoDelDirectorio } from '@/features/directorio/directorio'
 
 /** El globo de WhatsApp, para que el botón se reconozca sin leerlo. */
@@ -15,7 +20,8 @@ export function LogoWhatsApp({ className = 'size-4' }: { className?: string }) {
 
 /**
  * La tarjeta de un médico del directorio: el icono de su especialidad, su
- * nombre, su especialidad, dónde atiende y el botón para escribirle.
+ * nombre, su especialidad, dónde atiende, su red social (si la tiene) y el
+ * botón para escribirle.
  *
  * Es la misma en `/directorio` y en la vista previa del superadmin, así que
  * lo que el equipo ve al editar es lo que verá el paciente. `onContacto`
@@ -30,6 +36,7 @@ export function TarjetaDeMedico({
 }) {
   const especialidad = especialidadDeTarjeta(medico)
   const lugar = lugarDeTarjeta(medico)
+  const red = enlaceDeRed(medico)
 
   return (
     <article className="directorio-tarjeta group relative flex h-full flex-col rounded-[28px] border border-portada-linea bg-white p-6 sm:p-7">
@@ -47,11 +54,30 @@ export function TarjetaDeMedico({
         </div>
       </div>
 
-      {lugar && (
-        <p className="mt-5 flex gap-2.5 border-t border-portada-linea pt-5 text-[0.93rem] leading-relaxed text-portada-tinta-2">
-          <MapPin aria-hidden className="mt-[0.2em] size-4 shrink-0 text-portada-tinta-3" />
-          <span className="[overflow-wrap:anywhere]">{lugar}</span>
-        </p>
+      {(lugar || red) && (
+        <div className="mt-5 flex flex-col gap-2.5 border-t border-portada-linea pt-5 text-[0.93rem] leading-relaxed text-portada-tinta-2">
+          {lugar && (
+            <p className="flex gap-2.5">
+              <MapPin aria-hidden className="mt-[0.2em] size-4 shrink-0 text-portada-tinta-3" />
+              <span className="[overflow-wrap:anywhere]">{lugar}</span>
+            </p>
+          )}
+          {red && (
+            <p className="flex gap-2.5">
+              <AtSign aria-hidden className="mt-[0.2em] size-4 shrink-0 text-portada-tinta-3" />
+              <a
+                href={red.url}
+                target="_blank"
+                rel="noopener noreferrer nofollow"
+                aria-label={`${red.texto} en ${red.red}, abre en otra pestaña`}
+                className="min-w-0 [overflow-wrap:anywhere] underline-offset-4 hover:text-portada-azul hover:underline"
+              >
+                <span className="font-medium text-portada-tinta">{red.texto}</span>
+                <span className="text-portada-tinta-3"> · {red.red}</span>
+              </a>
+            </p>
+          )}
+        </div>
       )}
 
       <div className="mt-auto pt-6">

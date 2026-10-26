@@ -168,6 +168,19 @@ function Cabecera({
   total: number
 }) {
   const campo = useRef<HTMLInputElement>(null)
+  const chips = useRef<HTMLUListElement>(null)
+
+  // Quien llega con `?especialidad=` (un enlace compartido) ve su chip
+  // marcado aunque quede fuera de la fila en el teléfono.
+  useEffect(() => {
+    const fila = chips.current
+    const activo = fila?.querySelector<HTMLElement>('[aria-pressed="true"]')
+    if (!fila || !activo || fila.scrollWidth <= fila.clientWidth) return
+    const a = activo.getBoundingClientRect()
+    const f = fila.getBoundingClientRect()
+    if (a.left >= f.left && a.right <= f.right) return
+    fila.scrollTo({ left: fila.scrollLeft + a.left - f.left - 20, behavior: 'smooth' })
+  }, [elegida])
 
   return (
     <section className="relative isolate overflow-hidden bg-white">
@@ -199,8 +212,8 @@ function Cabecera({
         <div className="mt-10 max-w-[52rem]">
           <Rotulo>Directorio de médicos</Rotulo>
           <h1 className="portada-titular mt-6 text-portada-tinta">
-            Encuentra a tu médico,{' '}
-            <em className="portada-serif portada-degradado pr-[0.06em]">paga en dos cuotas.</em>
+            Encuentra a tu médico{' '}
+            <em className="portada-serif portada-degradado pr-[0.06em]">con 0% de inicial.</em>
           </h1>
           <p className="portada-entrada mt-7 max-w-[54ch] text-portada-tinta-2">
             Médicos, odontólogos y especialistas que aceptan Helios. Escríbeles por WhatsApp,
@@ -255,18 +268,21 @@ function Cabecera({
 
         {especialidades.length > 1 && (
           <div className="-mx-5 mt-6 sm:-mx-8 lg:mx-0">
+            {/* En el teléfono y la tableta, una fila que se desliza con el
+                dedo (y encaja en cada chip); desde 1024 px, envuelta. */}
             <ul
+              ref={chips}
               aria-label="Especialidades"
-              className="directorio-chips flex gap-2 overflow-x-auto px-5 pb-1 sm:px-8 lg:flex-wrap lg:overflow-visible lg:px-0"
+              className="directorio-chips flex snap-x snap-proximity scroll-px-5 gap-2 overflow-x-auto overscroll-x-contain px-5 pb-1 sm:scroll-px-8 sm:px-8 lg:flex-wrap lg:overflow-visible lg:px-0"
             >
-              <li className="shrink-0">
+              <li className="shrink-0 snap-start">
                 <ChipDeEspecialidad activa={!elegida} onClick={() => onEspecialidad(undefined)}>
                   Todas
                   <Cuenta activa={!elegida}>{total}</Cuenta>
                 </ChipDeEspecialidad>
               </li>
               {especialidades.map((e) => (
-                <li key={e.clave} className="shrink-0">
+                <li key={e.clave} className="shrink-0 snap-start">
                   <ChipDeEspecialidad
                     activa={elegida === e.clave}
                     onClick={() => onEspecialidad(elegida === e.clave ? undefined : e.clave)}

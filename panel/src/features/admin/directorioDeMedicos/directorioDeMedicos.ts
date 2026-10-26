@@ -1,6 +1,7 @@
 import { formatPhone } from '@/components/ui'
+import type { RedSocial } from '@/features/admin/clinicas/clinicas'
 import type { MedicoDelDirectorio } from '@/features/directorio/directorio'
-import { normalizar } from '@/features/directorio/directorio'
+import { leerRed, normalizar } from '@/features/directorio/directorio'
 import { leerEspecialidad, nombreDeEspecialidad } from '@/features/directorio/especialidades'
 import type { ClaveDeEspecialidad } from '@/features/directorio/especialidades'
 import { unoDe } from '@/lib/busqueda'
@@ -24,6 +25,8 @@ export type DatosDeTarjeta = {
   ciudad: string | null
   /** E.164, o `null` si no hay. */
   whatsapp: string | null
+  red: RedSocial | null
+  usuarioDeRed: string | null
 }
 
 /** Por qué una clínica no se puede publicar. */
@@ -92,6 +95,8 @@ function leerDatos(raw: unknown): DatosDeTarjeta {
     direccion: textoONulo(r.address),
     ciudad: textoONulo(r.city),
     whatsapp: textoONulo(r.whatsapp),
+    red: leerRed(r.social_network),
+    usuarioDeRed: textoONulo(r.social_user),
   }
 }
 
@@ -150,6 +155,8 @@ export function comoTarjetaPublica(id: string, d: DatosDeTarjeta): MedicoDelDire
     direccion: d.direccion?.trim() || null,
     ciudad: d.ciudad?.trim() || null,
     whatsapp: d.whatsapp ?? '',
+    red: d.red,
+    usuarioDeRed: d.usuarioDeRed?.trim() || null,
   }
 }
 
@@ -183,6 +190,7 @@ export function filtrarMedicos(
         m.tarjeta.ciudad,
         m.tarjeta.whatsapp,
         m.tarjeta.whatsapp ? formatPhone(m.tarjeta.whatsapp) : null,
+        m.tarjeta.usuarioDeRed,
       ]
         .filter(Boolean)
         .join(' '),
@@ -201,6 +209,9 @@ export type BorradorDeTarjeta = {
   direccion: string
   ciudad: string
   whatsapp: string
+  /** `''` con el usuario vacío: vuelve la red de la ficha. */
+  red: RedSocial | ''
+  usuarioDeRed: string
 }
 
 export function borradorDe(d: DatosDeTarjeta): BorradorDeTarjeta {
@@ -211,6 +222,8 @@ export function borradorDe(d: DatosDeTarjeta): BorradorDeTarjeta {
     direccion: d.direccion ?? '',
     ciudad: d.ciudad ?? '',
     whatsapp: d.whatsapp ? formatPhone(d.whatsapp) : '',
+    red: d.red ?? '',
+    usuarioDeRed: d.usuarioDeRed ?? '',
   }
 }
 
@@ -235,6 +248,8 @@ export function datosDelBorrador(b: BorradorDeTarjeta, ficha: DatosDeTarjeta): D
     direccion: limpio(b.direccion) || ficha.direccion,
     ciudad: limpio(b.ciudad) || ficha.ciudad,
     whatsapp: b.whatsapp.trim() ? whatsappE164(b.whatsapp) : ficha.whatsapp,
+    red: b.red || ficha.red,
+    usuarioDeRed: limpio(b.usuarioDeRed) || ficha.usuarioDeRed,
   }
 }
 
@@ -246,6 +261,8 @@ export function motivoParaNoGuardar(b: BorradorDeTarjeta): string | null {
   if (b.direccion.trim().length > 300) return 'La dirección no puede pasar de 300 caracteres.'
   if (b.ciudad.trim().length > 80) return 'La ciudad no puede pasar de 80 caracteres.'
   if (b.whatsapp.trim() && !whatsappE164(b.whatsapp)) return 'El WhatsApp debe ser un número venezolano, como 0414-1234567.'
+  if (b.usuarioDeRed.trim().length > 150) return 'El usuario de la red social no puede pasar de 150 caracteres.'
+  if (b.usuarioDeRed.trim() && !b.red) return 'Elige qué red social es.'
   return null
 }
 
@@ -267,6 +284,8 @@ export function cambiosDelBorrador(
   if (limpio(b.ciudad) !== (actual.ciudad ?? '')) cambios.city = limpio(b.ciudad)
   const wa = b.whatsapp.trim() ? (whatsappE164(b.whatsapp) ?? b.whatsapp.trim()) : ''
   if (wa !== (actual.whatsapp ?? '')) cambios.whatsapp = wa
+  if (b.red !== (actual.red ?? '')) cambios.social_network = b.red
+  if (limpio(b.usuarioDeRed) !== (actual.usuarioDeRed ?? '')) cambios.social_user = limpio(b.usuarioDeRed)
   return Object.keys(cambios).length > 0 ? cambios : null
 }
 

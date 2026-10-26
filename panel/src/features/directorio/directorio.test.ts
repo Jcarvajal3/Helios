@@ -10,8 +10,10 @@
  * el de la ficha).
  */
 import {
+  enlaceDeRed,
   enlaceDeWhatsApp,
   especialidadDeTarjeta,
+  leerRed,
   especialidadesPresentes,
   filtrarDirectorio,
   leerDirectorio,
@@ -89,6 +91,32 @@ comprueba(
   'el mensaje dice de dónde viene el paciente',
   enlace,
 )
+
+console.log('── La red social ─────────────────────────────────────────────')
+const red = (r: string | null, u: string | null) =>
+  enlaceDeRed({ red: leerRed(r), usuarioDeRed: u })
+comprueba(red(null, null) === null, 'sin red, nada')
+comprueba(red('instagram', '  ') === null, 'sin usuario, nada')
+comprueba(
+  JSON.stringify(red('instagram', '@draperez')) ===
+    JSON.stringify({ url: 'https://www.instagram.com/draperez', texto: '@draperez', red: 'Instagram' }),
+  'Instagram con @',
+  red('instagram', '@draperez'),
+)
+comprueba(red('tiktok', 'dra.perez')?.url === 'https://www.tiktok.com/@dra.perez', 'TikTok lleva la @ en la ruta')
+comprueba(red('x', 'draperez')?.red === 'X', 'X sin «(Twitter)»', red('x', 'draperez'))
+comprueba(red('linkedin', 'ana-perez')?.url === 'https://www.linkedin.com/in/ana-perez', 'LinkedIn va a /in/')
+comprueba(
+  red('instagram', 'instagram.com/draperez/')?.url === 'https://instagram.com/draperez/' &&
+    red('instagram', 'instagram.com/draperez/')?.texto === '@draperez',
+  'un enlace sin https se completa y se lee como usuario',
+  red('instagram', 'instagram.com/draperez/'),
+)
+comprueba(red('otra', 'https://linktr.ee/draperez')?.url === 'https://linktr.ee/draperez', '«Otra» con enlace, sí')
+comprueba(red('otra', 'draperez') === null, '«Otra» sin enlace no se sabe adónde va')
+comprueba(red('instagram', 'javascript:alert(1)') === null, 'nada que no sea https llega al enlace')
+comprueba(red('instagram', 'Dra Ana Pérez') === null, 'un nombre con espacios no es un usuario')
+comprueba(red('mastodon', 'draperez') === null, 'una red que el panel no conoce, nada')
 
 console.log('── Buscar y filtrar ──────────────────────────────────────────')
 const ids = (l: Array<{ id: string }>) => l.map((m) => m.id).join(',')
@@ -180,6 +208,16 @@ comprueba(cambiosDelBorrador({ ...b, whatsapp: '0414 123 4567' }, m1.tarjeta) ==
 comprueba(motivoParaNoGuardar({ ...b, whatsapp: '0414' }) !== null, 'un WhatsApp malo no se guarda')
 comprueba(motivoParaNoGuardar({ ...b, nombre: 'Dr' }) !== null, 'un nombre de dos letras no se guarda')
 comprueba(motivoParaNoGuardar(b) === null, 'el borrador de partida se puede guardar')
+comprueba(
+  JSON.stringify(cambiosDelBorrador({ ...b, red: 'instagram', usuarioDeRed: ' @draperez ' }, m1.tarjeta)) ===
+    JSON.stringify({ social_network: 'instagram', social_user: '@draperez' }),
+  'la red social va como red y usuario',
+)
+comprueba(motivoParaNoGuardar({ ...b, usuarioDeRed: '@draperez' }) !== null, 'un usuario sin red no se guarda')
+comprueba(
+  datosDelBorrador({ ...b, red: 'tiktok', usuarioDeRed: 'draperez' }, m1.ficha).red === 'tiktok',
+  'la vista previa enseña la red del borrador',
+)
 
 console.log(fallos === 0 ? '\nTodo bien.' : `\n${fallos} fallo(s).`)
 if (fallos > 0) process.exit(1)

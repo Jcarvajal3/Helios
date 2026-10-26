@@ -49,7 +49,8 @@ begin
 
   update public.merchants
      set owner_name = 'Ana Pérez', doctor_title = 'Dra.', specialty = 'TRAUMATOLOGIA Y ORTOPEDIA,',
-         address = 'Av. Lara, Torre Médica', city = 'Barquisimeto', phone = '0414-999.00.10'
+         address = 'Av. Lara, Torre Médica', city = 'Barquisimeto', phone = '0414-999.00.10',
+         social_network = 'instagram', social_user = '@draanaperez'
    where id = v_m;
   update public.merchants set phone = null, owner_name = 'Luis Gómez', doctor_title = 'Dr.' where id = v_otra;
   update public.merchants set is_test = true, phone = '+584149990011' where id = v_prueba;
@@ -98,7 +99,8 @@ begin
   if v_fila.merchant_id is null then raise exception '2. el médico encendido no sale'; end if;
   if v_fila.name <> 'Dra. Ana Pérez' or v_fila.specialty <> 'Traumatologia y ortopedia'
      or v_fila.specialty_key <> 'traumatologia' or v_fila.whatsapp <> '+584149990010'
-     or v_fila.address <> 'Av. Lara, Torre Médica' or v_fila.city <> 'Barquisimeto' then
+     or v_fila.address <> 'Av. Lara, Torre Médica' or v_fila.city <> 'Barquisimeto'
+     or v_fila.social_network <> 'instagram' or v_fila.social_user <> '@draanaperez' then
     raise exception '2. la tarjeta no trae los datos de la ficha: %', row_to_json(v_fila);
   end if;
   if (select published_at from public.directory_listings where merchant_id = v_m) is null then
@@ -161,6 +163,21 @@ begin
   end;
   if not v_fallo then raise exception '3. publicó una clínica sin WhatsApp'; end if;
 
+  v_fallo := false;
+  begin
+    perform public.admin_directorio_guardar(v_m, '{"social_network": "myspace"}');
+  exception when sqlstate '22023' then v_fallo := true;
+  end;
+  if not v_fallo then raise exception '3. aceptó una red social que no existe'; end if;
+
+  -- Luis no tiene red en la ficha: un usuario sin red no vale.
+  v_fallo := false;
+  begin
+    perform public.admin_directorio_guardar(v_otra, '{"social_user": "@drluis"}');
+  exception when sqlstate '22023' then v_fallo := true;
+  end;
+  if not v_fallo then raise exception '3. aceptó un usuario de red social sin red'; end if;
+
   -- Con el WhatsApp que faltaba, en la misma llamada, sí.
   perform public.admin_directorio_guardar(v_otra, '{"visible": true, "whatsapp": "0424 555 66 77"}');
   reset role;
@@ -192,6 +209,26 @@ begin
   select display_name, specialty_key into v_fila from public.directory_listings where merchant_id = v_m;
   if v_fila.display_name is not null or v_fila.specialty_key is not null then
     raise exception '4. igual a la ficha o vacío debía volver a la ficha: %', row_to_json(v_fila);
+  end if;
+
+  -- La red: propia manda; vacía, vuelve la de la ficha.
+  set local role authenticated;
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', v_admin::text, 'role', 'authenticated', 'aal', 'aal2')::text, true);
+  perform public.admin_directorio_guardar(v_m, '{"social_network": "TikTok", "social_user": " @ana.perez "}');
+  reset role;
+  select social_network, social_user into v_fila from public.directory_listings where merchant_id = v_m;
+  if v_fila.social_network <> 'tiktok' or v_fila.social_user <> '@ana.perez' then
+    raise exception '4. la red propia no se guardó limpia: %', row_to_json(v_fila);
+  end if;
+  set local role authenticated;
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', v_admin::text, 'role', 'authenticated', 'aal', 'aal2')::text, true);
+  perform public.admin_directorio_guardar(v_m, '{"social_network": "", "social_user": ""}');
+  reset role;
+  select social_network, social_user into v_fila from public.directory_listings where merchant_id = v_m;
+  if v_fila.social_network is not null or v_fila.social_user is not null then
+    raise exception '4. la red vacía debía volver a la de la ficha: %', row_to_json(v_fila);
   end if;
 
   -- =========================================================================
@@ -283,7 +320,7 @@ begin
 
   select count(*) into v_n from audit.admin_actions
    where action = 'directory.listing.update' and target_id = v_m and actor = v_admin;
-  if v_n <> 4 then raise exception '6. debía haber 4 líneas en la bitácora, hay %', v_n; end if;
+  if v_n <> 6 then raise exception '6. debía haber 6 líneas en la bitácora, hay %', v_n; end if;
   if not exists (
     select 1 from audit.admin_actions
      where action = 'directory.listing.update' and target_id = v_m

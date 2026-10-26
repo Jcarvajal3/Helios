@@ -965,7 +965,10 @@ Tablas (sin RLS de lectura: solo por estas RPC):
   (`helios_doctor_name`), `specialty` (`helios_directorio_texto(m.specialty)`:
   sin coma final, mayúscula inicial), `specialty_key`
   (`helios_directorio_especialidad_sugerida(m.specialty, m.category)`),
-  `address`, `city`, `whatsapp` (`helios_normalize_ve_phone(m.phone)`, E.164).
+  `address`, `city`, `whatsapp` (`helios_normalize_ve_phone(m.phone)`, E.164)
+  y, desde 20261026210000, `social_network` (de `helios_redes_sociales()`) y
+  `social_user` (`merchants.social_network` y `social_user`; en la ficha van
+  juntos o ninguno).
 - `directory_contact_clicks`: cada toque al botón de WhatsApp. `visitor_id`
   (aleatorio del navegador, `^[A-Za-z0-9-]{8,64}$` o null), `origin`
   (`publico | equipo | clinica`: quien llama está en `platform_admins` o es
@@ -986,7 +989,8 @@ sin_whatsapp`. Sale en la página si `is_visible` y se puede publicar: al
 pausarla desaparece sola y vuelve sola al reactivarla.
 
 - `helios_directorio() → table(merchant_id, name, specialty, specialty_key,
-  address, city, whatsapp)` — **anon y authenticated**. Las publicadas, por el
+  address, city, whatsapp, social_network, social_user)` — **anon y
+  authenticated**. Las publicadas, por el
   nombre sin el título.
 - `helios_directorio_contacto(p_merchant_id uuid, p_visitante text default
   null) → boolean` — **anon y authenticated**. Apunta un clic y dice si contó.
@@ -998,14 +1002,17 @@ pausarla desaparece sola y vuelve sola al reactivarla.
   medicos_contactados_30d }, por_dia: [{ dia, clics, visitantes }] (30),
   medicos: [{ merchant_id, clinic_name, status, is_test, is_visible,
   blocked_reason, published_at, updated_at, listing: {name, specialty,
-  specialty_key, address, city, whatsapp}, base: {…lo mismo, de la ficha},
+  specialty_key, address, city, whatsapp, social_network, social_user}, base:
+  {…lo mismo, de la ficha},
   clics: { total, d7, d30, visitantes_30d, ultimo, por_dia: [30 enteros] } }]
   }`. Todas las clínicas (de prueba incluidas), las visibles primero y luego
   por clics de 30 días. Días operativos de Caracas; 7 días = hoy y los seis
   anteriores.
 - `admin_directorio_guardar(p_merchant_id uuid, p_cambios jsonb) → void`.
   `p_cambios` lleva solo lo que cambia: `visible` (boolean), `name`,
-  `specialty`, `specialty_key`, `address`, `city`, `whatsapp`. Un dato vacío
+  `specialty`, `specialty_key`, `address`, `city`, `whatsapp`,
+  `social_network`, `social_user` (hasta 150; con usuario tiene que haber red,
+  la propia o la de la ficha: si no, `22023`). Un dato vacío
   o igual al de la ficha se guarda como null (vuelve el de la ficha). El
   WhatsApp se normaliza a E.164. `P0002` si la clínica no existe; `22023` con
   un dato desconocido, `visible` no booleano, una clave que no está en la
@@ -1019,7 +1026,11 @@ pausarla desaparece sola y vuelve sola al reactivarla.
 En la página, la búsqueda y la especialidad van en `?q=…&especialidad=…`
 (se comparte un filtro), el botón abre `wa.me` con el mensaje «Hola, {nombre}.
 Vi su perfil en el directorio de Helios y quisiera agendar una consulta.» y
-el clic se apunta sin esperar. Suite: `supabase/tests/directorio_smoke.sql`.
+el clic se apunta sin esperar. La red social sale debajo de la dirección
+como «@usuario · Instagram», con el enlace que arma el panel
+(`enlaceDeRed`: instagram.com/…, tiktok.com/@…, linkedin.com/in/…; si el
+médico escribió un enlace, ese, siempre con https; con «Otra», solo un
+enlace). Suite: `supabase/tests/directorio_smoke.sql`.
 
 ---
 

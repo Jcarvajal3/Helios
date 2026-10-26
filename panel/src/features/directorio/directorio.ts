@@ -1,4 +1,6 @@
 import { whatsappNumber } from '@/components/ui'
+import { REDES_SOCIALES } from '@/features/admin/clinicas/clinicas'
+import type { RedSocial } from '@/features/admin/clinicas/clinicas'
 import { comoFila, comoLista, texto, textoONulo } from '@/lib/json'
 import { leerEspecialidad, nombreDeEspecialidad } from './especialidades'
 import type { ClaveDeEspecialidad } from './especialidades'
@@ -25,6 +27,9 @@ export type MedicoDelDirectorio = {
   ciudad: string | null
   /** E.164: '+584141234567'. */
   whatsapp: string
+  /** Su red social, si la tiene: la red y el usuario o enlace, tal cual. */
+  red: RedSocial | null
+  usuarioDeRed: string | null
 }
 
 /** `helios_directorio()`. Una fila sin WhatsApp no tiene botón: no entra. */
@@ -40,6 +45,8 @@ export function leerDirectorio(raw: unknown): MedicoDelDirectorio[] {
         direccion: textoONulo(r.address),
         ciudad: textoONulo(r.city),
         whatsapp: texto(r.whatsapp),
+        red: leerRed(r.social_network),
+        usuarioDeRed: textoONulo(r.social_user),
       }
     })
     .filter((m) => m.id !== '' && m.nombre !== '' && m.whatsapp !== '')
@@ -61,6 +68,64 @@ export function lugarDeTarjeta(m: Pick<MedicoDelDirectorio, 'direccion' | 'ciuda
   const { direccion, ciudad } = m
   if (direccion && ciudad && normalizar(direccion).includes(normalizar(ciudad))) return direccion
   return [direccion, ciudad].filter(Boolean).join(' · ') || null
+}
+
+// ── La red social ──────────────────────────────────────────────────────────
+
+/** La red tal cual llega de la base; una que el panel no conoce, ninguna. */
+export function leerRed(v: unknown): RedSocial | null {
+  return REDES_SOCIALES.find((r) => r.value === v)?.value ?? null
+}
+
+/** Cómo se llega al perfil a partir del usuario, en cada red. */
+const PERFIL: Record<Exclude<RedSocial, 'otra'>, (usuario: string) => string> = {
+  instagram: (u) => `https://www.instagram.com/${u}`,
+  tiktok: (u) => `https://www.tiktok.com/@${u}`,
+  facebook: (u) => `https://www.facebook.com/${u}`,
+  x: (u) => `https://x.com/${u}`,
+  linkedin: (u) => `https://www.linkedin.com/in/${u}`,
+  youtube: (u) => `https://www.youtube.com/@${u}`,
+}
+
+export type EnlaceDeRed = {
+  /** Siempre https: un `javascript:` escrito en el alta nunca llega a un href. */
+  url: string
+  /** Lo que se lee: «@draperez». */
+  texto: string
+  /** «Instagram». */
+  red: string
+}
+
+/**
+ * El enlace a la red social del médico, o `null` si no tiene o no se puede
+ * armar. El médico escribe lo que quiere: «@draperez», «draperez» o el enlace
+ * entero («instagram.com/draperez»). Con «Otra», solo vale un enlace.
+ */
+export function enlaceDeRed(m: Pick<MedicoDelDirectorio, 'red' | 'usuarioDeRed'>): EnlaceDeRed | null {
+  const { red } = m
+  const escrito = m.usuarioDeRed?.trim() ?? ''
+  if (!red || !escrito) return null
+  const nombreDeRed = red === 'otra' ? 'Red social' : (REDES_SOCIALES.find((r) => r.value === red)?.label ?? red)
+  const corto = nombreDeRed.replace(/\s*\(.*\)$/, '')
+
+  // Un enlace: se usa tal cual, con https delante si no lo trae.
+  const comoEnlace = escrito.replace(/^https?:\/\//i, '')
+  if (/^[\w-]+(\.[\w-]+)+\/\S*$/.test(comoEnlace) && !/\s/.test(comoEnlace)) {
+    let url: URL
+    try {
+      url = new URL(`https://${comoEnlace}`)
+    } catch {
+      return null
+    }
+    const ruta = url.pathname.replace(/\/+$/, '').split('/').filter(Boolean).at(-1)
+    const leido = ruta ? `@${ruta.replace(/^@/, '')}` : url.hostname.replace(/^www\./, '')
+    return { url: url.toString(), texto: leido, red: corto }
+  }
+
+  // Un usuario: letras, números, puntos, guiones y guiones bajos.
+  const usuario = escrito.replace(/^@/, '')
+  if (red === 'otra' || !/^[\w.-]{1,100}$/.test(usuario)) return null
+  return { url: PERFIL[red](usuario), texto: `@${usuario}`, red: corto }
 }
 
 // ── El botón de WhatsApp ───────────────────────────────────────────────────
@@ -92,7 +157,7 @@ export function normalizar(t: string): string {
 
 function textoDeBusqueda(m: MedicoDelDirectorio): string {
   return normalizar(
-    [m.nombre, m.especialidad, nombreDeEspecialidad(m.clave), m.direccion, m.ciudad].filter(Boolean).join(' '),
+    [m.nombre, m.especialidad, nombreDeEspecialidad(m.clave), m.direccion, m.ciudad, m.usuarioDeRed].filter(Boolean).join(' '),
   )
 }
 
