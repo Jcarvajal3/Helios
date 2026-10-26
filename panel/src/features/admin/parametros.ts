@@ -40,6 +40,8 @@ export type ClaveParametro =
   | 'staff_commission_usd'
   | 'eligibility_lookups_per_staff_day'
   | 'payment_four_eyes'
+  | 'payment_margin_under_ves'
+  | 'payment_margin_over_ves'
   | 'receipt_resends_per_day'
   | 'alert_charges_per_merchant_day'
   | 'alert_new_patients_per_merchant_day'

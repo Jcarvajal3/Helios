@@ -32,6 +32,8 @@ export const GRUPO_POR_CLAVE: Readonly<Record<string, IdGrupoEnPantalla | undefi
   staff_commission_usd: 'financiamiento',
   receipt_resends_per_day: 'financiamiento',
   payment_four_eyes: 'control',
+  payment_margin_under_ves: 'control',
+  payment_margin_over_ves: 'control',
   eligibility_lookups_per_staff_day: 'control',
   alert_charges_per_merchant_day: 'alertas',
   alert_new_patients_per_merchant_day: 'alertas',
@@ -190,6 +192,10 @@ export const QUE_DECIDE: Record<string, string | undefined> = {
   payment_four_eyes:
     'Encendido (1), quien registra un pago no puede aprobarlo: lo aprueba otra persona del equipo o un super admin. Recomendado en cuanto el equipo tenga más de una persona.',
   receipt_resends_per_day: 'Cuántas veces al día puede la clínica reenviar el comprobante de un mismo financiamiento.',
+  payment_margin_under_ves:
+    'Lo que puede faltarle a un pago, frente a lo cotizado, para darlo por bueno: lo usan el lector de comprobantes, el aviso del BNC y el cruce con el extracto. La diferencia no se le cobra después.',
+  payment_margin_over_ves:
+    'Lo que puede sobrarle a un pago, frente a lo cotizado, para darlo por bueno: lo usan el lector de comprobantes, el aviso del BNC y el cruce con el extracto. La diferencia no se le devuelve.',
   alert_charges_per_merchant_day: 'Salta «Ráfaga de financiamientos» cuando una clínica registra más que esto en un día.',
   alert_new_patients_per_merchant_day:
     'Salta «Ráfaga de pacientes nuevos» cuando una clínica da de alta más pacientes nuevos que esto en un día.',

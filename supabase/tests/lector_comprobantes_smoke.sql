@@ -113,9 +113,14 @@ begin
     raise exception 'El monto de dos cuotas debía pagar las dos primeras: %', v_ids;
   end if;
 
-  if public.helios_receipt_tramo(v_pac, v_today, v_monto - 0.01) is not null
-     or public.helios_receipt_tramo(v_pac, v_today, v_monto + 0.01) is not null then
-    raise exception 'Un céntimo de diferencia no paga cuotas completas';
+  -- Con margen (20261026150000): de 10 Bs menos a 100 Bs más; fuera, nada.
+  if public.helios_receipt_tramo(v_pac, v_today, v_monto + 13.42) is distinct from array[v_a1]
+     or public.helios_receipt_tramo(v_pac, v_today, v_monto - 10) is distinct from array[v_a1] then
+    raise exception 'Dentro del margen el monto paga la cuota';
+  end if;
+  if public.helios_receipt_tramo(v_pac, v_today, v_monto - 10.01) is not null
+     or public.helios_receipt_tramo(v_pac, v_today, v_monto + 100.01) is not null then
+    raise exception 'Fuera del margen no paga cuotas completas';
   end if;
 
   -- --- 2. Apagado -------------------------------------------------------------

@@ -44,6 +44,7 @@ import { fetchUserDetail, fetchUsers } from '@/features/admin/users'
 import type { UserRow } from '@/features/admin/users'
 import { preverPago, registrarPago, subirComprobanteDePago } from '@/features/admin/pagosRegistrados/api'
 import {
+  MARGEN_POR_DEFECTO,
   METODOS_DEL_PACIENTE,
   alternarCuota,
   armarCuotas,
@@ -258,7 +259,10 @@ function FormularioDelPago({
   const esperado = idsMarcados.length > 0 ? (prevision.data ?? null) : null
   const esperadoBs = esperado?.amountVes ?? null
   const escritoBs = leerMonto(montoBs)
-  const diferencia = diferenciaEnBs(escritoBs, esperadoBs, esperado?.fxRate ?? null)
+  const diferencia = diferenciaEnBs(escritoBs, esperadoBs, esperado?.fxRate ?? null, {
+    menosBs: valorDe(parametros.data, 'payment_margin_under_ves') ?? MARGEN_POR_DEFECTO.menosBs,
+    masBs: valorDe(parametros.data, 'payment_margin_over_ves') ?? MARGEN_POR_DEFECTO.masBs,
+  })
   const cuatroOjos = valorDe(parametros.data, 'payment_four_eyes') === 1
 
   const faltan: string[] = []
@@ -392,7 +396,9 @@ function FormularioDelPago({
             diferencia === null
               ? undefined
               : diferencia.cuadra
-                ? `Cuadra con lo esperado a las tasas del ${formatDay(pagadoEl)}.`
+                ? Math.abs(diferencia.bs) < 0.01
+                  ? `Cuadra con lo esperado a las tasas del ${formatDay(pagadoEl)}.`
+                  : `${diferencia.bs > 0 ? 'Pagó de más' : 'Faltan'} ${formatVes(Math.abs(diferencia.bs))}: dentro del margen, cuadra con lo esperado a las tasas del ${formatDay(pagadoEl)}.`
                 : `${diferencia.bs > 0 ? 'Pagó de más' : 'Faltan'} ${formatVes(Math.abs(diferencia.bs))} (≈ ${formatUsd(Math.abs(diferencia.usd))}) respecto a lo esperado a las tasas del ${formatDay(pagadoEl)}.`
           }
           error={diferencia !== null && !diferencia.cuadra}

@@ -252,15 +252,21 @@ export function leerPrevisionDelPago(raw: unknown): PrevisionDelPago {
   }
 }
 
-/** La tolerancia del cruce con el extracto (plan §7.1): ±1 Bs. */
-export const TOLERANCIA_BS = 1
+/**
+ * Con cuánto margen cuadra un pago con lo cotizado (Javier, 2026-10-26;
+ * `helios_monto_cuadra` en la base): más holgura por encima que por debajo.
+ * Son los parámetros `payment_margin_under_ves` y `payment_margin_over_ves`;
+ * estos son sus valores por defecto, los mismos que usa la base sin ellos.
+ */
+export type MargenBs = { menosBs: number; masBs: number }
+export const MARGEN_POR_DEFECTO: MargenBs = { menosBs: 10, masBs: 100 }
 
 export type DiferenciaEnBs = {
   /** Escrito − esperado. Positivo: pagó de más. */
   bs: number
   /** Lo mismo en dólares a la tasa del dólar del día: una idea del tamaño, no un monto. */
   usd: number
-  /** Dentro de la tolerancia: se da por cuadrado. */
+  /** Dentro del margen: se da por cuadrado. */
   cuadra: boolean
 }
 
@@ -269,10 +275,11 @@ export function diferenciaEnBs(
   escritoBs: number | null,
   esperadoBs: number | null,
   tasa: number | null,
+  margen: MargenBs = MARGEN_POR_DEFECTO,
 ): DiferenciaEnBs | null {
   if (escritoBs === null || esperadoBs === null || tasa === null || tasa <= 0) return null
   const bs = redondear(escritoBs - esperadoBs)
-  return { bs, usd: redondear(bs / tasa), cuadra: Math.abs(bs) <= TOLERANCIA_BS }
+  return { bs, usd: redondear(bs / tasa), cuadra: bs >= -margen.menosBs && bs <= margen.masBs }
 }
 
 // ── La captura ─────────────────────────────────────────────────────────────
