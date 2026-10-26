@@ -118,11 +118,11 @@ begin
      or v_row.rendered_text not like '%tu cuota de $56,96 de la consulta con % vence el ' || public.helios_weekday_es(v_d) || ' ' || to_char(v_d, 'DD/MM') || '.%'
      or v_row.rendered_text not like '%envíanos la foto del comprobante por este chat.%'
      or v_row.rendered_text like '%{%'
-     -- La v2 (20261020200000): 10 variables y los botones del bot.
-     or v_row.wa_template ->> 'name' <> 'helios_cuota_en_3_dias_v2'
+     -- La v3 (20261026100000): 9 variables, sin el titular, y los botones del bot.
+     or v_row.wa_template ->> 'name' <> 'helios_cuota_en_3_dias_v3'
      or v_row.wa_template -> 'params' ->> 0 <> 'María'
      or v_row.wa_template -> 'params' ->> 1 <> '$56,96'
-     or jsonb_array_length(v_row.wa_template -> 'params') <> 10
+     or jsonb_array_length(v_row.wa_template -> 'params') <> 9
      or v_row.wa_template -> 'params' ->> 3 <> public.helios_weekday_es(v_d) || ' ' || to_char(v_d, 'DD/MM')
      or v_row.wa_template -> 'params' ->> 4 not like 'Bs %'
      or v_row.wa_template -> 'buttons' -> 0 ->> 'id' <> 'paciente:ya_pague'

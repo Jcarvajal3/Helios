@@ -1208,7 +1208,9 @@ Bloque común ({{5}} a {{9}}):
 
 Ejemplo: María · $56,96 · la Dra. Nadia Andi Khabbaze Alfaro · lunes 26/10 · Bs 10.624,18 · dólar · BNC (0191) · 0412-1714930 · J-50496786-6.
 
-**Al aprobarse** (leerlas antes en vivo de 360dialog):
+**Estado al 2026-10-26** (leídas en vivo de 360dialog): las cuatro aprobadas en `es`, con 9 variables y los dos botones, pero Meta puso **`helios_cuota_vence_manana_v3` y `helios_cuota_vence_hoy_v3` en MARKETING** (cuestan más y pueden no entregarse: tope de mensajes de marketing por persona y el paciente puede apagarlos). Javier decidió conectar solo las UTILITY (`20261026100000`): `cuota_en_3_dias` → `helios_cuota_en_3_dias_v3` y `cuota_vencida_d1` → `helios_cuota_vencida_v2`. `cuota_manana` y `cuota_hoy` siguen con sus `_v2` (dicen el titular) hasta que Javier avise que las corregidas quedaron en UTILITY; entonces se conectan con las 9 variables de abajo (y su nombre nuevo, si cambió).
+
+**Al aprobarse** (leerlas antes en vivo de 360dialog y comprobar que la categoría sea UTILITY):
 
 ```sql
 update public.notification_templates t
