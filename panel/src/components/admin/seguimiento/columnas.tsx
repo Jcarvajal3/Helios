@@ -5,12 +5,18 @@ import { Badge, formatDay, formatPhone } from '@/components/ui'
 import { haceCuanto } from '@/features/admin/cobranza/senales'
 import {
   ESTADO_DEL_SEGUIMIENTO,
+  PRIORIDAD,
   ROTULO_CANAL_DE_SEGUIMIENTO,
   ROTULO_MOTIVO,
   ROTULO_ROL,
   estadoDelSeguimiento,
+  prioridadDeLaClinica,
 } from '@/features/admin/seguimiento/seguimiento'
-import type { ClinicaEnSeguimiento, PersonaConSuClinica } from '@/features/admin/seguimiento/seguimiento'
+import type {
+  ClinicaEnSeguimiento,
+  PersonaConSuClinica,
+  PrioridadDeContacto,
+} from '@/features/admin/seguimiento/seguimiento'
 import { csvInstante } from '@/lib/csv'
 
 const APAGADO = 'text-on-surface-variant'
@@ -19,6 +25,30 @@ const PIE = 'mt-0.5 block type-panel-caption text-on-surface-variant'
 /** «hace 3 días», o una raya si no ha pasado nunca. */
 function cuandoFue(instante: string | null, ahora: Date) {
   return instante ? haceCuanto(instante, ahora) : '—'
+}
+
+const INFO_PRIORIDAD =
+  'Cruza las órdenes confirmadas en 30 días con los días sin usar Helios (ni el panel ni el bot). Rojo, contactar ya: más de 14 días sin usarlo, nunca lo ha usado, o de 8 a 14 días sin usarlo y sin órdenes. Amarillo, contactar pronto: de 8 a 14 días sin usarlo con órdenes, o lo usa pero sin órdenes. Verde: lo usó en los últimos 7 días y tiene órdenes. Una persona que no lo usa en una clínica que sí (en verde) se queda en amarillo. Las clínicas terminadas y las de prueba no llevan semáforo.'
+
+function sortPrioridad(p: PrioridadDeContacto | null): number | null {
+  return p ? PRIORIDAD[p.prioridad].puesto : null
+}
+
+function csvPrioridad(p: PrioridadDeContacto | null): string | null {
+  return p ? `${PRIORIDAD[p.prioridad].label} · ${p.motivo}` : null
+}
+
+function CeldaPrioridad({ prioridad }: { prioridad: PrioridadDeContacto | null }) {
+  if (!prioridad) return <span className={APAGADO}>—</span>
+  const p = PRIORIDAD[prioridad.prioridad]
+  return (
+    <div className="min-w-44 max-w-60">
+      <Badge tone={p.tone} icono>
+        {p.label}
+      </Badge>
+      <span className={PIE}>{prioridad.motivo}</span>
+    </div>
+  )
 }
 
 function MarcasDeClinica({ estado, esPrueba }: { estado: ClinicaEnSeguimiento['estado']; esPrueba: boolean }) {
@@ -136,6 +166,15 @@ export function columnasPorClinica(hoy: string, ahora: Date): Array<Column<Clini
     },
 
     {
+      key: 'prioridad',
+      header: 'Prioridad de contacto',
+      info: `${INFO_PRIORIDAD} Por clínica cuentan todas sus órdenes y el uso más reciente de cualquiera de su personal.`,
+      sort: (c) => sortPrioridad(prioridadDeLaClinica(c, ahora)),
+      csv: (c) => csvPrioridad(prioridadDeLaClinica(c, ahora)),
+      cell: (c) => <CeldaPrioridad prioridad={prioridadDeLaClinica(c, ahora)} />,
+    },
+
+    {
       key: 'ordenes-total',
       header: 'Órdenes desde el alta',
       hidden: true,
@@ -212,6 +251,15 @@ export function columnasPorPersona(ahora: Date): Array<Column<PersonaConSuClinic
           <p className="type-panel-caption text-on-surface-variant">{p.correo ?? 'Sin correo'}</p>
         </div>
       ),
+    },
+
+    {
+      key: 'prioridad',
+      header: 'Prioridad de contacto',
+      info: INFO_PRIORIDAD,
+      sort: (p) => sortPrioridad(p.prioridad),
+      csv: (p) => csvPrioridad(p.prioridad),
+      cell: (p) => <CeldaPrioridad prioridad={p.prioridad} />,
     },
 
     {
@@ -305,10 +353,37 @@ export function columnasPorPersona(ahora: Date): Array<Column<PersonaConSuClinic
     {
       key: 'acceso',
       header: 'Último acceso al panel',
+      info: 'La última vez que abrió el panel, volvió a su pestaña o lo usó, aunque no haya tenido que iniciar sesión. Antes del 26/10/2026 sale de sus sesiones y de las órdenes que registró en el panel.',
       sortDir: 'desc',
-      sort: (p) => p.ultimoAcceso,
-      csv: (p) => csvInstante(p.ultimoAcceso),
-      cell: (p) => <span className="whitespace-nowrap">{cuandoFue(p.ultimoAcceso, ahora)}</span>,
+      sort: (p) => p.ultimoPanel,
+      csv: (p) => csvInstante(p.ultimoPanel),
+      cell: (p) => <span className="whitespace-nowrap">{cuandoFue(p.ultimoPanel, ahora)}</span>,
+    },
+
+    {
+      key: 'ultimo-bot',
+      header: 'Último uso del bot',
+      info: 'La última vez que le escribió al bot de WhatsApp desde su número.',
+      sortDir: 'desc',
+      sort: (p) => p.ultimoBot,
+      csv: (p) => csvInstante(p.ultimoBot),
+      cell: (p) =>
+        p.telefono === null && p.ultimoBot === null ? (
+          <span className={APAGADO}>Sin número</span>
+        ) : (
+          <span className="whitespace-nowrap">{cuandoFue(p.ultimoBot, ahora)}</span>
+        ),
+    },
+
+    {
+      key: 'dias-de-uso',
+      header: 'Días de uso (30 días)',
+      info: 'Cuántos de los últimos 30 días usó Helios, por el panel o por el bot.',
+      type: 'number',
+      sortDir: 'desc',
+      sort: (p) => p.diasDeUso30d,
+      csv: (p) => p.diasDeUso30d,
+      cell: (p) => p.diasDeUso30d,
     },
   ]
 }

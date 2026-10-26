@@ -19,7 +19,12 @@ import {
   ordenarParaLlamar,
   personasDelTablero,
 } from '@/features/admin/seguimiento/seguimiento'
-import type { ClinicaEnSeguimiento, PersonaConSuClinica, QueSeVe } from '@/features/admin/seguimiento/seguimiento'
+import type {
+  ClinicaEnSeguimiento,
+  PersonaConSuClinica,
+  Prioridad,
+  QueSeVe,
+} from '@/features/admin/seguimiento/seguimiento'
 import { comoId, comoTexto, unoDe } from '@/lib/busqueda'
 
 type Vista = 'clinicas' | 'personas'
@@ -48,8 +53,8 @@ export const Route = createFileRoute('/admin/seguimiento')({
 })
 
 const OPCIONES_VISTA: Array<{ value: Vista; label: string }> = [
-  { value: 'clinicas', label: 'Por clínica' },
   { value: 'personas', label: 'Por persona' },
+  { value: 'clinicas', label: 'Por clínica' },
 ]
 
 const OPCIONES_VER: Array<{ value: QueSeVe; label: string }> = [
@@ -61,19 +66,20 @@ const OPCIONES_VER: Array<{ value: QueSeVe; label: string }> = [
 /**
  * Seguimiento: el contacto permanente del equipo con cada clínica.
  *
- * «Por clínica» es la lista de trabajo: el médico, el teléfono del
- * consultorio, todo su personal con su número y sus órdenes, y qué se habló la
- * última vez, en el orden en que hay que llamar (lo atrasado, lo de hoy y las
- * que nunca se han llamado, arriba). «Por persona» es todo el personal junto,
- * quien más órdenes registra primero: a quien preguntarle cómo funciona Helios
- * y pedirle su opinión. Las dos abren la misma ficha, donde se llama, se
- * escribe y se anota lo hablado. Los datos salen de `admin_followups_board`
- * (docs/01 §2.8).
+ * «Por persona», la que se abre, es todo el personal junto con su semáforo de
+ * prioridad de contacto (sus órdenes cruzadas con cuánto lleva sin usar el
+ * panel ni el bot): arriba, a quien hay que llamar para saber por qué no usa
+ * Helios, y dentro de cada color quien más órdenes tiene. «Por clínica» es la
+ * lista de las llamadas pendientes: el médico, el teléfono del consultorio,
+ * todo su personal y qué se habló la última vez, en el orden en que hay que
+ * llamar (lo atrasado, lo de hoy y las que nunca se han llamado, arriba). Las
+ * dos abren la misma ficha, donde se llama, se escribe y se anota lo hablado.
+ * Los datos salen de `admin_followups_board` (docs/01 §2.8).
  */
 function SeguimientoPage() {
   const navigate = useNavigate({ from: '/admin/seguimiento' })
   const search = Route.useSearch()
-  const vista = search.vista ?? 'clinicas'
+  const vista = search.vista ?? 'personas'
   const ver = search.ver ?? 'activas'
   const [hoy] = useState(() => diaOperativo(new Date()))
   const [ahora] = useState(() => new Date())
@@ -85,8 +91,8 @@ function SeguimientoPage() {
     [tablero.data, search.q, ver, hoy],
   )
   const personas = useMemo(
-    () => filtrarPersonas(personasDelTablero(clinicas), vista === 'personas' ? search.q : ''),
-    [clinicas, search.q, vista],
+    () => filtrarPersonas(personasDelTablero(clinicas, ahora), vista === 'personas' ? search.q : ''),
+    [clinicas, search.q, vista, ahora],
   )
   const columnasClinica = useMemo(() => columnasPorClinica(hoy, ahora), [hoy, ahora])
   const columnasPersona = useMemo(() => columnasPorPersona(ahora), [ahora])
@@ -113,7 +119,7 @@ function SeguimientoPage() {
           <Segmented
             options={OPCIONES_VISTA}
             value={vista}
-            onChange={(v) => cambiar({ vista: v === 'clinicas' ? undefined : v })}
+            onChange={(v) => cambiar({ vista: v === 'personas' ? undefined : v })}
           />
         </Filtro>
         <Filtro label="Clínicas">
@@ -167,6 +173,7 @@ function SeguimientoPage() {
           columns={columnasPersona}
           noun={['persona', 'personas']}
           summary={<ResumenPersonas personas={personas} />}
+          rowTone={(p) => TONO_DE_PRIORIDAD[p.prioridad?.prioridad ?? 'activo']}
           exportar={{ archivo: 'seguimiento-personas' }}
           onRowClick={(p) => cambiar({ clinica: p.clinicaId, persona: p.userId })}
         />
@@ -190,6 +197,12 @@ function tonoDeFila(c: ClinicaEnSeguimiento, hoy: string): 'warning' | 'error' |
   return estadoDelSeguimiento(c, hoy) === 'atrasado' ? 'error' : 'warning'
 }
 
+const TONO_DE_PRIORIDAD: Record<Prioridad, 'warning' | 'error' | undefined> = {
+  contactar_ya: 'error',
+  contactar_pronto: 'warning',
+  activo: undefined,
+}
+
 function ResumenClinicas({ clinicas, hoy }: { clinicas: ClinicaEnSeguimiento[]; hoy: string }) {
   const paraLlamar = clinicas.filter((c) => esParaLlamar(c, hoy)).length
   const nunca = clinicas.filter((c) => c.contactos === 0).length
@@ -202,10 +215,15 @@ function ResumenClinicas({ clinicas, hoy }: { clinicas: ClinicaEnSeguimiento[]; 
 
 function ResumenPersonas({ personas }: { personas: PersonaConSuClinica[] }) {
   const conNumero = personas.filter((p) => p.telefono !== null).length
-  const primera = personas.at(0)
+  const cuantas = (prioridad: Prioridad) => personas.filter((p) => p.prioridad?.prioridad === prioridad).length
+  const primera = personas.reduce<PersonaConSuClinica | undefined>(
+    (a, p) => (a === undefined || p.confirmadas > a.confirmadas ? p : a),
+    undefined,
+  )
   return (
     <>
-      {conNumero} con número del bot
+      {cuantas('contactar_ya')} para contactar ya · {cuantas('contactar_pronto')} pronto · {conNumero} con número
+      del bot
       {primera && primera.confirmadas > 0 && (
         <>
           {' '}

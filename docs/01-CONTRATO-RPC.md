@@ -755,9 +755,13 @@ soporte | capacitacion`), `note` (3–2000), `next_contact_on`, `actor`.
   last_order_at, staff[], followups_count, last_followup, next_contact_on`.
   `staff[]` es el personal activo, quien más órdenes confirmadas tiene
   primero: `user_id, name, email, phone` (el número activo del bot; si no,
-  el de auth), `role, branch, joined_at, last_sign_in_at,
-  orders_registered, orders_confirmed, orders_30d, orders_whatsapp,
-  last_order_at`. Las órdenes son las de `charges.requested_by`, sin las de
+  el de auth), `role, branch, joined_at, last_sign_in_at, last_panel_at,
+  last_bot_at, active_days_30d, orders_registered, orders_confirmed,
+  orders_30d, orders_whatsapp, last_order_at`. `last_panel_at`,
+  `last_bot_at` y `active_days_30d` (días con uso de cualquiera de los dos)
+  salen de `staff_activity_days` (2026-10-26, ver abajo);
+  `last_sign_in_at` solo cambia al iniciar sesión y ya no se enseña. Las
+  órdenes son las de `charges.requested_by`, sin las de
   pacientes de prueba; 30 días = días operativos con hoy. `last_followup`:
   `created_at, channel, topic, note, actor_name, contact_name` o null.
   `next_contact_on` es la del último contacto (una nota nueva sin fecha la
@@ -771,6 +775,28 @@ soporte | capacitacion`), `note` (3–2000), `next_contact_on`, `actor`.
   canal o motivo desconocido, nota de menos de 3 o más de 2000 caracteres,
   una persona que nunca fue de esa clínica o una fecha anterior al día
   operativo. Bitácora `merchant.followup` (target: la clínica).
+
+**El uso del panel y del bot** (2026-10-26, 20261026200000). Tabla
+`staff_activity_days` (sin RLS de lectura): una fila por `user_id,
+merchant_id, channel` (`panel | bot`) y `business_date`, con `first_at,
+last_at, hits`. La historia anterior se rellenó con `auth.sessions`,
+`auth.refresh_tokens`, `last_sign_in_at`, las órdenes con `channel = 'panel'`
+y los mensajes del personal en `whatsapp_inbound`.
+
+- `helios_staff_seen_in_panel(p_merchant_id uuid) → boolean` (authenticated):
+  anota un uso del panel. `false`, sin error, si quien llama no es personal
+  activo (`gerente | cajero`) de esa clínica. El panel la llama desde
+  `_comercio` al abrirse, al navegar, al volver a la pestaña y al tocar o
+  escribir, como mucho una vez cada 5 min (`features/auth/usoDelPanel.ts`).
+- `helios_whatsapp_inbound` anota `bot` por cada mensaje nuevo de un número
+  del personal (un reintento con el mismo wamid no cuenta).
+- `helios_note_staff_activity(user, merchant, channel, at)`: interna, sin
+  `grant`.
+
+La prioridad de contacto (el semáforo de Seguimiento › Por persona) se
+calcula en el panel (`prioridadDeContacto` en
+`features/admin/seguimiento/seguimiento.ts`): órdenes confirmadas en 30 días
+× días sin usar el panel ni el bot (≤ 7, 8–14, > 14 o nunca).
 
 ### 2.9 Agenda de médicos por afiliar (2026-10-22, 20261022200000)
 

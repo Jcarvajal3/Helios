@@ -12,6 +12,9 @@
 --   4. Lo anotado sale en la historia y en el tablero (último contacto y
 --      próximo), y queda en audit.admin_actions.
 --   5. La nota más nueva manda sobre «volver a llamar».
+--   6. El panel anota el uso solo del personal de esa clínica, el bot anota
+--      cada mensaje del personal (un reintento no cuenta dos veces) y el
+--      tablero trae el último panel, el último bot y los días de uso.
 --
 -- No manda nada: no llama a `helios_dispatch_*`.
 -- ============================================================================
@@ -36,6 +39,7 @@ declare
   v_s       jsonb;
   v_id      uuid;
   v_n       integer;
+  v_usos    integer;
   v_fallo   boolean;
   v_fila    audit.admin_actions;
 begin
@@ -228,6 +232,62 @@ begin
     raise exception '5. la nota nueva sin fecha debía dejar sin «volver a llamar»: %', v_c;
   end if;
   reset role;
+
+  -- =========================================================================
+  -- 6. El uso del panel y del bot (20261026200000)
+  -- =========================================================================
+  set local role authenticated;
+  -- Quien no es del personal de esa clínica no se anota.
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', v_ajena::text, 'role', 'authenticated')::text, true);
+  if public.helios_staff_seen_in_panel(v_m) then
+    raise exception '6. anotó el panel de alguien que no es de la clínica';
+  end if;
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', v_admin::text, 'role', 'authenticated', 'aal', 'aal2')::text, true);
+  if public.helios_staff_seen_in_panel(v_m) then
+    raise exception '6. anotó el panel de un admin de Helios';
+  end if;
+
+  -- Ana abre el panel dos veces el mismo día: un solo día, dos usos.
+  perform set_config('request.jwt.claims', json_build_object('sub', v_ana::text, 'role', 'authenticated')::text, true);
+  if not public.helios_staff_seen_in_panel(v_m) then raise exception '6. no anotó el panel de Ana'; end if;
+  perform public.helios_staff_seen_in_panel(v_m);
+  reset role;
+
+  select count(*), max(hits) into v_n, v_usos
+    from public.staff_activity_days
+   where user_id = v_ana and merchant_id = v_m and channel = 'panel';
+  if v_n <> 1 or v_usos <> 2 then
+    raise exception '6. el panel de Ana debía ser 1 día con 2 usos: % días, % usos', v_n, v_usos;
+  end if;
+
+  -- Ana le escribe al bot; el reintento del mismo mensaje no cuenta otra vez.
+  perform public.helios_whatsapp_inbound('wamid.seg-uso-1', '584149990001', 'text', '{"text":{"body":"hola"}}');
+  perform public.helios_whatsapp_inbound('wamid.seg-uso-1', '584149990001', 'text', '{"text":{"body":"hola"}}');
+  select count(*), max(hits) into v_n, v_usos
+    from public.staff_activity_days
+   where user_id = v_ana and merchant_id = v_m and channel = 'bot';
+  if v_n <> 1 or v_usos <> 1 then
+    raise exception '6. el bot de Ana debía ser 1 día con 1 uso: % días, % usos', v_n, v_usos;
+  end if;
+
+  set local role authenticated;
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', v_admin::text, 'role', 'authenticated', 'aal', 'aal2')::text, true);
+  v_j := public.admin_followups_board();
+  reset role;
+  select e into v_c from jsonb_array_elements(v_j) e where e ->> 'merchant_id' = v_m::text;
+  select s into v_s from jsonb_array_elements(v_c -> 'staff') s where s ->> 'user_id' = v_ana::text;
+  if v_s ->> 'last_panel_at' is null or v_s ->> 'last_bot_at' is null
+     or (v_s ->> 'active_days_30d')::int <> 1 then
+    raise exception '6. el tablero no trae el uso de Ana: %', v_s;
+  end if;
+  select s into v_s from jsonb_array_elements(v_c -> 'staff') s where s ->> 'user_id' = v_gerente::text;
+  if v_s ->> 'last_panel_at' is not null or v_s ->> 'last_bot_at' is not null
+     or (v_s ->> 'active_days_30d')::int <> 0 then
+    raise exception '6. el gerente no ha usado nada: %', v_s;
+  end if;
 end;
 $$;
 

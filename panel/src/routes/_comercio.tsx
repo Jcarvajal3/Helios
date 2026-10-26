@@ -7,6 +7,7 @@ import { merchantBarraInferiorFor, merchantNavGroupsFor } from '@/config/navigat
 import { ROLE_LABEL } from '@/features/auth/permissions'
 import { useSession } from '@/features/auth/session'
 import type { StaffContext } from '@/features/auth/session'
+import { useUsoDelPanel } from '@/features/auth/usoDelPanel'
 import { NO_INDEXAR } from '@/config/sitio'
 
 export const Route = createFileRoute('/_comercio')({
@@ -44,6 +45,7 @@ function ComercioShell({
   children: React.ReactNode
 }) {
   const session = useSession()
+  useUsoDelPanel(staff.merchantId)
 
   return (
     <PanelShell

@@ -21,6 +21,10 @@ import {
   motivoParaNoAnotarSeguimiento,
   ordenarParaLlamar,
   personasDelTablero,
+  prioridadDeContacto,
+  prioridadDeLaClinica,
+  prioridadDeLaPersona,
+  ultimoUso,
 } from './seguimiento'
 
 let fallos = 0
@@ -46,6 +50,9 @@ function persona(id: string, nombre: string, confirmadas: number, extra: Record<
     branch: 'Principal',
     joined_at: '2026-10-01T12:00:00Z',
     last_sign_in_at: null,
+    last_panel_at: null,
+    last_bot_at: null,
+    active_days_30d: 0,
     orders_registered: confirmadas,
     orders_confirmed: confirmadas,
     orders_30d: confirmadas,
@@ -127,10 +134,62 @@ igual(
   ['b', 'f', 'e', 'd', 'c', 'a', 'g'],
 )
 
+console.log('── Prioridad de contacto ─────────────────────────────────────')
+// Mediodía en Caracas del 21/10.
+const AHORA = new Date('2026-10-21T16:00:00Z')
+const haceDias = (n: number) => new Date(AHORA.getTime() - n * 86_400_000).toISOString()
+const prio = (diasSinUso: number | null, ordenes30d: number) =>
+  prioridadDeContacto({ ultimoUso: diasSinUso === null ? null : haceDias(diasSinUso), ordenes30d }, AHORA).prioridad
+igual('nunca lo usó → rojo', prio(null, 0), 'contactar_ya')
+igual('con órdenes, usado hace 3 días → verde', prio(3, 4), 'activo')
+igual('con órdenes, usado hace 7 días → verde', prio(7, 1), 'activo')
+igual('con órdenes, usado hace 10 días → amarillo', prio(10, 4), 'contactar_pronto')
+igual('con órdenes, usado hace 15 días → rojo', prio(15, 9), 'contactar_ya')
+igual('sin órdenes, usado hoy → amarillo', prio(0, 0), 'contactar_pronto')
+igual('sin órdenes, usado hace 8 días → rojo', prio(8, 0), 'contactar_ya')
+igual(
+  'el motivo dice cuándo',
+  prioridadDeContacto({ ultimoUso: haceDias(18), ordenes30d: 2 }, AHORA).motivo,
+  'Sin usar Helios hace 18 días',
+)
+igual(
+  'el último uso es el más reciente del panel y del bot',
+  ultimoUso({ ultimoPanel: '2026-10-10T12:00:00Z', ultimoBot: '2026-10-19T12:00:00+00:00' }),
+  '2026-10-19T12:00:00+00:00',
+)
+const conSecretaria = leerTablero([
+  clinica('s', 'Con secretaria', {
+    orders_30d: 6,
+    staff: [
+      persona('sec', 'Secretaria', 6, { last_bot_at: haceDias(1) }),
+      persona('doc', 'Doctor', 0, { role: 'gerente' }),
+    ],
+  }),
+])
+const s = conSecretaria.at(0)
+const doctor = s?.personal.at(1)
+igual('la clínica que lo usa por su secretaria está en verde', s ? prioridadDeLaClinica(s, AHORA)?.prioridad : null, 'activo')
+igual(
+  'el médico que no entra, en una clínica que sí lo usa, se queda en amarillo',
+  s && doctor ? prioridadDeLaPersona(doctor, s, AHORA)?.prioridad : null,
+  'contactar_pronto',
+)
+const dePrueba = tablero.at(6)
+igual('las de prueba no llevan semáforo', dePrueba ? prioridadDeLaClinica(dePrueba, AHORA) : 'x', null)
+
 console.log('── Por persona ───────────────────────────────────────────────')
-const personas = personasDelTablero(tablero)
-igual('quien más órdenes confirmadas, primero', personas.map((p) => p.userId), ['test', 'ana', 'luis'])
-igual('cada persona lleva su clínica', personas[1]?.clinica, 'Nunca, mucha')
+const personas = personasDelTablero(tablero, AHORA)
+igual(
+  'rojo primero y, dentro, quien más órdenes; las de prueba al final',
+  personas.map((p) => p.userId),
+  ['ana', 'luis', 'test'],
+)
+igual('cada persona lleva su clínica', personas[0]?.clinica, 'Nunca, mucha')
+igual(
+  'el verde va detrás del amarillo aunque tenga más órdenes',
+  personasDelTablero(conSecretaria, AHORA).map((p) => p.userId),
+  ['doc', 'sec'],
+)
 
 console.log('── Qué se ve y búsqueda ──────────────────────────────────────')
 igual(
