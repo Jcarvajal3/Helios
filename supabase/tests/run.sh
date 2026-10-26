@@ -79,6 +79,7 @@ SUITES=(
   bank_sms_smoke
   lector_comprobantes_smoke
   margen_de_pago_smoke
+  pago_duplicado_smoke
   datos_de_contrato_smoke
   demo_smoke
   mensajes_paciente_smoke

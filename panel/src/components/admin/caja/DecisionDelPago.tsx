@@ -19,18 +19,21 @@ import { useAtajos } from '@/components/admin/ModoCola'
 import { useToast } from '@/components/Toast'
 import { flagForReview, reconcilePayment } from '@/features/admin/api'
 import type { QueueItem, StatementMatch } from '@/features/admin/api'
+import { marcarPagoDuplicado } from '@/features/admin/pagosRegistrados/api'
 import { explicarErrorDeAprobacion } from '@/features/admin/pagosRegistrados/registrarPago'
 import { useSession } from '@/features/auth/session'
 import { describeError } from '@/lib/supabase'
 
+// «Pago duplicado» ya no es un motivo de rechazo (2026-10-26): rechazar le
+// avisa al paciente de que su pago no se confirmó. Un duplicado se cierra con
+// «Marcar como duplicado», sin aviso.
 const MOTIVOS_RECHAZO = [
   { value: 'La referencia no existe en el extracto del banco', label: 'La referencia no existe' },
   { value: 'El monto no coincide con lo que entró al banco', label: 'El monto no coincide' },
-  { value: 'Pago duplicado: ya se registró esta misma referencia', label: 'Pago duplicado' },
   { value: '', label: 'Otro motivo' },
 ]
 
-type Dialogo = 'aprobar' | 'rechazar' | 'revision'
+type Dialogo = 'aprobar' | 'rechazar' | 'revision' | 'duplicado'
 
 /**
  * Los tres botones que cierran un pago pendiente, con sus diálogos.
@@ -120,6 +123,15 @@ export function DecisionDelPago({
     },
   })
 
+  const duplicado = useMutation({
+    mutationFn: (nota: string) => marcarPagoDuplicado(item.reportId, nota),
+    onSuccess: () => {
+      setDialogo(null)
+      refrescar()
+      onResuelto(`Marcado como duplicado: ${formatUsd(item.amountUsd)} de ${quien}`)
+    },
+  })
+
   useAtajos({ a: () => setDialogo('aprobar'), r: () => setDialogo('rechazar') })
 
   // El servidor solo aparta un pago recién llegado.
@@ -150,6 +162,9 @@ export function DecisionDelPago({
           onClick={() => setDialogo('revision')}
         >
           Poner en revisión
+        </Button>
+        <Button variant="text" size="md" className="w-full" onClick={() => setDialogo('duplicado')}>
+          Marcar como duplicado
         </Button>
       </div>
 
@@ -249,6 +264,27 @@ export function DecisionDelPago({
           busy={rechazar.isPending}
           error={rechazar.isError ? describeError(rechazar.error) : undefined}
           onConfirm={() => rechazar.mutate([motivo, detalle.trim()].filter(Boolean).join('. '))}
+          onClose={() => setDialogo(null)}
+        />
+      )}
+
+      {dialogo === 'duplicado' && (
+        <ConfirmDialog
+          title="Marcar el pago como duplicado"
+          summary={`El pago de ${quien} se cierra como duplicado: otro pago ya saldó esas cuotas.`}
+          detail={
+            <p className="type-panel-body text-on-surface-variant">
+              No se salda nada ni se escribe ningún asiento, y al paciente no le llega ningún aviso (rechazarlo
+              le diría que su pago no se confirmó). El motivo queda en la bitácora.
+            </p>
+          }
+          nivel="sensible"
+          reasonLabel="Por qué es un duplicado"
+          reasonPlaceholder="Ya se aprobó con el abono del extracto del 24/10"
+          confirmLabel="Marcar como duplicado"
+          busy={duplicado.isPending}
+          error={duplicado.isError ? describeError(duplicado.error) : undefined}
+          onConfirm={(nota) => duplicado.mutate(nota)}
           onClose={() => setDialogo(null)}
         />
       )}

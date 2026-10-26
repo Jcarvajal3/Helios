@@ -85,3 +85,16 @@ export async function registrarPago(params: {
     { leer: leerPagoRegistrado },
   )
 }
+
+/**
+ * Cierra un pago pendiente como duplicado (`admin_mark_payment_duplicate`):
+ * otro pago ya saldó esas cuotas. A diferencia de rechazarlo, al paciente no
+ * le llega ningún aviso. El motivo es obligatorio y queda en la bitácora.
+ */
+export async function marcarPagoDuplicado(reportId: string, motivo: string): Promise<void> {
+  const { error } = await supabase.rpc('admin_mark_payment_duplicate', {
+    p_report_id: reportId,
+    p_note: motivo.trim(),
+  })
+  if (error) throw error
+}
