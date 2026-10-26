@@ -4,7 +4,14 @@ import { ENLACE_EN_CELDA } from '@/components/DataTable'
 import type { Column } from '@/components/DataTable'
 import { AnularConsumo } from '@/components/admin/directorio/AnularConsumo'
 import { EstadoBadge } from '@/components/admin/EstadoBadge'
-import { Badge, formatDay, formatUsd, formatPhone, formatTime } from '@/components/ui'
+import {
+  Badge,
+  formatDay,
+  formatMoneda,
+  formatUsd,
+  formatPhone,
+  formatTime,
+} from '@/components/ui'
 import {
   ESTADOS_CONSUMO,
   VALORES_ESTADO_CONSUMO,
@@ -123,7 +130,7 @@ export const COLUMNAS_CONSUMOS: Array<Column<ChargeRow>> = [
   {
     key: 'consumo',
     header: 'Financiado (sin comisión)',
-    info: 'Sin la Comisión Helios: lo que se financió en la clínica, que es lo que ocupó cupo; la Comisión Helios + IVA va repartido en las cuotas.',
+    info: 'Sin la Comisión Helios: lo que se financió en la clínica, que es lo que ocupó cupo; la Comisión Helios + IVA va repartido en las cuotas. Siempre en dólares; en una orden en euros, debajo, lo que fue en euros.',
     type: 'number',
     sortDir: 'desc',
     sort: (c) => c.financedUsd,
@@ -131,8 +138,43 @@ export const COLUMNAS_CONSUMOS: Array<Column<ChargeRow>> = [
     cell: (c) => (
       <span className="font-semibold">
         {formatUsd(c.financedUsd)}
+        {c.currency === 'EUR' && (
+          <span className="block type-panel-caption font-normal tabular-nums text-on-surface-variant">
+            {formatMoneda(c.financedCur, 'EUR')}
+          </span>
+        )}
       </span>
     ),
+  },
+
+  {
+    // Javier (2026-10-26): en qué moneda se hizo cada orden. Las cifras y las
+    // métricas siguen en dólares, con la conversión del día del registro.
+    key: 'moneda',
+    header: 'Moneda',
+    info: 'La moneda en la que el médico hizo la orden. El paciente paga sus cuotas en bolívares a la tasa BCV de esa moneda, y al médico se le paga a esa misma tasa. Las cifras de esta pantalla y las métricas van en dólares: una orden en euros se pasó a dólares con la tasa del día en que se registró.',
+    sort: (c) => c.currency,
+    csv: (c) => (c.currency === 'EUR' ? 'Euros' : 'Dólares'),
+    cell: (c) =>
+      c.currency === 'EUR' ? (
+        <span className="block whitespace-nowrap">
+          <Badge tone="brand">Euros</Badge>
+          <span className="block type-panel-caption tabular-nums text-on-surface-variant">
+            1 € = {formatUsd(c.fxUsdPerUnit)}
+          </span>
+        </span>
+      ) : (
+        <span className="text-on-surface-variant">Dólares</span>
+      ),
+  },
+
+  // Solo para el archivo: lo financiado en la moneda de la orden, sin el €.
+  {
+    key: 'consumo-moneda',
+    header: 'Financiado en su moneda',
+    hidden: true,
+    csv: (c) => csvDinero(c.financedCur),
+    cell: (c) => formatMoneda(c.financedCur, c.currency),
   },
 
   {

@@ -508,6 +508,14 @@ export type MerchantPayable = {
    * `null` si no hay nada más adelante.
    */
   proximoPago?: ({ fecha: string; usd: number } & ConsultasYComisiones) | null
+  /**
+   * Las monedas de lo que se le debe, dólares primero (20261026235000): cada
+   * parte se le paga en bolívares a la tasa BCV de la suya. `undefined` si la
+   * base no lo manda.
+   */
+  monedas?: Moneda[]
+  /** De lo que sale hoy, lo que va a la tasa del euro, en euros. */
+  nextRunEur?: number
 }
 
 export async function fetchMerchantPayables(): Promise<MerchantPayable[]> {
@@ -548,6 +556,8 @@ export async function fetchMerchantPayables(): Promise<MerchantPayable[]> {
             consultasUsd: Number(row.next_pay_consultas_usd ?? 0),
             comisionesUsd: Number(row.next_pay_comisiones_usd ?? 0),
           },
+    monedas: Array.isArray(row.monedas) ? row.monedas.map(leerMoneda) : undefined,
+    nextRunEur: Number(row.next_run_eur ?? 0),
   }))
 }
 
@@ -599,6 +609,50 @@ export type Settlement = {
    * se puede pagar antes (`fetchMerchantUpcomingSettlements`).
    */
   porVencer?: boolean
+  /**
+   * La tasa BCV de su moneda hoy, en bolívares por unidad: la del euro en una
+   * de una orden en euros, la del dólar si no. Es a la que se le paga hoy al
+   * médico. `null` sin tasa cargada.
+   */
+  tasaHoy: number | null
+  /**
+   * Cómo pagó el paciente la cuota que liquida esta línea (20261026235000).
+   * `null` en la comisión del personal, que no viene de ninguna cuota. Se le
+   * paga al médico pague o no el paciente: esto es para saber a qué tasa
+   * entró el dinero, no una condición.
+   */
+  cuotaDelPaciente: {
+    cuotas: number
+    pagadas: number
+    /** Día (Caracas) del último pago; `null` si todavía no paga. */
+    pagoEl: string | null
+    /** La tasa con la que pagó, en bolívares por unidad de `currency`. */
+    tasa: number | null
+  } | null
+  /** Si ya se le transfirió: el día y la tasa de su moneda con la que salió. */
+  transferida: { el: string | null; tasa: number | null } | null
+}
+
+/** Lo de la cuota del paciente y de la transferencia, como lo manda la base. */
+function leerTasasDeLaLinea(
+  row: Record<string, unknown>,
+): Pick<Settlement, 'tasaHoy' | 'cuotaDelPaciente' | 'transferida'> {
+  return {
+    tasaHoy: numeroONulo(row.tasa_hoy),
+    cuotaDelPaciente:
+      row.cuotas == null
+        ? null
+        : {
+            cuotas: Number(row.cuotas),
+            pagadas: Number(row.cuotas_pagadas ?? 0),
+            pagoEl: textoONulo(row.paciente_pago_el),
+            tasa: numeroONulo(row.paciente_tasa),
+          },
+    transferida:
+      row.pagado_el == null && row.pagado_tasa == null
+        ? null
+        : { el: textoONulo(row.pagado_el), tasa: numeroONulo(row.pagado_tasa) },
+  }
 }
 
 /**
@@ -635,6 +689,7 @@ export async function fetchMerchantUpcomingSettlements(merchantId: string): Prom
       inNextRun: false,
       runDate: String(row.run_date),
       porVencer: true,
+      ...leerTasasDeLaLinea(row),
     }
   })
 }
@@ -674,6 +729,7 @@ export async function fetchMerchantSettlements(
     isDue: Boolean(row.is_due),
     inNextRun: Boolean(row.in_next_run),
     runDate: String(row.run_date),
+    ...leerTasasDeLaLinea(row),
   }))
 }
 

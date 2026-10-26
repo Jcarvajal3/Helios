@@ -1,6 +1,8 @@
 import { booleano, comoFila, comoLista, filas, numero, numeroONulo, texto, textoONulo } from '@/lib/json'
 import { unoDe } from '@/lib/busqueda'
 import { supabase } from '@/lib/supabase'
+import { leerMoneda } from '@/components/ui'
+import type { Moneda } from '@/components/ui'
 import { VALORES_ESTADO_CONSUMO } from '@/features/admin/estados'
 import type { EstadoConsumo } from '@/features/admin/estados'
 
@@ -53,6 +55,16 @@ export type ChargeRow = {
   isTest: boolean
   installmentsPaid: number
   installmentsTotal: number
+  /**
+   * La moneda en la que el médico hizo la orden (2026-10-07). Las cifras `Usd`
+   * siguen siendo dólares —el libro y las métricas no cambian—; lo de la
+   * moneda de la orden va en `financedCur`.
+   */
+  currency: Moneda
+  /** El consumo sin comisión en la moneda de la orden (igual a `financedUsd` en una en dólares). */
+  financedCur: number
+  /** Dólares por unidad de su moneda el día del registro: la conversión que pasó la orden al libro. */
+  fxUsdPerUnit: number
 }
 
 export async function fetchCharges(params: {
@@ -96,6 +108,10 @@ export async function fetchCharges(params: {
     isTest: booleano(row.is_test),
     installmentsPaid: numero(row.installments_paid),
     installmentsTotal: numero(row.installments_total),
+    // 20261026235000. Sin la columna, dólares: es lo que era todo antes.
+    currency: leerMoneda(row.currency),
+    financedCur: numeroONulo(row.financed_cur) ?? numero(row.financed_usd),
+    fxUsdPerUnit: numeroONulo(row.fx_usd_per_unit) ?? 1,
   }))
 }
 

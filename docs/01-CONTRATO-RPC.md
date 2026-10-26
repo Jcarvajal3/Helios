@@ -1406,6 +1406,16 @@ van en columnas `_cur`.
   `admin_user_detail` (cuotas y órdenes con `currency` y `*_cur`),
   `merchant_transactions` (+ `currency`, `merchant_sale_cur`),
   `merchant_charge_detail` (`currency`, `*_cur`, payouts por moneda).
+- 20261026235000 (la moneda y la tasa en el superadmin): `admin_charges`
+  añade al final `currency`, `fx_usd_per_unit`, `amount_cur`, `financed_cur`.
+  `admin_merchant_settlements` y `admin_merchant_upcoming_settlements`
+  añaden `tasa_hoy` (Bs por unidad de su moneda, hoy), `cuotas`,
+  `cuotas_pagadas`, `paciente_pago_el`, `paciente_tasa` (la de la
+  cotización del pago: la del euro en una orden en euros; null en la
+  comisión del personal) y, solo la primera, `pagado_el` / `pagado_tasa` (la
+  transferencia a la clínica). `admin_merchant_payables` añade `monedas`
+  (`text[]`, dólares primero) y `next_run_eur`. Interna:
+  `helios_cuota_pagada(charge, due_date)`.
 
 ### 7.5 Mensajes
 

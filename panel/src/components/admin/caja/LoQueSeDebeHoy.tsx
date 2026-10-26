@@ -15,6 +15,7 @@ import {
   InfoDot,
   SkeletonTable,
   formatDay,
+  formatMoneda,
   formatUsd,
 } from '@/components/ui'
 import { fetchMerchantPayables } from '@/features/admin/api'
@@ -261,7 +262,33 @@ const COLUMNAS: Array<Column<MerchantPayable>> = [
         <>
           <span className="font-semibold">{formatUsd(m.nextRunUsd)}</span>
           {m.desglose && <Partido {...m.desglose} />}
+          {(m.nextRunEur ?? 0) > 0.005 && (
+            <span className="block whitespace-nowrap type-panel-caption font-normal text-on-surface-variant">
+              de eso, {formatMoneda(m.nextRunEur ?? 0, 'EUR')} a la tasa del euro
+            </span>
+          )}
         </>
+      ) : (
+        <span className="text-on-surface-variant">—</span>
+      ),
+  },
+  {
+    // Javier (2026-10-26): a qué tasa se le paga a cada médico. Lo de una
+    // orden en euros va a la del euro; lo demás, a la del dólar.
+    key: 'tasa',
+    header: 'Tasa de pago',
+    info: 'A qué tasa BCV se le pasa a bolívares lo que se le debe: la del euro para lo que viene de órdenes en euros (el paciente también pagó esas cuotas a la tasa del euro), la del dólar para lo demás. Si tiene de las dos, cada parte va a la suya. En su página, cada liquidación dice a qué tasa pagó el paciente.',
+    sort: (m) => (m.monedas ?? []).join(','),
+    csv: (m) => (m.monedas ?? []).map((x) => (x === 'EUR' ? 'Euro' : 'Dólar')).join(' y ') || null,
+    cell: (m) =>
+      m.monedas && m.monedas.length > 0 ? (
+        <span className="flex flex-wrap gap-1">
+          {m.monedas.map((x) => (
+            <Badge key={x} tone={x === 'EUR' ? 'brand' : 'neutral'}>
+              {x === 'EUR' ? 'Euro' : 'Dólar'}
+            </Badge>
+          ))}
+        </span>
       ) : (
         <span className="text-on-surface-variant">—</span>
       ),

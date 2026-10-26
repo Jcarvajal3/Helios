@@ -13,10 +13,12 @@ import {
   formatMoneda,
   formatUsd,
 } from '@/components/ui'
+import type { Moneda } from '@/components/ui'
 import { RegistrarTransferencia } from '@/components/admin/caja/RegistrarTransferencia'
 import { SeccionSinLeer } from '@/components/admin/directorio/SeccionSinLeer'
 import { fetchMerchantSettlements, fetchMerchantUpcomingSettlements } from '@/features/admin/api'
 import type { Settlement } from '@/features/admin/api'
+import { formatTasa } from '@/features/admin/ajustesReglas'
 import { partirPorMotivo } from '@/features/admin/clinicas/clinicas'
 import { MOTIVO_DE_LIQUIDACION } from '@/features/admin/liquidaciones'
 
@@ -365,6 +367,50 @@ function EstadoDelGrupo({ grupo }: { grupo: Grupo }) {
   return <Badge>Por llegar</Badge>
 }
 
+/** «tasa del euro», «tasa del dólar». */
+const TASA_DE: Record<Moneda, string> = { USD: 'tasa del dólar', EUR: 'tasa del euro' }
+
+/**
+ * A qué tasa pagó el paciente la cuota de esta línea y a qué tasa se le paga
+ * al médico (Javier, 2026-10-26). Las dos son la de la moneda de la orden: el
+ * paciente pagó en bolívares a la tasa de ese día, y al médico se le paga en
+ * bolívares a la del día de la transferencia. La comisión del personal no
+ * viene de ninguna cuota: solo lleva la del médico, que es la del dólar.
+ */
+function TasasDeLaLinea({ settlement, pagada }: { settlement: Settlement; pagada: boolean }) {
+  const moneda = settlement.currency
+  const cuota = settlement.cuotaDelPaciente
+
+  let paciente: string | null = null
+  if (cuota) {
+    if (cuota.pagadas === 0) paciente = 'Paciente: aún no paga su cuota'
+    else {
+      const cuantas = cuota.cuotas > 1 ? ` ${cuota.pagadas} de ${cuota.cuotas}` : ''
+      const dia = cuota.pagoEl ? ` el ${formatDay(cuota.pagoEl)}` : ''
+      const tasa = cuota.tasa !== null ? ` a ${formatTasa(cuota.tasa, moneda)}` : ''
+      paciente = `Paciente: pagó${cuantas}${dia} en bolívares, ${TASA_DE[moneda]}${tasa}`
+    }
+  }
+
+  const transferida = pagada ? settlement.transferida : null
+  const medico = transferida
+    ? `Médico: se le pagó${transferida.el ? ` el ${formatDay(transferida.el)}` : ''}, ${TASA_DE[moneda]}${
+        transferida.tasa !== null ? ` a ${formatTasa(transferida.tasa, moneda)}` : ''
+      }`
+    : `Médico: se le paga a la ${TASA_DE[moneda]}${
+        settlement.tasaHoy !== null ? ` (hoy ${formatTasa(settlement.tasaHoy, moneda)})` : ''
+      }`
+
+  return (
+    <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 type-panel-caption text-on-surface-variant">
+      <Badge tone={moneda === 'EUR' ? 'brand' : 'neutral'}>{moneda === 'EUR' ? 'Tasa euro' : 'Tasa dólar'}</Badge>
+      {paciente && <span>{paciente}</span>}
+      {paciente && <span aria-hidden>·</span>}
+      <span>{medico}</span>
+    </span>
+  )
+}
+
 /**
  * Una liquidación dentro de su día de pago: qué se devengó, de qué orden y cuánto
  * falta. En una pagada a medias, el monto original va al lado en pequeño; en
@@ -409,6 +455,7 @@ function LineaLiquidacion({
         <span className="ml-2 type-panel-caption text-on-surface-variant">
           vence el {formatDay(settlement.dueDate)}
         </span>
+        <TasasDeLaLinea settlement={settlement} pagada={pagada} />
       </span>
       {pagada && (
         <Badge tone="success" icono>
