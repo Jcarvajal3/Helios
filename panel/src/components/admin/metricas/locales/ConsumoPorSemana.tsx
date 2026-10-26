@@ -77,7 +77,9 @@ function FilaDeMultiplos({ f, d }: { f: FilaDeMultiplo; d: LocalesDeLaSemana }) 
   const titulo = (b: BarraDeMultiplo) => `${f.nombre} · ${semanaCorta(b.semana)}${b.destacada && d.semana.enCurso ? ' (a medias)' : ''}`
 
   return (
-    <li className="grid grid-cols-[minmax(0,8rem)_minmax(0,1fr)_minmax(0,7rem)] items-end gap-4">
+    // En el teléfono, el nombre y el importe arriba y las barras debajo, de
+    // lado a lado: en una fila, las dos columnas fijas dejaban 30 px al gráfico.
+    <li className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-x-4 gap-y-1.5 sm:grid-cols-[minmax(0,8rem)_minmax(0,1fr)_minmax(0,7rem)] sm:gap-4">
       <Link
         to="/admin/metricas"
         search={busquedaConLocal({ semana: d.semana.desde, enCurso: d.semana.enCurso, local: f.merchantId })}
@@ -94,7 +96,7 @@ function FilaDeMultiplos({ f, d }: { f: FilaDeMultiplo; d: LocalesDeLaSemana }) 
         onFocus={() => {
           if (punto === null) senalar(n - 1)
         }}
-        className="relative flex h-16 touch-pan-y items-end gap-1.5 rounded-t-extra-small border-b border-panel-hairline-strong"
+        className="relative flex h-16 touch-pan-y items-end gap-1.5 rounded-t-extra-small border-b border-panel-hairline-strong max-sm:col-span-2 max-sm:row-start-2"
       >
         {f.barras.map((b, i) => (
           <span

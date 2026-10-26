@@ -120,7 +120,7 @@ export function CuotasDelAbono({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
         <SectionTitle>Cuotas de {persona.fullName ?? 'este paciente'}</SectionTitle>
         <Button size="sm" variant="text" onClick={onCambiarPersona}>
           Cambiar de paciente

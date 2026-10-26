@@ -44,7 +44,7 @@ function AjustesPage() {
   }
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[13rem_minmax(0,1fr)]">
+    <div className="grid gap-5 lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-8">
       <SubmenuAjustes activa={tab} />
 
       <div className={PESTANAS_ANCHAS.includes(tab) ? undefined : 'max-w-(--panel-measure-normal)'}>

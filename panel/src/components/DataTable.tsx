@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useState } from 'react'
-import type { KeyboardEvent, MouseEvent, ReactNode } from 'react'
+import type { CSSProperties, KeyboardEvent, MouseEvent, ReactNode } from 'react'
 import { ArrowDown, ArrowUp, ChevronsUpDown, Columns3, Download, Rows3 } from 'lucide-react'
 
 import { Badge, Button, Checkbox, InfoDot, Tooltip } from '@/components/ui'
@@ -176,6 +176,12 @@ const MARCA_DE_TONO: Record<'warning' | 'error', string> = {
   error: 'shadow-[inset_2px_0_0_var(--color-error)]',
 }
 
+/** La misma marca en la tarjeta del teléfono, donde la lleva la fila entera. */
+const MARCA_DE_TONO_EN_TARJETA: Record<'warning' | 'error', string> = {
+  warning: 'max-sm:shadow-[inset_2px_0_0_var(--color-warning)]',
+  error: 'max-sm:shadow-[inset_2px_0_0_var(--color-error)]',
+}
+
 export function DataTable<T>({
   rows,
   rowKey,
@@ -347,13 +353,27 @@ export function DataTable<T>({
 
         {/* El tope de la consulta, dicho. Antes se cortaba en cien filas sin
             avisar y el operador creía que estaba viendo el padrón entero. */}
+        {/* Envuelve: en el teléfono la frase entera no cabe en un renglón. */}
         {truncada && (
-          <Badge tone="warning" icono>
+          <Badge tone="warning" icono className="h-auto! min-h-6 py-0.5 whitespace-normal!">
             Solo las primeras {limit} · afina la búsqueda para ver el resto
           </Badge>
         )}
 
-        <div className="ml-auto flex items-center gap-1">
+        {/* Envuelve: con dos acciones propias («Pagos a clínicas») la barra
+            medía 510 px y en el teléfono se salía de la pantalla. */}
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-1">
+          {/* En el teléfono las cabeceras no se ven (cada fila es una
+              tarjeta), así que el orden se elige aquí. */}
+          <OrdenEnTelefono
+            columnas={visibles.filter(ordenable)}
+            orden={orden}
+            onOrden={(siguiente) => {
+              if (ordenEnServidor) ordenEnServidor.onOrden(siguiente)
+              else setOrdenLocal(siguiente)
+            }}
+          />
+
           {acciones}
 
           {exportar && columnasCsv.length > 0 && (
@@ -399,13 +419,24 @@ export function DataTable<T>({
         sirve: junto a un overflow-x:auto, `clip` computa a `hidden` y vuelve a
         crear contenedor de desplazamiento.)
       */}
-      <div className="overflow-auto rounded-panel-card border border-panel-hairline bg-panel-card [max-height:var(--panel-table-max-h)]">
+      {/*
+        En el teléfono (por debajo de 640 px) cada fila es una tarjeta, con la
+        misma `.tabla-apilada` que la `Table` del kit: la primera columna hace
+        de título y las demás van una por renglón con su rótulo delante. Con
+        siete columnas y la de identidad pegada, en 343 px quedaban unos cien
+        para todo lo demás. Sin columnas a lo ancho, la caja ya no necesita
+        tope de alto: desplaza la página, no una caja dentro de ella.
+      */}
+      <div className="overflow-auto rounded-panel-card border border-panel-hairline bg-panel-card [max-height:var(--panel-table-max-h)] max-sm:[max-height:none]">
         {/*
           border-separate y no collapse: con las celdas colapsadas el borde
           pertenece a la rejilla y no a la celda, así que la cabecera pegajosa
           se desplaza dejando su propia línea atrás.
         */}
-        <table className="w-full min-w-max border-separate border-spacing-0">
+        <table
+          style={rotulosApilados(visibles.map((c) => c.header))}
+          className="tabla-apilada w-full min-w-max border-separate border-spacing-0"
+        >
           <thead>
             <tr>
               {visibles.map((columna) => (
@@ -452,7 +483,9 @@ export function DataTable<T>({
                   tabIndex={onRowClick ? 0 : undefined}
                   onClick={onRowClick ? (event) => alPulsarFila(event, row) : undefined}
                   onKeyDown={onRowClick ? (event) => alTeclearFila(event, row) : undefined}
-                  className={`group/fila ${onRowClick ? 'cursor-pointer outline-none' : ''}`}
+                  // La raya entre tarjetas del teléfono: allí las celdas
+                  // pierden la suya y la pone la fila.
+                  className={`group/fila max-sm:border-b max-sm:border-panel-hairline max-sm:last:border-b-0 ${tono ? MARCA_DE_TONO_EN_TARJETA[tono] : ''} ${onRowClick ? 'cursor-pointer outline-none max-sm:hover:bg-panel-raised max-sm:focus-visible:bg-panel-raised' : ''}`}
                 >
                   {visibles.map((columna, i) => (
                     <td
@@ -561,6 +594,60 @@ function Cabecera<T>({
       </button>
       {regla}
     </span>
+  )
+}
+
+/**
+ * El orden de la tabla en el teléfono, donde las cabeceras no se ven: un
+ * `<select>` nativo con cada columna ordenable en los dos sentidos. Desde
+ * 640 px no sale, porque ahí se ordena pulsando la cabecera.
+ */
+function OrdenEnTelefono<T>({
+  columnas,
+  orden,
+  onOrden,
+}: {
+  columnas: Array<Column<T>>
+  orden: Orden | null
+  onOrden: (orden: Orden | null) => void
+}) {
+  const id = useId()
+  if (columnas.length === 0) return null
+
+  return (
+    <div className="sm:hidden">
+      <label htmlFor={id} className="sr-only">
+        Ordenar por
+      </label>
+      <select
+        id={id}
+        value={orden ? `${orden.key}:${orden.dir}` : ''}
+        onChange={(evento) => {
+          const [key, dir] = evento.target.value.split(':')
+          onOrden(key ? { key, dir: dir === 'desc' ? 'desc' : 'asc' } : null)
+        }}
+        className="h-panel-control-sm max-w-52 truncate rounded-panel-control bg-transparent px-2 type-panel-control text-on-surface-variant hover:bg-panel-raised"
+      >
+        <option value="">Ordenar por…</option>
+        {columnas.map((c) => (
+          <optgroup key={c.key} label={c.header}>
+            <option value={`${c.key}:asc`}>{c.header} ↑</option>
+            <option value={`${c.key}:desc`}>{c.header} ↓</option>
+          </optgroup>
+        ))}
+      </select>
+    </div>
+  )
+}
+
+/**
+ * Los rótulos que la tarjeta del teléfono pone delante de cada celda, como
+ * cadenas de CSS: `--col-2: "Consulta"`. La primera columna no lleva: es el
+ * título. Lo mismo que hace `Table` con `apilada`.
+ */
+function rotulosApilados(headers: Array<string>): CSSProperties {
+  return Object.fromEntries(
+    headers.slice(1).map((h, i) => [`--col-${i + 2}`, JSON.stringify(h.trim())]),
   )
 }
 

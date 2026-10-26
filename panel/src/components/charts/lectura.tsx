@@ -112,9 +112,13 @@ export type ContenidoDelGlobo = {
   nota?: string
 }
 
-/** La caja del globo, la misma en el lienzo y flotando. */
+/**
+ * La caja del globo, la misma en el lienzo y flotando. En el teléfono
+ * envuelve con tope de pantalla: en un renglón, un rótulo largo lo hacía más
+ * ancho que la vista y se cortaba por la derecha.
+ */
 const CAJA_DEL_GLOBO =
-  'anim-globo pointer-events-none whitespace-nowrap rounded-panel-control border border-panel-hairline bg-panel-control px-3 py-2 shadow-lg'
+  'anim-globo pointer-events-none whitespace-nowrap max-sm:max-w-[calc(100vw-2rem)] max-sm:whitespace-normal rounded-panel-control border border-panel-hairline bg-panel-control px-3 py-2 shadow-lg'
 
 /** Lo de dentro del globo: título, filas ordenadas y nota. */
 function CuerpoDelGlobo({ titulo, filas, nota }: ContenidoDelGlobo) {

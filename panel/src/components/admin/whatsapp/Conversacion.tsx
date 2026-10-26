@@ -97,9 +97,20 @@ export function Conversacion({
             )}
             <QuienEnLaCabecera chat={chat} />
           </p>
+          {/* En el teléfono las etiquetas bajan debajo del nombre: en la fila,
+              con dos de ellas el nombre se quedaba en nada. */}
+          {chat.etiquetas.length > 0 && (
+            <div className="mt-1 flex flex-wrap gap-1.5 sm:hidden">
+              {chat.etiquetas.map((e) => (
+                <Badge key={e}>{e}</Badge>
+              ))}
+            </div>
+          )}
         </div>
         {chat.etiquetas.map((e) => (
-          <Badge key={e}>{e}</Badge>
+          <Badge key={e} className="max-sm:hidden">
+            {e}
+          </Badge>
         ))}
         <Button
           variant="tonal"

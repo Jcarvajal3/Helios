@@ -133,7 +133,7 @@ export function Condiciones({
               what="Lo que gana quien registra cada orden confirmada en esta clínica. Se le paga a la clínica junto con la primera mitad de esa consulta (día 8 de la orden), sumada en la misma transferencia, y ella se la entrega a su personal. Vacía, usa el valor global de Ajustes › Parámetros."
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             <Input
               id={`comision-personal-${merchantId}`}
               value={comisionPersonal}
@@ -150,7 +150,7 @@ export function Condiciones({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           <Input
             id={`desde-${merchantId}`}
             label="Vigente desde"

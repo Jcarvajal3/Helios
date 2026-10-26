@@ -1568,7 +1568,10 @@ export function FilterBar({
   className?: string
 }) {
   return (
-    <div className={`mb-6 flex flex-wrap items-end gap-x-5 gap-y-3 ${className}`}>
+    // En el teléfono cada filtro ocupa su renglón entero: con sus anchos de
+    // escritorio (un buscador de `w-72`, un desplegable de `w-56`) se
+    // apilaban dentados, cada uno de un largo.
+    <div className={`mb-6 flex flex-wrap items-end gap-x-5 gap-y-3 max-sm:[&>*]:w-full! ${className}`}>
       {children}
     </div>
   )

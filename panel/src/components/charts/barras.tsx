@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 
-import { TablaDelGrafico, anclaje, escalaBonita, indicesEspaciados } from '@/components/charts/comun'
+import { TablaDelGrafico, anclaje, escalaBonita, etiquetasDelEje } from '@/components/charts/comun'
 import type { ChartPoint, ChartSeries } from '@/components/charts/comun'
 import { columnaBajo } from '@/components/charts/geometria'
 import { Globo, lecturaDelPunto, useSenalado } from '@/components/charts/lectura'
@@ -254,14 +254,14 @@ export function BarChart({
       <div className="flex gap-2">
         <div className="w-11 shrink-0" />
         <div className="relative mt-2 h-4 min-w-0 flex-1" aria-hidden>
-          {indicesEspaciados(n, 7).map((i) => {
+          {etiquetasDelEje(n).map(({ i, clase }) => {
             const a = anclaje(i, n)
             return (
               <span
                 key={datos[i].key}
                 className={`absolute whitespace-nowrap type-panel-caption tabular-nums ${
                   i === punto ? 'text-on-surface' : 'text-panel-muted'
-                } ${a.clase}`}
+                } ${a.clase} ${clase}`}
                 style={a.style}
               >
                 {datos[i].label}

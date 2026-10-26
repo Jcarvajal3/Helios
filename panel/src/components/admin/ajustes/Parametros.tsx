@@ -186,7 +186,9 @@ function HistoriaDelParametro({ parametro }: { parametro: Parametro }) {
       {versiones.map((v) => (
         <li
           key={`${v.effectiveFrom}-${v.createdAt}`}
-          className="grid grid-cols-[7rem_8rem_minmax(0,1fr)] gap-3 type-panel-body"
+          // En el teléfono, el valor y su fecha en un renglón y la nota debajo:
+          // con las dos columnas fijas a la nota le quedaban 40 px.
+          className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 type-panel-body sm:grid-cols-[7rem_8rem_minmax(0,1fr)] sm:gap-3"
         >
           <span className="tabular-nums font-medium text-on-surface">
             {formatValorParametro(v.value, parametro.unit, parametro.key)}
@@ -194,7 +196,7 @@ function HistoriaDelParametro({ parametro }: { parametro: Parametro }) {
           <span className="whitespace-nowrap text-on-surface-variant">
             desde el {formatDay(v.effectiveFrom)}
           </span>
-          <span className="text-on-surface-variant">
+          <span className="text-on-surface-variant max-sm:col-span-2">
             {v.note ? `«${v.note}»` : 'Sin nota'}
             <span className="ml-2 type-panel-caption">· anotado el {formatDateTime(v.createdAt)}</span>
           </span>

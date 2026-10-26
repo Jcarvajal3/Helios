@@ -14,7 +14,9 @@ export function TablaAsistente({ tabla }: { tabla: Tabla }) {
       {tabla.filas.length === 0 ? (
         <p className="type-panel-body text-on-surface-variant">La consulta no devolvió filas.</p>
       ) : (
-        <Table headers={tabla.columnas.map((c) => c.rotulo)}>
+        // Apilada: en el teléfono, una lista de médicos con su dirección se
+        // leía arrastrándola de lado, con las demás columnas fuera de la vista.
+        <Table apilada headers={tabla.columnas.map((c) => c.rotulo)}>
           {tabla.filas.map((fila, i) => (
             <Tr key={i}>
               {tabla.columnas.map((c) => (

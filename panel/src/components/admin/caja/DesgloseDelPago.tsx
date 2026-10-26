@@ -73,9 +73,12 @@ export function DesgloseDelPago({ item }: { item: QueueItem }) {
             {compra.installments.map((cuota) => (
               <li
                 key={cuota.installmentId}
-                className="flex items-center justify-between gap-4 px-4 py-2.5"
+                // En el teléfono el importe y su desglose bajan a su propio
+                // renglón: al lado del vencimiento, con una pastilla, medían
+                // más que la pantalla.
+                className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-2.5"
               >
-                <div>
+                <div className="min-w-0">
                   <p className="type-panel-body text-on-surface">
                     Cuota {cuota.sequence} de {compra.installmentsTotal}
                   </p>
@@ -86,7 +89,7 @@ export function DesgloseDelPago({ item }: { item: QueueItem }) {
                   </p>
                 </div>
 
-                <div className="flex shrink-0 items-center gap-3">
+                <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-3">
                   {/* Una cuota ya pagada dentro de un pago pendiente significa
                       que otro reporte la saldó antes: aprobarlo va a fallar. */}
                   {cuota.status === 'paid' && (
@@ -101,7 +104,7 @@ export function DesgloseDelPago({ item }: { item: QueueItem }) {
                         : `${cuota.otherReports} reportes más`}
                     </Badge>
                   )}
-                  <span className="flex flex-col items-end">
+                  <span className="flex min-w-0 flex-col items-end text-right">
                     <span className="type-panel-body font-semibold tabular-nums text-on-surface">
                       {formatUsd(cuota.quotedUsd)}
                     </span>

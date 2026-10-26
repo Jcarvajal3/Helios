@@ -125,7 +125,7 @@ function Tabla({
           <tr className="border-b border-panel-hairline-strong">
             <th
               scope="col"
-              className="sticky left-0 z-10 min-w-56 bg-panel-card pr-4 pb-2 text-left align-bottom type-panel-caption font-semibold text-panel-muted"
+              className="sticky left-0 z-10 min-w-36 bg-panel-card sm:min-w-56 pr-4 pb-2 text-left align-bottom type-panel-caption font-semibold text-panel-muted"
             >
               Cifra
             </th>

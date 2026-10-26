@@ -27,10 +27,14 @@ const VARIANTES: Record<ButtonVariant, string> = {
   danger: 'bg-error text-on-error hover:bg-error-dim',
 }
 
+// El alto es un mínimo y no una medida: con una línea sale el mismo (20 de
+// letra más el relleno), pero cuando una fila aprieta el botón en el teléfono
+// y la etiqueta se parte en dos, el botón crece con ella. Con `h-*` el
+// segundo renglón se salía por abajo, encima de lo que hubiera debajo.
 const TAMANOS: Record<ButtonSize, string> = {
-  sm: 'h-panel-control-sm px-3.5 type-panel-control',
-  md: 'h-panel-control-md px-4 type-panel-control',
-  lg: 'h-panel-control w-full px-5 type-panel-control',
+  sm: 'min-h-panel-control-sm py-2 px-3.5 text-center type-panel-control [&>svg]:shrink-0',
+  md: 'min-h-panel-control-md py-2.5 px-4 text-center type-panel-control [&>svg]:shrink-0',
+  lg: 'min-h-panel-control w-full py-3 px-5 text-center type-panel-control [&>svg]:shrink-0',
 }
 
 export function claseDeBoton(variant: ButtonVariant, size: ButtonSize): string {

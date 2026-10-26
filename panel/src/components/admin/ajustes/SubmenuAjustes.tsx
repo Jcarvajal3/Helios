@@ -1,5 +1,7 @@
 import { useId } from 'react'
-import { Link } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
+
+import { CLASE_CAMPO, bordeDeCampo } from '@/components/kit/clases'
 
 import { GRUPOS_AJUSTES } from '@/features/admin/ajustesNavegacion'
 import type { GrupoAjustes, PestanaAjustes } from '@/features/admin/ajustesNavegacion'
@@ -13,11 +15,55 @@ import type { GrupoAjustes, PestanaAjustes } from '@/features/admin/ajustesNaveg
  */
 export function SubmenuAjustes({ activa }: { activa: PestanaAjustes }) {
   return (
-    <nav aria-label="Secciones de ajustes" className="flex flex-col gap-5">
-      {GRUPOS_AJUSTES.map((grupo) => (
-        <GrupoDelSubmenu key={grupo.titulo} grupo={grupo} activa={activa} />
-      ))}
-    </nav>
+    <>
+      <SelectorDeAjustes activa={activa} />
+      <nav aria-label="Secciones de ajustes" className="hidden flex-col gap-5 lg:flex">
+        {GRUPOS_AJUSTES.map((grupo) => (
+          <GrupoDelSubmenu key={grupo.titulo} grupo={grupo} activa={activa} />
+        ))}
+      </nav>
+    </>
+  )
+}
+
+/**
+ * El submenú por debajo de 1024 px, donde no hay columna a la izquierda: un
+ * desplegable con los mismos grupos. La lista entera ocupaba 700 px encima de
+ * cada sección, y en el teléfono había que bajar una pantalla y media para
+ * llegar a lo que se había abierto.
+ */
+function SelectorDeAjustes({ activa }: { activa: PestanaAjustes }) {
+  const navigate = useNavigate()
+  const id = useId()
+
+  return (
+    <div className="lg:hidden">
+      <label htmlFor={id} className="sr-only">
+        Sección de ajustes
+      </label>
+      <select
+        id={id}
+        value={activa}
+        onChange={(e) => void navigate({ to: '/admin/ajustes', search: { tab: e.target.value as PestanaAjustes } })}
+        className={`h-panel-control-md appearance-none bg-[length:15px] bg-[position:right_12px_center] bg-no-repeat ${CLASE_CAMPO} ${bordeDeCampo(false)}`}
+        style={{
+          // El mismo chevron que el `Select` del kit.
+          backgroundImage:
+            "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23B9B9B9'%3E%3Cpath d='M12 15.4 6.6 10l1.4-1.4 4 4 4-4L17.4 10z'/%3E%3C/svg%3E\")",
+          paddingRight: 34,
+        }}
+      >
+        {GRUPOS_AJUSTES.map((grupo) => (
+          <optgroup key={grupo.titulo} label={grupo.titulo}>
+            {grupo.secciones.map((item) => (
+              <option key={item.value} value={item.value}>
+                {item.label}
+              </option>
+            ))}
+          </optgroup>
+        ))}
+      </select>
+    </div>
   )
 }
 

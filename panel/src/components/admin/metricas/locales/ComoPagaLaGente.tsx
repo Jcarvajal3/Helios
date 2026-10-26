@@ -39,8 +39,12 @@ export function ComoPagaLaGente({ d, parametros }: { d: LocalesDeLaSemana; param
         ) : (
           <ul className="flex flex-col gap-4">
             {filas.map((f) => (
-              <li key={f.merchantId} className="grid grid-cols-[minmax(0,8rem)_minmax(0,1fr)] items-end gap-4">
-                <span className="truncate pb-4 type-panel-label text-on-surface">{f.nombre}</span>
+              // En el teléfono el nombre va encima de sus cuatro semanas.
+              <li
+                key={f.merchantId}
+                className="grid grid-cols-1 gap-1.5 sm:grid-cols-[minmax(0,8rem)_minmax(0,1fr)] sm:items-end sm:gap-4"
+              >
+                <span className="truncate type-panel-label text-on-surface sm:pb-4">{f.nombre}</span>
                 <CeldasDelLocal f={f} parametros={parametros} />
               </li>
             ))}
@@ -117,7 +121,9 @@ function Celda({ c, parametros, apagada }: { c: CeldaDePago; parametros: Paramet
       className="flex min-w-0 flex-col gap-1.5 transition-opacity duration-[var(--transition-fast)]"
       style={{ opacity: apagada ? 0.5 : 1 }}
     >
-      <span className="flex items-baseline justify-between gap-1 type-panel-caption">
+      {/* En el teléfono la semana y su cifra, una encima de otra: cada celda
+          mide unos 75 px y no caben en un renglón. */}
+      <span className="flex items-baseline justify-between gap-1 type-panel-caption max-sm:flex-col max-sm:items-start max-sm:gap-0.5">
         <span className="truncate text-panel-muted">{semanaCorta(c.semana)}</span>
         {juzgada && (tono === 'warning' || tono === 'error') ? (
           <Badge tone={tono}>{valor}</Badge>

@@ -34,8 +34,11 @@ const COLOR_DEL_ICONO: Partial<Record<BadgeTone, string>> = {
   error: 'text-panel-critico',
 }
 
+// `shrink-0`: en el teléfono van en una fila que se desliza y no se encogen.
+// Con el dedo, todas a 44: la que es un botón ya crecía sola (styles.css) y
+// las que son enlaces no, así que la fila salía de dos alturas.
 const CLASE_PASTILLA =
-  'inline-flex h-7.5 items-center gap-1.5 whitespace-nowrap rounded-full border border-panel-hairline bg-panel-card px-3 type-panel-label text-on-surface-variant transition-colors duration-(--transition-fast) hover:bg-panel-raised hover:text-on-surface'
+  'inline-flex h-7.5 shrink-0 pointer-coarse:h-11 items-center gap-1.5 whitespace-nowrap rounded-full border border-panel-hairline bg-panel-card px-3 type-panel-label text-on-surface-variant transition-colors duration-(--transition-fast) hover:bg-panel-raised hover:text-on-surface'
 
 /** Una pastilla de la tira: su estado con icono (o un punto neutro) y a dónde lleva. */
 function Pastilla({ pastilla, onVolver }: { pastilla: PastillaDeLaCharla; onVolver: () => void }) {
@@ -75,7 +78,13 @@ function TiraDeLaCharla({ onVolver }: { onVolver: () => void }) {
   })
 
   return (
-    <nav aria-label="Lo que pide atención" className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+    // En el teléfono, una sola fila que se desliza de lado: envueltas en 343
+    // px, las cuatro pastillas eran cuatro renglones metidos debajo de los
+    // botones. Desde 768 vuelven a envolver al lado de ellos.
+    <nav
+      aria-label="Lo que pide atención"
+      className="flex min-w-0 items-center gap-2 max-md:overflow-x-auto max-md:overscroll-x-contain max-md:px-4 max-md:[scrollbar-width:none] md:flex-1 md:flex-wrap"
+    >
       {pastillas.map((p) => (
         <Pastilla key={p.clave} pastilla={p} onVolver={onVolver} />
       ))}
@@ -125,9 +134,11 @@ export function CharlaDeInicio({ onVolver }: { onVolver: () => void }) {
     <div className="relative isolate -my-5 flex h-(--alto-de-la-charla) flex-col lg:-my-6 lg:h-dvh" style={ALTO}>
       <Halo donde="charla" />
 
-      <header className="-mx-4 flex min-h-15 shrink-0 flex-wrap items-center gap-2 border-b border-panel-hairline px-4 py-2.5 lg:-mx-8 lg:px-8">
+      {/* Por debajo de 768, en dos filas: las pastillas de lado a lado y
+          debajo los dos botones. En una sola, los botones se comían el ancho. */}
+      <header className="-mx-4 flex min-h-15 shrink-0 flex-col gap-2 border-b border-panel-hairline py-2.5 md:flex-row md:flex-wrap md:items-center md:px-4 lg:-mx-8 lg:px-8">
         <TiraDeLaCharla onVolver={onVolver} />
-        <div className="ml-auto flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center justify-end gap-2 max-md:px-4 md:ml-auto">
           <BotonConversacionNueva />
           <Button variant="tonal" size="sm" onClick={onVolver}>
             Volver a Inicio

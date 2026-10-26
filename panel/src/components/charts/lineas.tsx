@@ -4,7 +4,7 @@ import {
   TablaDelGrafico,
   anclajeEn,
   escalaConSigno,
-  indicesEspaciados,
+  etiquetasDelEje,
 } from '@/components/charts/comun'
 import type { ChartSeries, LinePoint } from '@/components/charts/comun'
 import {
@@ -317,14 +317,14 @@ export function LineChart({
       <div className="flex gap-2">
         <div className="w-11 shrink-0" />
         <div className="relative mt-2 h-4 min-w-0 flex-1" aria-hidden>
-          {indicesEspaciados(n, 7).map((i) => {
+          {etiquetasDelEje(n).map(({ i, clase }) => {
             const a = anclajeEn(xDe(i, n))
             return (
               <span
                 key={datos[i].key}
                 className={`absolute whitespace-nowrap type-panel-caption tabular-nums ${
                   i === punto ? 'text-on-surface' : 'text-panel-muted'
-                } ${a.clase}`}
+                } ${a.clase} ${clase}`}
                 style={a.style}
               >
                 {datos[i].label}

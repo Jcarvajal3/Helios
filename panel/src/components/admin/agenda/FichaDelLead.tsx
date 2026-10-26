@@ -643,7 +643,7 @@ function AnotarGestion({ lead, hoy, ahora }: { lead: Lead; hoy: string; ahora: D
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid gap-2 sm:grid-cols-3">
         {(['mensaje', 'llamada', 'visita'] as const).map((t) => {
           const Icono = ICONO_TIPO[t]
           const elegido = eleccion.tipo === t
@@ -661,7 +661,8 @@ function AnotarGestion({ lead, hoy, ahora }: { lead: Lead; hoy: string; ahora: D
               type="button"
               aria-pressed={elegido}
               onClick={() => elegir({ ...SIN_ELEGIR, tipo: t })}
-              className={`flex flex-col items-start gap-1 rounded-panel-control border px-3 py-2.5 text-left transition-colors ${
+              // En el teléfono, una por renglón y tumbada: icono, nombre y ayuda.
+              className={`flex items-center gap-2.5 rounded-panel-control border px-3 py-2.5 text-left transition-colors sm:flex-col sm:items-start sm:gap-1 ${
                 elegido
                   ? 'border-primary bg-primary/8 ring-1 ring-primary'
                   : t === 'visita' && visitaPasada
@@ -671,7 +672,7 @@ function AnotarGestion({ lead, hoy, ahora }: { lead: Lead; hoy: string; ahora: D
             >
               <Icono size={18} aria-hidden className={elegido ? 'text-primary' : 'text-on-surface-variant'} />
               <span className="type-panel-control text-on-surface">{ROTULO_TIPO[t]}</span>
-              <span className="truncate type-panel-caption text-on-surface-variant">{ayuda}</span>
+              <span className="min-w-0 truncate type-panel-caption text-on-surface-variant max-sm:ml-auto">{ayuda}</span>
             </button>
           )
         })}

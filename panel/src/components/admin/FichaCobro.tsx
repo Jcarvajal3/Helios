@@ -434,9 +434,11 @@ function porQueSinCotejo(cotejo: Cotejo, movimiento: StatementMatch | null): str
 
 function Dato({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
   return (
-    <div>
+    // `min-w-0` y cortar donde sea: en el teléfono cada columna mide 150 px y
+    // una referencia larga en monoespaciada empujaba la de al lado.
+    <div className="min-w-0">
       <dt className="type-panel-label text-on-surface-variant">{label}</dt>
-      <dd className={`mt-0.5 text-on-surface ${mono ? 'font-mono tracking-wider' : ''}`}>{value}</dd>
+      <dd className={`mt-0.5 text-on-surface [overflow-wrap:anywhere] ${mono ? 'font-mono tracking-wider' : ''}`}>{value}</dd>
     </div>
   )
 }

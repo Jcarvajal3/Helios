@@ -160,6 +160,23 @@ export function indicesEspaciados(n: number, cuantos: number): Array<number> {
 }
 
 /**
+ * Los puntos con etiqueta en el eje de abajo, y en qué anchos sale cada una:
+ * siete desde 640 px y cuatro en el teléfono. En un lienzo de 250 px, siete
+ * fechas como «12 oct» se montaban unas encima de otras. Va en clases y no
+ * midiendo el lienzo para que salga igual del servidor.
+ */
+export function etiquetasDelEje(n: number): Array<{ i: number; clase: string }> {
+  const anchas = indicesEspaciados(n, 7)
+  const estrechas = indicesEspaciados(n, 4)
+  return [...new Set([...anchas, ...estrechas])]
+    .sort((a, b) => a - b)
+    .map((i) => ({
+      i,
+      clase: !estrechas.includes(i) ? 'max-sm:hidden' : !anchas.includes(i) ? 'sm:hidden' : '',
+    }))
+}
+
+/**
  * Dónde se ancla algo que va encima de la barra `i`.
  *
  * Una etiqueta centrada sobre la primera barra de treinta se sale de la caja
