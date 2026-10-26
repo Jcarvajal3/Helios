@@ -209,7 +209,11 @@ function DirectorioPage() {
           </>
         )}
 
-        <div>
+        {/* Sin el tope de alto de la tabla (`--panel-table-max-h`, la
+            pantalla menos la barra y los filtros): aquí va debajo de las
+            cifras y el gráfico, y al bajar hasta ella sobraba ese hueco en
+            blanco. Con una fila por médico, la tabla se baja con la página. */}
+        <div className="[--panel-table-max-h:none]">
           <FilterBar>
             <BuscadorEnUrl
               id="buscar-directorio"
