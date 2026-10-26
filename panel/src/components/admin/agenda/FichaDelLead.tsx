@@ -289,7 +289,7 @@ function Embudo({ estado }: { estado: EstadoDelLead }) {
                 }`}
               />
               <span
-                className={`truncate type-panel-caption ${
+                className={`truncate type-panel-caption max-sm:hidden ${
                   actual ? 'font-semibold text-on-surface' : hecho ? 'text-on-surface-variant' : 'text-panel-muted'
                 }`}
               >
@@ -299,6 +299,12 @@ function Embudo({ estado }: { estado: EstadoDelLead }) {
           )
         })}
       </ol>
+      {/* En el teléfono cada paso mide unos 60 px y las cinco etiquetas se
+          cortaban («Visita age…»): quedan las barras y, debajo, el paso entero. */}
+      <p className="mt-1.5 type-panel-caption sm:hidden">
+        <span className="text-on-surface-variant">En qué va: </span>
+        <span className="font-semibold text-on-surface">{ESTADO_DEL_LEAD[estado].label}</span>
+      </p>
     </div>
   )
 }
