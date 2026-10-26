@@ -57,7 +57,7 @@ export const PAGINAS_PUBLICAS = {
   '/consulta-medica-en-cuotas': { actualizada: '2026-10-14' },
   '/odontologia-en-cuotas': { actualizada: '2026-10-14' },
   '/cosmetologia-en-cuotas': { actualizada: '2026-10-14' },
-  '/afiliacion': { actualizada: '2026-10-14' },
+  '/afiliacion': { actualizada: '2026-10-26' },
   '/soporte': { actualizada: '2026-10-09' },
   '/legal/terminos': { actualizada: '2026-10-07' },
   '/legal/privacidad': { actualizada: '2026-10-07' },

@@ -4,17 +4,17 @@ import { CampoDocumento } from '@/components/CampoDocumento'
 import { Input, Select } from '@/components/ui'
 import { BANKS } from '@/features/admin/banks'
 import { REDES_SOCIALES, cuentaDeOtroBanco, digitosDeCuenta, formatoCuenta } from '@/features/admin/clinicas/clinicas'
-import type { AltaDeClinica, ModoDeAlta, RedSocial } from '@/features/admin/clinicas/clinicas'
+import type { AltaDeClinica, RedSocial } from '@/features/admin/clinicas/clinicas'
 import { LETRAS_CEDULA, LETRAS_RIF, LETRAS_TITULAR } from '@/lib/documento'
 
 const OPCIONES_BANCO = BANKS.map((b) => ({ value: b.name, label: b.name }))
 
 /**
- * Los campos del alta de una clínica: el médico, el consultorio y a dónde se
- * le paga. Los mismos en la solicitud de la portada (`/afiliacion`), en el
- * alta del equipo y en la revisión de una solicitud, para que lo que pide uno
- * sea lo que ve el otro. La portada (`modo="portada"`) solo pide la
- * transferencia; el equipo ve también el Pago Móvil.
+ * Los campos del alta de una clínica que llena el equipo: el médico, el
+ * consultorio y a dónde se le paga (la transferencia, el Pago Móvil o los
+ * dos). Los mismos en el alta y en la revisión de una solicitud. La
+ * solicitud de la portada (`/afiliacion`) pide los mismos datos, en tres
+ * pasos y con el aspecto de la portada (`FormularioDeAfiliacion`).
  *
  * La red social, opcional, va con el contacto del consultorio: qué red es y
  * el usuario o el enlace.
@@ -27,18 +27,15 @@ export function CamposDeAlta({
   id,
   valor,
   onChange,
-  modo = 'equipo',
   autoFocus = false,
 }: {
   /** Prefijo de los `id`: dos formularios en la misma página no chocan. */
   id: string
   valor: AltaDeClinica
   onChange: (siguiente: AltaDeClinica) => void
-  modo?: ModoDeAlta
   autoFocus?: boolean
 }) {
   const campo = (k: keyof AltaDeClinica) => (v: string) => onChange({ ...valor, [k]: v })
-  const portada = modo === 'portada'
   const otroBanco = cuentaDeOtroBanco(valor.bank, valor.accountNumber)
   // «Otra» no dice cuál: el rótulo solo nombra la red cuando se sabe.
   const red = valor.socialNetwork === 'otra' ? null : REDES_SOCIALES.find((r) => r.value === valor.socialNetwork)?.label
@@ -147,14 +144,7 @@ export function CamposDeAlta({
         />
       </Bloque>
 
-      <Bloque
-        titulo={portada ? 'Datos para la transferencia' : 'Transferencia'}
-        nota={
-          portada
-            ? 'A esta cuenta te transferimos tus consultas.'
-            : 'A dónde se le paga. Pon la transferencia, el Pago Móvil o los dos.'
-        }
-      >
+      <Bloque titulo="Transferencia" nota="A dónde se le paga. Pon la transferencia, el Pago Móvil o los dos.">
         <Input
           id={`${id}-titular`}
           label="Titular de la cuenta"
@@ -180,7 +170,7 @@ export function CamposDeAlta({
         <div>
           <Input
             id={`${id}-cuenta`}
-            label={portada ? 'Número de cuenta (20 dígitos)' : 'Número de cuenta (20 dígitos, opcional)'}
+            label="Número de cuenta (20 dígitos, opcional)"
             value={formatoCuenta(valor.accountNumber)}
             onChange={(v) => onChange({ ...valor, accountNumber: digitosDeCuenta(v) })}
             inputMode="numeric"
@@ -191,32 +181,30 @@ export function CamposDeAlta({
         </div>
       </Bloque>
 
-      {!portada && (
-        <Bloque titulo="Pago Móvil (opcional)" nota="Con el mismo titular de arriba.">
-          <Select
-            id={`${id}-pm-banco`}
-            label="Banco"
-            value={valor.pagoMovilBank}
-            placeholder="Sin Pago Móvil"
-            options={OPCIONES_BANCO}
-            onChange={campo('pagoMovilBank')}
-          />
-          <Input
-            id={`${id}-pm-telefono`}
-            label="Número de teléfono"
-            value={valor.pagoMovilPhone}
-            onChange={campo('pagoMovilPhone')}
-            inputMode="tel"
-            placeholder="0414 1234567"
-          />
-        </Bloque>
-      )}
+      <Bloque titulo="Pago Móvil (opcional)" nota="Con el mismo titular de arriba.">
+        <Select
+          id={`${id}-pm-banco`}
+          label="Banco"
+          value={valor.pagoMovilBank}
+          placeholder="Sin Pago Móvil"
+          options={OPCIONES_BANCO}
+          onChange={campo('pagoMovilBank')}
+        />
+        <Input
+          id={`${id}-pm-telefono`}
+          label="Número de teléfono"
+          value={valor.pagoMovilPhone}
+          onChange={campo('pagoMovilPhone')}
+          inputMode="tel"
+          placeholder="0414 1234567"
+        />
+      </Bloque>
     </div>
   )
 }
 
 /** Un grupo del alta: su título, una nota opcional y los campos en dos columnas. */
-export function Bloque({ titulo, nota, children }: { titulo: string; nota?: string; children: ReactNode }) {
+function Bloque({ titulo, nota, children }: { titulo: string; nota?: string; children: ReactNode }) {
   return (
     <fieldset className="flex flex-col gap-3">
       <legend className="mb-3 type-panel-section text-on-surface">
