@@ -31,6 +31,7 @@ import {
   Tabs,
   formatDateTime,
   formatDocument,
+  formatMoneda,
   formatUsd,
   formatPhone,
   formatVes,
@@ -54,6 +55,8 @@ import {
 import type { EstadoCola, FiltrosPagos } from '@/features/admin/colaDePagos'
 import { estadoDePagoReportado } from '@/features/admin/estados'
 import { lineaDeSumandos, sumandosDeLosPagos } from '@/features/admin/sumandosDelPago'
+import { formatTasa } from '@/features/admin/ajustesReglas'
+import { etiquetaDeLaTasa, partesDelPago } from '@/features/admin/tasaDelPago'
 import { comoBooleano, comoDia, comoId, unoDe } from '@/lib/busqueda'
 import { csvDinero, csvInstante } from '@/lib/csv'
 import { describeError } from '@/lib/supabase'
@@ -547,6 +550,31 @@ const COLUMNAS: Array<Column<QueueItem>> = [
           {formatVes(p.amountVes)}
         </span>
       </>
+    ),
+  },
+  {
+    // Javier (2026-10-26): en qué moneda y a qué tasa se cotizó el pago. Solo
+    // se veía el monto.
+    key: 'tasa',
+    header: 'Moneda y tasa',
+    info: 'A qué tasa BCV se pasó el pago a bolívares: las cuotas de órdenes en euros, a la del euro (y cuánto era en euros); las de órdenes en dólares y los cargos por atraso, a la del dólar. Es la tasa del día de su cotización.',
+    sort: (p) => partesDelPago(p).map((x) => x.moneda).join(','),
+    csv: (p) =>
+      partesDelPago(p)
+        .map((x) => `${etiquetaDeLaTasa(x.moneda)}${x.tasa !== null ? ` ${formatTasa(x.tasa, x.moneda)}` : ''}`)
+        .join(' + '),
+    cell: (p) => (
+      <span className="flex flex-col gap-1">
+        {partesDelPago(p).map((x) => (
+          <span key={x.moneda} className="block whitespace-nowrap">
+            <Badge tone={x.moneda === 'EUR' ? 'brand' : 'neutral'}>{etiquetaDeLaTasa(x.moneda)}</Badge>
+            <span className="mt-0.5 block type-panel-caption tabular-nums text-on-surface-variant">
+              {formatMoneda(x.monto, x.moneda)}
+              {x.tasa !== null && ` a ${formatTasa(x.tasa, x.moneda)}`}
+            </span>
+          </span>
+        ))}
+      </span>
     ),
   },
   {

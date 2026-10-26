@@ -17,6 +17,7 @@ import {
   formatDateTime,
   formatDay,
   formatDocument,
+  formatMoneda,
   formatUsd,
   formatPhone,
   formatVes,
@@ -46,7 +47,24 @@ import { fetchLecturaDelPago } from '@/features/admin/lectorComprobantesApi'
 import { nombreDelMedio } from '@/features/admin/liquidaciones'
 import { fetchPaymentReport } from '@/features/admin/pagosReportados'
 import { lineaDeSumandos, sumandosDelPago } from '@/features/admin/sumandosDelPago'
+import { formatTasa } from '@/features/admin/ajustesReglas'
+import { etiquetaDeLaTasa, partesDelPago } from '@/features/admin/tasaDelPago'
 import { describeError } from '@/lib/supabase'
+
+/**
+ * «€14,24 a la tasa del euro (993,09 Bs./€)»: cada parte del pago en su
+ * moneda y a su tasa, unidas con «+» si hay de las dos.
+ */
+function textoDeLasTasas(item: QueueItem): string {
+  return partesDelPago(item)
+    .map(
+      (x) =>
+        `${formatMoneda(x.monto, x.moneda)} a la tasa del ${x.moneda === 'EUR' ? 'euro' : 'dólar'}${
+          x.tasa !== null ? ` (${formatTasa(x.tasa, x.moneda)})` : ''
+        }`,
+    )
+    .join(' + ')
+}
 
 /** El nombre de la cola que apunta la lista al abrir un pago. */
 export const COLA_PAGOS_REPORTADOS = 'pagos-reportados'
@@ -294,6 +312,12 @@ function FrenteAFrente({ item, lectura }: { item: QueueItem; lectura: Lectura | 
           <DataLabel>Lo que reportó</DataLabel>
           <dl className="grid grid-cols-2 gap-x-4 gap-y-3 type-panel-body">
             <Dato label="Monto en bolívares" value={formatVes(item.amountVes)} />
+            <Dato
+              label="Moneda y tasa"
+              value={partesDelPago(item)
+                .map((x) => etiquetaDeLaTasa(x.moneda))
+                .join(' y ')}
+            />
             <Dato label="Referencia" value={item.reference ?? '—'} mono />
             <Dato label="Medio" value={nombreDelMedio(item.method)} />
             <Dato label="Banco" value={item.bank ?? '—'} />
@@ -317,7 +341,10 @@ function FrenteAFrente({ item, lectura }: { item: QueueItem; lectura: Lectura | 
               <p className="type-panel-figure text-on-surface">{formatUsd(sumandos.totalUsd)}</p>
               {linea && <p className="type-panel-body text-on-surface-variant">{linea}</p>}
               <p className="type-panel-caption text-on-surface-variant">
-                {formatVes(sumandos.totalUsd * item.fxRate)} · {item.installmentCount}{' '}
+                {/* Lo cotizado en bolívares, cada parte a la tasa de su moneda:
+                    multiplicar los dólares por la del dólar daba otra cifra en
+                    un pago de una orden en euros. */}
+                {formatVes(item.amountVes)} · {item.installmentCount}{' '}
                 {item.installmentCount === 1 ? 'cuota' : 'cuotas'}
                 {cuota &&
                   `; la más antigua sin pagar vence el ${formatDay(cuota.dueDate)}${
@@ -370,8 +397,7 @@ function Decision({
         <DataLabel>Reportó (con comisión)</DataLabel>
         <p className="type-panel-figure text-on-surface">{formatUsd(item.amountUsd)}</p>
         <p className="type-panel-caption text-panel-muted">
-          {formatVes(item.amountVes)} a {item.fxRate.toLocaleString('es-VE')} Bs/$, la tasa BCV del día de
-          su cotización
+          {formatVes(item.amountVes)}: {textoDeLasTasas(item)}, la tasa BCV del día de su cotización
         </p>
       </div>
 

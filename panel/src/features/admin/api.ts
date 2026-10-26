@@ -156,6 +156,18 @@ export type QueueItem = {
    */
   installmentsFinancedUsd?: number | null
   installmentsFeeUsd?: number | null
+  /**
+   * La moneda y la tasa de cada parte del pago (20261027000000): lo de
+   * órdenes en euros se cotizó a la tasa BCV del euro (`fxRateEur`) y son
+   * `amountEur` euros; lo demás, y los cargos por atraso, a la del dólar
+   * (`fxRate`). `usdPartUsd` + `eurPartUsd` = `amountUsd`, en dólares del
+   * libro. `undefined` en una base sin la migración: todo en dólares.
+   */
+  monedas?: Moneda[]
+  fxRateEur?: number | null
+  amountEur?: number | null
+  usdPartUsd?: number
+  eurPartUsd?: number
   userId: string
   fullName: string | null
   phone: string | null
@@ -257,6 +269,11 @@ export function aQueueItem(raw: unknown): QueueItem {
     lateFeeUsd: numeroONulo(row.late_fee_usd) ?? 0,
     installmentsFinancedUsd: numeroONulo(row.installments_financed_usd),
     installmentsFeeUsd: numeroONulo(row.installments_fee_usd),
+    monedas: Array.isArray(row.monedas) ? row.monedas.map(leerMoneda) : undefined,
+    fxRateEur: numeroONulo(row.fx_rate_eur),
+    amountEur: numeroONulo(row.amount_eur),
+    usdPartUsd: numeroONulo(row.usd_part_usd) ?? undefined,
+    eurPartUsd: numeroONulo(row.eur_part_usd) ?? undefined,
     userId: String(user.user_id),
     fullName: textoONulo(user.full_name),
     phone: textoONulo(user.phone_e164),

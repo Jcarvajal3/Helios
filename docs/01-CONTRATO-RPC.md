@@ -1416,6 +1416,11 @@ van en columnas `_cur`.
   transferencia a la clínica). `admin_merchant_payables` añade `monedas`
   (`text[]`, dólares primero) y `next_run_eur`. Interna:
   `helios_cuota_pagada(charge, due_date)`.
+- 20261027000000: `helios_admin_payment_item` (lo que devuelven
+  `admin_payment_queue` y `admin_payment_report`) añade `monedas` (dólares
+  primero; los cargos por atraso cuentan como dólares), `fx_rate_eur`,
+  `amount_eur`, `usd_part_usd` y `eur_part_usd`; cada compra, `currency`, y
+  cada cuota, `quoted_cur`.
 
 ### 7.5 Mensajes
 
