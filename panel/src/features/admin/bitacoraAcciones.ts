@@ -70,6 +70,8 @@ export const ACCION_VERBO: Record<string, string | undefined> = {
   'merchant.staff_removed': 'dio de baja a alguien del personal de una clínica',
   // Seguimiento (20261021100000).
   'merchant.followup': 'anotó un contacto de seguimiento con una clínica',
+  // Directorio de médicos (20261026190000).
+  'directory.listing.update': 'cambió la tarjeta de un médico en el directorio',
   // Agenda de médicos por afiliar (20261022200000).
   'doctor_lead.created': 'apuntó un médico en la agenda',
   'doctor_lead.updated': 'corrigió los datos de un médico de la agenda',
@@ -197,6 +199,7 @@ export const FILTROS_BITACORA: ReadonlyArray<TemaBitacora> = [
       'merchant.staff_removed',
       'merchant.staff_password_reset',
       'merchant.followup',
+      'directory.listing.update',
     ],
   },
   {

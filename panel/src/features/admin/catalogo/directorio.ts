@@ -1,4 +1,4 @@
-import { ReceiptText, Store, Users } from 'lucide-react'
+import { BookUser, ReceiptText, Store, Users } from 'lucide-react'
 
 import type { Entrada } from './tipos'
 
@@ -72,6 +72,28 @@ export const directorio = [
     ],
     destino: { to: '/admin/financiamientos' },
     icono: ReceiptText,
+  },
+  {
+    tipo: 'pantalla',
+    id: 'directorio-de-medicos',
+    titulo: 'Directorio de médicos',
+    descripcion:
+      'La página pública /directorio, donde los pacientes buscan médicos y les escriben por WhatsApp: quién sale, con qué datos y cuántos contactos recibe cada uno.',
+    espacio: 'directorio',
+    sinonimos: [
+      'directorio',
+      'directorio público',
+      'directorio de médicos',
+      'página de médicos',
+      'publicar médico',
+      'ocultar médico',
+      'tarjeta del médico',
+      'clics',
+      'contactos por whatsapp',
+      'leads de pacientes',
+    ],
+    destino: { to: '/admin/directorio' },
+    icono: BookUser,
   },
 
   // ── Acciones sobre un paciente ───────────────────────────────────────────
@@ -207,6 +229,28 @@ export const directorio = [
     soloSuperAdmin: true,
   },
 
+  // ── Acciones sobre el directorio de médicos ──────────────────────────────
+  {
+    tipo: 'accion',
+    id: 'publicar-en-el-directorio',
+    titulo: 'Publicar u ocultar un médico en el directorio',
+    descripcion:
+      'Encender o apagar su tarjeta en /directorio. Solo sale una clínica activa, que no sea de prueba y con WhatsApp.',
+    espacio: 'directorio',
+    sinonimos: ['publicar en el directorio', 'sacar del directorio', 'mostrar médico', 'esconder médico'],
+    destino: { to: '/admin/directorio' },
+  },
+  {
+    tipo: 'accion',
+    id: 'corregir-tarjeta-del-directorio',
+    titulo: 'Corregir la tarjeta de un médico en el directorio',
+    descripcion:
+      'Cambiar el nombre, la especialidad, el filtro, la dirección, la ciudad o el WhatsApp que enseña su tarjeta, con la vista previa. Vacío, vuelve el de la ficha.',
+    espacio: 'directorio',
+    sinonimos: ['editar directorio', 'cambiar especialidad del directorio', 'whatsapp del directorio', 'dirección del médico'],
+    destino: { to: '/admin/directorio' },
+  },
+
   // ── Acciones sobre un financiamiento ─────────────────────────────────────
   {
     tipo: 'accion',
@@ -248,5 +292,16 @@ export const directorio = [
     destino: { to: '/admin/metricas', search: { vista: 'locales' } },
     que: 'Por clínica y en la semana elegida: el financiado (sin comisión), los financiamientos, el ticket medio (sin comisión), los pacientes (contados por sus cuotas) y cuántos eran nuevos en esa clínica, los días con financiamientos y el mejor día, con el cambio frente a la semana anterior a la misma altura; las clínicas activas que no financiaron nada también salen.',
     rpc: 'admin_metricas_locales',
+  },
+  {
+    tipo: 'cifra',
+    id: 'clics-del-directorio',
+    titulo: 'Clics de contacto del directorio',
+    descripcion: 'Cuántos pacientes le escriben por WhatsApp a cada médico desde /directorio, en la semana y en el mes.',
+    espacio: 'directorio',
+    sinonimos: ['clics del directorio', 'contactos del directorio', 'quién recibe más contactos', 'visitas del directorio'],
+    destino: { to: '/admin/directorio' },
+    que: 'Toques al botón «Escribir por WhatsApp» de cada tarjeta de /directorio, en la última semana y el último mes (días operativos, hoy incluido) y desde el inicio, con las personas distintas (por navegador) y el total del directorio día a día; los del equipo y los del personal de las clínicas no cuentan.',
+    rpc: 'admin_directorio',
   },
 ] as const satisfies ReadonlyArray<Entrada>

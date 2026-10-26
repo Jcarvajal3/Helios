@@ -948,6 +948,79 @@ defecto, hoy). No se parte por clínica. Guardia: `is_platform_admin()`.
   `?desde=…&hasta=…` (hoy no se escribe). Suite:
   `supabase/tests/metricas_juan_pablo.sql`.
 
+### 2.11 Directorio de médicos (2026-10-26, 20261026190000)
+
+La página pública `/directorio` (sin enlace desde la portada ni el sitemap,
+`noindex`; se llega escribiendo o compartiendo la URL, decisión de Javier) y
+la pestaña superadmin › Directorio › Directorio de médicos
+(`/admin/directorio`). Pestaña: `is_platform_admin()` (los dos roles), con
+bitácora al guardar.
+
+Tablas (sin RLS de lectura: solo por estas RPC):
+
+- `directory_listings`: una fila por clínica que el equipo tocó.
+  `is_visible` (por defecto **apagado**: nadie sale sin que el equipo lo
+  encienda), `published_at` (la última vez que se encendió) y los datos de la
+  tarjeta, cada uno null = el de la ficha: `display_name`
+  (`helios_doctor_name`), `specialty` (`helios_directorio_texto(m.specialty)`:
+  sin coma final, mayúscula inicial), `specialty_key`
+  (`helios_directorio_especialidad_sugerida(m.specialty, m.category)`),
+  `address`, `city`, `whatsapp` (`helios_normalize_ve_phone(m.phone)`, E.164).
+- `directory_contact_clicks`: cada toque al botón de WhatsApp. `visitor_id`
+  (aleatorio del navegador, `^[A-Za-z0-9-]{8,64}$` o null), `origin`
+  (`publico | equipo | clinica`: quien llama está en `platform_admins` o es
+  personal activo de una clínica). Solo cuentan los `publico`.
+
+`specialty_key` es una de `helios_directorio_especialidades()`:
+`medicina_general, medicina_interna, pediatria, ginecologia, traumatologia,
+cardiologia, dermatologia, oftalmologia, otorrinolaringologia, urologia,
+gastroenterologia, coloproctologia, neurologia, psicologia, nutricion,
+endocrinologia, neumologia, oncologia, fisioterapia, enfermeria,
+odontologia, cosmetologia, otra`. El panel tiene la misma lista con su nombre
+e icono (`features/directorio/especialidades.ts`): añadir una es tocar las
+dos.
+
+Una clínica **se puede publicar** si está `active`, no es de prueba y tiene
+WhatsApp; si no, `blocked_reason` = `terminada | pausada | prueba |
+sin_whatsapp`. Sale en la página si `is_visible` y se puede publicar: al
+pausarla desaparece sola y vuelve sola al reactivarla.
+
+- `helios_directorio() → table(merchant_id, name, specialty, specialty_key,
+  address, city, whatsapp)` — **anon y authenticated**. Las publicadas, por el
+  nombre sin el título.
+- `helios_directorio_contacto(p_merchant_id uuid, p_visitante text default
+  null) → boolean` — **anon y authenticated**. Apunta un clic y dice si contó.
+  `false` sin guardar nada si la clínica no está publicada, si el mismo
+  visitante tocó a ese médico hace menos de 30 s o si ese visitante ya lleva
+  30 clics en 24 h. Un `p_visitante` mal formado se guarda como null.
+- `admin_directorio() → jsonb`: `{ hoy, desde, totales: { clics_total,
+  clics_7d, clics_30d, clics_30d_anteriores, visitantes_30d,
+  medicos_contactados_30d }, por_dia: [{ dia, clics, visitantes }] (30),
+  medicos: [{ merchant_id, clinic_name, status, is_test, is_visible,
+  blocked_reason, published_at, updated_at, listing: {name, specialty,
+  specialty_key, address, city, whatsapp}, base: {…lo mismo, de la ficha},
+  clics: { total, d7, d30, visitantes_30d, ultimo, por_dia: [30 enteros] } }]
+  }`. Todas las clínicas (de prueba incluidas), las visibles primero y luego
+  por clics de 30 días. Días operativos de Caracas; 7 días = hoy y los seis
+  anteriores.
+- `admin_directorio_guardar(p_merchant_id uuid, p_cambios jsonb) → void`.
+  `p_cambios` lleva solo lo que cambia: `visible` (boolean), `name`,
+  `specialty`, `specialty_key`, `address`, `city`, `whatsapp`. Un dato vacío
+  o igual al de la ficha se guarda como null (vuelve el de la ficha). El
+  WhatsApp se normaliza a E.164. `P0002` si la clínica no existe; `22023` con
+  un dato desconocido, `visible` no booleano, una clave que no está en la
+  lista, un WhatsApp que no es venezolano, longitudes fuera de medida
+  (nombre 3–120, especialidad 2–120, dirección 3–300, ciudad 2–80) o al
+  publicar una clínica que no se puede publicar (se mira con los datos ya
+  cambiados: un WhatsApp nuevo en la misma llamada vale). Bitácora
+  `directory.listing.update` (target: la clínica; `detail`: `cambios`,
+  `antes`, `despues`).
+
+En la página, la búsqueda y la especialidad van en `?q=…&especialidad=…`
+(se comparte un filtro), el botón abre `wa.me` con el mensaje «Hola, {nombre}.
+Vi su perfil en el directorio de Helios y quisiera agendar una consulta.» y
+el clic se apunta sin esperar. Suite: `supabase/tests/directorio_smoke.sql`.
+
 ---
 
 ## 3. Parámetros nuevos (`business_parameters`)

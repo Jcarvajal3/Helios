@@ -13,7 +13,7 @@
     {
       "id": "metricas",
       "titulo": "Métricas",
-      "descripcion": "Todas las cifras del negocio en una pantalla, por semana y por clínica: la semana, los cobros, la mora, la caja, las clínicas, los pacientes y lo global.",
+      "descripcion": "Todas las cifras del negocio en una pantalla, por semana y por clínica: Juan Pablo, la semana, los cobros, la mora, la caja, las clínicas, los pacientes y lo global.",
       "ruta": "/admin/metricas",
       "espacio": "metricas",
       "search": {
@@ -31,6 +31,35 @@
           "cobros",
           "gente",
           "global",
+          "juan-pablo",
+          "locales",
+          "mora",
+          "semana"
+        ]
+      }
+    },
+    {
+      "id": "metricas-juan-pablo",
+      "titulo": "Métricas › Juan Pablo",
+      "descripcion": "Órdenes, GTV y revenue de un día, una semana, un mes o un rango, cuántos médicos generaron órdenes y la parte de cada uno. Es la primera pestaña de Métricas.",
+      "ruta": "/admin/metricas",
+      "espacio": "metricas",
+      "search": {
+        "cuota": [
+          "2"
+        ],
+        "sub": [
+          "cupos",
+          "impago-por-cuota",
+          "proyeccion",
+          "rendimiento"
+        ],
+        "vista": [
+          "caja",
+          "cobros",
+          "gente",
+          "global",
+          "juan-pablo",
           "locales",
           "mora",
           "semana"
@@ -58,6 +87,7 @@
           "cobros",
           "gente",
           "global",
+          "juan-pablo",
           "locales",
           "mora",
           "semana"
@@ -85,6 +115,7 @@
           "cobros",
           "gente",
           "global",
+          "juan-pablo",
           "locales",
           "mora",
           "semana"
@@ -112,6 +143,7 @@
           "cobros",
           "gente",
           "global",
+          "juan-pablo",
           "locales",
           "mora",
           "semana"
@@ -139,6 +171,7 @@
           "cobros",
           "gente",
           "global",
+          "juan-pablo",
           "locales",
           "mora",
           "semana"
@@ -166,6 +199,7 @@
           "cobros",
           "gente",
           "global",
+          "juan-pablo",
           "locales",
           "mora",
           "semana"
@@ -193,6 +227,7 @@
           "cobros",
           "gente",
           "global",
+          "juan-pablo",
           "locales",
           "mora",
           "semana"
@@ -220,6 +255,7 @@
           "cobros",
           "gente",
           "global",
+          "juan-pablo",
           "locales",
           "mora",
           "semana"
@@ -247,6 +283,7 @@
           "cobros",
           "gente",
           "global",
+          "juan-pablo",
           "locales",
           "mora",
           "semana"
@@ -274,6 +311,7 @@
           "cobros",
           "gente",
           "global",
+          "juan-pablo",
           "locales",
           "mora",
           "semana"
@@ -301,6 +339,7 @@
           "cobros",
           "gente",
           "global",
+          "juan-pablo",
           "locales",
           "mora",
           "semana"
@@ -328,6 +367,7 @@
           "cobros",
           "gente",
           "global",
+          "juan-pablo",
           "locales",
           "mora",
           "semana"
@@ -355,6 +395,7 @@
           "cobros",
           "gente",
           "global",
+          "juan-pablo",
           "locales",
           "mora",
           "semana"
@@ -382,6 +423,7 @@
           "cobros",
           "gente",
           "global",
+          "juan-pablo",
           "locales",
           "mora",
           "semana"
@@ -409,6 +451,7 @@
           "cobros",
           "gente",
           "global",
+          "juan-pablo",
           "locales",
           "mora",
           "semana"
@@ -436,6 +479,7 @@
           "cobros",
           "gente",
           "global",
+          "juan-pablo",
           "locales",
           "mora",
           "semana"
@@ -463,6 +507,7 @@
           "cobros",
           "gente",
           "global",
+          "juan-pablo",
           "locales",
           "mora",
           "semana"
@@ -734,6 +779,14 @@
           "pending"
         ]
       }
+    },
+    {
+      "id": "directorio-de-medicos",
+      "titulo": "Directorio de médicos",
+      "descripcion": "La página pública /directorio, donde los pacientes buscan médicos y les escriben por WhatsApp: quién sale, con qué datos y cuántos contactos recibe cada uno.",
+      "ruta": "/admin/directorio",
+      "espacio": "directorio",
+      "search": {}
     },
     {
       "id": "ajustes",
@@ -1701,6 +1754,13 @@
       "que": "Por clínica y en la semana elegida: el financiado (sin comisión), los financiamientos, el ticket medio (sin comisión), los pacientes (contados por sus cuotas) y cuántos eran nuevos en esa clínica, los días con financiamientos y el mejor día, con el cambio frente a la semana anterior a la misma altura; las clínicas activas que no financiaron nada también salen.",
       "rpc": "admin_metricas_locales",
       "pantalla": "metricas"
+    },
+    {
+      "id": "clics-del-directorio",
+      "titulo": "Clics de contacto del directorio",
+      "que": "Toques al botón «Escribir por WhatsApp» de cada tarjeta de /directorio, en la última semana y el último mes (días operativos, hoy incluido) y desde el inicio, con las personas distintas (por navegador) y el total del directorio día a día; los del equipo y los del personal de las clínicas no cuentan.",
+      "rpc": "admin_directorio",
+      "pantalla": "directorio-de-medicos"
     }
   ]
 }

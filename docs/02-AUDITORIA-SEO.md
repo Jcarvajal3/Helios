@@ -61,6 +61,14 @@ página.
 - Menú: «Médicos y centros» y «Pacientes» llevan a sus páginas; pie con
   columnas Pacientes / Médicos y centros / Helios / Legal.
 
+**`/directorio` (2026-10-26) va fuera de todo esto a propósito**: el
+directorio de médicos se comparte por URL y no se enlaza desde ninguna página
+(decisión de Javier). Lleva `noindex, follow`, no está en `PAGINAS_PUBLICAS`
+(ni en el sitemap ni en `llms.txt`) y no usa `cabeceraPublica`; sí lleva sus
+etiquetas `og:`/`twitter:` para que la vista previa salga bien al mandarlo
+por WhatsApp. Si un día se quiere en Google, se pasa a `cabeceraPublica`, se
+añade a `PAGINAS_PUBLICAS` y se enlaza desde el menú o el pie.
+
 Todo respeta las reglas de vocabulario de CLAUDE.md (nada de «préstamo»,
 «financiamiento», «crédito» ni «fee») y solo afirma lo que el sistema ya hace
 (límite inicial de $150, sin decir que crece; sin mencionar mora).

@@ -181,7 +181,12 @@ const MENU_ADMIN: ReadonlyArray<{
   { espacio: 'seguimiento', titulo: 'Seguimiento', pantallas: ['seguimiento', 'whatsapp'] },
   // Lo que se busca: un directorio. Se entra con un nombre o un teléfono en
   // la cabeza, no con una tarea.
-  { espacio: 'directorio', titulo: 'Directorio', pantallas: ['personas', 'locales', 'consumos'] },
+  // Al final del bloque, la página pública de médicos (`/directorio`).
+  {
+    espacio: 'directorio',
+    titulo: 'Directorio',
+    pantallas: ['personas', 'locales', 'consumos', 'directorio-de-medicos'],
+  },
   { espacio: 'ajustes', titulo: 'Ajustes', pantallas: ['ajustes'] },
 ]
 

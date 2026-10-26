@@ -15,6 +15,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AfiliacionRouteImport } from './routes/afiliacion'
 import { Route as ConsultaMedicaEnCuotasRouteImport } from './routes/consulta-medica-en-cuotas'
 import { Route as CosmetologiaEnCuotasRouteImport } from './routes/cosmetologia-en-cuotas'
+import { Route as DirectorioRouteImport } from './routes/directorio'
 import { Route as LlmsDottxtRouteImport } from './routes/llms[.]txt'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as MedicosRouteImport } from './routes/medicos'
@@ -39,6 +40,7 @@ import { Route as AdminClinicasRouteImport } from './routes/admin/clinicas'
 import { Route as AdminCobranzaRouteImport } from './routes/admin/cobranza'
 import { Route as AdminCobrosRouteImport } from './routes/admin/cobros'
 import { Route as AdminContabilidadRouteImport } from './routes/admin/contabilidad'
+import { Route as AdminDirectorioRouteImport } from './routes/admin/directorio'
 import { Route as AdminFinanciamientosRouteImport } from './routes/admin/financiamientos'
 import { Route as AdminMetricasRouteImport } from './routes/admin/metricas'
 import { Route as AdminPacientesRouteImport } from './routes/admin/pacientes'
@@ -82,6 +84,11 @@ const ConsultaMedicaEnCuotasRoute = ConsultaMedicaEnCuotasRouteImport.update({
 const CosmetologiaEnCuotasRoute = CosmetologiaEnCuotasRouteImport.update({
   id: '/cosmetologia-en-cuotas',
   path: '/cosmetologia-en-cuotas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DirectorioRoute = DirectorioRouteImport.update({
+  id: '/directorio',
+  path: '/directorio',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LlmsDottxtRoute = LlmsDottxtRouteImport.update({
@@ -204,6 +211,11 @@ const AdminContabilidadRoute = AdminContabilidadRouteImport.update({
   path: '/contabilidad',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminDirectorioRoute = AdminDirectorioRouteImport.update({
+  id: '/directorio',
+  path: '/directorio',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminFinanciamientosRoute = AdminFinanciamientosRouteImport.update({
   id: '/financiamientos',
   path: '/financiamientos',
@@ -288,6 +300,7 @@ export interface FileRoutesByFullPath {
   '/afiliacion': typeof AfiliacionRoute
   '/consulta-medica-en-cuotas': typeof ConsultaMedicaEnCuotasRoute
   '/cosmetologia-en-cuotas': typeof CosmetologiaEnCuotasRoute
+  '/directorio': typeof DirectorioRoute
   '/llms.txt': typeof LlmsDottxtRoute
   '/login': typeof LoginRoute
   '/medicos': typeof MedicosRoute
@@ -311,6 +324,7 @@ export interface FileRoutesByFullPath {
   '/admin/cobranza': typeof AdminCobranzaRoute
   '/admin/cobros': typeof AdminCobrosRoute
   '/admin/contabilidad': typeof AdminContabilidadRoute
+  '/admin/directorio': typeof AdminDirectorioRoute
   '/admin/financiamientos': typeof AdminFinanciamientosRoute
   '/admin/metricas': typeof AdminMetricasRoute
   '/admin/pacientes': typeof AdminPacientesRoute
@@ -333,6 +347,7 @@ export interface FileRoutesByTo {
   '/afiliacion': typeof AfiliacionRoute
   '/consulta-medica-en-cuotas': typeof ConsultaMedicaEnCuotasRoute
   '/cosmetologia-en-cuotas': typeof CosmetologiaEnCuotasRoute
+  '/directorio': typeof DirectorioRoute
   '/llms.txt': typeof LlmsDottxtRoute
   '/login': typeof LoginRoute
   '/medicos': typeof MedicosRoute
@@ -356,6 +371,7 @@ export interface FileRoutesByTo {
   '/admin/cobranza': typeof AdminCobranzaRoute
   '/admin/cobros': typeof AdminCobrosRoute
   '/admin/contabilidad': typeof AdminContabilidadRoute
+  '/admin/directorio': typeof AdminDirectorioRoute
   '/admin/financiamientos': typeof AdminFinanciamientosRoute
   '/admin/metricas': typeof AdminMetricasRoute
   '/admin/pacientes': typeof AdminPacientesRoute
@@ -381,6 +397,7 @@ export interface FileRoutesById {
   '/afiliacion': typeof AfiliacionRoute
   '/consulta-medica-en-cuotas': typeof ConsultaMedicaEnCuotasRoute
   '/cosmetologia-en-cuotas': typeof CosmetologiaEnCuotasRoute
+  '/directorio': typeof DirectorioRoute
   '/llms.txt': typeof LlmsDottxtRoute
   '/login': typeof LoginRoute
   '/medicos': typeof MedicosRoute
@@ -404,6 +421,7 @@ export interface FileRoutesById {
   '/admin/cobranza': typeof AdminCobranzaRoute
   '/admin/cobros': typeof AdminCobrosRoute
   '/admin/contabilidad': typeof AdminContabilidadRoute
+  '/admin/directorio': typeof AdminDirectorioRoute
   '/admin/financiamientos': typeof AdminFinanciamientosRoute
   '/admin/metricas': typeof AdminMetricasRoute
   '/admin/pacientes': typeof AdminPacientesRoute
@@ -429,6 +447,7 @@ export interface FileRouteTypes {
     | '/afiliacion'
     | '/consulta-medica-en-cuotas'
     | '/cosmetologia-en-cuotas'
+    | '/directorio'
     | '/llms.txt'
     | '/login'
     | '/medicos'
@@ -452,6 +471,7 @@ export interface FileRouteTypes {
     | '/admin/cobranza'
     | '/admin/cobros'
     | '/admin/contabilidad'
+    | '/admin/directorio'
     | '/admin/financiamientos'
     | '/admin/metricas'
     | '/admin/pacientes'
@@ -474,6 +494,7 @@ export interface FileRouteTypes {
     | '/afiliacion'
     | '/consulta-medica-en-cuotas'
     | '/cosmetologia-en-cuotas'
+    | '/directorio'
     | '/llms.txt'
     | '/login'
     | '/medicos'
@@ -497,6 +518,7 @@ export interface FileRouteTypes {
     | '/admin/cobranza'
     | '/admin/cobros'
     | '/admin/contabilidad'
+    | '/admin/directorio'
     | '/admin/financiamientos'
     | '/admin/metricas'
     | '/admin/pacientes'
@@ -521,6 +543,7 @@ export interface FileRouteTypes {
     | '/afiliacion'
     | '/consulta-medica-en-cuotas'
     | '/cosmetologia-en-cuotas'
+    | '/directorio'
     | '/llms.txt'
     | '/login'
     | '/medicos'
@@ -544,6 +567,7 @@ export interface FileRouteTypes {
     | '/admin/cobranza'
     | '/admin/cobros'
     | '/admin/contabilidad'
+    | '/admin/directorio'
     | '/admin/financiamientos'
     | '/admin/metricas'
     | '/admin/pacientes'
@@ -569,6 +593,7 @@ export interface RootRouteChildren {
   AfiliacionRoute: typeof AfiliacionRoute
   ConsultaMedicaEnCuotasRoute: typeof ConsultaMedicaEnCuotasRoute
   CosmetologiaEnCuotasRoute: typeof CosmetologiaEnCuotasRoute
+  DirectorioRoute: typeof DirectorioRoute
   LlmsDottxtRoute: typeof LlmsDottxtRoute
   LoginRoute: typeof LoginRoute
   MedicosRoute: typeof MedicosRoute
@@ -623,6 +648,13 @@ declare module '@tanstack/react-router' {
       path: '/cosmetologia-en-cuotas'
       fullPath: '/cosmetologia-en-cuotas'
       preLoaderRoute: typeof CosmetologiaEnCuotasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/directorio': {
+      id: '/directorio'
+      path: '/directorio'
+      fullPath: '/directorio'
+      preLoaderRoute: typeof DirectorioRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/llms.txt': {
@@ -793,6 +825,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminContabilidadRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/directorio': {
+      id: '/admin/directorio'
+      path: '/directorio'
+      fullPath: '/admin/directorio'
+      preLoaderRoute: typeof AdminDirectorioRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/financiamientos': {
       id: '/admin/financiamientos'
       path: '/financiamientos'
@@ -936,6 +975,7 @@ interface AdminRouteChildren {
   AdminCobranzaRoute: typeof AdminCobranzaRoute
   AdminCobrosRoute: typeof AdminCobrosRoute
   AdminContabilidadRoute: typeof AdminContabilidadRoute
+  AdminDirectorioRoute: typeof AdminDirectorioRoute
   AdminFinanciamientosRoute: typeof AdminFinanciamientosRoute
   AdminMetricasRoute: typeof AdminMetricasRoute
   AdminPacientesRoute: typeof AdminPacientesRoute
@@ -960,6 +1000,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminCobranzaRoute: AdminCobranzaRoute,
   AdminCobrosRoute: AdminCobrosRoute,
   AdminContabilidadRoute: AdminContabilidadRoute,
+  AdminDirectorioRoute: AdminDirectorioRoute,
   AdminFinanciamientosRoute: AdminFinanciamientosRoute,
   AdminMetricasRoute: AdminMetricasRoute,
   AdminPacientesRoute: AdminPacientesRoute,
@@ -984,6 +1025,7 @@ const rootRouteChildren: RootRouteChildren = {
   AfiliacionRoute: AfiliacionRoute,
   ConsultaMedicaEnCuotasRoute: ConsultaMedicaEnCuotasRoute,
   CosmetologiaEnCuotasRoute: CosmetologiaEnCuotasRoute,
+  DirectorioRoute: DirectorioRoute,
   LlmsDottxtRoute: LlmsDottxtRoute,
   LoginRoute: LoginRoute,
   MedicosRoute: MedicosRoute,
