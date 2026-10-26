@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ComercioRouteImport } from './routes/_comercio'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AfiliacionRouteImport } from './routes/afiliacion'
+import { Route as AgendaRouteImport } from './routes/agenda'
 import { Route as ConsultaMedicaEnCuotasRouteImport } from './routes/consulta-medica-en-cuotas'
 import { Route as CosmetologiaEnCuotasRouteImport } from './routes/cosmetologia-en-cuotas'
 import { Route as DirectorioRouteImport } from './routes/directorio'
@@ -75,6 +76,11 @@ const AdminRoute = AdminRouteImport.update({
 const AfiliacionRoute = AfiliacionRouteImport.update({
   id: '/afiliacion',
   path: '/afiliacion',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgendaRoute = AgendaRouteImport.update({
+  id: '/agenda',
+  path: '/agenda',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ConsultaMedicaEnCuotasRoute = ConsultaMedicaEnCuotasRouteImport.update({
@@ -304,6 +310,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/afiliacion': typeof AfiliacionRoute
+  '/agenda': typeof AgendaRoute
   '/consulta-medica-en-cuotas': typeof ConsultaMedicaEnCuotasRoute
   '/cosmetologia-en-cuotas': typeof CosmetologiaEnCuotasRoute
   '/directorio': typeof DirectorioRoute
@@ -352,6 +359,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/afiliacion': typeof AfiliacionRoute
+  '/agenda': typeof AgendaRoute
   '/consulta-medica-en-cuotas': typeof ConsultaMedicaEnCuotasRoute
   '/cosmetologia-en-cuotas': typeof CosmetologiaEnCuotasRoute
   '/directorio': typeof DirectorioRoute
@@ -403,6 +411,7 @@ export interface FileRoutesById {
   '/_comercio': typeof ComercioRouteWithChildren
   '/admin': typeof AdminRouteWithChildren
   '/afiliacion': typeof AfiliacionRoute
+  '/agenda': typeof AgendaRoute
   '/consulta-medica-en-cuotas': typeof ConsultaMedicaEnCuotasRoute
   '/cosmetologia-en-cuotas': typeof CosmetologiaEnCuotasRoute
   '/directorio': typeof DirectorioRoute
@@ -454,6 +463,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/afiliacion'
+    | '/agenda'
     | '/consulta-medica-en-cuotas'
     | '/cosmetologia-en-cuotas'
     | '/directorio'
@@ -502,6 +512,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/afiliacion'
+    | '/agenda'
     | '/consulta-medica-en-cuotas'
     | '/cosmetologia-en-cuotas'
     | '/directorio'
@@ -552,6 +563,7 @@ export interface FileRouteTypes {
     | '/_comercio'
     | '/admin'
     | '/afiliacion'
+    | '/agenda'
     | '/consulta-medica-en-cuotas'
     | '/cosmetologia-en-cuotas'
     | '/directorio'
@@ -603,6 +615,7 @@ export interface RootRouteChildren {
   ComercioRoute: typeof ComercioRouteWithChildren
   AdminRoute: typeof AdminRouteWithChildren
   AfiliacionRoute: typeof AfiliacionRoute
+  AgendaRoute: typeof AgendaRoute
   ConsultaMedicaEnCuotasRoute: typeof ConsultaMedicaEnCuotasRoute
   CosmetologiaEnCuotasRoute: typeof CosmetologiaEnCuotasRoute
   DirectorioRoute: typeof DirectorioRoute
@@ -647,6 +660,13 @@ declare module '@tanstack/react-router' {
       path: '/afiliacion'
       fullPath: '/afiliacion'
       preLoaderRoute: typeof AfiliacionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agenda': {
+      id: '/agenda'
+      path: '/agenda'
+      fullPath: '/agenda'
+      preLoaderRoute: typeof AgendaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/consulta-medica-en-cuotas': {
@@ -1043,6 +1063,7 @@ const rootRouteChildren: RootRouteChildren = {
   ComercioRoute: ComercioRouteWithChildren,
   AdminRoute: AdminRouteWithChildren,
   AfiliacionRoute: AfiliacionRoute,
+  AgendaRoute: AgendaRoute,
   ConsultaMedicaEnCuotasRoute: ConsultaMedicaEnCuotasRoute,
   CosmetologiaEnCuotasRoute: CosmetologiaEnCuotasRoute,
   DirectorioRoute: DirectorioRoute,

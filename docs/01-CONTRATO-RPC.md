@@ -920,6 +920,26 @@ superadmin › Agenda.
   cualquier otra ruta de `/admin` lo lleva a ella, y la Agenda le esconde los
   enlaces al inbox y a la ficha de la clínica.
 
+**El QR agenda la capacitación** (2026-10-26, 20261026233000). El QR impreso
+(`/qr`) lleva a `/agenda`, una página pública de un solo paso.
+
+- `helios_agendar_capacitacion(p jsonb) → jsonb {ok}` (anon): `name` (3–120),
+  `phone` (venezolano, se guarda en E.164), `specialty` (≤80), `address`
+  (5–300), `training_at` (obligatorio, con su desfase, de mañana a 90 días) y
+  el campo trampa `sitio_web`. `22023` con un dato que no vale; `54000` con
+  40 en la última hora.
+- Si ya hay un lead con ese teléfono (o, si no, ese nombre), queda `reunion`
+  con la visita a esa hora, presencial, en esa dirección; solo se completan
+  los datos que le faltaban y la historia (`gestion`, `visita_agendada`)
+  dice lo que dejó. Un lead `convertido` conserva su estado y su visita: la
+  capacitación queda solo en su historia. Si no hay ninguno, nace con `source
+  = 'qr'` (valor nuevo) y se cruza con las clínicas y las solicitudes
+  (`helios_cruzar_lead`).
+- `doctor_leads` gana `training_at` (la capacitación que pidió por el QR) y
+  `training_requested_at`. `admin_doctor_leads()` devuelve en
+  `application_training_at` la del QR o, si no hay, la del formulario: el
+  calendario la enseña como «Capacitación».
+
 ### 2.10 Métricas › Juan Pablo (2026-10-23, 20261023160000)
 
 La primera pestaña de Métricas (y la de por defecto): las cifras que mira Juan
