@@ -2,7 +2,7 @@ import { queryOptions } from '@tanstack/react-query'
 import type { QueryClient } from '@tanstack/react-query'
 
 import { supabase } from '@/lib/supabase'
-import { leerTablero } from './directorioDeMedicos'
+import { leerInteresados, leerTablero } from './directorioDeMedicos'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // La lectura y la escritura del Directorio de médicos del superadmin.
@@ -12,6 +12,9 @@ const CLAVE = ['admin-directorio-medicos'] as const
 
 /** Cuánto tarda en verse un clic nuevo con la pantalla abierta. */
 export const RELECTURA_MS = 30_000
+
+/** Cuántos interesados trae la lista, los más recientes: la pantalla avisa si llega al tope. */
+export const TOPE_DE_INTERESADOS = 200
 
 /**
  * Cada clínica con su tarjeta, su ficha y sus clics, y el total por día.
@@ -29,6 +32,28 @@ export function consultaDirectorio() {
       const { data, error } = await supabase.rpc('admin_directorio')
       if (error) throw error
       return leerTablero(data)
+    },
+  })
+}
+
+/**
+ * Quien escribió al WhatsApp de Helios desde una tarjeta, el más reciente
+ * primero, con su estado (si ya es paciente de ese médico). Sin médico, los
+ * de todos; con él, solo los suyos (la ficha). Se relee como el tablero: un
+ * interesado llega mientras se mira.
+ */
+export function consultaInteresados(merchantId?: string) {
+  return queryOptions({
+    queryKey: [...CLAVE, 'interesados', merchantId ?? 'todos'],
+    refetchInterval: RELECTURA_MS,
+    refetchOnWindowFocus: true,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('admin_directorio_interesados', {
+        p_merchant_id: merchantId ?? null,
+        p_limit: TOPE_DE_INTERESADOS,
+      })
+      if (error) throw error
+      return leerInteresados(data)
     },
   })
 }

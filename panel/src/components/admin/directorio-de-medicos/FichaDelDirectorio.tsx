@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Save, Store } from 'lucide-react'
 
 import { useToast } from '@/components/Toast'
+import { EstadoDelInteresado } from '@/components/admin/directorio-de-medicos/columnasDeInteresados'
 import { BarChart } from '@/components/charts/barras'
 import { TarjetaDeMedico } from '@/components/directorio/TarjetaDeMedico'
 import {
@@ -21,7 +22,7 @@ import {
 } from '@/components/ui'
 import { REDES_SOCIALES } from '@/features/admin/clinicas/clinicas'
 import type { RedSocial } from '@/features/admin/clinicas/clinicas'
-import { guardarTarjeta, refrescarDirectorio } from '@/features/admin/directorioDeMedicos/api'
+import { consultaInteresados, guardarTarjeta, refrescarDirectorio } from '@/features/admin/directorioDeMedicos/api'
 import {
   ROTULO_BLOQUEO,
   borradorDe,
@@ -44,7 +45,8 @@ function nombreDeRed(red: RedSocial | null): string {
 
 /**
  * La ficha de un médico en el directorio: si sale, los datos de su tarjeta
- * (con la vista previa de cómo la verá el paciente) y sus clics de contacto.
+ * (con la vista previa de cómo la verá el paciente), sus clics de contacto y
+ * sus interesados.
  *
  * Cada campo arranca con lo que se enseña hoy. Vacío, vuelve a ser el de la
  * ficha de la clínica, que se lee debajo del campo; igual al de la ficha,
@@ -263,8 +265,59 @@ export function FichaDelDirectorio({
             empty="Sin clics en los últimos 30 días."
           />
         </section>
+
+        <SusInteresados medico={m} />
       </div>
     </Modal>
+  )
+}
+
+/**
+ * Quien le escribió al WhatsApp de Helios desde su tarjeta (con el código del
+ * médico), el más reciente primero, y si ya se hizo su paciente. El teléfono
+ * no se le pasa al médico: está aquí solo para medir.
+ */
+function SusInteresados({ medico: m }: { medico: MedicoEnElDirectorio }) {
+  const lista = useQuery(consultaInteresados(m.id))
+  return (
+    <section className="flex flex-col gap-3">
+      <h3 className="type-panel-label text-on-surface-variant">Interesados</h3>
+      <div className="grid grid-cols-3 gap-3">
+        <Mini rotulo="Últimos 30 días" valor={m.interesados.d30} />
+        <Mini rotulo="Desde que salió" valor={m.interesados.total} />
+        <Mini rotulo="Ya son pacientes" valor={m.interesados.convertidos} />
+      </div>
+      {lista.isPending && <p className="type-panel-caption text-on-surface-variant">Leyendo los interesados…</p>}
+      {lista.isError && <ErrorBox title="No se pudo leer sus interesados" detail={describeError(lista.error)} />}
+      {lista.isSuccess && lista.data.length === 0 && (
+        <p className="type-panel-body text-on-surface-variant">
+          Todavía nadie le ha escrito al WhatsApp de Helios desde su tarjeta.
+        </p>
+      )}
+      {lista.isSuccess && lista.data.length > 0 && (
+        <ul className="divide-y divide-panel-hairline rounded-panel-card border border-panel-hairline">
+          {lista.data.map((i) => (
+            <li key={i.id} className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 px-3 py-2.5">
+              <div className="min-w-0">
+                <p className="tabular-nums text-on-surface">
+                  {formatPhone(i.telefono)}
+                  {i.paciente?.nombre && (
+                    <span className="type-panel-caption text-on-surface-variant"> · {i.paciente.nombre}</span>
+                  )}
+                </p>
+                <p className="type-panel-caption text-on-surface-variant">
+                  Escribió el {formatDateTime(i.primeraVez)}
+                  {i.ultimaVez !== i.primeraVez && <> · el último, {formatDateTime(i.ultimaVez)}</>}
+                  {' · '}
+                  {i.mensajes} {i.mensajes === 1 ? 'mensaje' : 'mensajes'}
+                </p>
+              </div>
+              <EstadoDelInteresado interesado={i} />
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   )
 }
 

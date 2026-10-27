@@ -157,3 +157,17 @@ export function igualSeguro(a: string, b: string): boolean {
   }
   return diff === 0
 }
+
+// El alfabeto de los códigos del directorio (`helios_directorio_codigo_nuevo`):
+// sin 0/O/1/I/L, que se confunden al leerlos.
+const CODIGO_DEL_DIRECTORIO = /(?<![A-Z0-9])DIR\s*-\s*([23456789ABCDEFGHJKMNPQRSTUVWXYZ]{4})(?![A-Z0-9])/i
+
+/**
+ * El código de una tarjeta del directorio (docs/04) dentro de un mensaje:
+ * «Hola, quiero agendar una consulta con la Dra. Ana Pérez. (Código DIR-7K2P)»
+ * → 'DIR-7K2P'. En mayúsculas aunque venga en minúsculas; null si no hay.
+ */
+export function codigoDelDirectorio(t: string | null | undefined): string | null {
+  const m = CODIGO_DEL_DIRECTORIO.exec(t ?? '')
+  return m ? `DIR-${m[1].toUpperCase()}` : null
+}

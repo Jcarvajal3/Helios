@@ -30,6 +30,11 @@ export type MedicoDelDirectorio = {
   /** Su red social, si la tiene: la red y el usuario o enlace, tal cual. */
   red: RedSocial | null
   usuarioDeRed: string | null
+  /**
+   * El código de su tarjeta («DIR-7K2P»): va en el mensaje al WhatsApp de
+   * Helios para que el bot sepa de qué médico se trata. `null` en datos viejos.
+   */
+  codigo: string | null
 }
 
 /** `helios_directorio()`. Una fila sin WhatsApp no tiene botón: no entra. */
@@ -47,6 +52,7 @@ export function leerDirectorio(raw: unknown): MedicoDelDirectorio[] {
         whatsapp: texto(r.whatsapp),
         red: leerRed(r.social_network),
         usuarioDeRed: textoONulo(r.social_user),
+        codigo: textoONulo(r.lead_code),
       }
     })
     .filter((m) => m.id !== '' && m.nombre !== '' && m.whatsapp !== '')
@@ -138,8 +144,30 @@ export function mensajeInicial(nombre: string): string {
   return `Hola, ${nombre.trim()}. Vi su perfil en el directorio de Helios y quisiera agendar una consulta.`
 }
 
-/** `https://wa.me/584141234567?text=…`. */
-export function enlaceDeWhatsApp(m: Pick<MedicoDelDirectorio, 'whatsapp' | 'nombre'>): string {
+/**
+ * Lo que el paciente encuentra escrito al abrir el chat con Helios: el
+ * código es lo que el bot busca para saber de qué médico se trata.
+ */
+export function mensajeAHelios(nombre: string, codigo: string): string {
+  return `Hola, quiero agendar una consulta con ${nombre.trim()}. (Código ${codigo.trim()})`
+}
+
+/**
+ * El botón de la tarjeta. Con el número de Helios y el código de la tarjeta,
+ * el chat de Helios (`https://wa.me/58422…?text=…(Código DIR-7K2P)`): el bot
+ * apunta al interesado y le pasa el WhatsApp del médico. Si falta cualquiera
+ * de los dos, el chat directo con el médico, con `mensajeInicial`: el botón
+ * nunca se queda sin funcionar.
+ */
+export function enlaceDeWhatsApp(
+  m: Pick<MedicoDelDirectorio, 'whatsapp' | 'nombre' | 'codigo'>,
+  whatsappHelios?: string | null,
+): string {
+  const helios = whatsappNumber(whatsappHelios ?? null)
+  const codigo = m.codigo?.trim()
+  if (helios && codigo) {
+    return `https://wa.me/${helios}?text=${encodeURIComponent(mensajeAHelios(m.nombre, codigo))}`
+  }
   return `https://wa.me/${whatsappNumber(m.whatsapp)}?text=${encodeURIComponent(mensajeInicial(m.nombre))}`
 }
 

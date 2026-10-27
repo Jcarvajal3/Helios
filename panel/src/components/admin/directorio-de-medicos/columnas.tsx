@@ -23,7 +23,8 @@ function MarcasDeClinica({ m }: { m: MedicoEnElDirectorio }) {
 
 /**
  * Una fila por clínica: cómo sale su tarjeta, si se ve, a qué WhatsApp lleva
- * y cuántos contactos recibe. El interruptor publica u oculta al momento;
+ * y cuántos contactos recibe (clics, interesados y pacientes). El
+ * interruptor publica u oculta al momento;
  * el resto se corrige en la ficha (pulsando la fila).
  */
 export function columnasDelDirectorio({
@@ -170,6 +171,35 @@ export function columnasDelDirectorio({
       sortDir: 'desc',
       csv: (m) => m.clics.visitantes30d,
       cell: (m) => m.clics.visitantes30d,
+    },
+
+    {
+      key: 'interesados30',
+      header: 'Interesados 30 días',
+      info: 'Personas que escribieron al WhatsApp de Helios desde su tarjeta en los últimos 30 días (el mensaje lleva el código del médico). Se cuentan por teléfono: quien escribe tres veces cuenta una.',
+      type: 'number',
+      sort: (m) => m.interesados.d30,
+      sortDir: 'desc',
+      csv: (m) => m.interesados.d30,
+      cell: (m) => m.interesados.d30,
+    },
+
+    {
+      key: 'pacientes',
+      header: 'Pacientes',
+      info: 'De todos los que le escribieron desde su tarjeta, los que después tuvieron una orden confirmada con él desde el mismo teléfono. Desde el inicio: «3 de 10» son 3 pacientes de 10 interesados.',
+      type: 'number',
+      sort: (m) => m.interesados.convertidos,
+      sortDir: 'desc',
+      csv: (m) => m.interesados.convertidos,
+      cell: (m) => (
+        <span className="tabular-nums">
+          {m.interesados.convertidos}
+          {m.interesados.total > 0 && (
+            <span className="type-panel-caption text-on-surface-variant"> de {m.interesados.total}</span>
+          )}
+        </span>
+      ),
     },
 
     {

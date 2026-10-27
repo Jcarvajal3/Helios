@@ -5,7 +5,7 @@ import { leerRed, normalizar } from '@/features/directorio/directorio'
 import { leerEspecialidad, nombreDeEspecialidad } from '@/features/directorio/especialidades'
 import type { ClaveDeEspecialidad } from '@/features/directorio/especialidades'
 import { unoDe } from '@/lib/busqueda'
-import { booleano, comoFila, comoLista, numero, numeros, texto, textoONulo } from '@/lib/json'
+import { booleano, comoFila, comoLista, filaONula, numero, numeroONulo, numeros, texto, textoONulo } from '@/lib/json'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Superadmin › Directorio de médicos: quién sale en `/directorio`, con qué
@@ -13,7 +13,9 @@ import { booleano, comoFila, comoLista, numero, numeros, texto, textoONulo } fro
 //
 // Módulo puro: lo usan la pantalla, la ficha y las pruebas. Los datos salen
 // de `admin_directorio()` y se guardan con `admin_directorio_guardar()`
-// (docs/01 §2.11, migración 20261026190000).
+// (docs/01 §2.11, migración 20261026190000). Los interesados —quien escribió
+// al WhatsApp de Helios desde la tarjeta de un médico— salen de
+// `admin_directorio_interesados()` (docs/04, migración 20261027100000).
 // ═══════════════════════════════════════════════════════════════════════════
 
 /** Los datos de una tarjeta: los que se enseñan o los de la ficha de la clínica. */
@@ -49,6 +51,20 @@ export type ClicsDelMedico = {
   porDia: number[]
 }
 
+/**
+ * El embudo de un médico después del clic: quién escribió al WhatsApp de
+ * Helios desde su tarjeta (un interesado por teléfono) y cuántos de ellos
+ * tuvieron después una orden confirmada con él (convertidos).
+ */
+export type InteresadosDelMedico = {
+  total: number
+  d30: number
+  /** Desde el inicio. */
+  convertidos: number
+  /** El último mensaje, o `null` si nadie ha escrito. */
+  ultimo: string | null
+}
+
 export type MedicoEnElDirectorio = {
   id: string
   clinica: string
@@ -62,6 +78,7 @@ export type MedicoEnElDirectorio = {
   /** Lo de la ficha de la clínica: lo que vuelve si se borra un dato. */
   ficha: DatosDeTarjeta
   clics: ClicsDelMedico
+  interesados: InteresadosDelMedico
 }
 
 export type DiaDelDirectorio = { dia: string; clics: number; visitantes: number }
@@ -76,6 +93,12 @@ export type TotalesDelDirectorio = {
   /** Los del equipo y del personal de las clínicas en 30 días: no cuentan arriba. */
   clicsInternos30d: number
   ultimoInterno: string | null
+  /** Personas (teléfonos) que escribieron al WhatsApp de Helios desde una tarjeta. */
+  interesados30d: number
+  interesadosTotal: number
+  /** De los interesados de 30 días, los que ya tuvieron una orden con ese médico. */
+  convertidos30d: number
+  convertidosTotal: number
 }
 
 export type TableroDelDirectorio = {
@@ -119,6 +142,11 @@ export function leerTablero(raw: unknown): TableroDelDirectorio {
       medicosContactados30d: numero(t.medicos_contactados_30d),
       clicsInternos30d: numero(t.clics_internos_30d),
       ultimoInterno: textoONulo(t.ultimo_interno),
+      // La base de antes del 2026-10-27 no los trae: cero.
+      interesados30d: numero(t.interesados_30d),
+      interesadosTotal: numero(t.interesados_total),
+      convertidos30d: numero(t.convertidos_30d),
+      convertidosTotal: numero(t.convertidos_total),
     },
     porDia: comoLista(r.por_dia).map((d) => {
       const f = comoFila(d)
@@ -127,6 +155,7 @@ export function leerTablero(raw: unknown): TableroDelDirectorio {
     medicos: comoLista(r.medicos).map((fila) => {
       const m = comoFila(fila)
       const c = comoFila(m.clics)
+      const i = comoFila(m.interesados)
       return {
         id: texto(m.merchant_id),
         clinica: texto(m.clinic_name),
@@ -145,12 +174,21 @@ export function leerTablero(raw: unknown): TableroDelDirectorio {
           ultimo: textoONulo(c.ultimo),
           porDia: numeros(c.por_dia),
         },
+        interesados: {
+          total: numero(i.total),
+          d30: numero(i.d30),
+          convertidos: numero(i.convertidos),
+          ultimo: textoONulo(i.ultimo),
+        },
       }
     }),
   }
 }
 
-/** La tarjeta tal cual la verá el paciente (sin WhatsApp no tiene botón). */
+/**
+ * La tarjeta tal cual la verá el paciente (sin WhatsApp no tiene botón). Sin
+ * código: la vista previa enlaza directo al médico, no pasa por Helios.
+ */
 export function comoTarjetaPublica(id: string, d: DatosDeTarjeta): MedicoDelDirectorio {
   return {
     id,
@@ -162,10 +200,15 @@ export function comoTarjetaPublica(id: string, d: DatosDeTarjeta): MedicoDelDire
     whatsapp: d.whatsapp ?? '',
     red: d.red,
     usuarioDeRed: d.usuarioDeRed?.trim() || null,
+    codigo: null,
   }
 }
 
 // ── Filtrar la lista ───────────────────────────────────────────────────────
+
+/** Una fila por médico, o una por interesado. */
+export const VISTAS_DEL_DIRECTORIO = ['medicos', 'interesados'] as const
+export type VistaDelDirectorio = (typeof VISTAS_DEL_DIRECTORIO)[number]
 
 export const VALORES_QUE_SE_VE = ['todos', 'visibles', 'ocultos'] as const
 export type QueSeVe = (typeof VALORES_QUE_SE_VE)[number]
@@ -197,6 +240,81 @@ export function filtrarMedicos(
         m.tarjeta.whatsapp ? formatPhone(m.tarjeta.whatsapp) : null,
         m.tarjeta.usuarioDeRed,
       ]
+        .filter(Boolean)
+        .join(' '),
+    )
+    return palabras.every((p) => t.includes(p))
+  })
+}
+
+// ── Los interesados ────────────────────────────────────────────────────────
+
+/** La orden que convirtió a un interesado en paciente: la primera confirmada. */
+export type ConversionDelInteresado = {
+  ordenId: string
+  /** El número de la orden (1042), o `null` si la base no lo trae. */
+  numero: number | null
+  creadaEl: string
+}
+
+/** Alguien que escribió al WhatsApp de Helios desde la tarjeta de un médico. */
+export type InteresadoDelDirectorio = {
+  id: string
+  medicoId: string
+  /** El nombre del médico, como sale en su tarjeta. */
+  medico: string
+  /** E.164. */
+  telefono: string
+  primeraVez: string
+  ultimaVez: string
+  mensajes: number
+  /** El paciente de Helios con ese teléfono, si ya lo es. */
+  paciente: { id: string; nombre: string | null } | null
+  conversion: ConversionDelInteresado | null
+}
+
+/** `admin_directorio_interesados()`: el más reciente primero, como lo manda la base. */
+export function leerInteresados(raw: unknown): InteresadoDelDirectorio[] {
+  return comoLista(raw).map((fila) => {
+    const r = comoFila(fila)
+    const p = filaONula(r.paciente)
+    const c = filaONula(r.conversion)
+    const primeraVez = texto(r.first_at)
+    return {
+      id: texto(r.lead_id),
+      medicoId: texto(r.merchant_id),
+      medico: texto(r.medico),
+      telefono: texto(r.phone),
+      primeraVez,
+      ultimaVez: texto(r.last_at, primeraVez),
+      // Quien está en la lista escribió al menos una vez.
+      mensajes: Math.max(1, numero(r.messages)),
+      paciente: p ? { id: texto(p.profile_id), nombre: textoONulo(p.nombre) } : null,
+      conversion: c
+        ? { ordenId: texto(c.charge_id), numero: numeroONulo(c.order_number), creadaEl: texto(c.created_at) }
+        : null,
+    }
+  })
+}
+
+/** «Paciente · orden #1042», «Paciente» (sin número) o «Todavía no». */
+export function rotuloDelInteresado(i: Pick<InteresadoDelDirectorio, 'conversion'>): string {
+  if (!i.conversion) return 'Todavía no'
+  return i.conversion.numero !== null ? `Paciente · orden #${i.conversion.numero}` : 'Paciente'
+}
+
+/** Busca por médico, teléfono (como se guarda o como se marca) o nombre del paciente. */
+export function filtrarInteresados(
+  interesados: readonly InteresadoDelDirectorio[],
+  q?: string,
+): InteresadoDelDirectorio[] {
+  const palabras = normalizar(q ?? '')
+    .split(' ')
+    .filter(Boolean)
+  if (palabras.length === 0) return [...interesados]
+  return interesados.filter((i) => {
+    const t = normalizar(
+      [i.medico, i.telefono, i.telefono ? formatPhone(i.telefono) : null, i.paciente?.nombre]
         .filter(Boolean)
         .join(' '),
     )
@@ -300,6 +418,16 @@ export function datosPropios(m: Pick<MedicoEnElDirectorio, 'tarjeta' | 'ficha'>)
 }
 
 // ── Las cifras ─────────────────────────────────────────────────────────────
+
+/**
+ * Qué parte de un paso del embudo llega al siguiente: «25 %», o `null` sin
+ * base. Puede pasar del 100 %: quien teclea el código a mano, o escribe
+ * después de un clic que no cuenta (del equipo), entra sin clic.
+ */
+export function parteDe(parte: number, todo: number): string | null {
+  if (todo <= 0) return null
+  return `${Math.round((parte / todo) * 100)} %`
+}
 
 /** «12 % más», «3 menos»… frente a los 30 días anteriores, o `null` sin base. */
 export function cambioFrenteAlAnterior(actual: number, anterior: number): { label: string; direction: 'up' | 'down' | 'flat' } | null {

@@ -4,6 +4,7 @@
  *   npx tsx supabase/functions/whatsapp-webhook/logica.test.ts
  */
 import {
+  codigoDelDirectorio,
   decisionDelBoton,
   decisionDelTexto,
   extraerEventos,
@@ -132,6 +133,36 @@ comprueba(normalizar('Dólares (USD)') === 'dolares usd' && normalizar('Euros (E
 comprueba(normalizar('€80') === '80' && normalizar('$') === '', 'normalizar quita $ y €')
 for (const moneda of ['euros', 'dólares', '€', 'USD']) {
   comprueba(decisionDelTexto(moneda) === null, `«${moneda}» no decide nada`)
+}
+
+console.log('\nEl código del directorio')
+const DESDE_LA_PAGINA = 'Hola, quiero agendar una consulta con la Dra. Ana Pérez. (Código DIR-7K2P)'
+comprueba(codigoDelDirectorio(DESDE_LA_PAGINA) === 'DIR-7K2P', 'el mensaje que escribe la página', String(codigoDelDirectorio(DESDE_LA_PAGINA)))
+for (const [entra, sale] of [
+  ['DIR-7K2P', 'DIR-7K2P'],
+  ['dir-7k2p', 'DIR-7K2P'],
+  ['  DIR-ABCD  ', 'DIR-ABCD'],
+  ['código: Dir-9zzz, gracias', 'DIR-9ZZZ'],
+  ['DIR - 7K2P', 'DIR-7K2P'],
+  ['(DIR-2345)', 'DIR-2345'],
+] as const) {
+  comprueba(codigoDelDirectorio(entra) === sale, `«${entra}» → ${sale}`, String(codigoDelDirectorio(entra)))
+}
+for (const nada of [
+  'DIR-0O1I', // sin 0, O, 1 ni I
+  'DIR-7K2L', // sin L
+  'DIRECTOR',
+  'el director me dijo',
+  'DIR-7K2', // tres caracteres
+  'DIR-7K2PQ', // cinco caracteres
+  'XDIR-7K2P',
+  'DIR7K2P',
+  'hola',
+  '',
+  null,
+  undefined,
+]) {
+  comprueba(codigoDelDirectorio(nada) === null, `«${nada}» no es un código`, String(codigoDelDirectorio(nada)))
 }
 
 console.log('\nEl secreto')

@@ -10,7 +10,7 @@ import { Menu } from '@/components/portada/Menu'
 import { Desglose } from '@/components/portada/Pacientes'
 import { BotonAfiliarme, Boton, Lienzo, Revelar, Rotulo } from '@/components/portada/piezas'
 import { IMAGEN_COMPARTIR, NOMBRE, urlAbsoluta } from '@/config/sitio'
-import { apuntarContacto, consultarDirectorio } from '@/features/directorio/api'
+import { apuntarContacto, consultarDirectorio, consultarWhatsappDeHelios } from '@/features/directorio/api'
 import { especialidadesPresentes, filtrarDirectorio } from '@/features/directorio/directorio'
 import type { MedicoDelDirectorio } from '@/features/directorio/directorio'
 import { CLAVES_DE_ESPECIALIDAD, nombreDeEspecialidad } from '@/features/directorio/especialidades'
@@ -51,11 +51,14 @@ export const Route = createFileRoute('/directorio')({
   // La lista no depende de la búsqueda: filtrar no vuelve a pedirla.
   loaderDeps: () => ({}),
   staleTime: 60_000,
+  // Los médicos y el número de Helios, a la vez. El número nunca falla (sin
+  // él, cada botón va directo al médico).
   loader: async () => {
+    const whatsappHelios = consultarWhatsappDeHelios()
     try {
-      return { medicos: await consultarDirectorio(), fallo: false }
+      return { medicos: await consultarDirectorio(), fallo: false, whatsappHelios: await whatsappHelios }
     } catch {
-      return { medicos: [] as MedicoDelDirectorio[], fallo: true }
+      return { medicos: [] as MedicoDelDirectorio[], fallo: true, whatsappHelios: await whatsappHelios }
     }
   },
   head: () => {
@@ -91,7 +94,7 @@ export const Route = createFileRoute('/directorio')({
 const NOCHE = '#020B24'
 
 function Directorio() {
-  const { medicos, fallo } = Route.useLoaderData()
+  const { medicos, fallo, whatsappHelios } = Route.useLoaderData()
   const search = Route.useSearch()
   const navigate = useNavigate({ from: '/directorio' })
 
@@ -138,6 +141,7 @@ function Directorio() {
           medicos={medicos}
           encontrados={encontrados}
           fallo={fallo}
+          whatsappHelios={whatsappHelios}
           texto={texto.trim()}
           especialidad={search.especialidad}
           onLimpiar={limpiar}
@@ -344,6 +348,7 @@ function Resultados({
   medicos,
   encontrados,
   fallo,
+  whatsappHelios,
   texto,
   especialidad,
   onLimpiar,
@@ -351,6 +356,7 @@ function Resultados({
   medicos: MedicoDelDirectorio[]
   encontrados: MedicoDelDirectorio[]
   fallo: boolean
+  whatsappHelios: string | null
   texto: string
   especialidad: ClaveDeEspecialidad | undefined
   onLimpiar: () => void
@@ -426,7 +432,11 @@ function Resultados({
               <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-5">
                 {encontrados.map((m, i) => (
                   <Revelar key={m.id} como="li" retraso={(i % 3) * 70}>
-                    <TarjetaDeMedico medico={m} onContacto={() => apuntarContacto(m.id)} />
+                    <TarjetaDeMedico
+                      medico={m}
+                      whatsappHelios={whatsappHelios}
+                      onContacto={() => apuntarContacto(m.id)}
+                    />
                   </Revelar>
                 ))}
               </ul>

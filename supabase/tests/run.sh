@@ -86,6 +86,7 @@ SUITES=(
   seguimiento_smoke
   agenda_smoke
   directorio_smoke
+  directorio_interesados_smoke
 )
 if [ "$#" -gt 0 ]; then SUITES=("$@"); fi
 

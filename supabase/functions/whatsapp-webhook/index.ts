@@ -7,10 +7,14 @@
 //
 //   1. Estados de entrega            → helios_whatsapp_status
 //   2. El botón de la pregunta       → helios_patient_decision
-//   3. Un número del personal        → el bot del médico (bot.ts)
-//   4. «Sí» / «No» escrito por un paciente con UNA orden esperando
+//   3. Un código del directorio (DIR-XXXX, docs/04)
+//                                    → el contacto del médico (directorio.ts);
+//                                      antes que el personal, para que un
+//                                      médico pueda probar su propia tarjeta
+//   4. Un número del personal        → el bot del médico (bot.ts)
+//   5. «Sí» / «No» escrito por un paciente con UNA orden esperando
 //                                    → helios_patient_decision
-//   5. Todo lo demás                 → el bot del paciente (paciente.ts); si
+//   6. Todo lo demás                → el bot del paciente (paciente.ts); si
 //                                      se calla, lo atiende una persona desde la
 //                                      app WhatsApp Business (coexistencia).
 //                                      Una captura de pago la lee además
@@ -29,9 +33,11 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
 import { atenderAlPersonal } from './bot.ts'
+import { atenderAlInteresado } from './directorio.ts'
 import { atenderAlPaciente } from './paciente.ts'
 import type { Personal } from './bot.ts'
 import {
+  codigoDelDirectorio,
   decisionDelBoton,
   decisionDelTexto,
   extraerEventos,
@@ -93,14 +99,22 @@ async function mensaje(m: EventoDeMensaje): Promise<void> {
     return
   }
 
-  // 3. El personal: el bot.
+  // 3. Un código del directorio: el contacto del médico de esa tarjeta.
+  const codigo = codigoDelDirectorio(m.texto)
+  if (codigo) {
+    const res = await atenderAlInteresado({ rpc, mensaje: m, codigo })
+    await listo('paciente', res)
+    return
+  }
+
+  // 4. El personal: el bot.
   if (r.staff) {
     const res = await atenderAlPersonal({ rpc, personal: r.staff, mensaje: m })
     await listo('personal', res)
     return
   }
 
-  // 4. Un «sí» o un «no» escrito, si hay UNA orden esperando a ese teléfono.
+  // 5. Un «sí» o un «no» escrito, si hay UNA orden esperando a ese teléfono.
   const escrito = decisionDelTexto(m.texto)
   if (escrito && r.pending_charge_id) {
     const res = await rpc('helios_patient_decision', {
@@ -113,7 +127,7 @@ async function mensaje(m: EventoDeMensaje): Promise<void> {
     return
   }
 
-  // 5. El bot del paciente; si se calla, lo atiende una persona desde la app.
+  // 6. El bot del paciente; si se calla, lo atiende una persona desde la app.
   const res = await atenderAlPaciente({ rpc, mensaje: m, despertarAlLector })
   await listo(res ? 'paciente' : 'nadie', res)
 }

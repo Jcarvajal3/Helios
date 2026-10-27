@@ -786,7 +786,11 @@
       "descripcion": "La página pública /directorio, donde los pacientes buscan médicos y les escriben por WhatsApp: quién sale, con qué datos y cuántos contactos recibe cada uno.",
       "ruta": "/admin/directorio",
       "espacio": "directorio",
-      "search": {}
+      "search": {
+        "vista": [
+          "interesados"
+        ]
+      }
     },
     {
       "id": "ajustes",
@@ -1760,6 +1764,13 @@
       "titulo": "Clics de contacto del directorio",
       "que": "Toques al botón «Escribir por WhatsApp» de cada tarjeta de /directorio, en la última semana y el último mes (días operativos, hoy incluido) y desde el inicio, con las personas distintas (por navegador) y el total del directorio día a día; los del equipo y los del personal de las clínicas no cuentan.",
       "rpc": "admin_directorio",
+      "pantalla": "directorio-de-medicos"
+    },
+    {
+      "id": "interesados-del-directorio",
+      "titulo": "Interesados y pacientes del directorio",
+      "que": "Cada persona (por su teléfono) que mandó al WhatsApp de Helios el mensaje con el código de la tarjeta de un médico, con cuándo escribió y cuántas veces; es paciente de ese médico si después tuvo una orden confirmada con él (sin las de prueba).",
+      "rpc": "admin_directorio_interesados",
       "pantalla": "directorio-de-medicos"
     }
   ]

@@ -25,13 +25,17 @@ export function LogoWhatsApp({ className = 'size-4' }: { className?: string }) {
  *
  * Es la misma en `/directorio` y en la vista previa del superadmin, así que
  * lo que el equipo ve al editar es lo que verá el paciente. `onContacto`
- * apunta el clic; la vista previa no lo pasa.
+ * apunta el clic; la vista previa no lo pasa. Con `whatsappHelios` (y el
+ * código de la tarjeta), el botón lleva al chat de Helios; si no, directo al
+ * médico (`enlaceDeWhatsApp`).
  */
 export function TarjetaDeMedico({
   medico,
+  whatsappHelios,
   onContacto,
 }: {
   medico: MedicoDelDirectorio
+  whatsappHelios?: string | null
   onContacto?: () => void
 }) {
   const especialidad = especialidadDeTarjeta(medico)
@@ -82,7 +86,7 @@ export function TarjetaDeMedico({
 
       <div className="mt-auto pt-6">
         <a
-          href={enlaceDeWhatsApp(medico)}
+          href={enlaceDeWhatsApp(medico, whatsappHelios)}
           target="_blank"
           rel="noopener noreferrer"
           onClick={onContacto}

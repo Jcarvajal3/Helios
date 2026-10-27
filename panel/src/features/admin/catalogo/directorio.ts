@@ -304,4 +304,23 @@ export const directorio = [
     que: 'Toques al botón «Escribir por WhatsApp» de cada tarjeta de /directorio, en la última semana y el último mes (días operativos, hoy incluido) y desde el inicio, con las personas distintas (por navegador) y el total del directorio día a día; los del equipo y los del personal de las clínicas no cuentan.',
     rpc: 'admin_directorio',
   },
+  {
+    tipo: 'cifra',
+    id: 'interesados-del-directorio',
+    titulo: 'Interesados y pacientes del directorio',
+    descripcion:
+      'Quién escribió al WhatsApp de Helios desde la tarjeta de un médico, y cuántos se hicieron pacientes suyos.',
+    espacio: 'directorio',
+    sinonimos: [
+      'interesados',
+      'leads del directorio',
+      'conversión del directorio',
+      'pacientes del directorio',
+      'quién escribió desde el directorio',
+      'teléfono del interesado',
+    ],
+    destino: { to: '/admin/directorio', search: { vista: 'interesados' } },
+    que: 'Cada persona (por su teléfono) que mandó al WhatsApp de Helios el mensaje con el código de la tarjeta de un médico, con cuándo escribió y cuántas veces; es paciente de ese médico si después tuvo una orden confirmada con él (sin las de prueba).',
+    rpc: 'admin_directorio_interesados',
+  },
 ] as const satisfies ReadonlyArray<Entrada>

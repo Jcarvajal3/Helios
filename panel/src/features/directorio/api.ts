@@ -10,6 +10,21 @@ export async function consultarDirectorio(): Promise<MedicoDelDirectorio[]> {
 }
 
 /**
+ * El número de WhatsApp de Helios (E.164, '+58422…'), al que lleva el botón
+ * de cada tarjeta con su código. Pública. Sin número o si falla, `null`: el
+ * botón vuelve al chat directo con el médico y la página no se rompe.
+ */
+export async function consultarWhatsappDeHelios(): Promise<string | null> {
+  try {
+    const { data, error } = await supabase.rpc('helios_directorio_whatsapp')
+    if (error) return null
+    return typeof data === 'string' && data.trim() !== '' ? data.trim() : null
+  } catch {
+    return null
+  }
+}
+
+/**
  * Apunta el toque al botón de WhatsApp. No se espera ni se avisa de un
  * fallo: el chat se abre igual, que es lo que importa al paciente.
  *

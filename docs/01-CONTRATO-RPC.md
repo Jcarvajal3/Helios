@@ -1058,6 +1058,68 @@ como «@usuario · Instagram», con el enlace que arma el panel
 médico escribió un enlace, ese, siempre con https; con «Otra», solo un
 enlace). Suite: `supabase/tests/directorio_smoke.sql`.
 
+### 2.12 El directorio pasa por el WhatsApp de Helios (2026-10-27, 20261027100000)
+
+El botón de cada tarjeta de `/directorio` abre el chat con **el número de
+Helios** y un mensaje con el código del médico; el bot guarda el teléfono de
+quien escribe y le contesta con el contacto del médico (plan:
+`docs/04-DIRECTORIO-POR-WHATSAPP.md`). Decisión de Javier: **solo el
+contacto**, el número del paciente no se le pasa al médico; Helios lo guarda
+para medir.
+
+- `directory_listings.lead_code text not null unique` (`DIR-` + 4 de
+  `23456789ABCDEFGHJKMNPQRSTUVWXYZ`, sin 0/O/1/I/L; `check
+  '^DIR-[2-9A-HJKMNP-Z]{4}$'`). Por defecto `helios_directorio_codigo_nuevo()`
+  (no se expone; busca uno libre). Las tarjetas que ya existían se
+  rellenaron al aplicar. No cambia al editar la tarjeta
+  (`admin_directorio_guardar` no lo toca).
+- `directory_leads` (RLS, sin acceso de la API: solo por RPC): `id`,
+  `merchant_id`, `phone_e164` (`^\+[0-9]{8,15}$`), `first_message_id`
+  (wamid), `messages` (≥ 1), `first_at`, `last_at`. Única por
+  `(merchant_id, phone_e164)`. Índices por `first_at desc` y por
+  `(merchant_id, first_at desc)`; además
+  `profiles (phone_national_key(phone_e164))` para buscar el perfil de un
+  teléfono.
+
+La **conversión** es una sola regla, `helios_directorio_conversion(merchant,
+phone, desde)` (no se expone): la primera orden de ese médico con `status =
+'confirmed'`, `not is_test`, `created_at >= first_at`, cuyo paciente
+(`charges.user_id → profiles.id`) tiene el mismo
+`phone_national_key(profiles.phone_e164)` (los 10 últimos dígitos).
+
+- `helios_directorio() → table(merchant_id, name, specialty, specialty_key,
+  address, city, whatsapp, social_network, social_user, lead_code)` —
+  **anon y authenticated**. Igual que en §2.11 con `lead_code` al final.
+- `helios_directorio_whatsapp() → text` — **anon y authenticated**. El
+  WhatsApp de Helios (`platform_contact.whatsapp_number`, E.164) o null. Sin
+  número o sin código, la página vuelve al enlace directo con el médico.
+- `bot_directorio_interesado(p_phone text, p_code text, p_message_id text) →
+  jsonb` — **solo `service_role`** (el webhook). El teléfono pasa por
+  `helios_wa_e164` (`22023` si no es válido); el código, a mayúsculas y sin
+  espacios. Código que no existe → `{ ok: false, motivo:
+  'codigo_desconocido' }`; tarjeta oculta o que no se puede publicar →
+  `{ ok: false, motivo: 'no_publicado' }`; en los dos casos no se guarda nada.
+  Si no, guarda el interesado (o suma `messages` y pone al día `last_at`; el
+  mismo wamid que el primero no suma: es un reintento) y devuelve `{ ok:
+  true, nuevo, lead_id, messages, merchant_id, name, specialty, address,
+  city, whatsapp }` (lo que enseña la tarjeta; `whatsapp` en E.164).
+- `admin_directorio() → jsonb`: todo lo de §2.11 y, además, en `totales`:
+  `interesados_total`, `interesados_30d`, `convertidos_total`,
+  `convertidos_30d` (de los interesados de los últimos 30 días, los ya
+  convertidos); en cada médico: `interesados: { total, d30, convertidos,
+  ultimo }` (`ultimo` = el `last_at` más reciente). Los 30 días son días
+  operativos de Caracas con hoy, contados por `first_at`.
+- `admin_directorio_interesados(p_merchant_id uuid default null, p_limit int
+  default 200) → jsonb` — `is_platform_admin()` (`42501` si no). Un arreglo,
+  el más reciente primero (`first_at desc`), de `{ lead_id, merchant_id,
+  medico, phone, first_at, last_at, messages, paciente: { profile_id, nombre }
+  | null, conversion: { charge_id, order_number, created_at } | null }`.
+  `medico`: el nombre de la tarjeta. `paciente`: el perfil con ese teléfono
+  (el de la orden que lo convirtió si la hay; si no, el más reciente que no
+  es de prueba). `p_limit` se acota entre 1 y 1.000.
+
+Suite: `supabase/tests/directorio_interesados_smoke.sql`.
+
 ---
 
 ## 3. Parámetros nuevos (`business_parameters`)

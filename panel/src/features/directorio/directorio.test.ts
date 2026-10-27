@@ -18,15 +18,21 @@ import {
   filtrarDirectorio,
   leerDirectorio,
   lugarDeTarjeta,
+  mensajeAHelios,
 } from './directorio'
 import { CLAVES_DE_ESPECIALIDAD, leerEspecialidad } from './especialidades'
 import {
   borradorDe,
   cambiosDelBorrador,
+  comoTarjetaPublica,
   datosDelBorrador,
+  filtrarInteresados,
   filtrarMedicos,
+  leerInteresados,
   leerTablero,
   motivoParaNoGuardar,
+  parteDe,
+  rotuloDelInteresado,
   whatsappE164,
 } from '@/features/admin/directorioDeMedicos/directorioDeMedicos'
 
@@ -47,6 +53,7 @@ const medicos = leerDirectorio([
     address: 'Av. Lara, Torre Médica, Barquisimeto',
     city: 'Barquisimeto',
     whatsapp: '+584141234567',
+    lead_code: 'DIR-7K2P',
   },
   {
     merchant_id: 'm2',
@@ -56,6 +63,7 @@ const medicos = leerDirectorio([
     address: 'Centro Médico La Trinidad',
     city: 'Caracas',
     whatsapp: '+584241112233',
+    lead_code: null,
   },
   {
     merchant_id: 'm3',
@@ -70,6 +78,9 @@ const medicos = leerDirectorio([
 ])
 comprueba(medicos.length === 3, 'una fila sin WhatsApp no entra', medicos)
 comprueba(medicos[2]?.clave === 'otra', 'una clave desconocida es «otra»', medicos[2])
+comprueba(medicos[0]?.codigo === 'DIR-7K2P', 'lee el código de la tarjeta (lead_code)', medicos[0])
+comprueba(medicos[1]?.codigo === null, 'lead_code null → sin código', medicos[1])
+comprueba(medicos[2]?.codigo === null, 'sin lead_code (datos viejos) → sin código', medicos[2])
 comprueba(leerEspecialidad('pediatria') === 'pediatria', 'una clave conocida se queda')
 comprueba(CLAVES_DE_ESPECIALIDAD.length === 23, 'son las 23 claves de la base', CLAVES_DE_ESPECIALIDAD.length)
 
@@ -90,6 +101,31 @@ comprueba(
     'Hola, Dra. Nadia Khabbaze. Vi su perfil en el directorio de Helios y quisiera agendar una consulta.',
   'el mensaje dice de dónde viene el paciente',
   enlace,
+)
+comprueba(enlace === enlaceDeWhatsApp(nadia, null), 'sin número de Helios, directo al médico', enlace)
+
+const HELIOS = '+584221234567'
+const aHelios = enlaceDeWhatsApp(nadia, HELIOS)
+comprueba(aHelios.startsWith('https://wa.me/584221234567?text='), 'con número y código, el chat de Helios', aHelios)
+comprueba(
+  decodeURIComponent(aHelios.split('text=')[1] ?? '') ===
+    'Hola, quiero agendar una consulta con Dra. Nadia Khabbaze. (Código DIR-7K2P)',
+  'el mensaje a Helios lleva el nombre y el código',
+  aHelios,
+)
+comprueba(
+  mensajeAHelios(' Dra. Ana Pérez ', 'DIR-AB12') === 'Hola, quiero agendar una consulta con Dra. Ana Pérez. (Código DIR-AB12)',
+  'mensajeAHelios lleva el código',
+)
+const sinCodigo = enlaceDeWhatsApp(jesus, HELIOS)
+comprueba(sinCodigo.startsWith('https://wa.me/584241112233?text='), 'sin código, directo al médico aunque haya número', sinCodigo)
+comprueba(
+  enlaceDeWhatsApp({ ...nadia, codigo: '  ' }, HELIOS).startsWith('https://wa.me/584141234567?text='),
+  'un código en blanco cuenta como sin código',
+)
+comprueba(
+  enlaceDeWhatsApp(nadia, '').startsWith('https://wa.me/584141234567?text='),
+  'un número de Helios vacío cuenta como sin número',
 )
 
 console.log('── La red social ─────────────────────────────────────────────')
@@ -176,6 +212,80 @@ comprueba(ids(filtrarMedicos(tablero.medicos, { ver: 'ocultos' })) === '', 'las 
 comprueba(ids(filtrarMedicos(tablero.medicos, { ver: 'todos' })) === 'm1,demo', 'en «Todos», sí')
 comprueba(ids(filtrarMedicos(tablero.medicos, { ver: 'ocultos', q: 'demo' })) === 'demo', 'y buscándolas')
 comprueba(ids(filtrarMedicos(tablero.medicos, { ver: 'todos', q: '0414-1234567' })) === 'm1', 'por teléfono')
+comprueba(
+  tablero.totales.interesados30d === 0 && tablero.totales.convertidosTotal === 0 && m1.interesados.total === 0 && m1.interesados.ultimo === null,
+  'sin interesados en la respuesta (la base de antes), ceros',
+)
+comprueba(comoTarjetaPublica('m1', m1.tarjeta).codigo === null, 'la vista previa no lleva código: enlaza directo al médico')
+
+console.log('── La pestaña: interesados y pacientes ───────────────────────')
+const conEmbudo = leerTablero({
+  totales: { clics_30d: 40, interesados_30d: 10, interesados_total: 25, convertidos_30d: 3, convertidos_total: 6 },
+  medicos: [{ merchant_id: 'm1', interesados: { total: 25, d30: 10, convertidos: 6, ultimo: '2026-10-27T13:00:00Z' } }],
+})
+comprueba(
+  conEmbudo.totales.interesados30d === 10 &&
+    conEmbudo.totales.interesadosTotal === 25 &&
+    conEmbudo.totales.convertidos30d === 3 &&
+    conEmbudo.totales.convertidosTotal === 6,
+  'los totales del embudo',
+  conEmbudo.totales,
+)
+comprueba(
+  JSON.stringify(conEmbudo.medicos[0]?.interesados) ===
+    JSON.stringify({ total: 25, d30: 10, convertidos: 6, ultimo: '2026-10-27T13:00:00Z' }),
+  'los interesados del médico',
+)
+comprueba(parteDe(10, 40) === '25 %' && parteDe(3, 10) === '30 %', 'qué parte pasa al paso siguiente')
+comprueba(parteDe(5, 0) === null, 'sin clics no hay parte')
+
+const interesados = leerInteresados([
+  {
+    lead_id: 'l2',
+    merchant_id: 'm1',
+    medico: 'Dra. Nadia Khabbaze',
+    phone: '+584241112233',
+    first_at: '2026-10-20T14:00:00Z',
+    last_at: '2026-10-22T09:00:00Z',
+    messages: 3,
+    paciente: { profile_id: 'p1', nombre: 'María Pérez' },
+    conversion: { charge_id: 'c1', order_number: 1042, created_at: '2026-10-23T16:00:00Z' },
+  },
+  {
+    lead_id: 'l1',
+    merchant_id: 'm2',
+    medico: 'Dr. Luis Gómez',
+    phone: '+584141234567',
+    first_at: '2026-10-19T10:00:00Z',
+    paciente: null,
+    conversion: null,
+  },
+])
+const [convertido, pendiente] = interesados
+comprueba(ids(interesados) === 'l2,l1', 'en el orden de la base (el más reciente primero)')
+comprueba(
+  convertido.conversion?.numero === 1042 && convertido.paciente?.nombre === 'María Pérez' && convertido.mensajes === 3,
+  'un interesado que ya es paciente',
+  convertido,
+)
+comprueba(
+  pendiente.conversion === null && pendiente.paciente === null && pendiente.mensajes === 1 && pendiente.ultimaVez === pendiente.primeraVez,
+  'sin mensajes ni última vez: uno, y la primera',
+  pendiente,
+)
+comprueba(leerInteresados(null).length === 0, 'sin respuesta, ninguno')
+comprueba(rotuloDelInteresado(convertido) === 'Paciente · orden #1042', 'el estado con el número de orden')
+comprueba(rotuloDelInteresado(pendiente) === 'Todavía no', 'el estado de quien no ha vuelto')
+comprueba(
+  rotuloDelInteresado({ conversion: { ordenId: 'c', numero: null, creadaEl: '' } }) === 'Paciente',
+  'paciente sin número de orden',
+)
+comprueba(ids(filtrarInteresados(interesados, '')) === 'l2,l1', 'sin búsqueda, todos')
+comprueba(ids(filtrarInteresados(interesados, 'gomez')) === 'l1', 'por médico, sin tildes')
+comprueba(ids(filtrarInteresados(interesados, '0424-1112233')) === 'l2', 'por teléfono como se marca')
+comprueba(ids(filtrarInteresados(interesados, '584141234567')) === 'l1', 'por teléfono como se guarda')
+comprueba(ids(filtrarInteresados(interesados, 'perez maria')) === 'l2', 'por el nombre del paciente, en cualquier orden')
+comprueba(ids(filtrarInteresados(interesados, 'nadia luis')) === '', 'todas las palabras tienen que estar')
 
 console.log('── La pestaña: el borrador ───────────────────────────────────')
 comprueba(whatsappE164('0414-123.45.67') === '+584141234567', 'el WhatsApp como lo marca la gente')
