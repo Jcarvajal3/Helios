@@ -15,6 +15,7 @@ import {
   especialidadDeTarjeta,
   leerRed,
   especialidadesPresentes,
+  fichasQueCaben,
   filtrarDirectorio,
   leerDirectorio,
   lugarDeTarjeta,
@@ -171,6 +172,15 @@ comprueba(
   'la de más médicos primero y «otra» al final',
   presentes,
 )
+
+console.log('── Las fichas de especialidad: cuántas caben ─────────────────')
+// 300 px de ancho, 8 de hueco: caben dos de 140 por fila.
+const caben = (anchos: number[], filas: number) => fichasQueCaben(anchos, { ancho: 300, hueco: 8, filas, verMas: 100 })
+comprueba(caben([140, 140, 140], 2) === 3, 'si caben todas, todas (sin «Ver más»)')
+comprueba(caben([140, 140, 140, 140, 140], 2) === 3, 'deja sitio a «Ver más» en la última fila')
+comprueba(caben([140, 140, 140, 140, 140], 3) === 5, 'con una fila más, caben todas')
+comprueba(caben([300, 300, 300], 1) === 1, '«Todas» se enseña siempre')
+comprueba(caben([146.2, 146.2], 1) === 2, 'el redondeo de medio píxel no tumba una ficha')
 
 console.log('── La pestaña: leer admin_directorio() ───────────────────────')
 const tablero = leerTablero({

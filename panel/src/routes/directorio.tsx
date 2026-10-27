@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { Link, createFileRoute, useNavigate, useRouter } from '@tanstack/react-router'
-import { ChevronRight, RotateCw, Search, X } from 'lucide-react'
+import { createFileRoute, useNavigate, useRouter } from '@tanstack/react-router'
+import { ChevronUp, RotateCw, Search, X } from 'lucide-react'
 
 import { IconoDeEspecialidad } from '@/components/directorio/IconoDeEspecialidad'
 import { TarjetaDeMedico } from '@/components/directorio/TarjetaDeMedico'
@@ -11,25 +11,30 @@ import { Desglose } from '@/components/portada/Pacientes'
 import { BotonAfiliarme, Boton, Lienzo, Revelar, Rotulo } from '@/components/portada/piezas'
 import { IMAGEN_COMPARTIR, NOMBRE, urlAbsoluta } from '@/config/sitio'
 import { apuntarContacto, consultarDirectorio, consultarWhatsappDeHelios } from '@/features/directorio/api'
-import { especialidadesPresentes, filtrarDirectorio } from '@/features/directorio/directorio'
-import type { MedicoDelDirectorio } from '@/features/directorio/directorio'
+import { especialidadesPresentes, fichasQueCaben, filtrarDirectorio } from '@/features/directorio/directorio'
+import type { EspecialidadPresente, MedicoDelDirectorio } from '@/features/directorio/directorio'
 import { CLAVES_DE_ESPECIALIDAD, nombreDeEspecialidad } from '@/features/directorio/especialidades'
 import type { ClaveDeEspecialidad } from '@/features/directorio/especialidades'
-import { comoTexto, unoDe } from '@/lib/busqueda'
+import { unoDe } from '@/lib/busqueda'
 import { FUENTES_DE_LA_PORTADA } from '@/lib/fuentes'
 
 /**
  * EL DIRECTORIO DE MÉDICOS — `/directorio`.
  *
- * Los médicos que aceptan Helios, para que un paciente encuentre uno por su
- * nombre, su especialidad o su zona y le escriba por WhatsApp. Quién sale y
- * con qué datos lo decide el equipo en superadmin › Directorio de médicos.
+ * Los médicos que aceptan Helios, para que un paciente elija uno por su
+ * especialidad y le escriba por WhatsApp. Quién sale y con qué datos lo
+ * decide el equipo en superadmin › Directorio de médicos.
+ *
+ * Es una página para convertir: el titular, una línea y las especialidades
+ * caben en la primera pantalla del teléfono junto a las primeras tarjetas, y
+ * cada tarjeta entera lleva al chat. Sin buscador (2026-10-27): con pocos
+ * médicos, las especialidades bastan.
  *
  * No se enlaza desde ninguna parte del sitio ni sale en el sitemap: se llega
  * escribiendo o compartiendo la URL (decisión de Javier, 2026-10-26). Por lo
  * mismo lleva `noindex`, pero sí su vista previa para WhatsApp: es por donde
- * se va a compartir. La búsqueda y la especialidad viven en la URL
- * (`?q=…&especialidad=odontologia`), así que también se comparte un filtro.
+ * se va a compartir. La especialidad vive en la URL
+ * (`?especialidad=odontologia`), así que también se comparte un filtro.
  *
  * Tiene el aspecto de la portada (`styles/portada.css`), siempre en claro.
  */
@@ -39,16 +44,14 @@ const DESCRIPCION =
   'Encuentra médicos, odontólogos y especialistas que aceptan Helios, escríbeles por WhatsApp y paga tu consulta en dos cuotas, a los 7 y 14 días, sin inicial.'
 
 type BusquedaDelDirectorio = {
-  q?: string
   especialidad?: ClaveDeEspecialidad
 }
 
 export const Route = createFileRoute('/directorio')({
   validateSearch: (search: Record<string, unknown>): BusquedaDelDirectorio => ({
-    q: comoTexto(search.q, 80),
     especialidad: unoDe(CLAVES_DE_ESPECIALIDAD, search.especialidad),
   }),
-  // La lista no depende de la búsqueda: filtrar no vuelve a pedirla.
+  // La lista no depende del filtro: filtrar no vuelve a pedirla.
   loaderDeps: () => ({}),
   staleTime: 60_000,
   // Los médicos y el número de Helios, a la vez. El número nunca falla (sin
@@ -98,31 +101,14 @@ function Directorio() {
   const search = Route.useSearch()
   const navigate = useNavigate({ from: '/directorio' })
 
-  // Se filtra con lo que se teclea, al momento; la URL se pone al día al
-  // dejar de teclear (sin dejar un paso en el historial por cada letra).
-  const [texto, setTexto] = useState(search.q ?? '')
-  useEffect(() => {
-    const q = texto.trim() || undefined
-    if (q === search.q) return
-    const t = window.setTimeout(() => {
-      void navigate({ search: (prev) => ({ ...prev, q }), replace: true })
-    }, 350)
-    return () => window.clearTimeout(t)
-  }, [texto, search.q, navigate])
-
   const especialidades = useMemo(() => especialidadesPresentes(medicos), [medicos])
   const encontrados = useMemo(
-    () => filtrarDirectorio(medicos, { q: texto, especialidad: search.especialidad }),
-    [medicos, texto, search.especialidad],
+    () => filtrarDirectorio(medicos, { especialidad: search.especialidad }),
+    [medicos, search.especialidad],
   )
 
   function elegirEspecialidad(clave: ClaveDeEspecialidad | undefined) {
-    void navigate({ search: (prev) => ({ ...prev, especialidad: clave }) })
-  }
-
-  function limpiar() {
-    setTexto('')
-    void navigate({ search: {} })
+    void navigate({ search: { especialidad: clave }, resetScroll: false })
   }
 
   return (
@@ -130,8 +116,6 @@ function Directorio() {
       <Menu />
       <main>
         <Cabecera
-          texto={texto}
-          onTexto={setTexto}
           especialidades={especialidades}
           elegida={search.especialidad}
           onEspecialidad={elegirEspecialidad}
@@ -142,9 +126,8 @@ function Directorio() {
           encontrados={encontrados}
           fallo={fallo}
           whatsappHelios={whatsappHelios}
-          texto={texto.trim()}
           especialidad={search.especialidad}
-          onLimpiar={limpiar}
+          onLimpiar={() => elegirEspecialidad(undefined)}
         />
         <ComoPagas />
         <ParaMedicos />
@@ -154,40 +137,21 @@ function Directorio() {
   )
 }
 
-// ── La cabecera: el titular, el buscador y las especialidades ──────────────
+// ── La cabecera: el titular y las especialidades ───────────────────────────
 
 function Cabecera({
-  texto,
-  onTexto,
   especialidades,
   elegida,
   onEspecialidad,
   total,
 }: {
-  texto: string
-  onTexto: (t: string) => void
-  especialidades: ReturnType<typeof especialidadesPresentes>
+  especialidades: EspecialidadPresente[]
   elegida: ClaveDeEspecialidad | undefined
   onEspecialidad: (clave: ClaveDeEspecialidad | undefined) => void
   total: number
 }) {
-  const campo = useRef<HTMLInputElement>(null)
-  const chips = useRef<HTMLUListElement>(null)
-
-  // Quien llega con `?especialidad=` (un enlace compartido) ve su chip
-  // marcado aunque quede fuera de la fila en el teléfono.
-  useEffect(() => {
-    const fila = chips.current
-    const activo = fila?.querySelector<HTMLElement>('[aria-pressed="true"]')
-    if (!fila || !activo || fila.scrollWidth <= fila.clientWidth) return
-    const a = activo.getBoundingClientRect()
-    const f = fila.getBoundingClientRect()
-    if (a.left >= f.left && a.right <= f.right) return
-    fila.scrollTo({ left: fila.scrollLeft + a.left - f.left - 20, behavior: 'smooth' })
-  }, [elegida])
-
   return (
-    <section className="relative isolate overflow-hidden bg-white">
+    <section className="relative isolate overflow-clip bg-white">
       <div
         aria-hidden
         className="portada-aurora absolute -right-[25%] -top-[35%] -z-10 size-[900px] rounded-full"
@@ -196,133 +160,198 @@ function Cabecera({
         aria-hidden
         className="portada-aurora absolute -left-[30%] top-[40%] -z-10 size-[700px] rounded-full opacity-60"
       />
-      <Lienzo className="pb-10 pt-32 sm:pb-14 sm:pt-40">
-        <nav aria-label="Estás en">
-          <ol className="flex flex-wrap items-center gap-1.5 text-[0.85rem] text-portada-tinta-3">
-            <li>
-              <Link to="/" className="underline-offset-4 hover:text-portada-tinta hover:underline">
-                Inicio
-              </Link>
-            </li>
-            <li aria-hidden>
-              <ChevronRight className="size-3.5" />
-            </li>
-            <li aria-current="page" className="text-portada-tinta-2">
-              Directorio de médicos
-            </li>
-          </ol>
-        </nav>
-
-        <div className="mt-10 max-w-[52rem]">
-          <Rotulo>Directorio de médicos</Rotulo>
-          <h1 className="portada-titular mt-6 text-portada-tinta">
+      <Lienzo className="pb-7 pt-28 sm:pb-10 sm:pt-36">
+        <div className="max-w-[52rem]">
+          <h1 className="portada-titular text-portada-tinta">
             Encuentra a tu médico{' '}
             <em className="portada-serif portada-degradado pr-[0.06em]">con 0% de inicial.</em>
           </h1>
-          <p className="portada-entrada mt-7 max-w-[54ch] text-portada-tinta-2">
-            Médicos, odontólogos y especialistas que aceptan Helios. Escríbeles por WhatsApp,
-            agenda tu consulta y págala en dos cuotas, a los 7 y 14 días, sin inicial.
+          <p className="portada-entrada mt-4 max-w-[60ch] text-portada-tinta-2 sm:mt-5">
+            Escríbele por WhatsApp y paga tu consulta en 2 cuotas, a los 7 y 14 días.
           </p>
         </div>
 
-        <form
-          role="search"
-          onSubmit={(e) => {
-            e.preventDefault()
-            campo.current?.blur()
-            document.getElementById('medicos')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-          }}
-          className="directorio-buscador mt-10 flex h-16 max-w-[52rem] items-center gap-3 rounded-full bg-white pl-6 pr-2"
-        >
-          <Search aria-hidden className="size-5 shrink-0 text-portada-tinta-3" />
-          <label htmlFor="buscar-medico" className="sr-only">
-            Buscar médico por nombre, especialidad o zona
-          </label>
-          <input
-            ref={campo}
-            id="buscar-medico"
-            type="search"
-            enterKeyHint="search"
-            autoComplete="off"
-            value={texto}
-            onChange={(e) => onTexto(e.target.value)}
-            placeholder={total > 0 ? 'Nombre, especialidad o zona' : 'Buscar médico'}
-            className="h-full min-w-0 flex-1 bg-transparent text-[1.05rem] tracking-[-0.01em] text-portada-tinta placeholder:text-portada-tinta-3 [&::-webkit-search-cancel-button]:hidden"
-          />
-          {texto && (
-            <button
-              type="button"
-              onClick={() => {
-                onTexto('')
-                campo.current?.focus()
-              }}
-              aria-label="Borrar la búsqueda"
-              className="grid size-10 shrink-0 place-items-center rounded-full text-portada-tinta-3 transition-colors hover:bg-portada-niebla hover:text-portada-tinta"
-            >
-              <X className="size-4" />
-            </button>
-          )}
-          <button
-            type="submit"
-            className="hidden h-12 shrink-0 items-center rounded-full bg-portada-tinta px-6 text-[0.95rem] font-medium tracking-[-0.01em] text-white transition-colors duration-300 hover:bg-portada-marino sm:inline-flex"
-          >
-            Buscar
-          </button>
-        </form>
-
         {especialidades.length > 1 && (
-          <div className="-mx-5 mt-6 sm:-mx-8 lg:mx-0">
-            {/* En el teléfono y la tableta, una fila que se desliza con el
-                dedo (y encaja en cada chip); desde 1024 px, envuelta. */}
-            <ul
-              ref={chips}
-              aria-label="Especialidades"
-              className="directorio-chips flex snap-x snap-proximity scroll-px-5 gap-2 overflow-x-auto overscroll-x-contain px-5 pb-1 sm:scroll-px-8 sm:px-8 lg:flex-wrap lg:overflow-visible lg:px-0"
-            >
-              <li className="shrink-0 snap-start">
-                <ChipDeEspecialidad activa={!elegida} onClick={() => onEspecialidad(undefined)}>
-                  Todas
-                  <Cuenta activa={!elegida}>{total}</Cuenta>
-                </ChipDeEspecialidad>
-              </li>
-              {especialidades.map((e) => (
-                <li key={e.clave} className="shrink-0 snap-start">
-                  <ChipDeEspecialidad
-                    activa={elegida === e.clave}
-                    onClick={() => onEspecialidad(elegida === e.clave ? undefined : e.clave)}
-                  >
-                    <IconoDeEspecialidad clave={e.clave} className="size-4" strokeWidth={1.9} />
-                    {e.nombre}
-                    <Cuenta activa={elegida === e.clave}>{e.cuantos}</Cuenta>
-                  </ChipDeEspecialidad>
-                </li>
-              ))}
-            </ul>
-          </div>
+          <Especialidades
+            especialidades={especialidades}
+            elegida={elegida}
+            onEspecialidad={onEspecialidad}
+            total={total}
+          />
         )}
       </Lienzo>
     </section>
   )
 }
 
+/** El hueco entre fichas (`gap-2`), en píxeles: lo usa la medición. */
+const HUECO_ENTRE_FICHAS = 8
+
+/**
+ * Las especialidades, envueltas en filas (sin deslizar de lado): 3 filas en
+ * el teléfono y 2 desde 640 px. Las que no quepan esperan detrás de «Ver
+ * más». Cuántas caben se mide sobre una copia invisible de la lista con
+ * todas las fichas, así que vale con cualquier ancho y cualquier nombre.
+ */
+function Especialidades({
+  especialidades,
+  elegida,
+  onEspecialidad,
+  total,
+}: {
+  especialidades: EspecialidadPresente[]
+  elegida: ClaveDeEspecialidad | undefined
+  onEspecialidad: (clave: ClaveDeEspecialidad | undefined) => void
+  total: number
+}) {
+  const copia = useRef<HTMLUListElement>(null)
+  // Cuántas fichas (contando «Todas») se ven con la lista cerrada; `null`
+  // hasta medir (en el servidor, la lista se recorta con CSS).
+  const [caben, setCaben] = useState<number | null>(null)
+  const [abierta, setAbierta] = useState(false)
+
+  useLayoutEffect(() => {
+    const lista = copia.current
+    if (!lista) return
+    const medir = () => {
+      const anchos = [...lista.children].map((f) => f.getBoundingClientRect().width)
+      const verMas = anchos.pop() ?? 0
+      setCaben(
+        fichasQueCaben(anchos, {
+          ancho: lista.getBoundingClientRect().width,
+          hueco: HUECO_ENTRE_FICHAS,
+          filas: window.matchMedia('(min-width: 640px)').matches ? 2 : 3,
+          verMas,
+        }),
+      )
+    }
+    medir()
+    // Al cambiar el ancho y cuando termina de cargar la letra (cambia el
+    // ancho de cada ficha).
+    const ro = new ResizeObserver(medir)
+    ro.observe(lista)
+    void document.fonts.ready.then(medir)
+    return () => ro.disconnect()
+  }, [especialidades])
+
+  // Quien llega con `?especialidad=` (un enlace compartido) de una que no
+  // cabe la ve marcada: la lista se abre sola, solo esa vez.
+  const posicionElegida = elegida ? especialidades.findIndex((e) => e.clave === elegida) + 1 : 0
+  const yaMedida = useRef(false)
+  useEffect(() => {
+    if (caben === null || yaMedida.current) return
+    yaMedida.current = true
+    if (posicionElegida >= caben) setAbierta(true)
+  }, [caben, posicionElegida])
+
+  const fichas = 1 + especialidades.length
+  const sobran = caben === null ? 0 : fichas - caben
+  const visibles = caben === null || abierta ? especialidades : especialidades.slice(0, caben - 1)
+
+  const todas = (
+    <ChipDeEspecialidad activa={!elegida} onClick={() => onEspecialidad(undefined)}>
+      Todas
+      <Cuenta activa={!elegida}>{total}</Cuenta>
+    </ChipDeEspecialidad>
+  )
+  const ficha = (e: EspecialidadPresente) => (
+    <ChipDeEspecialidad
+      activa={elegida === e.clave}
+      onClick={() => onEspecialidad(elegida === e.clave ? undefined : e.clave)}
+    >
+      <IconoDeEspecialidad clave={e.clave} className="size-4" strokeWidth={1.9} />
+      {e.nombre}
+      <Cuenta activa={elegida === e.clave}>{e.cuantos}</Cuenta>
+    </ChipDeEspecialidad>
+  )
+
+  return (
+    <div className="relative mt-7 sm:mt-9">
+      <ul
+        id="especialidades"
+        aria-label="Especialidades"
+        className={`flex flex-wrap gap-2 ${caben === null ? 'max-h-[128px] overflow-hidden sm:max-h-[88px]' : ''}`}
+      >
+        <li>{todas}</li>
+        {visibles.map((e) => (
+          <li key={e.clave}>{ficha(e)}</li>
+        ))}
+        {sobran > 0 && (
+          <li>
+            <ChipDeEspecialidad
+              activa={false}
+              aria-expanded={abierta}
+              aria-controls="especialidades"
+              onClick={() => setAbierta((a) => !a)}
+              variante="mas"
+            >
+              {abierta ? 'Ver menos' : 'Ver más'}
+              <span className="grid size-7 place-items-center rounded-full bg-portada-niebla text-portada-tinta-3">
+                {abierta ? (
+                  <ChevronUp className="size-4" aria-hidden />
+                ) : (
+                  <span className="font-[family-name:var(--font-portada-mono)] text-[0.72rem] tabular-nums">
+                    +{sobran}
+                  </span>
+                )}
+              </span>
+            </ChipDeEspecialidad>
+          </li>
+        )}
+      </ul>
+
+      {/* La copia que se mide: todas las fichas y «Ver más», invisible y
+          sin alto (no asoma ni se puede desplazar hasta ella). */}
+      <div
+        aria-hidden
+        inert
+        className="pointer-events-none invisible absolute inset-x-0 top-0 h-0 overflow-hidden"
+      >
+        <ul ref={copia} className="flex flex-wrap gap-2">
+          <li>{todas}</li>
+          {especialidades.map((e) => (
+            <li key={e.clave}>{ficha(e)}</li>
+          ))}
+          <li>
+            <ChipDeEspecialidad activa={false} onClick={() => {}} variante="mas">
+              Ver más
+              <span className="grid size-7 place-items-center rounded-full font-[family-name:var(--font-portada-mono)] text-[0.72rem]">
+                +{fichas}
+              </span>
+            </ChipDeEspecialidad>
+          </li>
+        </ul>
+      </div>
+    </div>
+  )
+}
+
 function ChipDeEspecialidad({
   activa,
   onClick,
+  variante = 'especialidad',
   children,
+  ...aria
 }: {
   activa: boolean
   onClick: () => void
+  variante?: 'especialidad' | 'mas'
   children: ReactNode
+  'aria-expanded'?: boolean
+  'aria-controls'?: string
 }) {
   return (
     <button
       type="button"
-      aria-pressed={activa}
+      aria-pressed={variante === 'especialidad' ? activa : undefined}
       onClick={onClick}
-      className={`directorio-chip inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-full border pl-4 pr-1.5 text-[0.9rem] tracking-[-0.01em] ${
+      {...aria}
+      className={`directorio-chip inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-full border pl-3.5 pr-1.5 text-[0.88rem] tracking-[-0.01em] sm:pl-4 sm:text-[0.9rem] ${
         activa
           ? 'border-portada-tinta bg-portada-tinta text-white'
-          : 'border-portada-linea bg-white/80 text-portada-tinta-2 backdrop-blur hover:border-portada-tinta/25 hover:text-portada-tinta'
+          : variante === 'mas'
+            ? 'border-dashed border-portada-tinta/25 bg-white/80 font-medium text-portada-tinta backdrop-blur hover:border-portada-tinta/45'
+            : 'border-portada-linea bg-white/80 text-portada-tinta-2 backdrop-blur hover:border-portada-tinta/25 hover:text-portada-tinta'
       }`}
     >
       {children}
@@ -349,7 +378,6 @@ function Resultados({
   encontrados,
   fallo,
   whatsappHelios,
-  texto,
   especialidad,
   onLimpiar,
 }: {
@@ -357,17 +385,15 @@ function Resultados({
   encontrados: MedicoDelDirectorio[]
   fallo: boolean
   whatsappHelios: string | null
-  texto: string
   especialidad: ClaveDeEspecialidad | undefined
   onLimpiar: () => void
 }) {
   const router = useRouter()
   const [reintentando, setReintentando] = useState(false)
-  const filtrado = texto !== '' || especialidad !== undefined
 
   return (
     <section id="medicos" className="relative bg-portada-niebla">
-      <Lienzo className="py-14 sm:py-20">
+      <Lienzo className="pb-16 pt-6 sm:pb-24 sm:pt-10">
         {fallo ? (
           <Aviso
             titulo="No pudimos cargar el directorio"
@@ -393,31 +419,30 @@ function Resultados({
           />
         ) : (
           <>
-            <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
-              <p aria-live="polite" className="text-[1.05rem] tracking-[-0.015em] text-portada-tinta">
+            <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
+              <p aria-live="polite" className="text-[0.98rem] tracking-[-0.015em] text-portada-tinta">
                 <span className="font-medium tabular-nums">{encontrados.length}</span>{' '}
                 {encontrados.length === 1 ? 'médico' : 'médicos'}
                 {especialidad && (
                   <span className="text-portada-tinta-2"> en {nombreDeEspecialidad(especialidad)}</span>
                 )}
-                {texto && <span className="text-portada-tinta-2"> para «{texto}»</span>}
               </p>
-              {filtrado && (
+              {especialidad && (
                 <button
                   type="button"
                   onClick={onLimpiar}
-                  className="inline-flex items-center gap-1.5 text-[0.93rem] font-medium text-portada-azul underline-offset-4 hover:underline"
+                  className="inline-flex items-center gap-1.5 text-[0.9rem] font-medium text-portada-azul underline-offset-4 hover:underline"
                 >
-                  <X className="size-4" aria-hidden /> Quitar filtros
+                  <X className="size-4" aria-hidden /> Ver todos
                 </button>
               )}
             </div>
 
             {encontrados.length === 0 ? (
-              <div className="mt-8">
+              <div className="mt-5">
                 <Aviso
-                  titulo={texto ? `No encontramos médicos para «${texto}»` : 'No hay médicos en esta especialidad todavía'}
-                  texto="Prueba con otra especialidad, o escribe solo una parte del nombre o de la zona."
+                  titulo="No hay médicos en esta especialidad todavía"
+                  texto="Prueba con otra especialidad: todos los médicos de este directorio aceptan Helios."
                 >
                   <button
                     type="button"
@@ -429,9 +454,9 @@ function Resultados({
                 </Aviso>
               </div>
             ) : (
-              <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-5">
+              <ul className="mt-4 grid gap-3 sm:mt-5 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
                 {encontrados.map((m, i) => (
-                  <Revelar key={m.id} como="li" retraso={(i % 3) * 70}>
+                  <Revelar key={m.id} como="li" retraso={(i % 3) * 60}>
                     <TarjetaDeMedico
                       medico={m}
                       whatsappHelios={whatsappHelios}
@@ -513,6 +538,10 @@ function ComoPagas() {
                 </Revelar>
               ))}
             </ol>
+            {/* Quien bajó a leer cómo se paga vuelve a la lista con un toque. */}
+            <Revelar retraso={240} className="mt-4">
+              <Boton href="#medicos">Elegir mi médico</Boton>
+            </Revelar>
           </div>
           <Revelar retraso={160}>
             <Desglose />

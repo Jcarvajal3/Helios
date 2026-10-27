@@ -699,7 +699,7 @@ html:has(.portada-raiz) {
 
 @media (hover: hover) {
   .directorio-tarjeta:hover {
-    transform: translateY(-4px);
+    transform: translateY(-3px);
     border-color: rgb(4 94 243 / 0.22);
     box-shadow: 0 40px 70px -44px rgb(0 39 112 / 0.45);
   }
@@ -708,42 +708,11 @@ html:has(.portada-raiz) {
   }
 }
 
-/* El buscador: una píldora grande, con el halo azul al enfocarla. */
-.directorio-buscador {
-  box-shadow:
-    0 0 0 1px var(--color-portada-linea),
-    0 30px 60px -40px rgb(0 39 112 / 0.4);
-  transition: box-shadow 300ms;
-}
-
-.directorio-buscador:focus-within {
-  box-shadow:
-    0 0 0 1px var(--color-portada-azul),
-    0 0 0 5px color-mix(in srgb, var(--color-portada-azul) 14%, transparent),
-    0 30px 60px -40px rgb(0 39 112 / 0.4);
-}
-
-.portada-raiz .directorio-buscador input:focus-visible {
-  outline: none;
-}
-
-/* Las especialidades: en el teléfono, una fila que se desliza y se desvanece
-   por los bordes. */
-.directorio-chips {
-  scrollbar-width: none;
-  -webkit-mask-image: linear-gradient(to right, transparent, #000 16px, #000 calc(100% - 24px), transparent);
-  mask-image: linear-gradient(to right, transparent, #000 16px, #000 calc(100% - 24px), transparent);
-}
-
-.directorio-chips::-webkit-scrollbar {
-  display: none;
-}
-
-@media (min-width: 1024px) {
-  .directorio-chips {
-    -webkit-mask-image: none;
-    mask-image: none;
-  }
+/* El «0% inicial» de la tarjeta: el cielo del icono, sin competir con el
+   botón. */
+.directorio-sello {
+  background: linear-gradient(150deg, var(--color-portada-cielo-3), #ddeeff);
+  box-shadow: inset 0 0 0 1px rgb(4 94 243 / 0.12);
 }
 
 .directorio-chip {

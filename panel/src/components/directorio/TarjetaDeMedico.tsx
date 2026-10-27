@@ -20,8 +20,12 @@ export function LogoWhatsApp({ className = 'size-4' }: { className?: string }) {
 
 /**
  * La tarjeta de un médico del directorio: el icono de su especialidad, su
- * nombre, su especialidad, dónde atiende, su red social (si la tiene) y el
- * botón para escribirle.
+ * nombre, su especialidad, dónde atiende, su red social (si la tiene), el
+ * «0% inicial» y el botón para escribirle.
+ *
+ * Compacta, para que en el teléfono se vean varias de un vistazo, y entera
+ * clicable: tocar cualquier parte abre el mismo chat que el botón. Solo el
+ * enlace a la red social queda por encima y lleva a su perfil.
  *
  * Es la misma en `/directorio` y en la vista previa del superadmin, así que
  * lo que el equipo ve al editar es lo que verá el paciente. `onContacto`
@@ -41,40 +45,53 @@ export function TarjetaDeMedico({
   const especialidad = especialidadDeTarjeta(medico)
   const lugar = lugarDeTarjeta(medico)
   const red = enlaceDeRed(medico)
+  const enlace = enlaceDeWhatsApp(medico, whatsappHelios)
 
   return (
-    <article className="directorio-tarjeta group relative flex h-full flex-col rounded-[28px] border border-portada-linea bg-white p-6 sm:p-7">
-      <div className="flex items-start gap-4">
-        <span className="directorio-icono relative grid size-14 shrink-0 place-items-center rounded-[18px] text-portada-azul">
-          <IconoDeEspecialidad clave={medico.clave} className="size-6" />
+    <article className="directorio-tarjeta group relative flex h-full flex-col gap-3 rounded-[22px] border border-portada-linea bg-white p-4 sm:p-5">
+      {/* Toda la tarjeta lleva al chat. Para el teclado y el lector de
+          pantalla, el enlace es el botón de abajo. */}
+      <a
+        href={enlace}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={onContacto}
+        aria-hidden
+        tabIndex={-1}
+        className="absolute inset-0 rounded-[inherit]"
+      />
+
+      <div className="flex items-start gap-3.5">
+        <span className="directorio-icono grid size-11 shrink-0 place-items-center rounded-[14px] text-portada-azul">
+          <IconoDeEspecialidad clave={medico.clave} className="size-5" />
         </span>
-        <div className="min-w-0 pt-1">
-          <h3 className="text-[1.16rem] font-medium leading-snug tracking-[-0.025em] text-portada-tinta [overflow-wrap:anywhere]">
+        <div className="min-w-0">
+          <h3 className="text-[1.02rem] font-medium leading-snug tracking-[-0.02em] text-portada-tinta [overflow-wrap:anywhere]">
             {medico.nombre}
           </h3>
           {especialidad && (
-            <p className="mt-1 text-[0.95rem] leading-snug text-portada-azul">{especialidad}</p>
+            <p className="mt-0.5 line-clamp-2 text-[0.88rem] leading-snug text-portada-azul">{especialidad}</p>
           )}
         </div>
       </div>
 
       {(lugar || red) && (
-        <div className="mt-5 flex flex-col gap-2.5 border-t border-portada-linea pt-5 text-[0.93rem] leading-relaxed text-portada-tinta-2">
+        <div className="flex flex-col gap-1 text-[0.86rem] leading-snug text-portada-tinta-2">
           {lugar && (
-            <p className="flex gap-2.5">
-              <MapPin aria-hidden className="mt-[0.2em] size-4 shrink-0 text-portada-tinta-3" />
-              <span className="[overflow-wrap:anywhere]">{lugar}</span>
+            <p className="flex gap-2" title={lugar}>
+              <MapPin aria-hidden className="mt-[0.15em] size-3.5 shrink-0 text-portada-tinta-3" />
+              <span className="line-clamp-1 [overflow-wrap:anywhere]">{lugar}</span>
             </p>
           )}
           {red && (
-            <p className="flex gap-2.5">
-              <AtSign aria-hidden className="mt-[0.2em] size-4 shrink-0 text-portada-tinta-3" />
+            <p className="flex gap-2">
+              <AtSign aria-hidden className="mt-[0.15em] size-3.5 shrink-0 text-portada-tinta-3" />
               <a
                 href={red.url}
                 target="_blank"
                 rel="noopener noreferrer nofollow"
                 aria-label={`${red.texto} en ${red.red}, abre en otra pestaña`}
-                className="min-w-0 [overflow-wrap:anywhere] underline-offset-4 hover:text-portada-azul hover:underline"
+                className="relative z-10 min-w-0 truncate underline-offset-4 hover:text-portada-azul hover:underline"
               >
                 <span className="font-medium text-portada-tinta">{red.texto}</span>
                 <span className="text-portada-tinta-3"> · {red.red}</span>
@@ -84,21 +101,26 @@ export function TarjetaDeMedico({
         </div>
       )}
 
-      <div className="mt-auto pt-6">
+      {/* El «0% inicial» junto al botón, como el precio junto a «Comprar». */}
+      <div className="mt-auto flex items-center justify-between gap-2 pt-1">
+        <span className="directorio-sello inline-flex h-7 shrink-0 items-center gap-1 rounded-full px-2.5 text-[0.78rem] font-medium tracking-[-0.01em] text-portada-azul">
+          <span className="font-[family-name:var(--font-portada-mono)] tabular-nums">0%</span>
+          inicial
+        </span>
         <a
-          href={enlaceDeWhatsApp(medico, whatsappHelios)}
+          href={enlace}
           target="_blank"
           rel="noopener noreferrer"
           onClick={onContacto}
-          aria-label={`Escribir por WhatsApp a ${medico.nombre}`}
-          className="portada-boton group/boton inline-flex h-12 w-full items-center justify-between gap-2 whitespace-nowrap rounded-full bg-portada-tinta pl-5 pr-2 text-[0.95rem] font-medium tracking-[-0.01em] text-white shadow-[0_10px_30px_-12px_rgba(0,39,112,0.55)] transition-[background-color,transform] duration-300 hover:bg-portada-marino active:scale-[0.98]"
+          aria-label={`Agendar cita por WhatsApp con ${medico.nombre}`}
+          className="portada-boton group/boton relative z-10 inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-full bg-portada-tinta pl-4 pr-1.5 text-[0.88rem] font-medium tracking-[-0.01em] text-white shadow-[0_10px_30px_-12px_rgba(0,39,112,0.55)] transition-[background-color,transform] duration-300 hover:bg-portada-marino active:scale-[0.98] group-hover:bg-portada-marino"
         >
-          Escribir por WhatsApp
+          Agendar cita
           <span
             aria-hidden
-            className="grid size-8 place-items-center rounded-full bg-[#25D366] text-white transition-transform duration-300 group-hover/boton:scale-105"
+            className="grid size-7 place-items-center rounded-full bg-[#25D366] text-white transition-transform duration-300 group-hover:scale-105"
           >
-            <LogoWhatsApp />
+            <LogoWhatsApp className="size-3.5" />
           </span>
         </a>
       </div>

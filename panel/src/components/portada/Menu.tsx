@@ -51,11 +51,13 @@ export function Menu() {
     return () => window.removeEventListener('keydown', alTeclear)
   }, [abierto])
 
+  // El header deja pasar los clics: su caja incluye la hoja cerrada
+  // (invisible) y, si no, taparía lo que queda debajo en el teléfono.
   return (
-    <header className="portada-menu fixed inset-x-0 top-0 z-50 px-3 pt-3 sm:px-5 sm:pt-4">
+    <header className="portada-menu pointer-events-none fixed inset-x-0 top-0 z-50 px-3 pt-3 sm:px-5 sm:pt-4">
       <nav
         data-bajo={bajo || abierto ? '' : undefined}
-        className="portada-menu-barra mx-auto flex w-full max-w-[calc(var(--portada-ancho)+1.5rem)] items-center justify-between gap-6 rounded-full py-2 pl-5 pr-2"
+        className="portada-menu-barra pointer-events-auto mx-auto flex w-full max-w-[calc(var(--portada-ancho)+1.5rem)] items-center justify-between gap-6 rounded-full py-2 pl-5 pr-2"
       >
         <a
           href={enPortada ? '#arriba' : '/'}
@@ -117,7 +119,7 @@ export function Menu() {
       <div
         id="portada-menu-movil"
         data-abierto={abierto ? '' : undefined}
-        className="portada-menu-hoja mx-auto mt-2 w-full max-w-[calc(var(--portada-ancho)+1.5rem)] overflow-hidden rounded-[28px] lg:hidden"
+        className="portada-menu-hoja pointer-events-auto mx-auto mt-2 w-full max-w-[calc(var(--portada-ancho)+1.5rem)] overflow-hidden rounded-[28px] lg:hidden"
       >
         <ul className="flex flex-col p-3">
           {MENU.map((item, i) => (

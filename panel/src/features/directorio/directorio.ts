@@ -227,6 +227,37 @@ export function especialidadesPresentes(medicos: readonly MedicoDelDirectorio[])
     })
 }
 
+/** Cuántas filas ocupan unas fichas de estos anchos, envueltas como `flex-wrap`. */
+function filasQueOcupan(anchos: readonly number[], ancho: number, hueco: number): number {
+  let filas = 1
+  let x = 0
+  for (const w of anchos) {
+    if (x > 0 && x + hueco + w > ancho + 0.5) {
+      filas++
+      x = w
+    } else {
+      x += (x > 0 ? hueco : 0) + w
+    }
+  }
+  return filas
+}
+
+/**
+ * Cuántas fichas de especialidad se enseñan con la lista cerrada: todas si
+ * caben en `filas`; si no, las que quepan dejando sitio en la última fila al
+ * botón «Ver más» (de ancho `verMas`). Siempre al menos la primera («Todas»).
+ */
+export function fichasQueCaben(
+  anchos: readonly number[],
+  { ancho, hueco, filas, verMas }: { ancho: number; hueco: number; filas: number; verMas: number },
+): number {
+  if (filasQueOcupan(anchos, ancho, hueco) <= filas) return anchos.length
+  for (let n = anchos.length - 1; n > 1; n--) {
+    if (filasQueOcupan([...anchos.slice(0, n), verMas], ancho, hueco) <= filas) return n
+  }
+  return 1
+}
+
 // ── El visitante ───────────────────────────────────────────────────────────
 
 const CLAVE_VISITANTE = 'helios.directorio.visitante'
