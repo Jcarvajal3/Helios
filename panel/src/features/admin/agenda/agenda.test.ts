@@ -7,20 +7,24 @@
  * sean las de Caracas (una visita a las 9 de la noche no salta al día
  * siguiente), que el orden de trabajo ponga arriba lo atrasado y lo de hoy,
  * que la búsqueda encuentre un teléfono escrito a la venezolana, que el
- * calendario cuadre las semanas, que el árbol de la gestión (mensaje,
- * llamada, visita) dé el resultado y el estado que da la base, y que una
+ * calendario cuadre las semanas, que las fases (Mensaje, Llamada, Visita)
+ * ofrezcan lo suyo y dejen el estado que deja la base, que las cifras
+ * cuadren por persona, y que una
  * gestión no se pueda anotar sin fecha de visita, con una fecha pasada o sin
  * nada que contar.
  */
 import {
-  SIN_ELEGIR,
   aParametros,
+  accionesPara,
   afiliacionEnCurso,
   anulaLaVisita,
   borradorDeGestion,
   canalDe,
   casillasDelMes,
   cifrasDeLaAgenda,
+  cifrasPorPersona,
+  cuentaPorFase,
+  delAlcance,
   citasDe,
   diaDeCaracas,
   esCapacitacion,
@@ -35,9 +39,8 @@ import {
   ordenarAgenda,
   pendienteDe,
   borradorDeLead,
-  resultadoDe,
 } from './agenda'
-import type { Eleccion, Lead } from './agenda'
+import type { Lead } from './agenda'
 
 let fallos = 0
 
@@ -126,27 +129,29 @@ console.log('\n── Qué toca hoy y el orden ───────────
 
   const todos = [afiliado, semana, manana, nuevo, hoyLlamar, hoyReunion, atrasada, pasada]
   igual(
-    '«Para hoy» trae solo lo pendiente',
-    filtrarAgenda(todos, { ver: 'para_hoy' }, HOY, AHORA).map((l) => l.id).sort(),
-    ['atrasada', 'hoyLlamar', 'hoyReunion', 'nuevo', 'pasada'],
+    'la pestaña Visita trae las visitas y los afiliados',
+    filtrarAgenda(todos, { fase: 'visita' }).map((l) => l.id).sort(),
+    ['afiliado', 'hoyReunion', 'manana', 'pasada'],
   )
-  igual('«Abiertos» deja fuera a los afiliados', filtrarAgenda(todos, { ver: 'abiertos' }, HOY, AHORA).length, 7)
+  const cuenta = cuentaPorFase(todos)
+  igual('cuántos hay en cada fase', [cuenta.mensaje.total, cuenta.llamada.total, cuenta.visita.total], [4, 0, 4])
+  igual('y de cada estado dentro', cuenta.mensaje.porEstado, { contactado: 3, nuevo: 1 })
 }
 
 console.log('\n── La búsqueda ──────────────────────────────────────────────')
 {
   const ana = lead('ana', { name: 'Dra. Ana Pérez', address: 'Torre Sur, Mérida', phone: '+584141234567' })
   const luis = lead('luis', { name: 'Dr. Luis Gómez', phone: '+582125550002' })
-  igual('sin tildes', filtrarAgenda([ana, luis], { texto: 'perez', ver: 'todos' }, HOY, AHORA).map((l) => l.id), ['ana'])
-  igual('por la dirección', filtrarAgenda([ana, luis], { texto: 'merida', ver: 'todos' }, HOY, AHORA).map((l) => l.id), ['ana'])
+  igual('sin tildes', filtrarAgenda([ana, luis], { texto: 'perez' }).map((l) => l.id), ['ana'])
+  igual('por la dirección', filtrarAgenda([ana, luis], { texto: 'merida' }).map((l) => l.id), ['ana'])
   igual(
     'un teléfono a la venezolana',
-    filtrarAgenda([ana, luis], { texto: '0414 123', ver: 'todos' }, HOY, AHORA).map((l) => l.id),
+    filtrarAgenda([ana, luis], { texto: '0414 123' }).map((l) => l.id),
     ['ana'],
   )
   igual(
     'filtra por estado',
-    filtrarAgenda([ana, lead('r', { status: 'reunion' })], { ver: 'todos', estado: 'reunion' }, HOY, AHORA).map((l) => l.id),
+    filtrarAgenda([ana, lead('r', { status: 'reunion' })], { estado: 'reunion' }).map((l) => l.id),
     ['r'],
   )
 }
@@ -195,20 +200,26 @@ console.log('\n── La afiliación en curso ───────────�
   igual('sin formulario, nada', afiliacionEnCurso(lead('n')), null)
 }
 
-console.log('\n── El árbol de la gestión ───────────────────────────────────')
+console.log('\n── Las fases ────────────────────────────────────────────────')
 {
-  const r = (e: Partial<Eleccion>, conVisita = false) => resultadoDe({ ...SIN_ELEGIR, ...e }, conVisita)
-  igual('mensaje › enviado', r({ tipo: 'mensaje', respuesta: 'enviado' }), 'mensaje_enviado')
-  igual('mensaje › contestó, sin decir si le interesa, aún no', r({ tipo: 'mensaje', respuesta: 'contesto' }), null)
-  igual('mensaje › contestó › interesado', r({ tipo: 'mensaje', respuesta: 'contesto', interesado: true }), 'interesado')
-  igual('llamada › contestó › no interesado', r({ tipo: 'llamada', respuesta: 'contesto', interesado: false }), 'no_interesado')
-  igual('llamada › ocupado', r({ tipo: 'llamada', respuesta: 'ocupado' }), 'ocupado')
-  igual('visita sin una agendada: agendarla', r({ tipo: 'visita' }), 'visita_agendada')
-  igual('visita con una agendada: falta decir qué pasó', r({ tipo: 'visita' }, true), null)
-  igual('visita › pospuesta', r({ tipo: 'visita', respuesta: 'pospuesta' }, true), 'visita_pospuesta')
-  igual('solo una nota', r({ tipo: 'nota' }), 'nota')
-  igual('el canal de una llamada', canalDe({ ...SIN_ELEGIR, tipo: 'llamada' }), 'llamada')
-  igual('una nota no tiene canal', canalDe({ ...SIN_ELEGIR, tipo: 'nota' }), null)
+  const enMensaje = lead('m', { status: 'no_respondio', stage: 'mensaje' })
+  const enLlamada = lead('l', { status: 'no_respondio', stage: 'llamada' })
+  igual('«no contestó» se queda en la fase que diga la base', [enMensaje.fase, enLlamada.fase], ['mensaje', 'llamada'])
+  igual('sin la fase, sale del estado', lead('x', { status: 'respondio' }).fase, 'llamada')
+
+  igual('en Mensaje, lo primero es «Interesado»', accionesPara(enMensaje)[0], 'interesado')
+  igual('en Llamada, agendar la visita', accionesPara(enLlamada)[0], 'visita_agendada')
+  const conVisita = lead('v', { status: 'reunion', meeting_at: '2026-10-23T14:00:00Z' })
+  igual('en Visita, realizada · afiliado', accionesPara(conVisita)[0], 'visita_realizada')
+  igual('en Visita sin visita, solo agendarla', accionesPara({ ...conVisita, reunion: null }), ['visita_agendada'])
+  igual('un afiliado ya no tiene acciones', accionesPara(lead('a', { status: 'convertido' })), [])
+
+  igual(
+    'la gestión va con el canal de la fase',
+    [canalDe('no_contesto', enMensaje), canalDe('no_contesto', enLlamada)],
+    ['mensaje', 'llamada'],
+  )
+  igual('una nota no tiene canal', canalDe('nota', enLlamada), null)
 
   const c = lead('c')
   igual(
@@ -216,8 +227,20 @@ console.log('\n── El árbol de la gestión ───────────
     (['mensaje_enviado', 'interesado', 'no_interesado', 'ocupado', 'visita_realizada', 'visita_cancelada', 'nota'] as const).map(
       (x) => estadoDelResultado(x, c),
     ),
-    ['contactado', 'respondio', 'descartado', 'no_respondio', 'visitado', 'respondio', 'contactado'],
+    ['contactado', 'respondio', 'descartado', 'no_respondio', 'convertido', 'respondio', 'contactado'],
   )
+}
+
+console.log('\n── De quién ─────────────────────────────────────────────────')
+{
+  const mio = lead('mio', { assigned_to: 'yo', assigned_name: 'Ana' })
+  const suyo = lead('suyo', { assigned_to: 'otra', assigned_name: 'Bea' })
+  const libre = lead('libre')
+  const todos = [mio, suyo, libre]
+  igual('mis médicos', delAlcance(todos, 'mios', 'yo').map((l) => l.id), ['mio'])
+  igual('sin asignar', delAlcance(todos, 'sin_asignar', 'yo').map((l) => l.id), ['libre'])
+  igual('sin sesión no hay «mis médicos»', delAlcance(todos, 'mios', null), [])
+  igual('todos', delAlcance(todos, 'todos', 'yo').length, 3)
 }
 
 console.log('\n── Anotar una gestión ───────────────────────────────────────')
@@ -273,7 +296,7 @@ console.log('\n── Las cifras de arriba ────────────�
       lead('nuevo', { status: 'nuevo' }),
       lead('mensaje', { status: 'contactado' }),
       lead('porVenir', { status: 'reunion', meeting_at: '2026-10-23T14:00:00Z' }),
-      lead('realizada', { status: 'visitado', meeting_at: '2026-10-20T14:00:00Z' }),
+      lead('realizada', { status: 'convertido', meeting_at: '2026-10-20T14:00:00Z' }),
       lead('cancelada', { status: 'respondio' }),
       lead('afiliado', { status: 'convertido', merchant_id: 'm1' }),
       lead('solicitud', { status: 'convertido' }),
@@ -285,9 +308,28 @@ console.log('\n── Las cifras de arriba ────────────�
     contactados: 6,
     citas: 2,
     citasPorVenir: 1,
-    activados: 2,
+    activados: 3,
     conClinica: 1,
   })
+
+  const porPersona = cifrasPorPersona(
+    [
+      lead('a1', { assigned_to: 'ana', assigned_name: 'Ana', status: 'convertido' }),
+      lead('a2', { assigned_to: 'ana', assigned_name: 'Ana', status: 'respondio' }),
+      lead('b1', { assigned_to: 'bea', assigned_name: 'Bea', status: 'nuevo' }),
+      lead('s1', { status: 'nuevo' }),
+    ],
+    AHORA,
+  )
+  igual(
+    'por persona: quien más activó primero y los sin asignar al final',
+    porPersona.map((p) => [p.nombre, p.apuntados, p.contactados, p.interesados, p.activados]),
+    [
+      ['Ana', 2, 2, 2, 1],
+      ['Bea', 1, 0, 0, 0],
+      ['Sin asignar', 1, 0, 0, 0],
+    ],
+  )
 }
 
 console.log('\n── Apuntar ──────────────────────────────────────────────────')

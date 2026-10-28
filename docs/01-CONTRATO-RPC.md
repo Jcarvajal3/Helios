@@ -949,6 +949,30 @@ superadmin › Agenda.
   `application_training_at` la del QR o, si no hay, la del formulario: el
   calendario la enseña como «Capacitación».
 
+**La agenda por fases** (2026-10-28, 20261028150000). La Agenda se trabaja en
+tres fases, que son sus pestañas, y cada persona ve al entrar los médicos que
+tiene asignados.
+
+- `doctor_leads.stage` (`mensaje | llamada | visita`). La pone el disparador
+  `helios_lead_fase()` a partir del estado, así que la mantienen todos los
+  que lo cambian: `nuevo`, `contactado` → `mensaje`; `respondio` (en el panel,
+  «Por llamar») → `llamada`; `reunion`, `convertido` → `visita`;
+  `no_respondio` y `descartado` se quedan en la fase en que estaban. Los que ya
+  había se rellenaron: un «no contestó» o «no interesado» que ya fue
+  interesado o tuvo una llamada quedó en Llamada. `admin_doctor_leads()`
+  devuelve `stage`.
+- «Visita realizada» y «Afiliado» son lo mismo: `visita_realizada` deja el
+  lead `convertido` con `converted_via = 'visita'` (valor nuevo). El estado
+  `visitado` desaparece del `check`.
+- `admin_assign_me_doctor_leads(p_cantidad integer default 20) → integer`
+  (`helios_puede_usar_la_agenda()`): le asigna a quien llama hasta
+  `p_cantidad` (1–100, `22023` fuera de eso) médicos al azar sin asignar y que
+  no estén `convertido` ni `descartado`; dos personas a la vez no se llevan el
+  mismo (`for update skip locked`). Devuelve cuántos (0 si no quedaba
+  ninguno). Bitácora `doctor_lead.assigned` (target: quien se los asignó; en
+  `detail`, `count` y `lead_ids`).
+- En el panel, un médico nuevo queda a cargo de quien lo apunta.
+
 ### 2.10 Métricas › Juan Pablo (2026-10-23, 20261023160000)
 
 La primera pestaña de Métricas (y la de por defecto): las cifras que mira Juan

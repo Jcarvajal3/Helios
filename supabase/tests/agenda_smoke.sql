@@ -293,8 +293,10 @@ begin
 
   perform public.admin_log_doctor_lead_contact(v_luis, 'visita_realizada', 'visita', 'Le gustó');
   select * into v_lead from public.doctor_leads where id = v_luis;
-  if v_lead.status <> 'visitado' or v_lead.meeting_at <> v_manana + interval '1 day' then
-    raise exception '3. la visita realizada no quedó: %', row_to_json(v_lead);
+  -- Visita realizada es afiliado (20261028150000).
+  if v_lead.status <> 'convertido' or v_lead.converted_via <> 'visita'
+     or v_lead.meeting_at <> v_manana + interval '1 day' then
+    raise exception '3. la visita realizada no lo dejó afiliado: %', row_to_json(v_lead);
   end if;
 
   -- Otra visita, cancelada: vuelve a interesado y sin visita.

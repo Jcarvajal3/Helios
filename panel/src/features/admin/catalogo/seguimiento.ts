@@ -15,7 +15,7 @@ export const seguimiento = [
     id: 'agenda',
     titulo: 'Agenda',
     descripcion:
-      'Los médicos por afiliar: su teléfono y su dirección, en qué quedó cada uno (mensaje enviado, interesado, visita agendada…) y el calendario de las visitas. Pasan solos a afiliado cuando llenan el formulario.',
+      'Los médicos por afiliar en tres fases: Mensaje, Llamada y Visita (con su calendario). Cada persona ve los suyos, toma más con «Asignarme 20 médicos» y ve sus cifras y las de cada uno.',
     espacio: 'seguimiento',
     sinonimos: [
       'leads',
@@ -30,6 +30,9 @@ export const seguimiento = [
       'embudo',
       'pipeline',
       'afiliar médicos',
+      'asignarme médicos',
+      'mis médicos',
+      'fases',
     ],
     destino: { to: '/admin/agenda' },
     icono: CalendarDays,
@@ -99,10 +102,10 @@ export const seguimiento = [
     tipo: 'accion',
     id: 'ver-calendario-de-visitas',
     titulo: 'Ver el calendario de visitas',
-    descripcion: 'El mes con las visitas a médicos por afiliar y los días de volver a llamarlos.',
+    descripcion: 'La pestaña Visita de la Agenda: el mes con las visitas agendadas a médicos por afiliar.',
     espacio: 'seguimiento',
     sinonimos: ['próximas visitas', 'agenda del mes', 'citas con médicos'],
-    destino: { to: '/admin/agenda', search: { vista: 'calendario' } },
+    destino: { to: '/admin/agenda', search: { fase: 'visita' } },
   },
   {
     tipo: 'accion',

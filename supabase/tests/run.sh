@@ -85,6 +85,7 @@ SUITES=(
   mensajes_paciente_smoke
   seguimiento_smoke
   agenda_smoke
+  agenda_fases_smoke
   directorio_smoke
   directorio_interesados_smoke
 )

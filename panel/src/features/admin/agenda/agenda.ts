@@ -23,7 +23,6 @@ export type EstadoDelLead =
   | 'no_respondio'
   | 'respondio'
   | 'reunion'
-  | 'visitado'
   | 'convertido'
   | 'descartado'
 
@@ -34,20 +33,72 @@ export const ESTADOS_DEL_LEAD: readonly EstadoDelLead[] = [
   'no_respondio',
   'respondio',
   'reunion',
-  'visitado',
   'convertido',
   'descartado',
 ]
 
+/**
+ * Cada estado con el nombre que tiene en su fase: el interesado es «Por
+ * llamar» porque está en Llamada esperando la llamada, y la visita realizada
+ * es «Afiliado» (20261028150000).
+ */
 export const ESTADO_DEL_LEAD: Record<EstadoDelLead, { label: string; tone: BadgeTone }> = {
-  nuevo: { label: 'Sin contactar', tone: 'neutral' },
+  nuevo: { label: 'Por contactar', tone: 'neutral' },
   contactado: { label: 'Mensaje enviado', tone: 'brand' },
   no_respondio: { label: 'No contestó', tone: 'warning' },
-  respondio: { label: 'Interesado', tone: 'brand' },
+  respondio: { label: 'Por llamar', tone: 'brand' },
   reunion: { label: 'Visita agendada', tone: 'brand' },
-  visitado: { label: 'Visita realizada', tone: 'brand' },
   convertido: { label: 'Afiliado', tone: 'success' },
   descartado: { label: 'No interesado', tone: 'neutral' },
+}
+
+// ── Las fases ──────────────────────────────────────────────────────────────
+
+/**
+ * Las tres fases de la Agenda, que son sus tres pestañas. La pone la base a
+ * partir del estado (`doctor_leads.stage`, 20261028150000): «no contestó» y
+ * «no interesado» se quedan en la fase en que pasaron.
+ */
+export type Fase = 'mensaje' | 'llamada' | 'visita'
+
+export const FASES: readonly Fase[] = ['mensaje', 'llamada', 'visita']
+
+export const ROTULO_FASE: Record<Fase, { label: string; ayuda: string }> = {
+  mensaje: { label: 'Mensaje', ayuda: 'Escribirle y saber si le interesa' },
+  llamada: { label: 'Llamada', ayuda: 'Llamar al interesado y agendar la visita' },
+  visita: { label: 'Visita', ayuda: 'Visitarlo, capacitarlo y afiliarlo' },
+}
+
+/** Los estados que se ven en cada fase, en su orden. */
+export const ESTADOS_DE_LA_FASE: Record<Fase, readonly EstadoDelLead[]> = {
+  mensaje: ['nuevo', 'contactado', 'no_respondio', 'descartado'],
+  llamada: ['respondio', 'no_respondio', 'descartado'],
+  visita: ['reunion', 'convertido'],
+}
+
+/**
+ * Lo que se puede anotar en cada fase, en el orden en que se ofrece. El
+ * primero de la lista es el que la hace avanzar: el interesado pasa a
+ * Llamada, la visita agendada a Visita y la realizada lo deja afiliado.
+ */
+export const ACCIONES_DE_LA_FASE: Record<Fase, readonly Resultado[]> = {
+  mensaje: ['interesado', 'mensaje_enviado', 'no_contesto', 'no_interesado'],
+  llamada: ['visita_agendada', 'no_contesto', 'ocupado', 'no_interesado'],
+  visita: ['visita_realizada', 'visita_pospuesta', 'visita_cancelada'],
+}
+
+/** El canal con el que se guarda una gestión de cada fase. */
+export const CANAL_DE_LA_FASE: Record<Fase, CanalDelLead> = {
+  mensaje: 'mensaje',
+  llamada: 'llamada',
+  visita: 'visita',
+}
+
+/** La fase de un lead que llega sin ella: la misma regla que la base. */
+function faseDelEstado(e: EstadoDelLead): Fase {
+  if (e === 'respondio') return 'llamada'
+  if (e === 'reunion' || e === 'convertido') return 'visita'
+  return 'mensaje'
 }
 
 export type CanalDelLead = 'mensaje' | 'llamada' | 'whatsapp' | 'visita' | 'correo' | 'redes'
@@ -73,15 +124,16 @@ export const ROTULO_MODO: Record<ModoDeVisita, string> = {
   llamada: 'Llamada',
 }
 
-export type ViaDeAfiliacion = 'formulario' | 'alta' | 'agenda' | 'manual'
+export type ViaDeAfiliacion = 'formulario' | 'alta' | 'agenda' | 'manual' | 'visita'
 
-const VIAS: readonly ViaDeAfiliacion[] = ['formulario', 'alta', 'agenda', 'manual']
+const VIAS: readonly ViaDeAfiliacion[] = ['formulario', 'alta', 'agenda', 'manual', 'visita']
 
 export const ROTULO_VIA: Record<ViaDeAfiliacion, string> = {
   formulario: 'Llenó el formulario de afiliación',
   alta: 'Se dio de alta su clínica',
   agenda: 'Ya era cliente al apuntarlo',
   manual: 'Marcado a mano',
+  visita: 'Se le visitó y capacitó',
 }
 
 export type PorQueSeReconocio = 'telefono' | 'correo' | 'nombre'
@@ -96,16 +148,11 @@ export const ROTULO_RAZON: Record<PorQueSeReconocio, string> = {
 
 export const NOTA_MAXIMA = 2000
 
-// ── El árbol de la gestión ─────────────────────────────────────────────────
+// ── El resultado de una gestión ────────────────────────────────────────────
 
 /**
- * Qué pasó en una gestión. Es el árbol del equipo:
- *
- *   Mensaje → mensaje enviado · contestó (interesado / no interesado) · no contestó
- *   Llamada → contestó (interesado / no interesado) · no contestó · teléfono ocupado
- *   Visita  → agendada con su fecha; después realizada · pospuesta · cancelada
- *
- * Y dos sueltos: «se afilió» y «solo una nota».
+ * Qué pasó en una gestión. Cada fase ofrece los suyos (`ACCIONES_DE_LA_FASE`),
+ * y en todas se puede dejar «solo una nota» o marcarlo afiliado.
  */
 export type Resultado =
   | 'mensaje_enviado'
@@ -136,12 +183,12 @@ const RESULTADOS: readonly Resultado[] = [
 
 export const ROTULO_RESULTADO: Record<Resultado, string> = {
   mensaje_enviado: 'Mensaje enviado',
-  interesado: 'Contestó: interesado',
-  no_interesado: 'Contestó: no interesado',
+  interesado: 'Interesado',
+  no_interesado: 'No interesado',
   no_contesto: 'No contestó',
   ocupado: 'Teléfono ocupado',
   visita_agendada: 'Visita agendada',
-  visita_realizada: 'Visita realizada',
+  visita_realizada: 'Visita realizada · Afiliado',
   visita_pospuesta: 'Visita pospuesta',
   visita_cancelada: 'Visita cancelada',
   afiliado: 'Se afilió',
@@ -158,71 +205,28 @@ export function estadoDelResultado(r: Resultado, l: Pick<Lead, 'estado'>): Estad
     ocupado: 'no_respondio',
     visita_agendada: 'reunion',
     visita_pospuesta: 'reunion',
-    visita_realizada: 'visitado',
+    visita_realizada: 'convertido',
     visita_cancelada: 'respondio',
     afiliado: 'convertido',
   }
   return r === 'nota' ? l.estado : estado[r]
 }
 
-/** La primera rama: por dónde fue la gestión. */
-export type TipoDeGestion = 'mensaje' | 'llamada' | 'visita'
-
-export const TIPOS_DE_GESTION: readonly TipoDeGestion[] = ['mensaje', 'llamada', 'visita']
-
-/** La segunda rama de cada tipo. «Contestó» abre la tercera: interesado o no. */
-export type Respuesta = 'enviado' | 'contesto' | 'no_contesto' | 'ocupado' | 'realizada' | 'pospuesta' | 'cancelada'
-
-export const RESPUESTAS: Record<TipoDeGestion, readonly Respuesta[]> = {
-  mensaje: ['enviado', 'contesto', 'no_contesto'],
-  llamada: ['contesto', 'no_contesto', 'ocupado'],
-  visita: ['realizada', 'pospuesta', 'cancelada'],
-}
-
-export const ROTULO_RESPUESTA: Record<Respuesta, string> = {
-  enviado: 'Mensaje enviado',
-  contesto: 'Contestó',
-  no_contesto: 'No contestó',
-  ocupado: 'Teléfono ocupado',
-  realizada: 'Realizada',
-  pospuesta: 'Pospuesta',
-  cancelada: 'Cancelada',
-}
-
-/** Lo elegido en el árbol, rama por rama. */
-export type Eleccion = {
-  tipo: TipoDeGestion | 'afiliado' | 'nota' | null
-  respuesta: Respuesta | null
-  interesado: boolean | null
-}
-
-export const SIN_ELEGIR: Eleccion = { tipo: null, respuesta: null, interesado: null }
-
 /**
- * El resultado de lo elegido, o `null` si falta una rama. Una visita sin una
- * agendada es agendarla; con una agendada, se dice qué pasó con ella.
+ * Las acciones que se ofrecen para un lead: las de su fase, salvo que ya
+ * esté afiliado (entonces, ninguna: solo la nota). En Visita, posponer o
+ * cancelar piden una visita agendada; sin ella, lo que toca es agendarla.
  */
-export function resultadoDe(e: Eleccion, conVisita: boolean): Resultado | null {
-  if (e.tipo === 'afiliado' || e.tipo === 'nota') return e.tipo
-  if (e.tipo === 'visita') {
-    if (!conVisita) return 'visita_agendada'
-    if (e.respuesta === 'realizada') return 'visita_realizada'
-    if (e.respuesta === 'pospuesta') return 'visita_pospuesta'
-    if (e.respuesta === 'cancelada') return 'visita_cancelada'
-    return null
-  }
-  if (e.tipo === null) return null
-  if (e.respuesta === 'enviado') return 'mensaje_enviado'
-  if (e.respuesta === 'no_contesto') return 'no_contesto'
-  if (e.respuesta === 'ocupado') return 'ocupado'
-  if (e.respuesta === 'contesto' && e.interesado !== null) return e.interesado ? 'interesado' : 'no_interesado'
-  return null
+export function accionesPara(l: Pick<Lead, 'fase' | 'estado' | 'reunion'>): readonly Resultado[] {
+  if (l.estado === 'convertido') return []
+  if (l.fase === 'visita' && !tieneVisita(l)) return ['visita_agendada']
+  return ACCIONES_DE_LA_FASE[l.fase]
 }
 
-/** El canal que se guarda con cada tipo. */
-export function canalDe(e: Eleccion): CanalDelLead | null {
-  if (e.tipo === 'mensaje' || e.tipo === 'llamada' || e.tipo === 'visita') return e.tipo
-  return null
+/** El canal con que se guarda cada resultado: el de la fase del lead; la nota y el afiliado, ninguno. */
+export function canalDe(r: Resultado, l: Pick<Lead, 'fase'>): CanalDelLead | null {
+  if (r === 'nota' || r === 'afiliado') return null
+  return CANAL_DE_LA_FASE[l.fase]
 }
 
 /** Si el resultado pone fecha a la visita. */
@@ -231,34 +235,27 @@ export function pideFechaDeVisita(r: Resultado | null): boolean {
 }
 
 /**
- * Cuándo volver a llamar, propuesto según lo que pasó: al día siguiente si
- * no contestó o estaba ocupado, a los dos días si solo se le mandó el
- * mensaje. En días desde hoy; `null` es sin fecha.
+ * Cuándo volver a escribirle o llamarlo, propuesto según lo que pasó: al día
+ * siguiente si no contestó o estaba ocupado, a los dos días si solo se le
+ * mandó el mensaje, el mismo día si le interesó (hay que llamarlo). En días
+ * desde hoy; `null` es sin fecha.
  */
 export function volverPropuesto(r: Resultado): number | null {
   if (r === 'no_contesto' || r === 'ocupado') return 1
   if (r === 'mensaje_enviado') return 2
+  if (r === 'interesado' || r === 'visita_cancelada') return 0
   return null
 }
 
-/** Si con ese resultado tiene sentido poner cuándo volver a llamar. */
+/** Si con ese resultado tiene sentido poner cuándo volver a contactarlo. */
 export function pideVolver(r: Resultado): boolean {
-  return !pideFechaDeVisita(r) && r !== 'no_interesado' && r !== 'afiliado'
+  return !pideFechaDeVisita(r) && r !== 'no_interesado' && r !== 'afiliado' && r !== 'visita_realizada'
 }
 
-/** El paso del embudo en que va un lead: 0 sin contactar … 4 afiliado. */
-export function pasoDelEmbudo(e: EstadoDelLead): number {
-  const paso: Record<EstadoDelLead, number> = {
-    nuevo: 0,
-    contactado: 1,
-    no_respondio: 1,
-    respondio: 2,
-    reunion: 3,
-    visitado: 3,
-    convertido: 4,
-    descartado: 0,
-  }
-  return paso[e]
+/** El paso del embudo en que va un lead: 0 Mensaje, 1 Llamada, 2 Visita, 3 Afiliado. */
+export function pasoDelEmbudo(l: Pick<Lead, 'fase' | 'estado'>): number {
+  if (l.estado === 'convertido') return 3
+  return FASES.indexOf(l.fase)
 }
 
 // ── Lo que llega de la base ────────────────────────────────────────────────
@@ -284,6 +281,7 @@ export type Lead = {
   direccion: string | null
   notas: string | null
   estado: EstadoDelLead
+  fase: Fase
   /** Instante ISO de la visita: la próxima, o la última si ya pasó. */
   reunion: string | null
   modo: ModoDeVisita | null
@@ -329,6 +327,7 @@ function leerUltima(raw: unknown): UltimaGestion | null {
 export function leerAgenda(raw: unknown): Lead[] {
   return comoLista(raw).map((fila) => {
     const r = comoFila(fila)
+    const estado = unoDe(ESTADOS_DEL_LEAD, r.status) ?? 'nuevo'
     return {
       id: texto(r.id),
       nombre: texto(r.name),
@@ -337,7 +336,8 @@ export function leerAgenda(raw: unknown): Lead[] {
       telefono: textoONulo(r.phone),
       direccion: textoONulo(r.address),
       notas: textoONulo(r.notes),
-      estado: unoDe(ESTADOS_DEL_LEAD, r.status) ?? 'nuevo',
+      estado,
+      fase: unoDe(FASES, r.stage) ?? faseDelEstado(estado),
       reunion: textoONulo(r.meeting_at),
       modo: unoDe(MODOS_DE_VISITA, r.meeting_mode) ?? null,
       lugar: textoONulo(r.meeting_place),
@@ -532,41 +532,67 @@ export function ordenarAgenda(leads: ReadonlyArray<Lead>, hoy: string, ahora: Da
 // ── Qué se ve ──────────────────────────────────────────────────────────────
 
 /**
- * `para_hoy`: lo que tiene algo pendiente hoy. `abiertos`: sin los afiliados
- * ni los no interesados. `afiliados` y `descartados`: solo esos. `todos`: todo.
+ * De quién son los médicos que se ven. Cada persona trabaja los suyos
+ * (`mios`, lo que se ve al entrar); `sin_asignar` y `todos` son para mirar
+ * el resto.
  */
-export type QueSeVe = 'para_hoy' | 'abiertos' | 'afiliados' | 'descartados' | 'todos'
+export type Alcance = 'mios' | 'sin_asignar' | 'todos'
 
-export const VALORES_QUE_SE_VE: readonly QueSeVe[] = ['para_hoy', 'abiertos', 'afiliados', 'descartados', 'todos']
+export const ALCANCES: readonly Alcance[] = ['mios', 'sin_asignar', 'todos']
+
+export const ROTULO_ALCANCE: Record<Alcance, string> = {
+  mios: 'Mis médicos',
+  sin_asignar: 'Sin asignar',
+  todos: 'Todos',
+}
+
+/** Los médicos de ese alcance; `yo` es el id de quien mira. */
+export function delAlcance(leads: ReadonlyArray<Lead>, alcance: Alcance, yo: string | null): Lead[] {
+  if (alcance === 'todos') return [...leads]
+  if (alcance === 'sin_asignar') return leads.filter((l) => l.responsableId === null)
+  return leads.filter((l) => yo !== null && l.responsableId === yo)
+}
 
 function sinTildes(t: string): string {
   return t.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim()
 }
 
 /**
- * Los leads que se ven. La búsqueda va por el nombre, el consultorio, la
- * especialidad y la dirección, y por los dígitos del teléfono: «0414 700»
- * encuentra «+584147000001».
+ * Los leads de una fase que se ven, con su estado si se eligió uno. La
+ * búsqueda va por el nombre, el consultorio, la especialidad y la dirección,
+ * y por los dígitos del teléfono: «0414 700» encuentra «+584147000001».
  */
 export function filtrarAgenda(
   leads: ReadonlyArray<Lead>,
-  { texto: buscado = '', ver, estado }: { texto?: string; ver: QueSeVe; estado?: EstadoDelLead },
-  hoy: string,
-  ahora: Date,
+  { texto: buscado = '', fase, estado }: { texto?: string; fase?: Fase; estado?: EstadoDelLead },
 ): Lead[] {
   const aguja = sinTildes(buscado)
   const digitos = buscado.replace(/\D/g, '').replace(/^0/, '')
   return leads.filter((l) => {
+    if (fase && l.fase !== fase) return false
     if (estado && l.estado !== estado) return false
-    if (ver === 'para_hoy' && pendienteDe(l, hoy, ahora) === null) return false
-    if (ver === 'abiertos' && estaCerrado(l)) return false
-    if (ver === 'afiliados' && l.estado !== 'convertido') return false
-    if (ver === 'descartados' && l.estado !== 'descartado') return false
     if (!aguja) return true
     const textos = [l.nombre, l.consultorio, l.especialidad, l.direccion]
     if (textos.some((t) => t !== null && sinTildes(t).includes(aguja))) return true
     return digitos.length >= 3 && l.telefono !== null && l.telefono.replace(/\D/g, '').includes(digitos)
   })
+}
+
+/** Cuántos hay de cada fase y, dentro, de cada estado: los números de las pestañas y los filtros. */
+export function cuentaPorFase(
+  leads: ReadonlyArray<Lead>,
+): Record<Fase, { total: number; porEstado: Partial<Record<EstadoDelLead, number>> }> {
+  const cuenta = {
+    mensaje: { total: 0, porEstado: {} },
+    llamada: { total: 0, porEstado: {} },
+    visita: { total: 0, porEstado: {} },
+  } as Record<Fase, { total: number; porEstado: Partial<Record<EstadoDelLead, number>> }>
+  for (const l of leads) {
+    const f = cuenta[l.fase]
+    f.total += 1
+    f.porEstado[l.estado] = (f.porEstado[l.estado] ?? 0) + 1
+  }
+  return cuenta
 }
 
 /** Cuántos hay en cada estado, para el resumen y el embudo. */
@@ -594,13 +620,13 @@ export type CifrasDeLaAgenda = {
 }
 
 /**
- * Las tres cifras del embudo de la Agenda, sobre todos los médicos (no sobre
- * lo filtrado): cuántos se contactaron, cuántos llegaron a una visita y
+ * Las tres cifras del embudo de la Agenda sobre un grupo de médicos (los de
+ * alguien, o todos): cuántos se contactaron, cuántos llegaron a una visita y
  * cuántos se activaron. Una visita cancelada se borra del médico, así que no
  * cuenta como cita.
  */
 export function cifrasDeLaAgenda(leads: ReadonlyArray<Lead>, ahora: Date): CifrasDeLaAgenda {
-  const conCita = leads.filter((l) => l.reunion !== null || l.estado === 'reunion' || l.estado === 'visitado')
+  const conCita = leads.filter((l) => l.reunion !== null || l.estado === 'reunion')
   const activados = leads.filter((l) => l.estado === 'convertido')
   return {
     apuntados: leads.length,
@@ -610,6 +636,38 @@ export function cifrasDeLaAgenda(leads: ReadonlyArray<Lead>, ahora: Date): Cifra
     activados: activados.length,
     conClinica: activados.filter((l) => l.clinicaId !== null).length,
   }
+}
+
+export type CifrasDeUnaPersona = CifrasDeLaAgenda & {
+  /** El id de quien gestiona, o `null` para los que no tienen a nadie. */
+  userId: string | null
+  nombre: string
+  /** Los que tiene en Llamada o más allá: le interesaron. */
+  interesados: number
+}
+
+/**
+ * Las cifras de cada persona sobre los médicos que tiene asignados, la que
+ * más activó primero, y al final los que no tienen a nadie. Sale de los
+ * leads, así que solo aparece quien tiene alguno.
+ */
+export function cifrasPorPersona(leads: ReadonlyArray<Lead>, ahora: Date): CifrasDeUnaPersona[] {
+  const grupos = new Map<string | null, Lead[]>()
+  for (const l of leads) grupos.set(l.responsableId, [...(grupos.get(l.responsableId) ?? []), l])
+  const filas = [...grupos.entries()].map(([userId, suyos]) => ({
+    ...cifrasDeLaAgenda(suyos, ahora),
+    userId,
+    nombre: userId === null ? 'Sin asignar' : (suyos[0]?.responsable ?? 'Sin nombre'),
+    interesados: suyos.filter((l) => l.fase !== 'mensaje' || l.estado === 'convertido').length,
+  }))
+  return filas.sort(
+    (a, b) =>
+      (a.userId === null ? 1 : 0) - (b.userId === null ? 1 : 0) ||
+      b.activados - a.activados ||
+      b.citas - a.citas ||
+      b.contactados - a.contactados ||
+      a.nombre.localeCompare(b.nombre, 'es'),
+  )
 }
 
 // ── El calendario ──────────────────────────────────────────────────────────
@@ -791,7 +849,7 @@ export function anulaLaVisita(r: Resultado | null, l: Lead, ahora: Date): boolea
   if (r === null || !tieneVisita(l) || l.reunion === null || new Date(l.reunion) <= ahora) return false
   if (r === 'visita_cancelada') return true
   const despues = estadoDelResultado(r, l)
-  return despues !== 'reunion' && despues !== 'visitado' && despues !== 'convertido'
+  return despues !== 'reunion' && despues !== 'convertido'
 }
 
 /** Los parámetros de `admin_log_doctor_lead_contact`. */

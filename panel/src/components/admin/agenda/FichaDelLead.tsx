@@ -55,15 +55,13 @@ import {
   ESTADO_DEL_LEAD,
   MODOS_DE_VISITA,
   NOTA_MAXIMA,
-  RESPUESTAS,
   ROTULO_CANAL,
   ROTULO_MODO,
   ROTULO_RAZON,
-  ROTULO_RESPUESTA,
   ROTULO_RESULTADO,
   ROTULO_AFILIACION_EN_CURSO,
   ROTULO_VIA,
-  SIN_ELEGIR,
+  accionesPara,
   afiliacionEnCurso,
   anulaLaVisita,
   borradorDeGestion,
@@ -75,7 +73,6 @@ import {
   pasoDelEmbudo,
   pideFechaDeVisita,
   pideVolver,
-  resultadoDe,
   rotuloDelDia,
   tieneVisita,
   visitaSinResultado,
@@ -84,13 +81,10 @@ import {
 import type {
   BorradorDeGestion,
   CanalDelLead,
-  Eleccion,
-  EstadoDelLead,
   Gestion,
   Lead,
   ModoDeVisita,
   Resultado,
-  TipoDeGestion,
 } from '@/features/admin/agenda/agenda'
 import { describeError } from '@/lib/supabase'
 
@@ -120,18 +114,6 @@ const ICONO_CANAL: Record<CanalDelLead, LucideIcon> = {
   redes: Sparkles,
 }
 
-const ICONO_TIPO: Record<TipoDeGestion, LucideIcon> = {
-  mensaje: MessageCircle,
-  llamada: Phone,
-  visita: CalendarClock,
-}
-
-const ROTULO_TIPO: Record<TipoDeGestion, string> = {
-  mensaje: 'Mensaje',
-  llamada: 'Llamada',
-  visita: 'Visita',
-}
-
 const ICONO_MODO: Record<ModoDeVisita, LucideIcon> = {
   presencial: MapPin,
   videollamada: Video,
@@ -154,7 +136,7 @@ const EJEMPLO_DE_NOTA: Record<Resultado, string> = {
 }
 
 /** Los pasos del embudo, del primero al último (`pasoDelEmbudo`). */
-const PASOS = ['Sin contactar', 'Contactado', 'Interesado', 'Visita', 'Afiliado']
+const PASOS = ['Mensaje', 'Llamada', 'Visita', 'Afiliado']
 
 /**
  * El enlace para añadir la visita al Google Calendar de quien va. Las fechas
@@ -240,7 +222,7 @@ export function FichaDelLead({
           </div>
         </header>
 
-        <Embudo estado={lead.estado} />
+        <Embudo lead={lead} />
 
         <Contacto lead={lead} />
 
@@ -271,13 +253,14 @@ export function FichaDelLead({
 
 // ── En qué va ──────────────────────────────────────────────────────────────
 
-/** El embudo en una tira: lo recorrido, en color, y el paso actual con su estado. */
-function Embudo({ estado }: { estado: EstadoDelLead }) {
-  const paso = pasoDelEmbudo(estado)
+/** Las fases en una tira: lo recorrido, en color, y la fase actual con su estado. */
+function Embudo({ lead }: { lead: Lead }) {
+  const { estado } = lead
+  const paso = pasoDelEmbudo(lead)
   const apagado = estado === 'descartado'
   return (
     <div aria-label={`En qué va: ${ESTADO_DEL_LEAD[estado].label}`}>
-      <ol className="grid grid-cols-5 gap-1.5">
+      <ol className="grid grid-cols-4 gap-1.5">
         {PASOS.map((p, i) => {
           const hecho = !apagado && i <= paso
           const actual = !apagado && i === paso
@@ -299,7 +282,7 @@ function Embudo({ estado }: { estado: EstadoDelLead }) {
           )
         })}
       </ol>
-      {/* En el teléfono cada paso mide unos 60 px y las cinco etiquetas se
+      {/* En el teléfono cada paso mide unos 75 px y las cuatro etiquetas se
           cortaban («Visita age…»): quedan las barras y, debajo, el paso entero. */}
       <p className="mt-1.5 type-panel-caption sm:hidden">
         <span className="text-on-surface-variant">En qué va: </span>
@@ -507,17 +490,6 @@ function ProximoPaso({
     )
   }
 
-  if (lead.estado === 'visitado') {
-    return (
-      <Tarjeta
-        tono="neutral"
-        icono={CalendarCheck}
-        titulo="Visita realizada"
-        subtitulo="Falta que se afilie: anota si se afilió o cuándo volver a llamarlo."
-      />
-    )
-  }
-
   if (lead.estado === 'nuevo') {
     return (
       <Tarjeta
@@ -589,27 +561,42 @@ function atajosDeVolver(hoy: string): Array<{ label: string; dia: string }> {
   ]
 }
 
+/** Lo que dice cada botón debajo de su nombre: qué pasa al elegirlo. */
+const AYUDA_DE_ACCION: Record<Resultado, string> = {
+  interesado: 'Pasa a Llamada',
+  mensaje_enviado: 'Esperando su respuesta',
+  no_contesto: 'Se le intentó, sin respuesta',
+  ocupado: 'Volver a intentarlo',
+  no_interesado: 'Se deja de contactar',
+  visita_agendada: 'Pasa a Visita',
+  visita_realizada: 'Se le capacitó: queda afiliado',
+  visita_pospuesta: 'Otra fecha',
+  visita_cancelada: 'Vuelve a Llamada',
+  afiliado: 'Queda afiliado',
+  nota: 'Sin cambiar el estado',
+}
+
 /**
- * Anotar una gestión siguiendo el árbol del equipo: primero por dónde fue
- * (mensaje, llamada o visita), después qué pasó y, si contestó, si le
- * interesa. Solo entonces aparece lo que ese resultado pide —la fecha de la
- * visita, cuándo volver a llamar— con la nota al final.
+ * Anotar lo que pasó con los botones de la fase en que está. En Mensaje,
+ * «Interesado» lo pasa a Llamada; en Llamada, agendar la visita lo pasa a
+ * Visita; en Visita, «Visita realizada · Afiliado» lo deja afiliado. El
+ * primero de cada fase es el que la hace avanzar y va destacado. Elegido uno,
+ * aparece lo que pide (la fecha de la visita, cuándo volver a contactarlo) y
+ * la nota. «Solo una nota» está siempre.
  */
 function AnotarGestion({ lead, hoy, ahora }: { lead: Lead; hoy: string; ahora: Date }) {
   const client = useQueryClient()
   const avisar = useToast()
-  const [eleccion, setEleccion] = useState<Eleccion>(SIN_ELEGIR)
+  const [resultado, setResultado] = useState<Resultado | null>(null)
   const [borrador, setBorrador] = useState(() => borradorDeGestion(lead))
-
-  const conVisita = tieneVisita(lead)
-  const resultado = resultadoDe(eleccion, conVisita)
+  const acciones = accionesPara(lead)
 
   const anotar = useMutation({
-    mutationFn: ({ r, b }: { r: Resultado; b: BorradorDeGestion }) => anotarGestion(lead.id, r, canalDe(eleccion), b),
+    mutationFn: ({ r, b }: { r: Resultado; b: BorradorDeGestion }) => anotarGestion(lead.id, r, canalDe(r, lead), b),
     onSuccess: (_, { r }) => {
       refrescarAgenda(client)
       avisar(`${ROTULO_RESULTADO[r]}: anotado.`)
-      setEleccion(SIN_ELEGIR)
+      setResultado(null)
       setBorrador(borradorDeGestion(lead))
     },
   })
@@ -618,14 +605,12 @@ function AnotarGestion({ lead, hoy, ahora }: { lead: Lead; hoy: string; ahora: D
     setBorrador((b) => ({ ...b, ...parte }))
   }
 
-  /** Elige una rama y propone lo que el resultado suele llevar. */
-  function elegir(e: Eleccion) {
-    setEleccion(e)
-    const r = resultadoDe(e, conVisita)
-    if (r === null) return
+  /** Elige qué pasó y propone lo que suele llevar. */
+  function elegir(r: Resultado) {
+    setResultado(r)
     const dias = volverPropuesto(r)
     cambiar({
-      // Una nota no mueve la llamada pendiente.
+      // Una nota no mueve la fecha pendiente.
       volverEl: r === 'nota' ? (lead.volverEl ?? '') : dias !== null ? sumarDias(hoy, dias) : '',
       visitaDia: r === 'visita_pospuesta' ? '' : borrador.visitaDia,
     })
@@ -638,88 +623,53 @@ function AnotarGestion({ lead, hoy, ahora }: { lead: Lead; hoy: string; ahora: D
   return (
     <section className="flex flex-col gap-4 rounded-panel-card border border-panel-hairline p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="type-panel-section text-on-surface">Anotar gestión</h3>
-        <div className="flex gap-1">
-          <Chip selected={eleccion.tipo === 'afiliado'} onClick={() => elegir({ ...SIN_ELEGIR, tipo: 'afiliado' })}>
-            <BadgeCheck size={14} aria-hidden /> Se afilió
-          </Chip>
-          <Chip selected={eleccion.tipo === 'nota'} onClick={() => elegir({ ...SIN_ELEGIR, tipo: 'nota' })}>
-            <NotebookPen size={14} aria-hidden /> Solo una nota
-          </Chip>
+        <h3 className="type-panel-section text-on-surface">¿Qué pasó?</h3>
+        <Chip selected={resultado === 'nota'} onClick={() => elegir('nota')}>
+          <NotebookPen size={14} aria-hidden /> Solo una nota
+        </Chip>
+      </div>
+
+      {acciones.length === 0 ? (
+        <p className="type-panel-body text-on-surface-variant">Ya está afiliado. Si hace falta, deja una nota.</p>
+      ) : (
+        <div className="grid gap-2 sm:grid-cols-2">
+          {acciones.map((r, i) => {
+            const Icono = ICONO_RESULTADO[r]
+            const elegido = resultado === r
+            const avanza = i === 0
+            return (
+              <button
+                key={r}
+                type="button"
+                aria-pressed={elegido}
+                onClick={() => elegir(r)}
+                className={`flex items-center gap-3 rounded-panel-control border px-3 py-2.5 text-left transition-colors ${
+                  elegido
+                    ? 'border-primary bg-primary/8 ring-1 ring-primary'
+                    : avanza
+                      ? visitaPasada && r === 'visita_realizada'
+                        ? 'border-error/50 bg-error/6 hover:bg-error/10'
+                        : 'border-primary/40 bg-primary/6 hover:bg-primary/10'
+                      : 'border-panel-hairline hover:border-panel-hairline-strong hover:bg-panel-raised'
+                }`}
+              >
+                <Icono
+                  size={18}
+                  aria-hidden
+                  className={`shrink-0 ${elegido || avanza ? 'text-primary' : 'text-on-surface-variant'}`}
+                />
+                <span className="min-w-0">
+                  <span className="block type-panel-control text-on-surface">{ROTULO_RESULTADO[r]}</span>
+                  <span className="block truncate type-panel-caption text-on-surface-variant">{AYUDA_DE_ACCION[r]}</span>
+                </span>
+              </button>
+            )
+          })}
         </div>
-      </div>
+      )}
 
-      <div className="grid gap-2 sm:grid-cols-3">
-        {(['mensaje', 'llamada', 'visita'] as const).map((t) => {
-          const Icono = ICONO_TIPO[t]
-          const elegido = eleccion.tipo === t
-          const ayuda =
-            t === 'visita'
-              ? conVisita && lead.reunion
-                ? `La del ${formatDateTime(lead.reunion)}`
-                : 'Agendar con fecha'
-              : t === 'mensaje'
-                ? 'WhatsApp o SMS'
-                : 'Por teléfono'
-          return (
-            <button
-              key={t}
-              type="button"
-              aria-pressed={elegido}
-              onClick={() => elegir({ ...SIN_ELEGIR, tipo: t })}
-              // En el teléfono, una por renglón y tumbada: icono, nombre y ayuda.
-              className={`flex items-center gap-2.5 rounded-panel-control border px-3 py-2.5 text-left transition-colors sm:flex-col sm:items-start sm:gap-1 ${
-                elegido
-                  ? 'border-primary bg-primary/8 ring-1 ring-primary'
-                  : t === 'visita' && visitaPasada
-                    ? 'border-error/50 bg-error/6 hover:bg-error/10'
-                    : 'border-panel-hairline hover:border-panel-hairline-strong hover:bg-panel-raised'
-              }`}
-            >
-              <Icono size={18} aria-hidden className={elegido ? 'text-primary' : 'text-on-surface-variant'} />
-              <span className="type-panel-control text-on-surface">{ROTULO_TIPO[t]}</span>
-              <span className="min-w-0 truncate type-panel-caption text-on-surface-variant max-sm:ml-auto">{ayuda}</span>
-            </button>
-          )
-        })}
-      </div>
-
-      {eleccion.tipo !== null && (
+      {resultado !== null && (
         <div className="flex flex-col gap-4 border-t border-panel-hairline pt-4">
-          {(eleccion.tipo === 'mensaje' || eleccion.tipo === 'llamada' || (eleccion.tipo === 'visita' && conVisita)) && (
-            <Fila etiqueta={eleccion.tipo === 'visita' ? 'La visita' : 'Qué pasó'}>
-              {RESPUESTAS[eleccion.tipo].map((r) => (
-                <Chip
-                  key={r}
-                  selected={eleccion.respuesta === r}
-                  onClick={() => elegir({ ...eleccion, respuesta: r, interesado: null })}
-                >
-                  {ROTULO_RESPUESTA[r]}
-                </Chip>
-              ))}
-            </Fila>
-          )}
-
-          {eleccion.respuesta === 'contesto' && (
-            <Fila etiqueta="¿Le interesa?">
-              <Chip selected={eleccion.interesado === true} onClick={() => elegir({ ...eleccion, interesado: true })}>
-                <ThumbsUp size={14} aria-hidden /> Interesado
-              </Chip>
-              <Chip selected={eleccion.interesado === false} onClick={() => elegir({ ...eleccion, interesado: false })}>
-                <ThumbsDown size={14} aria-hidden /> No interesado
-              </Chip>
-              {eleccion.interesado === true && !conVisita && (
-                <button
-                  type="button"
-                  className="ml-1 type-panel-caption text-primary underline-offset-2 hover:underline"
-                  onClick={() => elegir({ ...SIN_ELEGIR, tipo: 'visita' })}
-                >
-                  ¿Ya quedaron en una visita? Agéndala
-                </button>
-              )}
-            </Fila>
-          )}
-
           {pideFechaDeVisita(resultado) && (
             <>
               <Fila etiqueta={resultado === 'visita_pospuesta' ? 'Nueva fecha' : 'Fecha'}>
@@ -768,9 +718,9 @@ function AnotarGestion({ lead, hoy, ahora }: { lead: Lead; hoy: string; ahora: D
             </>
           )}
 
-          {resultado && pideVolver(resultado) && (
-            <Fila etiqueta="Volver a llamar">
-              {atajosDeVolver(hoy).map((a) => (
+          {pideVolver(resultado) && (
+            <Fila etiqueta={lead.fase === 'mensaje' && resultado !== 'interesado' ? 'Volver a escribirle' : 'Llamarlo'}>
+              {[{ label: 'Hoy', dia: hoy }, ...atajosDeVolver(hoy)].map((a) => (
                 <Chip key={a.label} selected={borrador.volverEl === a.dia} onClick={() => cambiar({ volverEl: a.dia })}>
                   {a.label}
                 </Chip>
@@ -789,17 +739,15 @@ function AnotarGestion({ lead, hoy, ahora }: { lead: Lead; hoy: string; ahora: D
             </Fila>
           )}
 
-          {resultado && (
-            <Textarea
-              id="agenda-nota"
-              label={resultado === 'nota' ? 'Nota' : 'Nota (opcional)'}
-              rows={2}
-              maxLength={NOTA_MAXIMA}
-              value={borrador.nota}
-              placeholder={EJEMPLO_DE_NOTA[resultado]}
-              onChange={(nota) => cambiar({ nota })}
-            />
-          )}
+          <Textarea
+            id="agenda-nota"
+            label={resultado === 'nota' ? 'Nota' : 'Nota (opcional)'}
+            rows={2}
+            maxLength={NOTA_MAXIMA}
+            value={borrador.nota}
+            placeholder={EJEMPLO_DE_NOTA[resultado]}
+            onChange={(nota) => cambiar({ nota })}
+          />
 
           {anula && lead.reunion && (
             <Callout
@@ -811,7 +759,7 @@ function AnotarGestion({ lead, hoy, ahora }: { lead: Lead; hoy: string; ahora: D
               }
             >
               {resultado === 'visita_cancelada'
-                ? 'El médico queda como interesado, sin visita.'
+                ? 'El médico vuelve a Llamada, por llamar.'
                 : 'Para dejar solo un comentario, usa «Solo una nota».'}
             </Callout>
           )}
@@ -819,23 +767,21 @@ function AnotarGestion({ lead, hoy, ahora }: { lead: Lead; hoy: string; ahora: D
           {anotar.isError && <ErrorBox title="No se pudo anotar" detail={describeError(anotar.error)} />}
 
           <div className="flex flex-wrap items-center justify-end gap-3">
-            {resultado && (
-              <span className="mr-auto inline-flex items-center gap-1.5 type-panel-caption text-on-surface-variant">
-                Queda como
-                <Badge tone={ESTADO_DEL_LEAD[estadoDelResultado(resultado, lead)].tone}>
-                  {ESTADO_DEL_LEAD[estadoDelResultado(resultado, lead)].label}
-                </Badge>
-              </span>
-            )}
+            <span className="mr-auto inline-flex items-center gap-1.5 type-panel-caption text-on-surface-variant">
+              Queda como
+              <Badge tone={ESTADO_DEL_LEAD[estadoDelResultado(resultado, lead)].tone}>
+                {ESTADO_DEL_LEAD[estadoDelResultado(resultado, lead)].label}
+              </Badge>
+            </span>
             {bloqueo && <span className="type-panel-caption text-on-surface-variant">{bloqueo}</span>}
-            <Button size="sm" variant="text" onClick={() => setEleccion(SIN_ELEGIR)}>
+            <Button size="sm" variant="text" onClick={() => setResultado(null)}>
               Cancelar
             </Button>
             <Button
               size="md"
-              disabled={resultado === null || !!bloqueo || anotar.isPending}
+              disabled={!!bloqueo || anotar.isPending}
               onClick={() => {
-                if (resultado && !bloqueo) anotar.mutate({ r: resultado, b: borrador })
+                if (!bloqueo) anotar.mutate({ r: resultado, b: borrador })
               }}
             >
               {anotar.isPending ? 'Guardando…' : 'Guardar'}

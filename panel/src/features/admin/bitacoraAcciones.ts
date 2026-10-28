@@ -77,6 +77,7 @@ export const ACCION_VERBO: Record<string, string | undefined> = {
   'doctor_lead.updated': 'corrigió los datos de un médico de la agenda',
   'doctor_lead.contact': 'anotó una gestión con un médico de la agenda',
   'doctor_lead.deleted': 'borró un médico de la agenda',
+  'doctor_lead.assigned': 'se asignó médicos de la agenda',
   'merchant.staff_password_reset': 'reinició la contraseña de alguien del personal de una clínica',
 
   // ── Pagos a locales ──────────────────────────────────────────────────────
@@ -205,7 +206,13 @@ export const FILTROS_BITACORA: ReadonlyArray<TemaBitacora> = [
   {
     value: 'agenda',
     label: 'Agenda de médicos',
-    acciones: ['doctor_lead.created', 'doctor_lead.updated', 'doctor_lead.contact', 'doctor_lead.deleted'],
+    acciones: [
+      'doctor_lead.created',
+      'doctor_lead.updated',
+      'doctor_lead.contact',
+      'doctor_lead.deleted',
+      'doctor_lead.assigned',
+    ],
   },
   {
     value: 'reglas',

@@ -25,16 +25,19 @@ const ESPECIALIDADES = ['Medicina general', 'Odontología', 'Cosmetología', 'Pe
  */
 export function FormularioDeLead({
   lead,
+  yo = null,
   onGuardado,
   onClose,
 }: {
   lead?: Lead
+  /** Quien apunta: un médico nuevo queda a su cargo, para que le salga en «Mis médicos». */
+  yo?: string | null
   onGuardado: (guardado: LeadGuardado) => void
   onClose: () => void
 }) {
   const client = useQueryClient()
   const avisar = useToast()
-  const [borrador, setBorrador] = useState(() => borradorDeLead(lead))
+  const [borrador, setBorrador] = useState(() => (lead ? borradorDeLead(lead) : { ...borradorDeLead(), responsableId: yo ?? '' }))
   const equipo = useQuery(consultaEquipoDeLaAgenda())
 
   const guardar = useMutation({

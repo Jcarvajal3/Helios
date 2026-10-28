@@ -99,6 +99,17 @@ export async function anotarGestion(
   if (error) throw error
 }
 
+/**
+ * Le asigna a quien llama hasta `cantidad` médicos al azar que no tienen a
+ * nadie y siguen abiertos. Devuelve cuántos le tocaron (0 si no quedaba
+ * ninguno libre).
+ */
+export async function asignarmeMedicos(cantidad = 20): Promise<number> {
+  const { data, error } = await supabase.rpc('admin_assign_me_doctor_leads', { p_cantidad: cantidad })
+  if (error) throw error
+  return typeof data === 'number' ? data : Number(data ?? 0)
+}
+
 /** Borra un lead y su historia. La bitácora guarda sus datos. */
 export async function borrarLead(leadId: string): Promise<void> {
   const { error } = await supabase.rpc('admin_delete_doctor_lead', { p_lead_id: leadId })
