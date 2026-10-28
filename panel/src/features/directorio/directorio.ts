@@ -145,6 +145,17 @@ export function mensajeInicial(nombre: string): string {
 }
 
 /**
+ * Si el botón de la tarjeta pasa por el WhatsApp de Helios (para apuntar a
+ * cada interesado, docs/04) o va directo al del médico.
+ *
+ * Apagado desde el 2026-10-28 por decisión de los founders: el botón vuelve a
+ * ir directo al médico y no se apuntan interesados. Todo lo demás se queda
+ * como está (los códigos de las tarjetas, la ruta del bot, el embudo del
+ * superadmin) para poder volver a encenderlo con solo poner esto en `true`.
+ */
+export const INTERESADOS_POR_HELIOS = false as boolean
+
+/**
  * Lo que el paciente encuentra escrito al abrir el chat con Helios: el
  * código es lo que el bot busca para saber de qué médico se trata.
  */

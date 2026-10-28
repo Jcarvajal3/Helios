@@ -11,7 +11,12 @@ import { Desglose } from '@/components/portada/Pacientes'
 import { BotonAfiliarme, Boton, Lienzo, Revelar, Rotulo } from '@/components/portada/piezas'
 import { IMAGEN_COMPARTIR, NOMBRE, urlAbsoluta } from '@/config/sitio'
 import { apuntarContacto, consultarDirectorio, consultarWhatsappDeHelios } from '@/features/directorio/api'
-import { especialidadesPresentes, fichasQueCaben, filtrarDirectorio } from '@/features/directorio/directorio'
+import {
+  INTERESADOS_POR_HELIOS,
+  especialidadesPresentes,
+  fichasQueCaben,
+  filtrarDirectorio,
+} from '@/features/directorio/directorio'
 import type { EspecialidadPresente, MedicoDelDirectorio } from '@/features/directorio/directorio'
 import { CLAVES_DE_ESPECIALIDAD, nombreDeEspecialidad } from '@/features/directorio/especialidades'
 import type { ClaveDeEspecialidad } from '@/features/directorio/especialidades'
@@ -55,9 +60,10 @@ export const Route = createFileRoute('/directorio')({
   loaderDeps: () => ({}),
   staleTime: 60_000,
   // Los médicos y el número de Helios, a la vez. El número nunca falla (sin
-  // él, cada botón va directo al médico).
+  // él, cada botón va directo al médico). Con `INTERESADOS_POR_HELIOS`
+  // apagado ni se pide: el botón va directo al médico.
   loader: async () => {
-    const whatsappHelios = consultarWhatsappDeHelios()
+    const whatsappHelios = INTERESADOS_POR_HELIOS ? consultarWhatsappDeHelios() : Promise.resolve(null)
     try {
       return { medicos: await consultarDirectorio(), fallo: false, whatsappHelios: await whatsappHelios }
     } catch {
