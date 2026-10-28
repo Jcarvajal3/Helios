@@ -83,7 +83,9 @@ comprueba(medicos[0]?.codigo === 'DIR-7K2P', 'lee el código de la tarjeta (lead
 comprueba(medicos[1]?.codigo === null, 'lead_code null → sin código', medicos[1])
 comprueba(medicos[2]?.codigo === null, 'sin lead_code (datos viejos) → sin código', medicos[2])
 comprueba(leerEspecialidad('pediatria') === 'pediatria', 'una clave conocida se queda')
-comprueba(CLAVES_DE_ESPECIALIDAD.length === 23, 'son las 23 claves de la base', CLAVES_DE_ESPECIALIDAD.length)
+comprueba(CLAVES_DE_ESPECIALIDAD.length === 24, 'son las 24 claves de la base', CLAVES_DE_ESPECIALIDAD.length)
+comprueba(leerEspecialidad('vacunacion') === 'vacunacion', 'Vacunación es una categoría propia')
+comprueba(CLAVES_DE_ESPECIALIDAD.at(-1) === 'otra', '«Otras» sigue al final')
 
 console.log('── La tarjeta ────────────────────────────────────────────────')
 const [nadia, jesus, carlos] = medicos

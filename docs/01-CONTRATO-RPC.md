@@ -998,8 +998,9 @@ Tablas (sin RLS de lectura: solo por estas RPC):
 `medicina_general, medicina_interna, pediatria, ginecologia, traumatologia,
 cardiologia, dermatologia, oftalmologia, otorrinolaringologia, urologia,
 gastroenterologia, coloproctologia, neurologia, psicologia, nutricion,
-endocrinologia, neumologia, oncologia, fisioterapia, enfermeria,
-odontologia, cosmetologia, otra`. El panel tiene la misma lista con su nombre
+endocrinologia, neumologia, oncologia, fisioterapia, enfermeria, vacunacion
+(2026-10-28, 20261028100000), odontologia, cosmetologia, otra`. El panel
+tiene la misma lista con su nombre
 e icono (`features/directorio/especialidades.ts`): añadir una es tocar las
 dos.
 

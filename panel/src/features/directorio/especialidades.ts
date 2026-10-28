@@ -30,6 +30,7 @@ export const ESPECIALIDADES = [
   { clave: 'oncologia', nombre: 'Oncología' },
   { clave: 'fisioterapia', nombre: 'Fisioterapia' },
   { clave: 'enfermeria', nombre: 'Enfermería' },
+  { clave: 'vacunacion', nombre: 'Vacunación' },
   { clave: 'odontologia', nombre: 'Odontología' },
   { clave: 'cosmetologia', nombre: 'Cosmetología y estética' },
   { clave: 'otra', nombre: 'Otras especialidades' },
