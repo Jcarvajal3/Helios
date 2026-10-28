@@ -145,6 +145,7 @@ export function erroresDelPaso(paso: Paso, b: Borrador, hoy: string): Errores {
     if (a.ownerName.trim().length < 3) {
       e.ownerName = 'Escribe tu nombre y apellido.'
     }
+    if (!a.doctorTitle) e.doctorTitle = 'Elige cómo quieres que te nombren.'
     const documento = errorDeDocumento(
       b.documento,
       LETRAS_CEDULA_O_RIF,
@@ -230,6 +231,7 @@ export function erroresDelPaso(paso: Paso, b: Borrador, hoy: string): Errores {
 export const CAMPOS_DEL_PASO: Record<Paso, ReadonlyArray<CampoDeAfiliacion>> = {
   0: [
     'ownerName',
+    'doctorTitle',
     'documento',
     'ownerDocument',
     'specialty',

@@ -43,6 +43,7 @@ const HOY = '2026-10-26'
 const escrita: AltaDeClinica = {
   ...ALTA_VACIA,
   ownerName: 'Ana Pérez',
+  doctorTitle: 'Dra.',
   specialty: 'Pediatría',
   clinicName: 'Consultorio Demo',
   address: 'Av. Principal, piso 3',
@@ -142,9 +143,9 @@ const conAlta = (cambios: Partial<AltaDeClinica>) =>
 
 igual('el alta completa pasa los tres pasos', pasos(borrador()), [{}, {}, {}])
 igual(
-  'vacía, el paso 1 pide nombre, cédula o RIF y especialidad',
+  'vacía, el paso 1 pide nombre, título, cédula o RIF y especialidad',
   Object.keys(pasos(borrador({ alta: ALTA_VACIA, documento: '' }))[0]),
-  ['ownerName', 'documento', 'specialty'],
+  ['ownerName', 'doctorTitle', 'documento', 'specialty'],
 )
 igual(
   'la cédula corta se explica',

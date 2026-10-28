@@ -20,7 +20,9 @@ import {
   CAPACITACION_HASTA_DIAS,
   REDES_SOCIALES,
   SIN_CAPACITACION,
+  TITULOS_DEL_MEDICO,
   capacitacionParaEnviar,
+  comoLoNombran,
   datosDeAlta,
   digitosDeCuenta,
   formatoCuenta,
@@ -224,6 +226,58 @@ export function FormularioDeAfiliacion({
               enterKeyHint="next"
               placeholder="Ana María Pérez"
             />
+            {/* Obligatorio (Javier, 2026-10-28): el foco de «Continuar»
+                viene al grupo cuando falta. */}
+            <fieldset
+              id={idDe('doctorTitle')}
+              tabIndex={-1}
+              aria-describedby={
+                error('doctorTitle')
+                  ? `${idDe('doctorTitle')}-error`
+                  : undefined
+              }
+              className="flex min-w-0 flex-col outline-none"
+            >
+              <legend className="mb-2 text-[0.9rem] font-medium tracking-[-0.01em] text-portada-tinta">
+                ¿Cómo quieres que te nombren tus pacientes?
+              </legend>
+              <div className="flex flex-wrap gap-2">
+                {TITULOS_DEL_MEDICO.map((t) => (
+                  <Sugerencia
+                    key={t}
+                    activa={alta.doctorTitle === t}
+                    onClick={() => setAlta((a) => ({ ...a, doctorTitle: t }))}
+                  >
+                    {t}
+                  </Sugerencia>
+                ))}
+              </div>
+              {error('doctorTitle') ? (
+                <p
+                  id={`${idDe('doctorTitle')}-error`}
+                  className="mt-2 flex gap-1.5 text-[0.85rem] leading-snug text-[#B3261E]"
+                >
+                  <CircleAlert
+                    aria-hidden
+                    className="mt-[0.1rem] size-3.5 shrink-0"
+                  />
+                  {error('doctorTitle')}
+                </p>
+              ) : (
+                <p className="mt-2 text-[0.85rem] leading-snug text-portada-tinta-3">
+                  {alta.ownerName.trim().length >= 3 && alta.doctorTitle ? (
+                    <>
+                      En los mensajes a tus pacientes dirá:{' '}
+                      <span className="font-medium text-portada-tinta">
+                        {comoLoNombran(alta.doctorTitle, alta.ownerName)}
+                      </span>
+                    </>
+                  ) : (
+                    'Va delante de tu nombre en los mensajes a tus pacientes. Od. es para odontólogos.'
+                  )}
+                </p>
+              )}
+            </fieldset>
             <CampoDeDocumento
               id={idDe('documento')}
               etiqueta="Cédula o RIF"

@@ -19,7 +19,7 @@ import type {
   TituloDelMedico,
 } from '@/features/admin/api'
 import { guardarTitular } from '@/features/admin/clinicas/api'
-import { pareceCorreo } from '@/features/admin/clinicas/clinicas'
+import { comoLoNombran, pareceCorreo } from '@/features/admin/clinicas/clinicas'
 import { CampoDocumento } from '@/components/CampoDocumento'
 import {
   LETRAS_CEDULA,
@@ -180,25 +180,6 @@ export function Perfil({
 }
 
 
-const MINUSCULAS = new Set(['de', 'del', 'la', 'las', 'los', 'y'])
-
-/**
- * El nombre del titular como lo leen sus pacientes (lo mismo que
- * `helios_person_name_text` en la base): cada palabra con mayúscula inicial,
- * «de», «del» y «la» en minúscula y sin un «Dr.» escrito delante.
- */
-function nombreComoLoLeen(nombre: string): string {
-  return nombre
-    .trim()
-    .replace(/^(dra|dr|lcda|lcdo|licda|licdo)\.?\s+/i, '')
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((w, i) =>
-      i > 0 && MINUSCULAS.has(w.toLowerCase()) ? w.toLowerCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase(),
-    )
-    .join(' ')
-}
-
 /**
  * El médico titular: su nombre, su cédula o pasaporte, su número de Colegio
  * y su título (Dr., Dra., Lcdo., Lcda.), que va delante de su nombre en los
@@ -222,7 +203,7 @@ function Titular({
   const [documento, setDocumento] = useState(titular.ownerDocument ?? '')
   const [colegio, setColegio] = useState(titular.collegeNumber ?? '')
   const [titulo, setTitulo] = useState<TituloDelMedico | ''>(titular.doctorTitle ?? '')
-  const comoLoLeen = [titulo, nombreComoLoLeen(nombre)].filter(Boolean).join(' ')
+  const comoLoLeen = comoLoNombran(titulo, nombre)
 
   /** `null` = no tocar; `''` = borrar. */
   const cambio = (antes: string | null, ahora: string) => (ahora.trim() === (antes ?? '').trim() ? null : ahora.trim())

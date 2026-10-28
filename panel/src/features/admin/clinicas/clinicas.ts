@@ -36,10 +36,12 @@ import { comoFila, filaONula, numeroONulo, textoONulo } from '@/lib/json'
  * transferencia; el equipo pone una, otra o las dos.
  *
  * La red social es opcional, pero va entera: qué red es y el usuario o el
- * enlace.
+ * enlace. El título (Dr., Dra.…) es obligatorio desde 20261028130000: va
+ * delante de su nombre en los mensajes a sus pacientes.
  */
 export type AltaDeClinica = {
   ownerName: string
+  doctorTitle: TituloDelMedico | ''
   ownerDocument: string
   taxId: string
   specialty: string
@@ -62,6 +64,42 @@ export type AltaDeClinica = {
 /** Quién llena el alta: el equipo (transferencia y/o Pago Móvil) o el médico en la portada (solo transferencia). */
 export type ModoDeAlta = 'equipo' | 'portada'
 
+/**
+ * El título delante del nombre del médico (`merchants.doctor_title`): los
+ * de `helios_titulos_del_medico()`. «Od.» es para odontólogos.
+ */
+export type TituloDelMedico = 'Dr.' | 'Dra.' | 'Lcdo.' | 'Lcda.' | 'Od.'
+
+export const TITULOS_DEL_MEDICO: TituloDelMedico[] = ['Dr.', 'Dra.', 'Lcdo.', 'Lcda.', 'Od.']
+
+export function comoTitulo(v: unknown): TituloDelMedico | null {
+  return TITULOS_DEL_MEDICO.find((t) => t === v) ?? null
+}
+
+const MINUSCULAS = new Set(['de', 'del', 'la', 'las', 'los', 'y'])
+
+/**
+ * El nombre del titular como lo leen sus pacientes (lo mismo que
+ * `helios_person_name_text` en la base): cada palabra con mayúscula inicial,
+ * «de», «del» y «la» en minúscula y sin un «Dr.» escrito delante.
+ */
+export function nombreComoLoLeen(nombre: string): string {
+  return nombre
+    .trim()
+    .replace(/^((dra|dr|lcda|lcdo|licda|licdo)\.?|od\.)\s+/i, '')
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w, i) =>
+      i > 0 && MINUSCULAS.has(w.toLowerCase()) ? w.toLowerCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase(),
+    )
+    .join(' ')
+}
+
+/** Cómo lo nombran sus pacientes: «Dra. Ana María Pérez», o el nombre solo. */
+export function comoLoNombran(titulo: TituloDelMedico | '' | null, nombre: string): string {
+  return [titulo, nombreComoLoLeen(nombre)].filter(Boolean).join(' ')
+}
+
 /** Las redes que se pueden elegir en el alta: las mismas que `helios_redes_sociales()` en la base. */
 export const REDES_SOCIALES = [
   { value: 'instagram', label: 'Instagram' },
@@ -81,6 +119,7 @@ function comoRedSocial(v: string): RedSocial | '' {
 
 export const ALTA_VACIA: AltaDeClinica = {
   ownerName: '',
+  doctorTitle: '',
   ownerDocument: '',
   taxId: '',
   specialty: '',
@@ -146,6 +185,7 @@ export function cuentaDeOtroBanco(banco: string, cuenta: string): string | null 
 /** Qué falta o está mal en el alta, o `null` si se puede mandar. */
 export function motivoDeAlta(a: AltaDeClinica, modo: ModoDeAlta = 'equipo'): string | null {
   if (a.ownerName.trim().length < 3) return 'Falta el nombre completo.'
+  if (!a.doctorTitle) return 'Falta el título que verán sus pacientes: Dr., Dra., Lcdo., Lcda. u Od.'
   if (!documentoValido(a.ownerDocument, LETRAS_CEDULA)) {
     return 'Falta la cédula o el pasaporte: elige V, E o P y escribe solo los números.'
   }
@@ -189,6 +229,7 @@ export function datosDeAlta(a: AltaDeClinica, modo: ModoDeAlta = 'equipo'): Reco
   const pagoMovil = modo === 'equipo' && a.pagoMovilPhone.trim() !== ''
   return {
     owner_name: a.ownerName.trim(),
+    doctor_title: a.doctorTitle,
     owner_document: documentoParaEnviar(a.ownerDocument, LETRAS_CEDULA),
     tax_id: documentoParaEnviar(a.taxId, LETRAS_RIF),
     specialty: a.specialty.trim(),
@@ -266,6 +307,7 @@ export function leerSolicitud(raw: unknown): SolicitudDeAfiliacion {
     status: estado === 'approved' || estado === 'rejected' ? estado : 'pending',
     alta: {
       ownerName: t(r.owner_name),
+      doctorTitle: comoTitulo(r.doctor_title) ?? '',
       ownerDocument: t(r.owner_document),
       taxId: documentoParaEnviar(t(r.tax_id), LETRAS_RIF),
       specialty: t(r.specialty),

@@ -3,8 +3,14 @@ import type { ReactNode } from 'react'
 import { CampoDocumento } from '@/components/CampoDocumento'
 import { Input, Select } from '@/components/ui'
 import { BANKS } from '@/features/admin/banks'
-import { REDES_SOCIALES, cuentaDeOtroBanco, digitosDeCuenta, formatoCuenta } from '@/features/admin/clinicas/clinicas'
-import type { AltaDeClinica, RedSocial } from '@/features/admin/clinicas/clinicas'
+import {
+  REDES_SOCIALES,
+  TITULOS_DEL_MEDICO,
+  cuentaDeOtroBanco,
+  digitosDeCuenta,
+  formatoCuenta,
+} from '@/features/admin/clinicas/clinicas'
+import type { AltaDeClinica, RedSocial, TituloDelMedico } from '@/features/admin/clinicas/clinicas'
 import { LETRAS_CEDULA, LETRAS_RIF, LETRAS_TITULAR } from '@/lib/documento'
 
 const OPCIONES_BANCO = BANKS.map((b) => ({ value: b.name, label: b.name }))
@@ -17,7 +23,8 @@ const OPCIONES_BANCO = BANKS.map((b) => ({ value: b.name, label: b.name }))
  * pasos y con el aspecto de la portada (`FormularioDeAfiliacion`).
  *
  * La red social, opcional, va con el contacto del consultorio: qué red es y
- * el usuario o el enlace.
+ * el usuario o el enlace. El título del médico (Dr., Dra.…,
+ * obligatorio) va junto a su nombre.
  *
  * Las cédulas y el RIF van con `CampoDocumento` (la letra en un selector y
  * solo números), y la cuenta se escribe en bloques de 4 y se guarda sin
@@ -51,6 +58,14 @@ export function CamposDeAlta({
           autoComplete="name"
           placeholder="Ana María Pérez"
           autoFocus={autoFocus}
+        />
+        <Select<TituloDelMedico>
+          id={`${id}-titulo`}
+          label="Título que verán sus pacientes"
+          value={valor.doctorTitle}
+          placeholder="Elige el título"
+          options={TITULOS_DEL_MEDICO.map((t) => ({ value: t, label: t }))}
+          onChange={(v) => onChange({ ...valor, doctorTitle: v })}
         />
         <CampoDocumento
           id={`${id}-cedula`}

@@ -52,6 +52,7 @@ declare
   v_lead    public.doctor_leads%rowtype;
   v_datos   jsonb := jsonb_build_object(
     'owner_name', 'Ana María Pérez Agenda',
+    'doctor_title', 'Dra.',
     'owner_document', 'V12345601',
     'tax_id', '',
     'specialty', 'Odontología',

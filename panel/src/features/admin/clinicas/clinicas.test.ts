@@ -13,6 +13,7 @@ import {
   cambioDeCuenta,
   capacitacionParaEnviar,
   celularAE164,
+  comoLoNombran,
   comisionEfectiva,
   correccionesDeSolicitud,
   datosDeAlta,
@@ -46,6 +47,7 @@ function igual(nombre: string, obtenido: unknown, esperado: unknown) {
 
 const alta: AltaDeClinica = {
   ownerName: 'Ana Pérez',
+  doctorTitle: 'Dra.',
   ownerDocument: 'V12345678',
   taxId: '',
   specialty: 'Pediatría',
@@ -99,6 +101,15 @@ igual(
   ),
   ['instagram', '@consultorio.demo'],
 )
+igual('el título va con el alta', datosDeAlta({ ...alta, doctorTitle: 'Od.' }).doctor_title, 'Od.')
+igual('cómo la nombran sus pacientes', comoLoNombran('Dra.', '  ana maría DE la rosa '), 'Dra. Ana María de la Rosa')
+igual('sin título, el nombre solo (y sin el «Dr.» escrito a mano)', comoLoNombran('', 'Dr. luis gómez'), 'Luis Gómez')
+igual('un «Od.» escrito a mano no sale dos veces', comoLoNombran('Od.', 'od. ana pérez'), 'Od. Ana Pérez')
+igual(
+  'sin título no',
+  motivoDeAlta({ ...alta, doctorTitle: '' }),
+  'Falta el título que verán sus pacientes: Dr., Dra., Lcdo., Lcda. u Od.',
+)
 igual('sin titular no', motivoDeAlta({ ...alta, accountHolder: '' }), 'Falta el titular de la cuenta.')
 igual('el titular con RIF vale', motivoDeAlta({ ...alta, holderDocument: 'J123456789' }), null)
 igual('sin banco de la cuenta no', motivoDeAlta({ ...alta, bank: '' }), 'Elige el banco de la cuenta.')
@@ -134,6 +145,7 @@ const solicitud = leerSolicitud({
   id: 's1',
   status: 'pending',
   owner_name: 'Ana Pérez',
+  doctor_title: 'Dra.',
   owner_document: 'V12345678',
   tax_id: 'J-123456789',
   specialty: 'Pediatría',
@@ -155,6 +167,8 @@ igual('la solicitud se lee pendiente', solicitud.status, 'pending')
 igual('el RIF vuelve sin guion', solicitud.alta.holderDocument, 'J123456789')
 igual('la red social se lee', [solicitud.alta.socialNetwork, solicitud.alta.socialUser], ['facebook', 'Consultorio Demo'])
 igual('una red desconocida se lee vacía', leerSolicitud({ social_network: 'myspace' }).alta.socialNetwork, '')
+igual('el título se lee', leerSolicitud({ doctor_title: 'Lcda.' }).alta.doctorTitle, 'Lcda.')
+igual('un título desconocido se lee vacío', leerSolicitud({ doctor_title: 'Ing.' }).alta.doctorTitle, '')
 igual('la solicitud leída es un alta válida', motivoDeAlta(solicitud.alta), null)
 igual('sin cambios no hay correcciones', correccionesDeSolicitud(solicitud.alta, solicitud.alta), null)
 igual(

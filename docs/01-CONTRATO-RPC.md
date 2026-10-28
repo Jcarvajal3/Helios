@@ -540,6 +540,15 @@ enlace, hasta 150). Van las dos o ninguna (`22023`). Se guardan en
 (`social_network`, `social_user`); `merchants.social_url`, heredada de
 Ronda, no se toca.
 
+**Desde 20261028120000** `p` lleva también `doctor_title`: `Dr.`, `Dra.`,
+`Lcdo.`, `Lcda.` u `Od.` (`helios_titulos_del_medico()`; «Od.» desde
+20261028130000). **Desde 20261028130000 es obligatorio** en el alta (portada,
+equipo y aprobación); sin él u otro valor, `22023`. En la ficha
+(`admin_set_merchant_owner`) se puede seguir dejando vacío. Se guarda en
+`merchant_applications.doctor_title`, `admin_merchant_applications` lo
+devuelve y, al crear la clínica, pasa a `merchants.doctor_title` (el de la
+ficha, que va delante del nombre en los mensajes al paciente).
+
 - **Al aprobar (20261013000400)**, el panel encadena, si se deja marcado:
   `merchant_staff_add` (administrador, con el correo y el nombre de la
   solicitud y una contraseña generada) → `admin_set_staff_whatsapp` (su

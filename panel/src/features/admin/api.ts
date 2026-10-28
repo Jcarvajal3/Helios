@@ -5,8 +5,8 @@ import { resizeToThumbnail } from '@/features/admin/resizeImage'
 import { comoFila, comoLista, numeroONulo, textoONulo } from '@/lib/json'
 import { unoDe } from '@/lib/busqueda'
 import type { PayoutMethod } from '@/features/admin/liquidaciones'
-import { leerConsultasYComisiones } from '@/features/admin/clinicas/clinicas'
-import type { ConsultasYComisiones } from '@/features/admin/clinicas/clinicas'
+import { comoTitulo, leerConsultasYComisiones } from '@/features/admin/clinicas/clinicas'
+import type { ConsultasYComisiones, TituloDelMedico } from '@/features/admin/clinicas/clinicas'
 import type { LineaParaGuardar, LineaParaRegistrar } from '@/features/admin/pagoMasivo'
 
 /** `agenda` solo entra a superadmin › Agenda (20261022220100). */
@@ -1352,13 +1352,9 @@ export type TitularDeLaClinica = {
   doctorName: string | null
 }
 
-export type TituloDelMedico = 'Dr.' | 'Dra.' | 'Lcdo.' | 'Lcda.'
-
-export const TITULOS_DEL_MEDICO: TituloDelMedico[] = ['Dr.', 'Dra.', 'Lcdo.', 'Lcda.']
-
-function comoTitulo(v: unknown): TituloDelMedico | null {
-  return TITULOS_DEL_MEDICO.find((t) => t === v) ?? null
-}
+// El título vive con el alta (`clinicas.ts`), que también lo pide.
+export { TITULOS_DEL_MEDICO } from '@/features/admin/clinicas/clinicas'
+export type { TituloDelMedico } from '@/features/admin/clinicas/clinicas'
 
 export type MerchantDetail = {
   profile: MerchantProfile
