@@ -118,7 +118,10 @@ begin
 
   -- El resto de los libres y abiertos (los reales también, dentro de esta
   -- transacción que se deshace).
-  perform public.admin_assign_me_doctor_leads(100);
+  -- Hasta que no quede ninguno (con los reales hay cientos libres).
+  loop
+    exit when public.admin_assign_me_doctor_leads(100) = 0;
+  end loop;
   if (select assigned_to from public.doctor_leads where id = v_libre) is distinct from v_admin then
     raise exception '4. el médico libre y abierto no quedó asignado';
   end if;

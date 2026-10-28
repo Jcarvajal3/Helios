@@ -53,9 +53,11 @@ import { haceCuanto } from '@/features/admin/cobranza/senales'
 import { anotarGestion, borrarLead, consultaHistoria, refrescarAgenda } from '@/features/admin/agenda/api'
 import {
   ESTADO_DEL_LEAD,
+  FASES,
   MODOS_DE_VISITA,
   NOTA_MAXIMA,
   ROTULO_CANAL,
+  ROTULO_FASE,
   ROTULO_MODO,
   ROTULO_RAZON,
   ROTULO_RESULTADO,
@@ -206,8 +208,8 @@ export function FichaDelLead({
             <p className="type-panel-body text-on-surface">{quien || 'Sin especialidad ni consultorio'}</p>
             <p className="type-panel-caption text-on-surface-variant">
               Apuntado el {formatDay(lead.creado.slice(0, 10))}
-              {lead.responsable ? ` · Gestionado por ${lead.responsable}` : ''}
             </p>
+            <Encargados lead={lead} />
           </div>
           <div className="flex shrink-0 items-center gap-1">
             <Badge tone={ESTADO_DEL_LEAD[lead.estado].tone}>{ESTADO_DEL_LEAD[lead.estado].label}</Badge>
@@ -248,6 +250,32 @@ export function FichaDelLead({
         />
       )}
     </Modal>
+  )
+}
+
+/**
+ * Quién lo lleva en cada fase: «Mensaje: Lis · Llamada: Juan Vicente ·
+ * Visita: Carlos». La fase en que está, en negrita; las que aún no tocan, no
+ * salen. Al pasar de fase se le asigna solo a alguien de esa fase.
+ */
+function Encargados({ lead }: { lead: Lead }) {
+  const hasta = FASES.indexOf(lead.fase)
+  const partes = FASES.filter((f, i) => i <= hasta || lead.encargados[f] !== null)
+  return (
+    <p className="type-panel-caption text-on-surface-variant">
+      {partes.map((f, i) => {
+        const actual = f === lead.fase && lead.estado !== 'convertido'
+        return (
+          <span key={f}>
+            {i > 0 && ' · '}
+            {ROTULO_FASE[f].label}:{' '}
+            <span className={actual ? 'font-semibold text-on-surface' : undefined}>
+              {lead.encargados[f]?.nombre ?? 'sin encargado'}
+            </span>
+          </span>
+        )
+      })}
+    </p>
   )
 }
 

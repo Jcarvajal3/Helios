@@ -2,10 +2,10 @@ import { queryOptions } from '@tanstack/react-query'
 import type { QueryClient } from '@tanstack/react-query'
 
 import { supabase } from '@/lib/supabase'
-import { comoFila, comoLista, texto, textoONulo } from '@/lib/json'
+import { comoFila, comoLista, numero, texto, textoONulo } from '@/lib/json'
 import { unoDe } from '@/lib/busqueda'
-import { ESTADOS_DEL_LEAD, aDatos, aParametros, leerAgenda, leerHistoria } from './agenda'
-import type { BorradorDeGestion, BorradorDeLead, CanalDelLead, EstadoDelLead, Resultado } from './agenda'
+import { ESTADOS_DEL_LEAD, FASES, aDatos, aParametros, leerAgenda, leerHistoria } from './agenda'
+import type { BorradorDeGestion, BorradorDeLead, CanalDelLead, EstadoDelLead, Fase, Resultado } from './agenda'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Las lecturas y las escrituras de la Agenda, con sus claves de caché.
@@ -53,10 +53,59 @@ export function consultaEquipoDeLaAgenda() {
       if (error) throw error
       return comoLista(data).map((fila) => {
         const r = comoFila(fila)
-        return { userId: texto(r.user_id), nombre: texto(r.name, 'Sin nombre'), rol: texto(r.role) }
+        return {
+          userId: texto(r.user_id),
+          nombre: texto(r.name, 'Sin nombre'),
+          rol: texto(r.role),
+          /** Las fases en que trabaja: deciden el reparto automático. */
+          fases: comoLista(r.stages).flatMap((s) => unoDe(FASES, s) ?? []),
+        }
       })
     },
     staleTime: 5 * 60 * 1000,
+  })
+}
+
+/** Cambia las fases en que trabaja alguien del equipo (super admin). */
+export async function guardarFasesDe(userId: string, fases: readonly Fase[]): Promise<void> {
+  const { error } = await supabase.rpc('admin_set_agenda_phases', { p_user_id: userId, p_stages: [...fases] })
+  if (error) throw error
+}
+
+export type ActividadDeUnaPersona = {
+  userId: string
+  nombre: string
+  gestiones: number
+  mensajes: number
+  interesados: number
+  llamadas: number
+  visitasAgendadas: number
+  visitasRealizadas: number
+  ultima: string | null
+}
+
+/** Lo que hizo cada persona, por quien anotó cada gestión (no por quién lleva hoy al médico). */
+export function consultaActividadPorPersona() {
+  return queryOptions({
+    queryKey: [...CLAVE_AGENDA, 'actividad'],
+    queryFn: async (): Promise<ActividadDeUnaPersona[]> => {
+      const { data, error } = await supabase.rpc('admin_agenda_activity_by_person', {})
+      if (error) throw error
+      return comoLista(data).map((fila) => {
+        const r = comoFila(fila)
+        return {
+          userId: texto(r.user_id),
+          nombre: texto(r.name, 'Sin nombre'),
+          gestiones: numero(r.gestiones),
+          mensajes: numero(r.mensajes),
+          interesados: numero(r.interesados),
+          llamadas: numero(r.llamadas),
+          visitasAgendadas: numero(r.visitas_agendadas),
+          visitasRealizadas: numero(r.visitas_realizadas),
+          ultima: textoONulo(r.ultima),
+        }
+      })
+    },
   })
 }
 

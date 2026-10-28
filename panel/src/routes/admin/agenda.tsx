@@ -2,12 +2,14 @@ import { useMemo, useState } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { LucideIcon } from 'lucide-react'
-import { BadgeCheck, CalendarDays, MessageCircle, Phone, Plus, UserPlus, Users } from 'lucide-react'
+import { BadgeCheck, CalendarDays, MessageCircle, Phone, Plus, Settings2, UserPlus, Users } from 'lucide-react'
 
 import { useToast } from '@/components/Toast'
 import { DataTable } from '@/components/DataTable'
 import { BuscadorEnUrl } from '@/components/FiltrosDeLista'
 import { SeccionSinLeer } from '@/components/admin/directorio/SeccionSinLeer'
+import { ErrorConReintento } from '@/components/admin/ErrorConReintento'
+import { EquipoPorFase } from '@/components/admin/agenda/EquipoPorFase'
 import { CalendarioDeReuniones } from '@/components/admin/agenda/CalendarioDeReuniones'
 import { FichaDelLead } from '@/components/admin/agenda/FichaDelLead'
 import { FormularioDeLead } from '@/components/admin/agenda/FormularioDeLead'
@@ -30,7 +32,13 @@ import {
   formatPorcentaje,
   hoyCaracas,
 } from '@/components/ui'
-import { asignarmeMedicos, consultaAgenda, refrescarAgenda } from '@/features/admin/agenda/api'
+import {
+  asignarmeMedicos,
+  consultaActividadPorPersona,
+  consultaAgenda,
+  consultaEquipoDeLaAgenda,
+  refrescarAgenda,
+} from '@/features/admin/agenda/api'
 import { useSoloAgenda } from '@/features/admin/role'
 import { useSession } from '@/features/auth/session'
 import {
@@ -42,7 +50,6 @@ import {
   ROTULO_ALCANCE,
   ROTULO_FASE,
   cifrasDeLaAgenda,
-  cifrasPorPersona,
   cuentaPorFase,
   delAlcance,
   filtrarAgenda,
@@ -481,16 +488,23 @@ function CifrasDeArriba({
   onReintentar: () => void
 }) {
   const [porPersona, setPorPersona] = useState(false)
+  const [viendoEquipo, setViendoEquipo] = useState(false)
   const c = useMemo(() => cifrasDeLaAgenda(leads, ahora), [leads, ahora])
 
   return (
     <section className="mb-6 flex flex-col gap-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="type-panel-label text-on-surface-variant">{TITULO_DE_LAS_CIFRAS[alcance]}</h2>
-        <Button size="sm" variant="text" onClick={() => setPorPersona((v) => !v)}>
-          <Users size={14} aria-hidden /> {porPersona ? 'Ocultar por persona' : 'Ver por persona'}
-        </Button>
+        <span className="flex flex-wrap gap-1">
+          <Button size="sm" variant="text" onClick={() => setPorPersona((v) => !v)}>
+            <Users size={14} aria-hidden /> {porPersona ? 'Ocultar por persona' : 'Ver por persona'}
+          </Button>
+          <Button size="sm" variant="text" onClick={() => setViendoEquipo(true)}>
+            <Settings2 size={14} aria-hidden /> Equipo por fase
+          </Button>
+        </span>
       </div>
+      {viendoEquipo && <EquipoPorFase onClose={() => setViendoEquipo(false)} />}
       <StatGrid cols={3}>
         <Stat
           label="Médicos contactados"
@@ -520,36 +534,80 @@ function CifrasDeArriba({
           onReintentar={onReintentar}
         />
       </StatGrid>
-      {porPersona && estado === 'listo' && <TablaPorPersona leads={todos} ahora={ahora} />}
+      {porPersona && estado === 'listo' && <TablaPorPersona leads={todos} />}
     </section>
   )
 }
 
-/** Las cifras de cada persona sobre los médicos que tiene asignados. */
-function TablaPorPersona({ leads, ahora }: { leads: ReadonlyArray<Lead>; ahora: Date }) {
-  const filas = useMemo(() => cifrasPorPersona(leads, ahora), [leads, ahora])
+/**
+ * Lo que hizo cada persona, por quien anotó cada gestión (no por quién lleva
+ * hoy al médico): así Lis cuenta los interesados que consiguió aunque ya los
+ * llame Juan Vicente. Con sus fases y los médicos abiertos que lleva ahora.
+ */
+function TablaPorPersona({ leads }: { leads: ReadonlyArray<Lead> }) {
+  const actividad = useQuery(consultaActividadPorPersona())
+  const equipo = useQuery(consultaEquipoDeLaAgenda())
+
+  const filas = useMemo(() => {
+    const llevando = new Map<string, number>()
+    for (const l of leads) {
+      if (l.responsableId && l.estado !== 'convertido' && l.estado !== 'descartado') {
+        llevando.set(l.responsableId, (llevando.get(l.responsableId) ?? 0) + 1)
+      }
+    }
+    const hecho = new Map((actividad.data ?? []).map((a) => [a.userId, a]))
+    return (equipo.data ?? [])
+      .map((m) => ({ ...m, llevando: llevando.get(m.userId) ?? 0, hecho: hecho.get(m.userId) }))
+      .filter((m) => m.fases.length > 0 || m.llevando > 0 || m.hecho)
+      .sort(
+        (a, b) =>
+          (b.hecho?.visitasRealizadas ?? 0) - (a.hecho?.visitasRealizadas ?? 0) ||
+          (b.hecho?.gestiones ?? 0) - (a.hecho?.gestiones ?? 0) ||
+          a.nombre.localeCompare(b.nombre, 'es'),
+      )
+  }, [leads, actividad.data, equipo.data])
+
+  if (actividad.isError || equipo.isError) {
+    return (
+      <ErrorConReintento
+        title="No se pudieron leer las cifras por persona"
+        error={actividad.error ?? equipo.error}
+        onReintentar={() => {
+          void actividad.refetch()
+          void equipo.refetch()
+        }}
+      />
+    )
+  }
+  if (actividad.isPending || equipo.isPending) return <SkeletonTable rows={4} columns={7} />
+
   return (
     <Table
       apilada
       headers={[
         'Persona',
-        'Asignados',
-        'Contactados',
-        { label: 'Interesados', info: 'Los que pasaron a Llamada o más allá.' },
-        'Citas agendadas',
-        'Activados',
-        { label: 'Activación', info: 'Activados sobre contactados.' },
+        { label: 'Lleva ahora', info: 'Los médicos abiertos de los que es encargado en la fase en que están.' },
+        { label: 'Mensajes', info: 'Gestiones que anotó en Mensaje: enviados, no contestó, interesados…' },
+        { label: 'Interesados', info: 'Médicos que anotó como «Interesado»: los que pasó a Llamada.' },
+        { label: 'Llamadas', info: 'Gestiones que anotó en Llamada.' },
+        { label: 'Visitas agendadas', info: 'Visitas que agendó.' },
+        { label: 'Visitas realizadas', info: 'Visitas que anotó como realizadas: cada una, un afiliado.' },
       ]}
     >
       {filas.map((f) => (
-        <Tr key={f.userId ?? 'sin-asignar'}>
-          <Td className={f.userId === null ? 'text-on-surface-variant' : 'font-medium'}>{f.nombre}</Td>
-          <Td className="tabular-nums">{f.apuntados}</Td>
-          <Td className="tabular-nums">{f.contactados}</Td>
-          <Td className="tabular-nums">{f.interesados}</Td>
-          <Td className="tabular-nums">{f.citas}</Td>
-          <Td className="tabular-nums">{f.activados}</Td>
-          <Td className="tabular-nums">{porcentaje(f.activados, f.contactados) ?? '—'}</Td>
+        <Tr key={f.userId}>
+          <Td>
+            <span className="block font-medium">{f.nombre}</span>
+            <span className="block type-panel-caption text-on-surface-variant">
+              {f.fases.length > 0 ? f.fases.map((x) => ROTULO_FASE[x].label).join(', ') : 'Sin fase'}
+            </span>
+          </Td>
+          <Td className="tabular-nums">{f.llevando}</Td>
+          <Td className="tabular-nums">{f.hecho?.mensajes ?? 0}</Td>
+          <Td className="tabular-nums">{f.hecho?.interesados ?? 0}</Td>
+          <Td className="tabular-nums">{f.hecho?.llamadas ?? 0}</Td>
+          <Td className="tabular-nums">{f.hecho?.visitasAgendadas ?? 0}</Td>
+          <Td className="tabular-nums">{f.hecho?.visitasRealizadas ?? 0}</Td>
         </Tr>
       ))}
     </Table>

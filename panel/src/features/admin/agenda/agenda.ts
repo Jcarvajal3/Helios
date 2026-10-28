@@ -288,8 +288,11 @@ export type Lead = {
   lugar: string | null
   /** 'YYYY-MM-DD'. */
   volverEl: string | null
+  /** El encargado de la fase en que está: «Gestionado por». */
   responsableId: string | null
   responsable: string | null
+  /** Quién lo llevó (o lleva) en cada fase (20261028170000). */
+  encargados: Record<Fase, { id: string; nombre: string } | null>
   afiliadoEl: string | null
   via: ViaDeAfiliacion | null
   razon: PorQueSeReconocio | null
@@ -323,6 +326,16 @@ function leerUltima(raw: unknown): UltimaGestion | null {
   }
 }
 
+function leerEncargados(ids: unknown, nombres: unknown): Lead['encargados'] {
+  const i = comoFila(ids)
+  const n = comoFila(nombres)
+  const uno = (f: Fase) => {
+    const id = textoONulo(i[f])
+    return id ? { id, nombre: texto(n[f], 'Sin nombre') } : null
+  }
+  return { mensaje: uno('mensaje'), llamada: uno('llamada'), visita: uno('visita') }
+}
+
 /** `admin_doctor_leads()`. */
 export function leerAgenda(raw: unknown): Lead[] {
   return comoLista(raw).map((fila) => {
@@ -344,6 +357,7 @@ export function leerAgenda(raw: unknown): Lead[] {
       volverEl: textoONulo(r.next_contact_on),
       responsableId: textoONulo(r.assigned_to),
       responsable: textoONulo(r.assigned_name),
+      encargados: leerEncargados(r.owners, r.owner_names),
       afiliadoEl: textoONulo(r.converted_at),
       via: unoDe(VIAS, r.converted_via) ?? null,
       razon: unoDe(RAZONES, r.match_reason) ?? null,

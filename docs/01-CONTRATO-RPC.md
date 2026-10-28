@@ -973,6 +973,33 @@ tiene asignados.
   `detail`, `count` y `lead_ids`).
 - En el panel, un médico nuevo queda a cargo de quien lo apunta.
 
+**Un encargado por fase, con reparto automático** (2026-10-28,
+20261028170000). Un médico lo trabajan varias personas, una por fase.
+
+- `agenda_phase_members (user_id, stage)`: quién trabaja cada fase; una
+  persona puede estar en varias. `admin_set_agenda_phases(p_user_id uuid,
+  p_stages text[]) → void` (super admin; `22023` con alguien que no es del
+  equipo o una fase desconocida; bitácora `agenda.phase_members`).
+  `admin_agenda_team()` devuelve además `stages text[]`.
+- `doctor_leads` gana `message_owner`, `call_owner` y `visit_owner`.
+  `assigned_to` sigue siendo el encargado de la fase actual y su columna se
+  mantiene igual a él (también al cambiarlo a mano). Los que había quedaron
+  con su encargado en la columna de su fase.
+- El reparto (`helios_lead_fase()`, que ahora salta también con `update of
+  assigned_to`): al entrar en Llamada o Visita, el médico vuelve a quien ya
+  llevó esa fase o, si nadie, pasa a alguien de su equipo, el que menos
+  médicos abiertos lleva en ella (`helios_encargado_para`; a igualdad, al
+  azar). Sin equipo en la fase, sigue con quien lo llevaba. Mensaje no
+  reparte, y los `convertido` y `descartado` no se reparten.
+- `admin_assign_me_doctor_leads` toma solo de las fases de quien lo pide (de
+  todas, si no está en ninguna); la bitácora guarda `stages`.
+- `admin_agenda_activity_by_person(p_desde date default null) →
+  table(user_id, name, gestiones, mensajes, interesados, llamadas,
+  visitas_agendadas, visitas_realizadas, ultima)`: lo que hizo cada persona,
+  por el `actor` de cada gestión (no por quién lleva hoy al médico).
+- `admin_doctor_leads()` devuelve `owners` y `owner_names` (`{mensaje,
+  llamada, visita}`).
+
 ### 2.10 Métricas › Juan Pablo (2026-10-23, 20261023160000)
 
 La primera pestaña de Métricas (y la de por defecto): las cifras que mira Juan
