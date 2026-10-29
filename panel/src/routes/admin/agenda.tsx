@@ -144,8 +144,8 @@ function AgendaPage() {
       refrescarAgenda(client)
       avisar(
         n === 0
-          ? 'No quedan médicos sin asignar.'
-          : `Te ${n === 1 ? 'tocó 1 médico' : `tocaron ${n} médicos`}: están en Mensaje.`,
+          ? 'No quedan médicos por contactar sin encargado.'
+          : `Te ${n === 1 ? 'tocó 1 médico' : `tocaron ${n} médicos`} por contactar: están en Mensaje.`,
       )
       if (n > 0) cambiar({ fase: undefined, estado: undefined, de: undefined })
     },
@@ -165,6 +165,24 @@ function AgendaPage() {
     () => todos.filter((l) => l.responsableId === null && l.estado !== 'convertido' && l.estado !== 'descartado').length,
     [todos],
   )
+  // Lo que da «Asignarme» (20261029120000): por contactar y sin encargado, para cualquiera.
+  const porContactarLibres = useMemo(
+    () => todos.filter((l) => l.responsableId === null && l.estado === 'nuevo').length,
+    [todos],
+  )
+  // El tope (20261029140000): nadie pasa de 20 por contactar con «Asignarme».
+  const misPorContactar = useMemo(
+    () => todos.filter((l) => yo !== null && l.responsableId === yo && l.estado === 'nuevo').length,
+    [todos, yo],
+  )
+  const cupo = Math.max(0, POR_TANDA - misPorContactar)
+  const meTocan = Math.min(cupo, porContactarLibres)
+  const motivoParaNoAsignar =
+    cupo === 0
+      ? `Ya tienes ${misPorContactar} médicos por contactar. Escríbeles antes de pedir más.`
+      : porContactarLibres === 0
+        ? 'No quedan médicos por contactar sin encargado.'
+        : undefined
 
   const abierto = search.lead ? todos.find((l) => l.id === search.lead) : undefined
 
@@ -176,11 +194,15 @@ function AgendaPage() {
     <Button
       size="sm"
       variant="tonal"
-      disabled={asignar.isPending || sinAsignar === 0}
-      title={sinAsignar === 0 ? 'No quedan médicos sin asignar.' : undefined}
+      disabled={asignar.isPending || motivoParaNoAsignar !== undefined}
+      title={
+        motivoParaNoAsignar ??
+        `Tienes ${misPorContactar} por contactar: te tocan ${meTocan} al azar de los ${porContactarLibres} sin encargado (hasta 20).`
+      }
       onClick={() => asignar.mutate()}
     >
-      <UserPlus size={14} aria-hidden /> {asignar.isPending ? 'Asignando…' : `Asignarme ${POR_TANDA} médicos`}
+      <UserPlus size={14} aria-hidden />{' '}
+      {asignar.isPending ? 'Asignando…' : `Asignarme ${meTocan > 0 ? meTocan : POR_TANDA} ${meTocan === 1 ? 'médico' : 'médicos'}`}
     </Button>
   )
 
@@ -270,9 +292,9 @@ function AgendaPage() {
           icon={<UserPlus size={40} />}
           title="Todavía no tienes médicos asignados"
           description={
-            sinAsignar > 0
-              ? `Hay ${sinAsignar} sin nadie que los gestione. Toma ${POR_TANDA} y empieza por escribirles.`
-              : 'No quedan médicos sin asignar. Apunta uno nuevo o mira los de todo el equipo.'
+            porContactarLibres > 0
+              ? `Hay ${porContactarLibres} por contactar sin encargado. Toma ${POR_TANDA} y empieza por escribirles.`
+              : 'No quedan médicos por contactar sin encargado. Apunta uno nuevo o mira los de todo el equipo.'
           }
           action={
             <div className="flex flex-wrap justify-center gap-2">

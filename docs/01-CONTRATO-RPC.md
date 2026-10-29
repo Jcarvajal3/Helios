@@ -991,8 +991,13 @@ tiene asignados.
   médicos abiertos lleva en ella (`helios_encargado_para`; a igualdad, al
   azar). Sin equipo en la fase, sigue con quien lo llevaba. Mensaje no
   reparte, y los `convertido` y `descartado` no se reparten.
-- `admin_assign_me_doctor_leads` toma solo de las fases de quien lo pide (de
-  todas, si no está en ninguna); la bitácora guarda `stages`.
+- `admin_assign_me_doctor_leads` da solo médicos por contactar (`nuevo`) y
+  sin encargado, a cualquiera del equipo, sin mirar sus fases (20261029120000,
+  Javier: cualquiera puede escribir). Los de Llamada y Visita no se piden:
+  llegan con el reparto. Tope (20261029140000): completa hasta 20 por
+  contactar a cargo de quien lo pide; con 20 o más, `22023` («Ya tienes N
+  médicos por contactar…»). Un `pg_advisory_xact_lock` por persona hace que
+  dos clics a la vez se esperen. La bitácora guarda `had` (los que ya tenía).
 - `admin_agenda_activity_by_person(p_desde date default null) →
   table(user_id, name, gestiones, mensajes, interesados, llamadas,
   visitas_agendadas, visitas_realizadas, ultima)`: lo que hizo cada persona,

@@ -12,7 +12,8 @@
 --   3. Si vuelve a una fase, vuelve a quien ya la llevó.
 --   4. Cambiar el encargado a mano mueve también el de su fase.
 --   5. Sin equipo en una fase, sigue con quien lo llevaba.
---   6. «Asignarme médicos» toma solo de mis fases.
+--   6. «Asignarme médicos» da médicos por contactar, no los de otras fases
+--      (20261029120000).
 --   7. Lo que hizo cada persona se cuenta por quien anotó la gestión.
 --
 -- No manda nada: no llama a `helios_dispatch_*`.
@@ -146,22 +147,21 @@ begin
   end if;
 
   -- =========================================================================
-  -- 6. «Asignarme médicos», de mis fases
+  -- 6. «Asignarme médicos»: solo por contactar
   -- =========================================================================
   update public.doctor_leads set assigned_to = null where id = v_b;
   perform set_config('request.jwt.claims',
     json_build_object('sub', v_lis::text, 'role', 'authenticated', 'aal', 'aal2')::text, true);
-  loop
-    exit when public.admin_assign_me_doctor_leads(100) = 0;
-  end loop;
+  v_n := public.admin_assign_me_doctor_leads(20);
   if (select assigned_to from public.doctor_leads where id = v_b) is not null then
     raise exception '6. Lis (de Mensaje) se llevó un médico de Visita';
   end if;
   if exists (
-    select 1 from public.doctor_leads where assigned_to is null and stage = 'mensaje'
-       and status not in ('convertido', 'descartado')
+    select 1 from public.doctor_leads where assigned_to = v_lis and status <> 'nuevo'
+       and id not in (v_a, v_b) and updated_at >= now() - interval '1 minute'
+       and stage <> 'mensaje'
   ) then
-    raise exception '6. a Lis le quedaron médicos de Mensaje sin tomar';
+    raise exception '6. a Lis le tocaron médicos que no son por contactar';
   end if;
 
   -- =========================================================================

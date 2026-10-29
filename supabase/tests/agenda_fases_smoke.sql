@@ -9,9 +9,10 @@
 --      y «no contestó» / «no interesado» se quedan en la fase en que pasan.
 --   2. Una visita cancelada vuelve a Llamada; una realizada lo deja afiliado.
 --   3. El tablero devuelve la fase.
---   4. «Asignarme médicos» solo toma los que no tienen a nadie y siguen
---      abiertos, no toca a los de otra persona, respeta el tope y queda en la
---      bitácora. Fuera del equipo, no.
+--   4. «Asignarme médicos» solo toma los que no tienen a nadie y nadie ha
+--      contactado (20261029120000), no toca a los de otra persona, respeta el
+--      tope de 20 por contactar (20261029140000) y queda en la bitácora.
+--      Fuera del equipo, no.
 --
 -- No manda nada: no llama a `helios_dispatch_*`.
 -- ============================================================================
@@ -112,18 +113,16 @@ begin
   end;
   if not v_fallo then raise exception '4. aceptó pedir cero médicos'; end if;
 
-  -- El tope: uno solo.
-  v_n := public.admin_assign_me_doctor_leads(1);
-  if v_n <> 1 then raise exception '4. con tope 1 debía asignar 1, asignó %', v_n; end if;
+  -- Los libres reales se los lleva otra persona (dentro de esta transacción,
+  -- que se deshace): la bolsa queda solo con los de la prueba.
+  update public.doctor_leads set assigned_to = v_otro
+   where assigned_to is null and status = 'nuevo' and id <> v_libre;
 
-  -- El resto de los libres y abiertos (los reales también, dentro de esta
-  -- transacción que se deshace).
-  -- Hasta que no quede ninguno (con los reales hay cientos libres).
-  loop
-    exit when public.admin_assign_me_doctor_leads(100) = 0;
-  end loop;
+  -- Pide uno y le toca el único libre por contactar.
+  v_n := public.admin_assign_me_doctor_leads(1);
+  if v_n <> 1 then raise exception '4. con 1 pedido debía asignar 1, asignó %', v_n; end if;
   if (select assigned_to from public.doctor_leads where id = v_libre) is distinct from v_admin then
-    raise exception '4. el médico libre y abierto no quedó asignado';
+    raise exception '4. el médico libre por contactar no quedó asignado';
   end if;
   if (select assigned_to from public.doctor_leads where id = v_cerrado) is not null then
     raise exception '4. se asignó un médico ya afiliado';
@@ -131,14 +130,21 @@ begin
   if (select assigned_to from public.doctor_leads where id = v_ajeno) is distinct from v_otro then
     raise exception '4. se le quitó el médico a otra persona';
   end if;
-  if exists (
-    select 1 from public.doctor_leads where assigned_to is null and status not in ('convertido', 'descartado')
-  ) then
-    raise exception '4. quedaron médicos abiertos sin asignar';
-  end if;
   if public.admin_assign_me_doctor_leads(20) <> 0 then
     raise exception '4. sin médicos libres debía asignar 0';
   end if;
+
+  -- El tope (20261029140000): con 20 por contactar no da más, y completa hasta 20.
+  update public.doctor_leads set assigned_to = null
+   where id in (select id from public.doctor_leads where assigned_to = v_otro and status = 'nuevo' limit 30);
+  v_n := public.admin_assign_me_doctor_leads(100);
+  if v_n <> 19 then raise exception '4. con 1 por contactar debía completar hasta 20 (19), dio %', v_n; end if;
+  v_fallo := false;
+  begin
+    perform public.admin_assign_me_doctor_leads(20);
+  exception when sqlstate '22023' then v_fallo := true;
+  end;
+  if not v_fallo then raise exception '4. con 20 por contactar le dio más'; end if;
   if not exists (
     select 1 from audit.admin_actions where actor = v_admin and action = 'doctor_lead.assigned'
   ) then

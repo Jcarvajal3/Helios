@@ -46,8 +46,8 @@ export function EquipoPorFase({ onClose }: { onClose: () => void }) {
       <div className="flex flex-col gap-4">
         <p className="type-panel-body text-on-surface-variant">
           Cuando un médico pasa a Llamada o a Visita, se le asigna solo a alguien de esa fase, al que menos médicos
-          lleva en ella; si ya la había llevado alguien, vuelve a esa persona. Mensaje no reparte: sus médicos se toman
-          con «Asignarme médicos», que da solo de las fases de quien lo pulsa.
+          lleva en ella; si ya la había llevado alguien, vuelve a esa persona. Mensaje no reparte: cualquiera, esté o no
+          en esa fase, toma médicos por contactar con «Asignarme 20 médicos».
         </p>
 
         {!esSuperAdmin && <p className="type-panel-caption text-on-surface-variant">{SOLO_SUPER_ADMIN}.</p>}
