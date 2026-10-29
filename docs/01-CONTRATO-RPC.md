@@ -634,6 +634,21 @@ ficha, que va delante del nombre en los mensajes al paciente).
   filtro) y desde el «⋯» de la ficha (una).
 - `merchant_directory` (vista, 20261014000300) añade al final `owner_name`: la
   columna «Médico titular» de la lista de Clínicas.
+- **La clínica se llama como su médico** (20261029190000 y 20261029190100,
+  Javier, 2026-10-29): `merchants.name` lo arma un trigger
+  (`merchants_nombre_es_el_medico`) con el título y el nombre del titular
+  («Dra. Ana Lara», sin «Consultorio» delante; interna
+  `helios_nombre_del_medico(titulo, nombre)`). Lo que se escriba en `name`
+  (el alta, `helios_crear_clinica`, `admin_create_merchant`) pasa a la
+  columna nueva `merchants.consultorio`, salvo que empiece por un título
+  («Dra. …»: es el médico, no un consultorio). Sin titular, `name` se queda
+  como se escribió. `merchant_directory` añade al final `consultorio`,
+  `admin_merchant_detail.profile` y `admin_merchant_contract_data` añaden
+  `consultorio`, y `admin_set_merchant_profile` añade al final
+  `p_consultorio text default null` (null = no tocar, '' = borrar). El panel
+  enseña al médico primero (columna «Médico» de Clínicas, cabecera de la
+  ficha) y el consultorio como dato secundario; la búsqueda lo encuentra
+  también por consultorio.
 - `merchant_staff_add` / `merchant_staff_update`: el rol `inventario` se
   rechaza (`22023`).
 - **La secretaria que solo registra** (20261029160000): `merchant_users.solo_registra`

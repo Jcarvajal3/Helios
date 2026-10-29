@@ -20,6 +20,7 @@ const kabal = {
   taxId: 'J-12345678-9',
   status: 'active' as EstadoLocal,
   ownerName: 'Ana María Pérez',
+  consultorio: 'Grupo Médico 708',
 }
 const cerrado = { name: 'La Quinta', legalName: null, taxId: null, status: 'paused' as EstadoLocal }
 
@@ -28,6 +29,7 @@ comprueba(normalizarTexto('  Kábal ') === 'kabal', 'sin tildes ni mayúsculas')
 comprueba(casaConLaBusqueda(kabal, 'kabal'), 'el nombre sin tilde encuentra el que la lleva')
 comprueba(casaConLaBusqueda(kabal, 'nocturnas'), 'por razón social')
 comprueba(casaConLaBusqueda(kabal, 'maria perez'), 'por médico titular, sin tildes')
+comprueba(casaConLaBusqueda(kabal, 'grupo medico'), 'por consultorio, sin tildes')
 comprueba(casaConLaBusqueda(kabal, 'j123456789'), 'el RIF sin guiones')
 comprueba(casaConLaBusqueda(kabal, 'J-1234'), 'el RIF con guiones')
 comprueba(!casaConLaBusqueda(kabal, 'quinta'), 'otro nombre no casa')

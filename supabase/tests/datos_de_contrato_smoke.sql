@@ -97,7 +97,9 @@ begin
   -- --- 3. La fila completa -----------------------------------------------
   v_fila := v_res->0;
   if v_fila->>'merchant_id' <> v_con::text
-     or v_fila->>'name' <> 'Consultorio Prueba Contrato'
+     or v_fila->>'name' <> 'Ana María Pérez'
+     -- 20261029190000: el nombre es el del titular; el de alta, el consultorio.
+     or v_fila->>'consultorio' is distinct from 'Consultorio Prueba Contrato'
      or v_fila->>'legal_name' <> 'Consultorio Prueba Contrato C.A.'
      or v_fila->>'tax_id' <> 'J509876543'
      or v_fila->>'category' <> 'odontologia'

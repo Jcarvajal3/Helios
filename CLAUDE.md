@@ -100,6 +100,11 @@ docs/       plan, contrato, reglas
   `charges`, `installments`, `settlements`, `merchant_users`…). Solo el prefijo
   de marca cambia: `ronda_` → `helios_`. Así los arreglos de Ronda se portan
   con `scripts/portar-de-ronda.mjs`.
+- **La clínica se llama como su médico titular** (Javier, 2026-10-29):
+  `merchants.name` lo arma un trigger («Dra. Ana Lara», sin «Consultorio»
+  delante) y el nombre del consultorio va en `merchants.consultorio`, como
+  un dato secundario junto a la dirección. Lo que se escriba en `name` pasa
+  a `consultorio`. En tablas y filtros, el médico va primero.
 - La interfaz habla en vocabulario médico: médico, centro o clínica, sede,
   paciente, **pago en cuotas** (u «orden» con su número), **Comisión Helios**
   (desde el 2026-10-13; los mensajes al paciente —la pregunta de WhatsApp,

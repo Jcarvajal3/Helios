@@ -42,6 +42,7 @@ SUITES=(
   merchant_payout_smoke
   statement_smoke
   edit_merchants_smoke
+  consultorio_smoke
   level_promotion_smoke
   due_dates_smoke
   saldo_smoke

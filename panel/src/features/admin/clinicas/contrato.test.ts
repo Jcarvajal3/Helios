@@ -25,7 +25,8 @@ function igual(nombre: string, obtenido: unknown, esperado: unknown) {
 
 const completa = leerDatosDeContrato({
   merchant_id: 'm-1',
-  name: 'Consultorio Dental Ana Pérez',
+  name: 'Dra. Ana María Pérez',
+  consultorio: 'Consultorio Dental Ana Pérez',
   legal_name: 'Consultorio Ana Pérez C.A.',
   tax_id: 'J509876543',
   category: 'odontologia',
@@ -67,11 +68,12 @@ const fila = lineas[1].split(';')
 const celda = (titulo: string) => fila[cabecera.indexOf(titulo)]
 
 igual('una fila por clínica, con la cabecera', lineas.length, 4) // la última, vacía tras el CRLF final
-igual('la primera columna es la clínica, tras el BOM', [csvDeContratos([]).startsWith(`${BOM}Clínica;`), cabecera[0]], [
+igual('la primera columna es el consultorio, tras el BOM', [csvDeContratos([]).startsWith(`${BOM}Consultorio;`), cabecera[0]], [
   true,
-  'Clínica',
+  'Consultorio',
 ])
 igual('el titular va en su columna', celda('Médico titular'), 'Ana María Pérez')
+igual('el consultorio va en la suya', celda('Consultorio'), 'Consultorio Dental Ana Pérez')
 igual('el teléfono, en local y con espacio', celda('Teléfono'), '0212 5551234')
 igual('el celular del Pago Móvil también', celda('Celular del Pago Móvil'), '0414 1234567')
 igual('la cuenta, en grupos de 4', celda('N.º de cuenta'), '0134 0000 0000 0000 0001')
@@ -86,7 +88,7 @@ igual('sin solicitud, celda vacía', lineas[2].split(';')[cabecera.indexOf('Soli
 
 igual(
   'una fórmula escrita en la portada queda como texto (lib/csv.ts)',
-  csvDeContratos([{ ...completa, name: '=HYPERLINK("x")' }]).split('\r\n')[1].startsWith(`"'=HYPERLINK(""x"")";`),
+  csvDeContratos([{ ...completa, consultorio: '=HYPERLINK("x")' }]).split('\r\n')[1].startsWith(`"'=HYPERLINK(""x"")";`),
   true,
 )
 

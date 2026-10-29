@@ -2,7 +2,7 @@ import type { EstadoLocal } from '@/features/admin/estados'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Lo que la lista de Locales sabe hacer sin la base: la búsqueda por nombre,
-// razón social, médico titular o RIF. El estado de un local está en `estados.ts`.
+// consultorio, razón social, médico titular o RIF. El estado de un local está en `estados.ts`.
 //
 // Módulo puro: se prueba en Node (`locales.test.ts`). La lista es corta y
 // viene entera, así que se filtra en el navegador.
@@ -25,14 +25,20 @@ type Buscable = {
   status: EstadoLocal
   /** El médico titular. Opcional: no todas las listas lo traen. */
   ownerName?: string | null
+  /** El nombre del consultorio («Grupo Médico 708»). Opcional, como el titular. */
+  consultorio?: string | null
 }
 
-/** Si el local casa con lo buscado: nombre, razón social, médico titular o RIF. */
+/**
+ * Si el local casa con lo buscado: nombre (el del médico), consultorio,
+ * razón social, médico titular o RIF.
+ */
 export function casaConLaBusqueda(local: Buscable, texto: string): boolean {
   const aguja = normalizarTexto(texto)
   if (aguja === '') return true
 
   if (normalizarTexto(local.name).includes(aguja)) return true
+  if (local.consultorio && normalizarTexto(local.consultorio).includes(aguja)) return true
   if (local.legalName && normalizarTexto(local.legalName).includes(aguja)) return true
   if (local.ownerName && normalizarTexto(local.ownerName).includes(aguja)) return true
 

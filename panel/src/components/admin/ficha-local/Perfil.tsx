@@ -66,6 +66,7 @@ export function Perfil({
   const [phone, setPhone] = useState(datos.phone ?? '')
   const [email, setEmail] = useState(datos.email ?? '')
   const [address, setAddress] = useState(datos.address ?? '')
+  const [consultorio, setConsultorio] = useState(datos.consultorio ?? '')
 
   const taxIdError =
     tieneNumero(taxId, LETRAS_RIF) && !rifValido(taxId) ? 'El RIF lleva 8 o 9 números después de la letra.' : null
@@ -84,6 +85,7 @@ export function Perfil({
     phone,
     email,
     address,
+    consultorio,
   })
   const datosCambiados = Object.values(cambios).some((v) => v !== null)
   const correoInvalido = email.trim() !== '' && !pareceCorreo(email)
@@ -116,10 +118,11 @@ export function Perfil({
 
       <Seccion
         titulo="Datos de la clínica"
-        info="Especialidad, registro del MPPS y cómo contactarla. Salen en el comprobante del paciente. Dejar un campo vacío lo borra."
+        info="El consultorio, la especialidad, el registro del MPPS y cómo contactarla. La clínica se llama como su médico titular: el consultorio es un dato más, como la dirección. Dejar un campo vacío lo borra."
       >
         <Card>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Input id={`consultorio-${merchantId}`} label="Consultorio o centro médico" value={consultorio} onChange={setConsultorio} placeholder="Centro Médico La Viña, consultorio 12" className="sm:col-span-2" />
             <Input id={`specialty-${merchantId}`} label="Especialidad" value={specialty} onChange={setSpecialty} placeholder="Medicina interna" />
             <Input id={`mpps-${merchantId}`} label="Matrícula o MPPS (opcional)" value={mpps} onChange={setMpps} placeholder="12345" />
             <Input id={`phone-${merchantId}`} label="Teléfono" value={phone} onChange={setPhone} inputMode="tel" placeholder="0212 1234567" />

@@ -45,6 +45,8 @@ export function Cabecera({
         </>
       }
       datos={[
+        // El nombre es el del médico titular; el consultorio, un dato más.
+        merchant.consultorio,
         merchant.taxId ?? 'Sin RIF',
         merchant.legalName && merchant.legalName !== merchant.name ? merchant.legalName : null,
         merchant.city,

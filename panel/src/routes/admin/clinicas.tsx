@@ -136,7 +136,7 @@ function ListaDeLocales() {
         <BuscadorEnUrl
           id="buscar-local"
           valor={search.q}
-          placeholder="Nombre, razón social, titular o RIF"
+          placeholder="Médico, consultorio, razón social o RIF"
           onBuscar={(q) => cambiar({ q }, true)}
         />
         <Filtro label="Estado">

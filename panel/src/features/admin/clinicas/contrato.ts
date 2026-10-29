@@ -18,7 +18,10 @@ import { formatoCuenta, telefonoLocal } from './clinicas'
 
 export type DatosDeContrato = {
   merchantId: string
+  /** El del médico titular («Dra. Ana Lara»), desde 20261029190000. */
   name: string
+  /** El nombre del consultorio o centro médico. */
+  consultorio: string | null
   legalName: string | null
   taxId: string | null
   specialty: string | null
@@ -53,6 +56,7 @@ export function leerDatosDeContrato(raw: unknown): DatosDeContrato {
   return {
     merchantId: String(r.merchant_id),
     name: textoONulo(r.name) ?? '',
+    consultorio: textoONulo(r.consultorio),
     legalName: textoONulo(r.legal_name),
     taxId: textoONulo(r.tax_id),
     specialty: textoONulo(r.specialty),
@@ -87,7 +91,9 @@ export function leerDatosDeContrato(raw: unknown): DatosDeContrato {
  * la cuenta de 20 dígitos en notación científica.
  */
 export const COLUMNAS_DE_CONTRATO: Array<CsvColumn<DatosDeContrato>> = [
-  { header: 'Clínica', value: (d) => d.name },
+  // El nombre de la clínica es el del titular, que va más abajo con su
+  // cédula: aquí, el consultorio.
+  { header: 'Consultorio', value: (d) => d.consultorio },
   { header: 'Razón social', value: (d) => d.legalName },
   { header: 'RIF', value: (d) => d.taxId },
   { header: 'Especialidad', value: (d) => d.specialty },

@@ -34,8 +34,11 @@ export function columnasLocales(porPagar: PorPagar): Array<Column<MerchantRow>> 
 
   return [
     {
+      // El nombre de la clínica es el de su médico titular (20261029190000):
+      // los de consultorio no sirven para reconocer a nadie. El consultorio
+      // va debajo, como un dato más.
       key: 'local',
-      header: 'Clínica',
+      header: 'Médico',
       identity: true,
       sort: (m) => m.name,
       csv: (m) => m.name,
@@ -45,7 +48,7 @@ export function columnasLocales(porPagar: PorPagar): Array<Column<MerchantRow>> 
           <div>
             <p className="font-medium text-on-surface">{m.name}</p>
             <p className="type-panel-caption text-on-surface-variant">
-              {m.taxId ?? 'Sin RIF'}
+              {[m.consultorio, m.taxId ?? 'Sin RIF'].filter(Boolean).join(' · ')}
             </p>
           </div>
         </div>
@@ -53,11 +56,12 @@ export function columnasLocales(porPagar: PorPagar): Array<Column<MerchantRow>> 
     },
 
     {
-      key: 'titular',
-      header: 'Médico titular',
-      sort: (m) => m.ownerName,
-      csv: (m) => m.ownerName,
-      cell: (m) => m.ownerName ?? <span className="text-on-surface-variant">Sin titular</span>,
+      key: 'consultorio',
+      header: 'Consultorio',
+      hidden: true,
+      sort: (m) => m.consultorio,
+      csv: (m) => m.consultorio,
+      cell: (m) => m.consultorio ?? '—',
     },
 
     { key: 'rif', header: 'RIF', hidden: true, csv: (m) => m.taxId, cell: (m) => m.taxId ?? '—' },

@@ -432,6 +432,9 @@ export type MerchantRow = {
   isTest: boolean
   /** El médico titular (`merchants.owner_name`); null si el alta no lo trajo. */
   ownerName: string | null
+  /** El nombre del consultorio o centro médico, un dato secundario: `name` es
+   *  el del médico titular («Dra. Ana Lara», 20261029190000). */
+  consultorio: string | null
 }
 
 export async function fetchMerchants(): Promise<MerchantRow[]> {
@@ -460,6 +463,7 @@ export async function fetchMerchants(): Promise<MerchantRow[]> {
     logoUrl: (row.logo_url as string | null) ?? null,
     socialUrl: (row.social_url as string | null) ?? null,
     ownerName: (row.owner_name as string | null) ?? null,
+    consultorio: textoONulo(row.consultorio),
   }))
 }
 
@@ -1339,6 +1343,8 @@ export type DatosDeLaClinica = {
   phone: string | null
   email: string | null
   address: string | null
+  /** El nombre del consultorio o centro médico; el de la clínica es el de su titular. */
+  consultorio: string | null
 }
 
 /** El médico titular de la clínica (`admin_set_merchant_owner`). */
@@ -1389,6 +1395,7 @@ export async function fetchMerchantDetail(merchantId: string): Promise<MerchantD
       phone: textoONulo(raw.profile.phone),
       email: textoONulo(raw.profile.email),
       address: textoONulo(raw.profile.address),
+      consultorio: textoONulo(raw.profile.consultorio),
     },
     titular: {
       ownerName: textoONulo(raw.profile.owner_name),
@@ -1431,6 +1438,7 @@ export function cambiosDeDatos(antes: DatosDeLaClinica, despues: DatosDeLaClinic
     p_phone: campo(antes.phone, despues.phone),
     p_email: campo(antes.email, despues.email),
     p_address: campo(antes.address, despues.address),
+    p_consultorio: campo(antes.consultorio, despues.consultorio),
   }
 }
 
