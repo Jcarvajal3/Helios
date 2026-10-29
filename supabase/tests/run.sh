@@ -83,6 +83,7 @@ SUITES=(
   datos_de_contrato_smoke
   demo_smoke
   mensajes_paciente_smoke
+  avisos_con_vencidas_smoke
   seguimiento_smoke
   agenda_smoke
   agenda_fases_smoke

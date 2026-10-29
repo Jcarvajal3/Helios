@@ -194,6 +194,37 @@ type Todo = { cuotas: number; s: PorMoneda }
  * exacta en vez de multiplicar la de una cuota (que puede errar en un
  * céntimo, y entonces el lector no reconoce el pago).
  */
+/**
+ * El bloque de pago con dos o más cuotas vencidas (2026-10-29, caso 3): la
+ * más antigua y todo de una vez; si además hay cuotas por vencer, también lo
+ * vencido («para ponerte al día»). Null si falta alguna tasa (se usa el de
+ * un monto).
+ */
+export function bloqueDePagoVencidas(
+  r: ResumenDelPaciente,
+  antigua: PorMoneda,
+  vencidas: PorMoneda,
+  todo: Todo | null,
+): string | null {
+  const bsAntigua = bolivaresDeHoy(r, antigua)
+  const bsVencidas = bolivaresDeHoy(r, vencidas)
+  const bsTodo = todo ? bolivaresDeHoy(r, todo.s) : bsVencidas
+  if (bsAntigua === null || bsVencidas === null || bsTodo === null) return null
+  const todas: PorMoneda = new Map(todo ? todo.s : vencidas)
+  const montos = [
+    `💵 *Para pagar la más antigua hoy: ${bolivares(bsAntigua)}*`,
+    ...(todo ? [`💵 *Para ponerte al día hoy: ${bolivares(bsVencidas)}*`] : []),
+    `💰 *Para pagar todo de una vez hoy: ${bolivares(bsTodo)}*`,
+    `Es el equivalente a la tasa BCV ${deLasMonedas(todas)} de hoy. Si pagas otro día, paga el equivalente a la tasa BCV de ese día.`,
+  ].join('\n')
+  return [
+    montos,
+    r.datos_de_pago ?? r.cuentas_de_cobro,
+    '📸 Cuando pagues, envíanos la foto del comprobante por este chat.',
+    FRASE_NIVEL,
+  ].join('\n\n')
+}
+
 export function bloqueDePago(r: ResumenDelPaciente, s: PorMoneda, todo: Todo | null = null): string {
   const bs = bolivaresDeHoy(r, s)
   const bsTodo = todo ? bolivaresDeHoy(r, todo.s) : null
@@ -337,7 +368,9 @@ export function mensajePagar(r: ResumenDelPaciente): string {
     cabeza =
       `⚠️ *Tienes ${n} ${n === 1 ? 'cuota pendiente' : 'cuotas pendientes'}*\n${lineas.join('\n')}\n` +
       (n > 1 ? `*Total: ${enSusMonedas(total)}*\n` : '') +
-      '\nAún estás a tiempo de ponerte al día 💙'
+      '\nAún estás a tiempo de ponerte al día 💙' +
+      // 2026-10-29: con dos o más, que puede empezar por la más antigua.
+      (n > 1 ? ` Puedes pagar ${n === 2 ? 'las dos' : 'todas'} o empezar por la más antigua.` : '')
   } else {
     const { f, c } = aPagar[0]
     cabeza =
@@ -352,7 +385,14 @@ export function mensajePagar(r: ResumenDelPaciente): string {
   const pendientes = r.financiamientos.flatMap((f) => f.cuotas.map((c) => ({ f, c })))
   const todo = pendientes.length > aPagar.length && !r.pago_en_revision ? { cuotas: pendientes.length, s: porMoneda(pendientes) } : null
 
-  return [cabeza, ...(r.pago_en_revision ? [PAGO_EN_REVISION] : []), bloqueDePago(r, total, todo)].join('\n\n')
+  // Dos o más vencidas: la más antigua (las de su fecha) y todo de una vez.
+  let bloque: string | null = null
+  if (vencidas && aPagar.length > 1) {
+    const primera = aPagar[0].c.due_date
+    bloque = bloqueDePagoVencidas(r, porMoneda(aPagar.filter((x) => x.c.due_date === primera)), total, todo)
+  }
+
+  return [cabeza, ...(r.pago_en_revision ? [PAGO_EN_REVISION] : []), bloque ?? bloqueDePago(r, total, todo)].join('\n\n')
 }
 
 /** «1.ª cuota». */

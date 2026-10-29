@@ -1223,3 +1223,76 @@ update public.notification_templates t
 ```
 
 Después, `pago_movil_titular` puede salir de `helios_message_builtins`.
+
+### 15.10 Los avisos de cuota cuentan lo vencido (2026-10-29)
+
+Textos aprobados por Javier el 2026-10-29 (`20261029110000`). Antes, cada aviso de cuota hablaba solo de las cuotas de su fecha: a quien debía la cuota 1, el aviso de la cuota 2 no se la mencionaba, y si pagaba lo que el aviso decía, el pago no se podía aplicar a la 2 (lo vencido va primero). «Lo vencido» = cuotas pendientes de órdenes confirmadas que vencieron antes de hoy, sin pago esperando revisión (`helios_vencidas_de`).
+
+- **Caso 1** · 3 días antes, mañana y hoy, si debe otra cuota: «⚠️ También tienes 1 cuota vencida de $56,96 (venció el lunes 26/10). Te recomendamos pagarla primero para ponerte al día 💙», y el bloque de pago con «💵 Para ponerte al día hoy» y «💰 Para pagar todo de una vez hoy».
+- **Caso 2** · cuota vencida si ya debía otra: «Con ella tienes 2 cuotas pendientes por $113,92… en cuanto te pongas al día, se reactiva. Puedes pagar las dos de una vez o empezar por la más antigua», con «💵 Para pagar la más antigua hoy» y «💰 Para pagar todo de una vez hoy».
+- **Caso 3** · «Pagar mi cuota» con 2 o más vencidas (bot): «Puedes pagar las dos o empezar por la más antigua» y los montos de la más antigua y de todo (y de lo vencido, si además hay cuotas por vencer).
+- **Caso 4** · pago confirmado con algo aún vencido, de cualquier orden: «⚠️ Aún tienes 1 cuota vencida: $56,96 (venció el …). Cuando la pagues, tu cuenta se reactiva.» y el botón «Pagar mi cuota».
+- **Caso 5** · varias cuotas el mismo día: «tus 2 cuotas de $113,92 de las consultas con … vencen». En las plantillas de Meta (texto fijo) el monto dice «$113,92 (2 cuotas)».
+- **Después del día siguiente al vencimiento** no hay más avisos automáticos: sigue la cobranza manual del equipo por tramos (Javier, 2026-10-29).
+
+El texto libre y el correo (`{aviso_vencidas_html}` tras el saludo) ya lo dicen. Fuera de la ventana de 24 h, el WhatsApp usa la plantilla de Meta de la fila `cuota_con_vencidas` (caso 1) o `cuotas_vencidas` (caso 2) **solo cuando esté conectada**; hasta entonces sale la plantilla de siempre, sin lo vencido.
+
+#### Las dos plantillas para Meta
+
+Las dos: **Utility** · **`es`** · variables numéricas · botones de respuesta rápida **Ya pagué** · **Hablar con alguien** · sin encabezado ni pie.
+
+**`helios_cuota_con_vencidas`** → `cuota_con_vencidas` (13 variables)
+
+> Hola, {{1}} 👋 Te recordamos que tu cuota de {{2}} de la consulta con {{3}} {{4}}.
+>
+> ⚠️ También tienes {{5}}. Te recomendamos pagar primero lo vencido para ponerte al día 💙
+>
+> 💵 *Para ponerte al día hoy: {{6}}*
+> Es {{7}} a la tasa BCV del {{8}} de hoy.
+>
+> 💰 *Para pagar todo de una vez hoy: {{9}}*
+> Son {{10}}.
+>
+> Si pagas otro día, paga el equivalente a la tasa BCV de ese día.
+>
+> 🏦 *Pago Móvil*
+> Banco: {{11}}
+> Teléfono: {{12}}
+> RIF: {{13}}
+>
+> 📸 Cuando pagues, envíanos la foto del comprobante por este chat.
+>
+> ⭐ Recuerda pagar a tiempo para subir de nivel y disponer de mayores beneficios.
+
+Ejemplo: María · $56,96 · la Dra. Nadia Andi Khabbaze Alfaro · vence mañana, lunes 02/11 · 1 cuota vencida de $56,96 (venció el lunes 26/10) · Bs 10.624,18 · tu cuota vencida ($56,96) · dólar · Bs 21.248,36 · tus 2 cuotas ($113,92) · BNC (0191) · 0412-1714930 · J-50496786-6.
+
+**`helios_cuotas_vencidas`** → `cuotas_vencidas` (14 variables)
+
+> Hola, {{1}}. Tu cuota de {{2}} de la consulta con {{3}} venció ayer, {{4}}. Con ella tienes {{5}}. Sabemos que a veces pasa 💙 Mientras estén pendientes no podrás pagar nuevas consultas en cuotas; en cuanto te pongas al día, se reactiva.
+>
+> Puedes pagar todo de una vez o empezar por la más antigua.
+>
+> 💵 *Para pagar la más antigua hoy: {{6}}*
+> Es tu cuota del {{7}} ({{8}}) a la tasa BCV del {{9}} de hoy.
+>
+> 💰 *Para pagar todo de una vez hoy: {{10}}*
+> Son {{11}}.
+>
+> Si pagas otro día, paga el equivalente a la tasa BCV de ese día.
+>
+> 🏦 *Pago Móvil*
+> Banco: {{12}}
+> Teléfono: {{13}}
+> RIF: {{14}}
+>
+> 📸 Cuando pagues, envíanos la foto del comprobante por este chat.
+>
+> ⭐ Recuerda pagar a tiempo para subir de nivel y disponer de mayores beneficios.
+>
+> Si tienes algún inconveniente, escríbenos por este chat y lo resolvemos juntos.
+
+Ejemplo: María · $56,96 · la Dra. Nadia Andi Khabbaze Alfaro · lunes 02/11 · 2 cuotas pendientes por $113,92 · Bs 10.624,18 · lunes 26/10 · $56,96 · dólar · Bs 21.248,36 · tus 2 cuotas ($113,92) · BNC (0191) · 0412-1714930 · J-50496786-6.
+
+**Al aprobarse** (leerlas en vivo de 360dialog y comprobar que sean UTILITY): `update public.notification_templates set wa_template_name = 'helios_cuota_con_vencidas' where key = 'cuota_con_vencidas';` y lo mismo con `helios_cuotas_vencidas` / `cuotas_vencidas`. Las variables y los botones ya están puestos.
+
+Piezas nuevas (internas): `helios_vencidas_de(user, hoy, excluir_fecha, excluir_ids) → jsonb`, `helios_payment_block_doble`, `helios_wa_template_for(key, vars)`, `helios_bs_de`, `helios_moneda_de`, `helios_dia_text`. Variables nuevas de los avisos: `tu_cuota`, `tu_cuota_inicio`, `vence`, `vencio`, `aviso_vencidas`, `aviso_vencidas_html`, `situacion_vencida`, `opciones_vencidas`.

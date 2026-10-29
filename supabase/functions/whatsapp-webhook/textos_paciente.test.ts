@@ -184,8 +184,43 @@ comprueba(
   'vencidas: la lista, el total, el ánimo y el pago en revisión',
   pagarVencida,
 )
-// 113,92 × 184,52 = 21.020,5184
-comprueba(pagarVencida.includes('Monto en bolívares hoy: Bs 21.020,52*'), 'vencidas: los bolívares del total', pagarVencida)
+// Caso 3 (2026-10-29): con dos vencidas, la más antigua y todo de una vez.
+// 56,96 × 184,52 = 10.510,2592; 113,92 × 184,52 = 21.020,5184
+comprueba(
+  pagarVencida.includes('Aún estás a tiempo de ponerte al día 💙 Puedes pagar las dos o empezar por la más antigua.') &&
+    pagarVencida.includes(
+      '💵 *Para pagar la más antigua hoy: Bs 10.510,26*\n' +
+        '💰 *Para pagar todo de una vez hoy: Bs 21.020,52*\n' +
+        'Es el equivalente a la tasa BCV del dólar de hoy. Si pagas otro día, paga el equivalente a la tasa BCV de ese día.',
+    ) &&
+    !pagarVencida.includes('Monto en bolívares hoy') &&
+    pagarVencida.trimEnd().endsWith(FRASE_NIVEL),
+  'dos vencidas: la más antigua y todo de una vez',
+  pagarVencida,
+)
+const vencidasYFutura = mensajePagar({
+  ...base,
+  financiamientos: [
+    { ...base.financiamientos[0], cuotas: vencida.financiamientos[0].cuotas },
+    {
+      ...base.financiamientos[0],
+      orden: 1050,
+      cuotas: [{ sequence: 1, due_date: '2026-11-09', monto: 20, cargo_atraso: 0, vencida: false }],
+    },
+  ],
+})
+// 133,92 × 184,52 = 24.710,9184
+comprueba(
+  vencidasYFutura.includes(
+    '💵 *Para pagar la más antigua hoy: Bs 10.510,26*\n💵 *Para ponerte al día hoy: Bs 21.020,52*\n💰 *Para pagar todo de una vez hoy: Bs 24.710,92*',
+  ),
+  'dos vencidas y otra por vencer: la más antigua, ponerse al día y todo',
+  vencidasYFutura,
+)
+comprueba(
+  mensajePagar({ ...vencida, tasa_bcv: null }).includes('💵 *Monto en bolívares*'),
+  'dos vencidas sin tasa: el bloque de un monto',
+)
 const unaVencida = mensajePagar({
   ...vencida,
   pago_en_revision: false,
