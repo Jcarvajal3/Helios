@@ -25,6 +25,7 @@ import {
   formatTime,
   formatUsd,
 } from '@/components/ui'
+import { canSee } from '@/features/auth/permissions'
 import { useStaff } from '@/features/auth/session'
 import { ESTADO_DEL_FINANCIAMIENTO, ESTADO_DEL_PAGO } from '@/features/merchant/financiamientos'
 import type { DetalleDeFinanciamiento } from '@/features/merchant/financiamientos'
@@ -67,6 +68,8 @@ function FinanciamientoRoute() {
   const { id } = Route.useParams()
   const staff = useStaff()
   if (!staff) return null
+  // La secretaria que solo registra no abre la ficha de una orden.
+  if (!canSee(staff, 'financiamientos')) return null
   return <Ficha chargeId={id} />
 }
 

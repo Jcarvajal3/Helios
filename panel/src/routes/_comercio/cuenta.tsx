@@ -40,7 +40,8 @@ function CuentaPage() {
             {/* El rol explica el sidebar. Sin esto, quien no ve Liquidaciones
                 no tiene forma de saber si es que no le toca o si está roto. */}
             <p className="mt-1 type-body-medium text-on-surface-variant">
-              {ROLE_LABEL[staff.role]} — {ROLE_DESCRIPTION[staff.role]}
+              {ROLE_LABEL[staff.role]} —{' '}
+              {staff.soloRegistra ? SOLO_REGISTRA : ROLE_DESCRIPTION[staff.role]}
             </p>
           </div>
 
@@ -63,3 +64,5 @@ const ROLE_DESCRIPTION = {
   gerente: 'ves toda la clínica: pagos en cuotas, comisiones, métricas, pagos y personal.',
   cajero: 'registras pagos en cuotas y consultas los tuyos y tus comisiones.',
 } as const
+
+const SOLO_REGISTRA = 'registras pagos en cuotas y consultas tus comisiones.'

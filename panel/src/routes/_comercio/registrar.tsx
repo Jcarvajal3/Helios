@@ -12,6 +12,7 @@ import { PasoListo } from '@/components/registrar/PasoListo'
 import { PasoMonto } from '@/components/registrar/PasoMonto'
 import { Button, ConfirmDialog, formatMoneda, hoyCaracas } from '@/components/ui'
 import type { Moneda } from '@/components/ui'
+import { canSee } from '@/features/auth/permissions'
 import { useStaff } from '@/features/auth/session'
 import type { StaffContext } from '@/features/auth/session'
 import { claveDelAlta, estrenarClaveDelAlta } from '@/features/merchant/claveDelAlta'
@@ -381,6 +382,7 @@ function Registrar({ staff }: { staff: StaffContext }) {
         <PasoListo
           financiamiento={resultado.financiamiento}
           coincide={resultado.coincide}
+          conFicha={canSee(staff, 'financiamientos')}
           onOtro={empezarDeCero}
           onRegistrarElQueQueria={() => {
             // La clave ya se estrenó al recibir el alta vieja: volver a

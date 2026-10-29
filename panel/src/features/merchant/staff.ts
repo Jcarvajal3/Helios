@@ -25,6 +25,10 @@ export type StaffMember = {
   /** Quien está mirando. El servidor le prohíbe cambiarse el rol y darse de
    *  baja; esto es para apagar los botones en vez de dejar que falle. */
   isSelf: boolean
+  /** Secretaria que solo registra y ve sus comisiones: sin el historial de
+   *  pagos en cuotas. Lo decide el médico al crearla; siempre false para un
+   *  administrador. */
+  soloRegistra: boolean
 }
 
 export async function fetchStaff(merchantId: string): Promise<StaffMember[]> {
@@ -45,6 +49,7 @@ export async function fetchStaff(merchantId: string): Promise<StaffMember[]> {
     branch: (row.branch as string | null) ?? null,
     createdAt: String(row.created_at),
     isSelf: Boolean(row.is_self),
+    soloRegistra: row.solo_registra === true,
   }))
 }
 
@@ -54,6 +59,8 @@ export async function addStaff(params: {
   password: string
   fullName: string
   role: MerchantRole
+  /** Solo cuenta para una secretaria. Sin él, ve su historial. */
+  soloRegistra?: boolean
 }): Promise<string> {
   const { data, error } = await supabase.rpc('merchant_staff_add', {
     p_merchant_id: params.merchantId,
@@ -62,6 +69,7 @@ export async function addStaff(params: {
     p_full_name: params.fullName.trim(),
     p_role: params.role,
     p_branch_id: null,
+    p_solo_registra: params.role === 'cajero' && params.soloRegistra === true,
   })
   if (error) throw error
   return String((data as { user_id: unknown }).user_id)
@@ -91,12 +99,14 @@ export async function enviarBienvenida(params: {
   return { status, error: r.error ?? null }
 }
 
-/** Nombre y rol. La sucursal la resuelve el servidor según el rol. */
+/** Nombre, rol y si solo registra. La sucursal la resuelve el servidor
+ *  según el rol. */
 export async function updateStaff(params: {
   merchantId: string
   userId: string
   fullName: string
   role: MerchantRole
+  soloRegistra: boolean
 }): Promise<void> {
   const { error } = await supabase.rpc('merchant_staff_update', {
     p_merchant_id: params.merchantId,
@@ -104,6 +114,7 @@ export async function updateStaff(params: {
     p_full_name: params.fullName.trim(),
     p_role: params.role,
     p_branch_id: null,
+    p_solo_registra: params.role === 'cajero' && params.soloRegistra,
   })
   if (error) throw error
 }
@@ -154,3 +165,12 @@ export const ROL: Record<MerchantRole, { label: string; hace: string }> = {
 export const ROLES: Array<{ value: MerchantRole; label: string }> = (
   ['gerente', 'cajero'] as const
 ).map((value) => ({ value, label: ROL[value].label }))
+
+/** Qué hace la secretaria que solo registra. */
+export const HACE_SOLO_REGISTRA =
+  'registra pagos en cuotas, sin ver el historial ni el monto de cada consulta'
+
+/** Qué hace esta persona: lo de su rol, o lo de la secretaria que solo registra. */
+export function queHace(m: { role: MerchantRole; soloRegistra: boolean }): string {
+  return m.role === 'cajero' && m.soloRegistra ? HACE_SOLO_REGISTRA : ROL[m.role].hace
+}

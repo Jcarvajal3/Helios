@@ -27,7 +27,7 @@ function PersonalRoute() {
 
   if (!staff) return null
 
-  if (!canSee(staff.role, 'personal')) {
+  if (!canSee(staff, 'personal')) {
     return (
       <EmptyState
         icon={<Lock size={48} />}

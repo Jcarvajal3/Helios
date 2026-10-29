@@ -2,8 +2,7 @@ import type { LucideIcon } from 'lucide-react'
 import { BarChart3, FilePlus2, FileText, HandCoins, Landmark, UserCog } from 'lucide-react'
 
 import { canSee } from '@/features/auth/permissions'
-import type { MerchantSection } from '@/features/auth/permissions'
-import type { MerchantRole } from '@/features/auth/session'
+import type { Acceso, MerchantSection } from '@/features/auth/permissions'
 import { pantalla } from '@/features/admin/catalogo'
 import type { Ambito, IdPantalla } from '@/features/admin/catalogo'
 
@@ -118,11 +117,11 @@ type MerchantNavGroup = { title?: string; items: MerchantNavItem[] }
  * peligroso que hay — el que parece una respuesta legítima (el mismo que
  * documenta la migración 20260822123000).
  */
-export function merchantNavGroupsFor(role: MerchantRole): NavGroup[] {
+export function merchantNavGroupsFor(acceso: Acceso): NavGroup[] {
   return merchantNavGroups
     .map((group) => ({
       ...group,
-      items: group.items.filter((i) => canSee(role, i.section)),
+      items: group.items.filter((i) => canSee(acceso, i.section)),
     }))
     .filter((group) => group.items.length > 0)
 }
@@ -259,8 +258,8 @@ const PREFERENCIA_EN_LA_BARRA: ReadonlyArray<string> = [
 /** Hasta tres: con el menú son cuatro huecos de 94 px, donde cabe «Comisiones» (y «Cuotas»). */
 const HUECOS_DE_LA_BARRA = 3
 
-export function merchantBarraInferiorFor(role: MerchantRole): NavItem[] {
-  const visibles = merchantNavGroupsFor(role).flatMap((g) => g.items)
+export function merchantBarraInferiorFor(acceso: Acceso): NavItem[] {
+  const visibles = merchantNavGroupsFor(acceso).flatMap((g) => g.items)
   return PREFERENCIA_EN_LA_BARRA.map((path) => visibles.find((i) => i.path === path))
     .filter((i): i is NavItem => i !== undefined)
     .slice(0, HUECOS_DE_LA_BARRA)

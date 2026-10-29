@@ -67,7 +67,7 @@ function FinanciamientosRoute() {
   if (!staff) return null
   // Los dos roles entran: la secretaria ve los que registró ella. Lo recorta
   // la base, no esta pantalla.
-  if (!canSee(staff.role, 'financiamientos')) return null
+  if (!canSee(staff, 'financiamientos')) return null
   return <Financiamientos staff={staff} />
 }
 
@@ -166,7 +166,7 @@ function Financiamientos({ staff }: { staff: StaffContext }) {
         {/* La descarga es del administrador: lleva el neto y lo transferido,
             que es la misma clase de dato que Pagos. La base lo vuelve a
             comprobar en `merchant_sales_export`. */}
-        {canSee(staff.role, 'contabilidad') && (
+        {canSee(staff, 'contabilidad') && (
           <div className="ml-auto">
             <DescargarVentas
               from={rango.from}

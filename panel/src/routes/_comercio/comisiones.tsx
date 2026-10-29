@@ -67,7 +67,7 @@ export const Route = createFileRoute('/_comercio/comisiones')({
 function ComisionesRoute() {
   const staff = useStaff()
   if (!staff) return null
-  if (!canSee(staff.role, 'comisiones')) return null
+  if (!canSee(staff, 'comisiones')) return null
   return <Comisiones staff={staff} />
 }
 
@@ -92,7 +92,7 @@ function Comisiones({ staff }: { staff: StaffContext }) {
 
   const porDefecto = rangoPorDefecto(hoy)
   const rango = { from: search.desde ?? porDefecto.from, to: search.hasta ?? porDefecto.to }
-  const deTodos = canSee(staff.role, 'comisiones-de-todos')
+  const deTodos = canSee(staff, 'comisiones-de-todos')
   const vista: Vista = deTodos ? (search.vista ?? 'persona') : 'persona'
 
   const resumen = useQuery({
@@ -171,7 +171,7 @@ function Comisiones({ staff }: { staff: StaffContext }) {
         {deTodos
           ? 'Helios paga cada comisión a la clínica el día siguiente a que el paciente confirma, junto con las consultas de ese día. La clínica se las entrega a su personal.'
           : 'Ves solo tus comisiones. Helios le paga cada una a la clínica junto con la primera mitad de la consulta (8 días después de que el paciente confirma), y la clínica te las entrega.'}
-        {canSee(staff.role, 'pagos') && (
+        {canSee(staff, 'pagos') && (
           <>
             {' '}
             <Link to="/pagos" className="underline underline-offset-2 hover:text-on-surface">
@@ -186,7 +186,13 @@ function Comisiones({ staff }: { staff: StaffContext }) {
       )}
 
       {/* La secretaria: directamente sus comisiones, una por orden. */}
-      {!deTodos && resumen.isSuccess && <DetalleDePersona rango={rango} persona={null} />}
+      {!deTodos && resumen.isSuccess && (
+        <DetalleDePersona
+          rango={rango}
+          persona={null}
+          conFicha={canSee(staff, 'financiamientos')}
+        />
+      )}
 
       {deTodos && search.persona && (
         <>
@@ -201,6 +207,7 @@ function Comisiones({ staff }: { staff: StaffContext }) {
           <DetalleDePersona
             rango={rango}
             persona={{ id: search.persona, nombre: personaElegida?.staffName ?? null }}
+            conFicha
           />
         </>
       )}
@@ -372,14 +379,17 @@ function PorSemana({
 /**
  * Las comisiones de una persona, orden a orden y agrupadas por semana, con
  * el día en que se paga cada una (el de la primera mitad de su consulta) o en que se
- * pagó. `persona` a null: las de quien mira (la secretaria).
+ * pagó. `persona` a null: las de quien mira (la secretaria). Sin `conFicha`
+ * (la secretaria que solo registra), el número de orden no abre la ficha.
  */
 function DetalleDePersona({
   rango,
   persona,
+  conFicha,
 }: {
   rango: { from: string; to: string }
   persona: { id: string; nombre: string | null } | null
+  conFicha: boolean
 }) {
   const items = useQuery({
     queryKey: ['comisiones', 'items', rango.from, rango.to, persona?.id ?? 'yo'],
@@ -435,13 +445,17 @@ function DetalleDePersona({
                     {formatDateTime(i.createdAt)}
                   </Td>
                   <Td>
-                    <Link
-                      to="/financiamientos/$id"
-                      params={{ id: i.chargeId }}
-                      className="font-semibold underline-offset-2 hover:underline"
-                    >
-                      #{i.orderNumber}
-                    </Link>
+                    {conFicha ? (
+                      <Link
+                        to="/financiamientos/$id"
+                        params={{ id: i.chargeId }}
+                        className="font-semibold underline-offset-2 hover:underline"
+                      >
+                        #{i.orderNumber}
+                      </Link>
+                    ) : (
+                      <span className="font-semibold">#{i.orderNumber}</span>
+                    )}
                   </Td>
                   <Td
                     className={`tabular-nums ${i.status === 'revertida' ? 'text-on-surface-variant line-through' : 'font-semibold'}`}

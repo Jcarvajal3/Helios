@@ -35,6 +35,7 @@ import {
   ROL,
   ROLES,
   addStaff,
+  queHace,
   enviarBienvenida,
   fetchStaff,
   removeStaff,
@@ -364,7 +365,7 @@ function Fila({
             <span className="text-on-surface-variant"> · {miembro.branch}</span>
           )}
         </p>
-        <p className="type-panel-body text-on-surface-variant">{rol.hace}</p>
+        <p className="type-panel-body text-on-surface-variant">{queHace(miembro)}</p>
       </div>
 
       <p className="hidden type-panel-body text-on-surface-variant lg:block">
@@ -523,6 +524,9 @@ function Alta({
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [role, setRole] = useState<MerchantRole>('cajero')
+  // Marcada de entrada (Javier, 2026-10-29): la secretaria nace sin el
+  // historial de pagos en cuotas, y el médico la desmarca si quiere.
+  const [soloRegistra, setSoloRegistra] = useState(true)
   // Nace generada y se puede escribir encima. El inicializador es una función
   // para que solo corra al montar: si se regenerara en cada repintado, la que
   // se copia no sería la que se guarda.
@@ -535,7 +539,7 @@ function Alta({
 
   const mutation = useMutation({
     mutationFn: async (): Promise<DespuesDelAlta> => {
-      const userId = await addStaff({ merchantId, email, password, fullName, role })
+      const userId = await addStaff({ merchantId, email, password, fullName, role, soloRegistra })
 
       // El bot va antes del correo: así el correo ya dice su número.
       let bot: DespuesDelAlta['bot'] = null
@@ -627,7 +631,10 @@ function Alta({
             options={ROLES}
             onChange={setRole}
           />
-          <p className="type-panel-body text-on-surface-variant">{ROL[role].hace}</p>
+          <p className="type-panel-body text-on-surface-variant">{queHace({ role, soloRegistra })}</p>
+          {role === 'cajero' && (
+            <CasillaSoloRegistra id="alta-solo-registra" checked={soloRegistra} onChange={setSoloRegistra} />
+          )}
 
           <CampoContrasena id="alta-clave" value={password} onChange={setPassword} />
 
@@ -735,6 +742,39 @@ function ResumenDelAlta({
   )
 }
 
+/**
+ * La secretaria que solo registra (2026-10-29): registra pacientes y ve sus
+ * comisiones, sin la pestaña de pagos en cuotas. A criterio del médico; el
+ * corte de verdad lo hace la base (`helios_assert_ve_el_historial`).
+ */
+function CasillaSoloRegistra({
+  id,
+  checked,
+  onChange,
+}: {
+  id: string
+  checked: boolean
+  onChange: (marcada: boolean) => void
+}) {
+  return (
+    <div>
+      <Checkbox
+        id={id}
+        label="Ocultarle el historial de pagos en cuotas y sus montos"
+        checked={checked}
+        onChange={onChange}
+      />
+      {/* El médico es nuevo y no sabe qué más hay: se le dice lo que se
+          oculta, no lo que queda (Javier, 2026-10-29). */}
+      <p className="mt-1 pl-7 type-panel-body text-on-surface-variant">
+        {checked
+          ? 'No verá la pestaña Pagos en cuotas: ni los pacientes que registró antes ni el monto de cada consulta.'
+          : 'Verá la pestaña Pagos en cuotas con los pacientes que registró y el monto de cada consulta.'}
+      </p>
+    </div>
+  )
+}
+
 // ── Edición ────────────────────────────────────────────────────────────────
 
 function Edicion({
@@ -754,6 +794,7 @@ function Edicion({
   const isSuperAdmin = useIsSuperAdmin()
   const [fullName, setFullName] = useState(miembro.name ?? '')
   const [role, setRole] = useState<MerchantRole>(miembro.role)
+  const [soloRegistra, setSoloRegistra] = useState(miembro.soloRegistra)
 
   // El bot solo se edita con los números ya leídos al abrir: sin ellos no
   // se sabe si el campo vacío es «no tiene» o «no se pudo leer», y si
@@ -767,6 +808,8 @@ function Edicion({
 
   const cambioDeRol = role !== miembro.role
   const cambioDeNombre = fullName.trim() !== (miembro.name ?? '')
+  // Para un administrador no cuenta: nunca solo registra.
+  const cambioDeAcceso = (role === 'cajero' && soloRegistra) !== miembro.soloRegistra
   const nuevoE164 = celularAE164(whatsapp)
   const cambioDeBot =
     conBot &&
@@ -777,8 +820,8 @@ function Edicion({
 
   const mutation = useMutation({
     mutationFn: async () => {
-      if (cambioDeRol || cambioDeNombre) {
-        await updateStaff({ merchantId, userId: miembro.userId, fullName, role })
+      if (cambioDeRol || cambioDeNombre || cambioDeAcceso) {
+        await updateStaff({ merchantId, userId: miembro.userId, fullName, role, soloRegistra })
       }
       if (cambioDeBot) {
         if (quitaElBot && numeroActual) {
@@ -817,7 +860,10 @@ function Edicion({
             options={ROLES}
             onChange={setRole}
           />
-          <p className="type-panel-body text-on-surface-variant">{ROL[role].hace}</p>
+          <p className="type-panel-body text-on-surface-variant">{queHace({ role, soloRegistra })}</p>
+          {role === 'cajero' && (
+            <CasillaSoloRegistra id="editar-solo-registra" checked={soloRegistra} onChange={setSoloRegistra} />
+          )}
 
           {/* Cambiarse el rol a uno mismo deja al local sin nadie que pueda
               gestionar su personal. Lo rechaza el servidor; aquí se dice
@@ -875,7 +921,7 @@ function Edicion({
               ? motivoDelWhatsApp(whatsapp)
               : cambioDeBot && !isSuperAdmin
                 ? SOLO_SUPER_ADMIN
-                : !cambioDeRol && !cambioDeNombre && !cambioDeBot
+                : !cambioDeRol && !cambioDeNombre && !cambioDeAcceso && !cambioDeBot
                   ? 'No has cambiado nada'
                   : undefined
       }

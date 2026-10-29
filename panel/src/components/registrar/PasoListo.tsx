@@ -42,6 +42,7 @@ import { DesgloseDelServicio, PlanDePagos } from './PlanDePagos'
 export function PasoListo({
   financiamiento,
   coincide,
+  conFicha,
   onOtro,
   onRegistrarElQueQueria,
 }: {
@@ -51,6 +52,8 @@ export function PasoListo({
    * respuesta de aquel alta se perdió y esto no es lo que se acaba de pedir.
    */
   coincide: boolean
+  /** La secretaria que solo registra no abre la ficha de la orden. */
+  conFicha: boolean
   onOtro: () => void
   onRegistrarElQueQueria: () => void
 }) {
@@ -209,13 +212,15 @@ export function PasoListo({
           Registrar otro
           <Tecla enBoton>Enter</Tecla>
         </BotonConFoco>
-        <Link
-          to="/financiamientos/$id"
-          params={{ id: f.id }}
-          className={claseDeBoton('text', 'md')}
-        >
-          Ver el pago en cuotas
-        </Link>
+        {conFicha && (
+          <Link
+            to="/financiamientos/$id"
+            params={{ id: f.id }}
+            className={claseDeBoton('text', 'md')}
+          >
+            Ver el pago en cuotas
+          </Link>
+        )}
       </div>
     </div>
   )

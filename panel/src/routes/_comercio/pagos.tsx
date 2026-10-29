@@ -52,7 +52,7 @@ function PagosRoute() {
 
   // Sin este corte, una secretaria vería CERO y no un error: la RLS de
   // `settlements` le devuelve lista vacía. Es el fallo que parece respuesta.
-  if (!canSee(staff.role, 'pagos')) {
+  if (!canSee(staff, 'pagos')) {
     return (
       <EmptyState
         icon={<Lock size={48} />}

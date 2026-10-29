@@ -28,6 +28,10 @@ export type StaffContext = {
   /** Dirección de la sucursal. Opcional en la base. */
   branchAddress: string | null
   role: MerchantRole
+  /** Secretaria que solo registra pacientes y ve sus comisiones: sin el
+   *  historial de pagos en cuotas (`merchant_users.solo_registra`). Para un
+   *  administrador, siempre false. */
+  soloRegistra: boolean
 }
 
 /**
@@ -90,7 +94,7 @@ export async function fetchStaffContext(userId: string): Promise<StaffContext | 
     // consulta aparte: es la MISMA fila que ya se lee al entrar al panel, y
     // sin ellos el comprobante del cobro no dice quién emite.
     .select(
-      'merchant_id, branch_id, role, ' +
+      'merchant_id, branch_id, role, solo_registra, ' +
         'merchants(name, legal_name, tax_id), ' +
         'merchant_branches(name, address)',
     )
@@ -115,6 +119,7 @@ export async function fetchStaffContext(userId: string): Promise<StaffContext | 
     merchant_id: string
     branch_id: string | null
     role: MerchantRole | 'inventario'
+    solo_registra: boolean | null
     merchants: {
       name: string
       legal_name: string | null
@@ -139,6 +144,7 @@ export async function fetchStaffContext(userId: string): Promise<StaffContext | 
     branchName: row.merchant_branches?.name ?? 'Todas las sedes',
     branchAddress: row.merchant_branches?.address ?? null,
     role: row.role,
+    soloRegistra: row.role === 'cajero' && row.solo_registra === true,
   }
 }
 

@@ -49,8 +49,8 @@ function ComercioShell({
 
   return (
     <PanelShell
-      groups={merchantNavGroupsFor(staff.role)}
-      barraInferior={merchantBarraInferiorFor(staff.role)}
+      groups={merchantNavGroupsFor(staff)}
+      barraInferior={merchantBarraInferiorFor(staff)}
       logo={(plegado) => (
         <LogoDeHelios clinica={staff.merchantName} plegado={plegado} />
       )}

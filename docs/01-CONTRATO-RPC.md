@@ -636,6 +636,21 @@ ficha, que va delante del nombre en los mensajes al paciente).
   columna «Médico titular» de la lista de Clínicas.
 - `merchant_staff_add` / `merchant_staff_update`: el rol `inventario` se
   rechaza (`22023`).
+- **La secretaria que solo registra** (20261029160000): `merchant_users.solo_registra`
+  (false por defecto; solo para `cajero`, lo exige un check).
+  `merchant_staff_add(..., p_branch_id uuid default null, p_solo_registra boolean default false)`,
+  `merchant_staff_update(..., p_branch_id uuid default null, p_solo_registra boolean default null)`
+  (null conserva lo que tenía; pasar a administrador lo apaga) y
+  `merchant_staff_list` devuelve `solo_registra` en cada fila. El panel lo
+  manda marcado al crear una secretaria (se desmarca en el alta o en «Editar»).
+  Quien solo registra no consulta el historial: `merchant_transactions`,
+  `merchant_transactions_summary`, `merchant_sales_by_staff` y
+  `merchant_charge_detail` le responden `42501`
+  (`helios_assert_ve_el_historial`) y `merchant_charge_items` le sale vacía.
+  Sí registra (`helios_charge_for_staff` de la orden recién registrada) y ve
+  sus comisiones. «Mis pagos en cuotas» del bot (`bot_recent_charges`) le
+  devuelve el mismo `42501`, que el bot enseña tal cual.
+  `helios_solo_registra() → boolean` dice si quien llama lo es.
 - `merchant_staff_send_welcome(p_merchant_id uuid, p_user_id uuid, p_password text) →
   {status: 'enviado' | 'sin_configurar' | 'fallido', error}` (20261009000300):
   quien gestiona el personal (equipo o gerente), justo después de

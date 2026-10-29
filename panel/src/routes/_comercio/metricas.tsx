@@ -76,14 +76,14 @@ function MetricasPage() {
   const overview = useQuery({
     queryKey: ['merchant-overview', days],
     queryFn: () => fetchMerchantOverview(days),
-    enabled: !!staff && canSee(staff.role, 'metricas'),
+    enabled: !!staff && canSee(staff, 'metricas'),
     placeholderData: keepPreviousData,
   })
 
   const daily = useQuery({
     queryKey: ['merchant-daily', days],
     queryFn: () => fetchMerchantDailySeries(days),
-    enabled: !!staff && canSee(staff.role, 'metricas'),
+    enabled: !!staff && canSee(staff, 'metricas'),
     placeholderData: keepPreviousData,
   })
 
@@ -92,12 +92,12 @@ function MetricasPage() {
   const recurrence = useQuery({
     queryKey: ['merchant-recurrence', RECURRENCE_DAYS],
     queryFn: () => fetchMerchantRecurrence(RECURRENCE_DAYS),
-    enabled: !!staff && canSee(staff.role, 'metricas'),
+    enabled: !!staff && canSee(staff, 'metricas'),
   })
 
   if (!staff) return null
 
-  if (!canSee(staff.role, 'metricas')) {
+  if (!canSee(staff, 'metricas')) {
     return (
       <EmptyState
         icon={<Lock size={48} />}
