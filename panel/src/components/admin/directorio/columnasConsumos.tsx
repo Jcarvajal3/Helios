@@ -25,7 +25,7 @@ import { csvDinero, csvInstante } from '@/lib/csv'
  *
  * La ancla es el número de orden: es lo que identifica la fila y lo único que
  * el local dice por teléfono. El importe es el consumo sin la Comisión Helios;
- * la comisión va en las cuotas y en la factura de cada consumo.
+ * al lado, la comisión + IVA y el total que paga el paciente (2026-10-29).
  */
 export const COLUMNAS_CONSUMOS: Array<Column<ChargeRow>> = [
   {
@@ -148,6 +148,47 @@ export const COLUMNAS_CONSUMOS: Array<Column<ChargeRow>> = [
   },
 
   {
+    // Javier (2026-10-29): la comisión y el total que paga el paciente, cada
+    // uno en su columna. Es el superadmin (interno): a la clínica nunca se le
+    // enseña un total con la comisión.
+    key: 'comision',
+    header: 'Comisión Helios + IVA',
+    info: 'La Comisión Helios más su IVA, que paga el paciente repartida en sus cuotas. Es la diferencia entre el total con comisión y lo financiado. En dólares; en una orden en euros, debajo, lo que es en euros.',
+    type: 'number',
+    sort: (c) => c.amountUsd - c.financedUsd,
+    csv: (c) => csvDinero(c.amountUsd - c.financedUsd),
+    cell: (c) => (
+      <span className="block whitespace-nowrap">
+        {formatUsd(c.amountUsd - c.financedUsd)}
+        {c.currency === 'EUR' && (
+          <span className="block type-panel-caption tabular-nums text-on-surface-variant">
+            {formatMoneda(c.amountCur - c.financedCur, 'EUR')}
+          </span>
+        )}
+      </span>
+    ),
+  },
+
+  {
+    key: 'total',
+    header: 'Total con comisión',
+    info: 'Lo que paga el paciente: lo financiado más la Comisión Helios + IVA, en sus cuotas. En dólares; en una orden en euros, debajo, lo que es en euros.',
+    type: 'number',
+    sort: (c) => c.amountUsd,
+    csv: (c) => csvDinero(c.amountUsd),
+    cell: (c) => (
+      <span className="block whitespace-nowrap font-semibold">
+        {formatUsd(c.amountUsd)}
+        {c.currency === 'EUR' && (
+          <span className="block type-panel-caption font-normal tabular-nums text-on-surface-variant">
+            {formatMoneda(c.amountCur, 'EUR')}
+          </span>
+        )}
+      </span>
+    ),
+  },
+
+  {
     // Javier (2026-10-26): en qué moneda se hizo cada orden. Las cifras y las
     // métricas siguen en dólares, con la conversión del día del registro.
     key: 'moneda',
@@ -168,13 +209,20 @@ export const COLUMNAS_CONSUMOS: Array<Column<ChargeRow>> = [
       ),
   },
 
-  // Solo para el archivo: lo financiado en la moneda de la orden, sin el €.
+  // Solo para el archivo: lo financiado y el total en la moneda de la orden, sin el €.
   {
     key: 'consumo-moneda',
     header: 'Financiado en su moneda',
     hidden: true,
     csv: (c) => csvDinero(c.financedCur),
     cell: (c) => formatMoneda(c.financedCur, c.currency),
+  },
+  {
+    key: 'total-moneda',
+    header: 'Total con comisión en su moneda',
+    hidden: true,
+    csv: (c) => csvDinero(c.amountCur),
+    cell: (c) => formatMoneda(c.amountCur, c.currency),
   },
 
   {

@@ -63,6 +63,8 @@ export type ChargeRow = {
   currency: Moneda
   /** El consumo sin comisión en la moneda de la orden (igual a `financedUsd` en una en dólares). */
   financedCur: number
+  /** Lo que paga el paciente (con la Comisión Helios y su IVA) en la moneda de la orden. */
+  amountCur: number
   /** Dólares por unidad de su moneda el día del registro: la conversión que pasó la orden al libro. */
   fxUsdPerUnit: number
 }
@@ -111,6 +113,7 @@ export async function fetchCharges(params: {
     // 20261026235000. Sin la columna, dólares: es lo que era todo antes.
     currency: leerMoneda(row.currency),
     financedCur: numeroONulo(row.financed_cur) ?? numero(row.financed_usd),
+    amountCur: numeroONulo(row.amount_cur) ?? numero(row.amount_usd),
     fxUsdPerUnit: numeroONulo(row.fx_usd_per_unit) ?? 1,
   }))
 }

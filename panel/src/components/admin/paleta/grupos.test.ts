@@ -80,6 +80,7 @@ function consumo(cambios: Partial<ChargeRow> = {}): ChargeRow {
     installmentsTotal: 2,
     currency: 'USD',
     financedCur: 10,
+    amountCur: 12.32,
     fxUsdPerUnit: 1,
     ...cambios,
   }
