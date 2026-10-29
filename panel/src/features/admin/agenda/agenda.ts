@@ -77,15 +77,23 @@ export const ESTADOS_DE_LA_FASE: Record<Fase, readonly EstadoDelLead[]> = {
 }
 
 /**
- * Lo que se puede anotar en cada fase, en el orden en que se ofrece. El
- * primero de la lista es el que la hace avanzar: el interesado pasa a
- * Llamada, la visita agendada a Visita y la realizada lo deja afiliado.
+ * Lo que se puede anotar en cada fase, en el orden en que se ofrece: primero
+ * lo que la hace avanzar (`AVANZAN_DE_FASE`). En Mensaje se puede agendar la
+ * visita sin pasar por Llamada (Javier, 2026-10-29): el médico salta a
+ * Visita.
  */
 export const ACCIONES_DE_LA_FASE: Record<Fase, readonly Resultado[]> = {
-  mensaje: ['interesado', 'mensaje_enviado', 'no_contesto', 'no_interesado'],
+  mensaje: ['interesado', 'visita_agendada', 'mensaje_enviado', 'no_contesto', 'no_interesado'],
   llamada: ['visita_agendada', 'no_contesto', 'ocupado', 'no_interesado'],
   visita: ['visita_realizada', 'visita_pospuesta', 'visita_cancelada'],
 }
+
+/**
+ * Los resultados que hacen avanzar al médico de fase, y van destacados: el
+ * interesado pasa a Llamada, la visita agendada a Visita y la realizada lo
+ * deja afiliado.
+ */
+export const AVANZAN_DE_FASE: ReadonlySet<Resultado> = new Set(['interesado', 'visita_agendada', 'visita_realizada'])
 
 /** El canal con el que se guarda una gestión de cada fase. */
 export const CANAL_DE_LA_FASE: Record<Fase, CanalDelLead> = {

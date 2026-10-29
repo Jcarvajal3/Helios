@@ -208,6 +208,12 @@ console.log('\n── Las fases ────────────────
   igual('sin la fase, sale del estado', lead('x', { status: 'respondio' }).fase, 'llamada')
 
   igual('en Mensaje, lo primero es «Interesado»', accionesPara(enMensaje)[0], 'interesado')
+  comprueba(accionesPara(enMensaje).includes('visita_agendada'), 'y desde Mensaje se agenda la visita sin pasar por Llamada')
+  igual(
+    'la visita agendada desde Mensaje deja el médico en «Visita agendada»',
+    estadoDelResultado('visita_agendada', enMensaje),
+    'reunion',
+  )
   igual('en Llamada, agendar la visita', accionesPara(enLlamada)[0], 'visita_agendada')
   const conVisita = lead('v', { status: 'reunion', meeting_at: '2026-10-23T14:00:00Z' })
   igual('en Visita, realizada · afiliado', accionesPara(conVisita)[0], 'visita_realizada')

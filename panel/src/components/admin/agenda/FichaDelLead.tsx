@@ -52,6 +52,7 @@ import { MESES_CORTOS, sumarDias } from '@/components/kit/rango'
 import { haceCuanto } from '@/features/admin/cobranza/senales'
 import { anotarGestion, borrarLead, consultaHistoria, refrescarAgenda } from '@/features/admin/agenda/api'
 import {
+  AVANZAN_DE_FASE,
   ESTADO_DEL_LEAD,
   FASES,
   MODOS_DE_VISITA,
@@ -606,9 +607,9 @@ const AYUDA_DE_ACCION: Record<Resultado, string> = {
 
 /**
  * Anotar lo que pasó con los botones de la fase en que está. En Mensaje,
- * «Interesado» lo pasa a Llamada; en Llamada, agendar la visita lo pasa a
- * Visita; en Visita, «Visita realizada · Afiliado» lo deja afiliado. El
- * primero de cada fase es el que la hace avanzar y va destacado. Elegido uno,
+ * «Interesado» lo pasa a Llamada y agendar la visita, directo a Visita; en
+ * Llamada, agendar la visita lo pasa a Visita; en Visita, «Visita realizada
+ * · Afiliado» lo deja afiliado. Lo que hace avanzar va destacado. Elegido uno,
  * aparece lo que pide (la fecha de la visita, cuándo volver a contactarlo) y
  * la nota. «Solo una nota» está siempre.
  */
@@ -661,10 +662,10 @@ function AnotarGestion({ lead, hoy, ahora }: { lead: Lead; hoy: string; ahora: D
         <p className="type-panel-body text-on-surface-variant">Ya está afiliado. Si hace falta, deja una nota.</p>
       ) : (
         <div className="grid gap-2 sm:grid-cols-2">
-          {acciones.map((r, i) => {
+          {acciones.map((r) => {
             const Icono = ICONO_RESULTADO[r]
             const elegido = resultado === r
-            const avanza = i === 0
+            const avanza = AVANZAN_DE_FASE.has(r)
             return (
               <button
                 key={r}
