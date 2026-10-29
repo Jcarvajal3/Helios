@@ -1243,7 +1243,7 @@ Las dos: **Utility** · **`es`** · variables numéricas · botones de respuesta
 
 **`helios_cuota_con_vencidas`** → `cuota_con_vencidas` (13 variables)
 
-> Hola, {{1}} 👋 Te recordamos que tu cuota de {{2}} de la consulta con {{3}} {{4}}.
+> Hola, {{1}} 👋 Te recordamos que tu cuota de {{2}} de la consulta con {{3}} vence {{4}}.
 >
 > ⚠️ También tienes {{5}}. Te recomendamos pagar primero lo vencido para ponerte al día 💙
 >
@@ -1264,7 +1264,7 @@ Las dos: **Utility** · **`es`** · variables numéricas · botones de respuesta
 >
 > ⭐ Recuerda pagar a tiempo para subir de nivel y disponer de mayores beneficios.
 
-Ejemplo: María · $56,96 · la Dra. Nadia Andi Khabbaze Alfaro · vence mañana, lunes 02/11 · 1 cuota vencida de $56,96 (venció el lunes 26/10) · Bs 10.624,18 · tu cuota vencida ($56,96) · dólar · Bs 21.248,36 · tus 2 cuotas ($113,92) · BNC (0191) · 0412-1714930 · J-50496786-6.
+Ejemplo: María · $56,96 · la Dra. Nadia Andi Khabbaze Alfaro · mañana, lunes 02/11 (o «el lunes 02/11», «hoy, lunes 02/11») · 1 cuota vencida de $56,96 (venció el lunes 26/10) · Bs 10.624,18 · tu cuota vencida ($56,96) · dólar · Bs 21.248,36 · tus 2 cuotas ($113,92) · BNC (0191) · 0412-1714930 · J-50496786-6.
 
 **`helios_cuotas_vencidas`** → `cuotas_vencidas` (14 variables)
 
@@ -1273,7 +1273,7 @@ Ejemplo: María · $56,96 · la Dra. Nadia Andi Khabbaze Alfaro · vence mañana
 > Puedes pagar todo de una vez o empezar por la más antigua.
 >
 > 💵 *Para pagar la más antigua hoy: {{6}}*
-> Es tu cuota del {{7}} ({{8}}) a la tasa BCV del {{9}} de hoy.
+> Es tu cuota del {{7}} (de {{8}}) a la tasa BCV del {{9}} de hoy.
 >
 > 💰 *Para pagar todo de una vez hoy: {{10}}*
 > Son {{11}}.
@@ -1296,3 +1296,5 @@ Ejemplo: María · $56,96 · la Dra. Nadia Andi Khabbaze Alfaro · lunes 02/11 �
 **Al aprobarse** (leerlas en vivo de 360dialog y comprobar que sean UTILITY): `update public.notification_templates set wa_template_name = 'helios_cuota_con_vencidas' where key = 'cuota_con_vencidas';` y lo mismo con `helios_cuotas_vencidas` / `cuotas_vencidas`. Las variables y los botones ya están puestos.
 
 Piezas nuevas (internas): `helios_vencidas_de(user, hoy, excluir_fecha, excluir_ids) → jsonb`, `helios_payment_block_doble`, `helios_wa_template_for(key, vars)`, `helios_bs_de`, `helios_moneda_de`, `helios_dia_text`. Variables nuevas de los avisos: `tu_cuota`, `tu_cuota_inicio`, `vence`, `vencio`, `aviso_vencidas`, `aviso_vencidas_html`, `situacion_vencida`, `opciones_vencidas`.
+
+(2026-10-29, `20261029170000`) Meta rechazó la primera versión: «Two variables cannot be next to each other» («con {{3}} {{4}}»). Quedó «con {{3}} vence {{4}}», y {{4}} ya no lleva el verbo. En la segunda, «({{8}})» pasó a «(de {{8}})» para no rozar la misma regla.

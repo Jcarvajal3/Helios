@@ -131,7 +131,7 @@ begin
      or v_row.wa_template->'params'->>0 <> 'María'
      or v_row.wa_template->'params'->>1 <> '$56,96'
      or v_row.wa_template->'params'->>2 <> 'la Dra. Nadia Prueba'
-     or v_row.wa_template->'params'->>3 <> 'vence el ' || public.helios_dia_text(v_hoy + 3)
+     or v_row.wa_template->'params'->>3 <> 'el ' || public.helios_dia_text(v_hoy + 3)
      or v_row.wa_template->'params'->>4 <> '1 cuota vencida de $56,96 (venció el ' || public.helios_dia_text(v_hoy - 3) || ')'
      or v_row.wa_template->'params'->>5 <> 'Bs 45.568,00'
      or v_row.wa_template->'params'->>6 <> 'tu cuota vencida ($56,96)'
@@ -150,7 +150,7 @@ begin
   select * into v_row from public.outbound_messages
   where profile_id = v_pac and template_key = 'cuota_manana' and channel = 'whatsapp';
   if v_row.rendered_text not like '%⚠️ También tienes 1 cuota vencida%'
-     or v_row.wa_template->'params'->>3 <> 'vence mañana, ' || public.helios_dia_text(v_hoy + 1) then
+     or v_row.wa_template->'params'->>3 <> 'mañana, ' || public.helios_dia_text(v_hoy + 1) then
     raise exception 'Caso 1: la víspera también debía contar lo vencido: %', to_jsonb(v_row);
   end if;
   delete from public.outbound_messages where profile_id = v_pac;
