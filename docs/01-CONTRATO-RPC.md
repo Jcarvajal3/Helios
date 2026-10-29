@@ -1091,8 +1091,12 @@ pausarla desaparece sola y vuelve sola al reactivarla.
 
 - `helios_directorio() → table(merchant_id, name, specialty, specialty_key,
   address, city, whatsapp, social_network, social_user)` — **anon y
-  authenticated**. Las publicadas, por el
-  nombre sin el título.
+  authenticated**. Las publicadas, en un orden sorteado en cada llamada que
+  favorece a quien tiene menos clics públicos en los últimos 7 días
+  (20261029100000): se ordena por `random() ^ (1 + clics)` de mayor a menor
+  (sorteo ponderado de Efraimidis–Spirakis, peso 1 / (1 + clics)). Con los
+  mismos clics el orden rota; entre `a` y `b` clics, el de `a` sale por encima
+  con probabilidad (1 + b) / (2 + a + b). Volátil.
 - `helios_directorio_contacto(p_merchant_id uuid, p_visitante text default
   null) → boolean` — **anon y authenticated**. Apunta un clic y dice si contó.
   `false` sin guardar nada si la clínica no está publicada, si el mismo

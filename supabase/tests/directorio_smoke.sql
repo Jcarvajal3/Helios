@@ -35,6 +35,7 @@ declare
   v_ok      boolean;
   v_fallo   boolean;
   v_fila    record;
+  v_orden   uuid[];
 begin
   update public.platform_maintenance set is_active = false;
 
@@ -334,6 +335,32 @@ begin
        and not (detail -> 'despues' ->> 'is_visible')::boolean
   ) then
     raise exception '6. la bitácora no dice qué cambió';
+  end if;
+
+  -- =========================================================================
+  -- 7. El orden reparte los clics (20261029100000)
+  -- =========================================================================
+  -- Luis (publicado en el paso 3) no tiene clics públicos; otro médico
+  -- publicado, 30 esta semana. Luis tiene que salir por encima casi siempre
+  -- (31 de cada 32 veces): en 200 sorteos, al menos 150. Los 100 clics del
+  -- equipo que se le dan a Luis no cuentan.
+  delete from public.directory_contact_clicks where created_at > now() - interval '7 days';
+  select d.merchant_id into v_prueba from public.helios_directorio() d where d.merchant_id <> v_otra limit 1;
+  insert into public.directory_contact_clicks (merchant_id, visitor_id, origin)
+  select v_prueba, 'orden-clic-' || g, 'publico' from generate_series(1, 30) g;
+  insert into public.directory_contact_clicks (merchant_id, visitor_id, origin)
+  select v_otra, 'orden-equipo-' || g, 'equipo' from generate_series(1, 100) g;
+
+  -- Un solo sorteo por vuelta: cada llamada ordena distinto.
+  v_n := 0;
+  for v_ok in select true from generate_series(1, 200) loop
+    select array_agg(d.merchant_id) into v_orden from public.helios_directorio() d;
+    if array_position(v_orden, v_otra) < array_position(v_orden, v_prueba) then
+      v_n := v_n + 1;
+    end if;
+  end loop;
+  if v_n < 150 then
+    raise exception '7. el médico sin clics debía salir por encima casi siempre: % de 200', v_n;
   end if;
 end;
 $$;
