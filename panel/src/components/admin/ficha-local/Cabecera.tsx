@@ -1,9 +1,11 @@
+import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { FileDown } from 'lucide-react'
+import { Check, Copy, FileDown } from 'lucide-react'
 
 import { CabeceraDeFicha } from '@/components/admin/ficha'
 import type { HuecoDeMenu } from '@/components/admin/ficha'
 import { LogoLocal } from '@/components/admin/directorio/LogoLocal'
+import { useToast } from '@/components/Toast'
 import { Badge, Button, claseDeBoton, formatDateTime } from '@/components/ui'
 import { MERCHANT_CATEGORY_LABEL } from '@/features/admin/api'
 import type { MerchantRow } from '@/features/admin/api'
@@ -22,11 +24,14 @@ export function Cabecera({
   merchant,
   menu,
   datosDeAlta,
+  datosParaCompartir,
 }: {
   merchant: MerchantRow
   menu: ReadonlyArray<HuecoDeMenu>
   /** Bajar en CSV los datos de alta de esta clínica y su titular. */
   datosDeAlta: { pendiente: boolean; onDescargar: () => void }
+  /** El médico en texto, para pegárselo a un interesado (`fichaParaCompartir`). */
+  datosParaCompartir: string
 }) {
   const estado = ESTADOS_LOCAL[merchant.status]
 
@@ -71,9 +76,38 @@ export function Cabecera({
             <FileDown size={15} aria-hidden />
             {datosDeAlta.pendiente ? 'Leyendo…' : 'Datos de alta (CSV)'}
           </Button>
+          <CopiarDatos texto={datosParaCompartir} />
         </>
       }
       menu={menu}
     />
+  )
+}
+
+/** Copia el nombre, la especialidad, el teléfono y la dirección del médico, listos para pegar. */
+function CopiarDatos({ texto }: { texto: string }) {
+  const avisar = useToast()
+  const [copiado, setCopiado] = useState(false)
+
+  async function copiar() {
+    try {
+      await navigator.clipboard.writeText(texto)
+      setCopiado(true)
+      setTimeout(() => setCopiado(false), 1500)
+    } catch {
+      avisar('No se pudo copiar: el navegador no dejó usar el portapapeles')
+    }
+  }
+
+  return (
+    <Button
+      size="sm"
+      variant="tonal"
+      title={`Copia para pegárselo a un interesado:\n\n${texto}`}
+      onClick={() => void copiar()}
+    >
+      {copiado ? <Check size={15} aria-hidden /> : <Copy size={15} aria-hidden />}
+      {copiado ? 'Copiado' : 'Copiar datos'}
+    </Button>
   )
 }

@@ -7,6 +7,7 @@ import { usePageTitle } from '@/components/layouts/PageAction'
 import { ErrorBox, SkeletonList, Tabs } from '@/components/ui'
 import { fetchMerchantDetail, fetchMerchants } from '@/features/admin/api'
 import type { MerchantDetail, MerchantRow } from '@/features/admin/api'
+import { fichaParaCompartir } from '@/features/admin/clinicas/clinicas'
 import { useDatosDeContrato } from '@/features/admin/clinicas/useDatosDeContrato'
 import { valorDe } from '@/features/admin/parametros'
 import { useParametros } from '@/features/admin/useParametros'
@@ -154,6 +155,13 @@ function FichaLocal({
                 pendiente: datosDeAlta.pendiente,
                 onDescargar: () => datosDeAlta.descargar({ de: 'ficha', id: merchant.id, nombre: merchant.name }),
               }}
+              datosParaCompartir={fichaParaCompartir({
+                nombre: detalle.titular.doctorName ?? merchant.name,
+                especialidad: detalle.datos.specialty,
+                telefono: detalle.datos.phone,
+                direccion: detalle.datos.address,
+                ciudad: merchant.city,
+              })}
             />
             {datosDeAlta.error && (
               <ErrorBox title="No se pudieron bajar los datos de alta" detail={datosDeAlta.error} />

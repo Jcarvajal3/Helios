@@ -14,6 +14,8 @@ import {
   capacitacionParaEnviar,
   celularAE164,
   comoLoNombran,
+  fichaParaCompartir,
+  nombreComoLoLeen,
   comisionEfectiva,
   correccionesDeSolicitud,
   datosDeAlta,
@@ -105,6 +107,29 @@ igual('el título va con el alta', datosDeAlta({ ...alta, doctorTitle: 'Od.' }).
 igual('cómo la nombran sus pacientes', comoLoNombran('Dra.', '  ana maría DE la rosa '), 'Dra. Ana María de la Rosa')
 igual('sin título, el nombre solo (y sin el «Dr.» escrito a mano)', comoLoNombran('', 'Dr. luis gómez'), 'Luis Gómez')
 igual('un «Od.» escrito a mano no sale dos veces', comoLoNombran('Od.', 'od. ana pérez'), 'Od. Ana Pérez')
+igual('«la» tras «de», en minúscula', nombreComoLoLeen('MARÍA DE LA LUZ seijas'), 'María de la Luz Seijas')
+igual('«La» suelta es apellido', nombreComoLoLeen('daniel peña la grave'), 'Daniel Peña La Grave')
+igual('las partículas portuguesas', nombreComoLoLeen('sonia DE abreu DOS reis'), 'Sonia de Abreu dos Reis')
+igual('mayúscula tras el guion', nombreComoLoLeen('ricardo ziri-castro'), 'Ricardo Ziri-Castro')
+
+// ── Los datos para un interesado ───────────────────────────────────────────
+
+igual(
+  'los datos del médico, cada uno en su línea',
+  fichaParaCompartir({
+    nombre: 'Dra. Nadia Andi Khabbaze Alfaro',
+    especialidad: 'ODONTOLOGÍA ESTÉTICA.',
+    telefono: '+584141234567',
+    direccion: 'Av. Principal, Torre Médica, piso 3',
+    ciudad: 'Caracas',
+  }),
+  '*Dra. Nadia Andi Khabbaze Alfaro*\nEspecialidad: Odontología estética\nTeléfono: 0414-1234567\nDirección: Av. Principal, Torre Médica, piso 3, Caracas',
+)
+igual(
+  'la ciudad no se repite, y lo que falta no sale',
+  fichaParaCompartir({ nombre: 'Dr. Luis Gómez', especialidad: null, telefono: null, direccion: 'Calle 5, Caracas', ciudad: 'Caracas' }),
+  '*Dr. Luis Gómez*\nDirección: Calle 5, Caracas',
+)
 igual(
   'sin título no',
   motivoDeAlta({ ...alta, doctorTitle: '' }),

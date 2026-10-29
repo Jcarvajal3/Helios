@@ -1,4 +1,5 @@
 import { sumarDias } from '@/components/kit/rango'
+import { formatPhone } from '@/components/ui'
 import { instanteDeCaracas } from '@/features/admin/agenda/agenda'
 import { BANKS } from '@/features/admin/banks'
 import {
@@ -76,23 +77,80 @@ export function comoTitulo(v: unknown): TituloDelMedico | null {
   return TITULOS_DEL_MEDICO.find((t) => t === v) ?? null
 }
 
-const MINUSCULAS = new Set(['de', 'del', 'la', 'las', 'los', 'y'])
+const MINUSCULAS = new Set(['de', 'del', 'y', 'da', 'das', 'do', 'dos'])
+/** Solo detrás de «de»: «María de la Luz», pero «Peña La Grave». */
+const MINUSCULAS_TRAS_DE = new Set(['la', 'las', 'los'])
+
+/** Mayúscula inicial, también tras un guion o un apóstrofo («Ziri-Castro»), como `initcap`. */
+function conMayusculaInicial(palabra: string): string {
+  return palabra.toLowerCase().replace(/(^|[^\p{L}\p{N}])(\p{L})/gu, (_, antes: string, letra: string) => antes + letra.toUpperCase())
+}
 
 /**
  * El nombre del titular como lo leen sus pacientes (lo mismo que
- * `helios_person_name_text` en la base): cada palabra con mayúscula inicial,
- * «de», «del» y «la» en minúscula y sin un «Dr.» escrito delante.
+ * `helios_person_name_text` en la base, que además lo guarda así): cada
+ * palabra con mayúscula inicial, las partículas («de», «del», «da», «dos»…)
+ * en minúscula y sin un «Dr.» escrito delante.
  */
 export function nombreComoLoLeen(nombre: string): string {
-  return nombre
+  const palabras = nombre
     .trim()
     .replace(/^((dra|dr|lcda|lcdo|licda|licdo)\.?|od\.)\s+/i, '')
     .split(/\s+/)
     .filter(Boolean)
-    .map((w, i) =>
-      i > 0 && MINUSCULAS.has(w.toLowerCase()) ? w.toLowerCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase(),
-    )
+  return palabras
+    .map((w, i) => {
+      const baja = w.toLowerCase()
+      const particula = i > 0 && (MINUSCULAS.has(baja) || (MINUSCULAS_TRAS_DE.has(baja) && palabras[i - 1].toLowerCase() === 'de'))
+      return particula ? baja : conMayusculaInicial(w)
+    })
     .join(' ')
+}
+
+/**
+ * Una especialidad escrita a mano, presentable (lo mismo que
+ * `helios_directorio_texto`): «UROLOGO» → «Urologo», «medicina interna.» →
+ * «Medicina interna».
+ */
+function especialidadLegible(texto: string): string {
+  const t = texto.trim().replace(/[\s,;.\-/]+$/, '')
+  if (!t) return ''
+  const cuerpo = t === t.toUpperCase() ? t.slice(1).toLowerCase() : t.slice(1)
+  return t.charAt(0).toUpperCase() + cuerpo
+}
+
+/**
+ * Los datos del médico para pasárselos a un interesado (WhatsApp, correo):
+ * su nombre con el título, y debajo la especialidad, el teléfono y la
+ * dirección, cada uno en su línea. Lo que no tiene, no sale. El nombre va
+ * entre asteriscos: WhatsApp lo pone en negrita.
+ */
+export function fichaParaCompartir(m: {
+  /** «Dra. Nadia Andi Khabbaze Alfaro» (`helios_doctor_name`). */
+  nombre: string
+  especialidad: string | null
+  /** E.164, como se guarda. */
+  telefono: string | null
+  direccion: string | null
+  ciudad: string | null
+}): string {
+  const direccion = (m.direccion ?? '').trim()
+  const ciudad = (m.ciudad ?? '').trim()
+  // La ciudad, si la dirección no la dice ya.
+  const lugar =
+    direccion && ciudad && !direccion.toLowerCase().includes(ciudad.toLowerCase())
+      ? `${direccion.replace(/[\s,.]+$/, '')}, ${ciudad}`
+      : direccion || ciudad
+  const especialidad = especialidadLegible(m.especialidad ?? '')
+  const telefono = m.telefono ? formatPhone(m.telefono) : ''
+  return [
+    `*${m.nombre.trim()}*`,
+    especialidad && `Especialidad: ${especialidad}`,
+    telefono && `Teléfono: ${telefono}`,
+    lugar && `Dirección: ${lugar}`,
+  ]
+    .filter(Boolean)
+    .join('\n')
 }
 
 /** Cómo lo nombran sus pacientes: «Dra. Ana María Pérez», o el nombre solo. */

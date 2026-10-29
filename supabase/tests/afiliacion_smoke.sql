@@ -32,7 +32,8 @@ declare
   v_m        public.merchants%rowtype;
   v_cuenta   public.merchant_payout_accounts%rowtype;
   v_datos    jsonb := jsonb_build_object(
-    'owner_name', '  Ana   María Pérez ',
+    -- Como lo teclean: se guarda con mayúscula inicial («Ana María Pérez»).
+    'owner_name', '  ana   MARÍA pérez ',
     'doctor_title', ' Dra. ',
     'owner_document', 'V12345678',
     'tax_id', '',
@@ -225,7 +226,9 @@ begin
 
   reset role;
   select * into v_m from public.merchants where id = v_merchant;
-  if v_m.name <> 'Consultorio Dental Ana Pérez' or v_m.owner_name <> 'Ana María Pérez'
+  -- La clínica se llama como su médico; el nombre del consultorio queda aparte.
+  if v_m.name <> 'Dra. Ana María Pérez' or v_m.consultorio is distinct from 'Consultorio Dental Ana Pérez'
+     or v_m.owner_name <> 'Ana María Pérez'
      or v_m.owner_document <> 'V12345678' or v_m.college_number <> 'COV-1234'
      or v_m.category <> 'odontologia' or v_m.tax_id is not null or v_m.status <> 'active'
      or v_m.social_network <> 'instagram' or v_m.social_user <> '@dra.ana.prueba'

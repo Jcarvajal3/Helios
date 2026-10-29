@@ -91,9 +91,42 @@ begin
   if public.helios_person_name_text('jesus francisco VIVAS rodriguez') <> 'Jesus Francisco Vivas Rodriguez'
      or public.helios_person_name_text('Elizabeth Del valle  ponte Castillo') <> 'Elizabeth del Valle Ponte Castillo'
      or public.helios_person_name_text('DR. VICTOR GÓMEZ') <> 'Victor Gómez'
-     or public.helios_person_name_text('  ') is not null then
+     or public.helios_person_name_text('  ') is not null
+     or public.helios_person_name_text('MARÍA DE LA LUZ seijas') <> 'María de la Luz Seijas'
+     or public.helios_person_name_text('israel montes DE OCA') <> 'Israel Montes de Oca'
+     or public.helios_person_name_text('daniel peña la grave') <> 'Daniel Peña La Grave'
+     or public.helios_person_name_text('sonia DE abreu DOS reis') <> 'Sonia de Abreu dos Reis'
+     or public.helios_person_name_text('Lucymar DA silva') <> 'Lucymar da Silva'
+     or public.helios_person_name_text('ricardo ziri-castro') <> 'Ricardo Ziri-Castro' then
     raise exception 'El nombre del titular no se arregla como se espera';
   end if;
+
+  -- Se guarda arreglado, y el título escrito delante pasa a su columna si no había.
+  -- Al terminar, la clínica vuelve a como estaba: con titular, su nombre es
+  -- el del médico (`merchants_nombre_es_el_medico`) y no el de la prueba siguiente.
+  declare
+    v_antes public.merchants%rowtype;
+  begin
+  select * into v_antes from public.merchants where id = v_m;
+  update public.merchants set owner_name = '  zuleidys   DEL valle ', doctor_title = null where id = v_m;
+  if (select owner_name from public.merchants where id = v_m) <> 'Zuleidys del Valle'
+     or (select doctor_title from public.merchants where id = v_m) is not null then
+    raise exception 'El nombre del titular no se guardó arreglado: %', (select owner_name from public.merchants where id = v_m);
+  end if;
+  update public.merchants set owner_name = 'DRA. ana LARA' where id = v_m;
+  if (select owner_name from public.merchants where id = v_m) <> 'Ana Lara'
+     or (select doctor_title from public.merchants where id = v_m) is distinct from 'Dra.' then
+    raise exception 'El título escrito en el nombre debía pasar a su columna';
+  end if;
+  update public.merchants set owner_name = 'Lcdo. Pedro Pérez' where id = v_m;
+  if (select doctor_title from public.merchants where id = v_m) <> 'Dra.' then
+    raise exception 'Un título que ya estaba no se cambia por el escrito en el nombre';
+  end if;
+  update public.merchants
+     set owner_name = v_antes.owner_name, doctor_title = v_antes.doctor_title,
+         name = v_antes.name, consultorio = v_antes.consultorio
+   where id = v_m;
+  end;
 
   update public.merchants set owner_name = null where id = v_m;
   if public.helios_doctor_ref(v_m) <> 'Consultorio 999' then
