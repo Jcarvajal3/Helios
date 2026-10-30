@@ -1,6 +1,8 @@
+import { Link } from '@tanstack/react-router'
 import { AtSign, MapPin } from 'lucide-react'
 
 import { IconoDeEspecialidad } from './IconoDeEspecialidad'
+import { rutaDeFicha } from '@/features/directorio/paginas'
 import {
   enlaceDeRed,
   enlaceDeWhatsApp,
@@ -25,7 +27,8 @@ export function LogoWhatsApp({ className = 'size-4' }: { className?: string }) {
  *
  * Compacta, para que en el teléfono se vean varias de un vistazo, y entera
  * clicable: tocar cualquier parte abre el mismo chat que el botón. Solo el
- * enlace a la red social queda por encima y lleva a su perfil.
+ * nombre (a su ficha, `/medico/<slug>`) y el enlace a la red social quedan
+ * por encima y llevan a otro sitio.
  *
  * Es la misma en `/directorio` y en la vista previa del superadmin, así que
  * lo que el equipo ve al editar es lo que verá el paciente. `onContacto`
@@ -67,7 +70,19 @@ export function TarjetaDeMedico({
         </span>
         <div className="min-w-0">
           <h3 className="text-[1.02rem] font-medium leading-snug tracking-[-0.02em] text-portada-tinta [overflow-wrap:anywhere]">
-            {medico.nombre}
+            {/* El nombre lleva a su ficha (2026-10-30), por encima del enlace
+                al chat: es el enlace que Google sigue hasta cada médico. La
+                vista previa del superadmin no tiene ficha. */}
+            {medico.slug ? (
+              <Link
+                to={rutaDeFicha(medico.slug)}
+                className="relative z-10 underline-offset-4 hover:text-portada-azul hover:underline"
+              >
+                {medico.nombre}
+              </Link>
+            ) : (
+              medico.nombre
+            )}
           </h3>
           {especialidad && (
             <p className="mt-0.5 line-clamp-2 text-[0.88rem] leading-snug text-portada-azul">{especialidad}</p>

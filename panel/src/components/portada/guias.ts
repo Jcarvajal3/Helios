@@ -56,6 +56,12 @@ export type Guia = {
   aparte?: { titulo: string; texto: string }
   preguntas: Pregunta[]
   relacionadas: RutaPublica[]
+  /**
+   * El botón principal de las guías del paciente: su página del directorio
+   * (2026-10-30). Solo especialidades con médicos de sobra, para que el
+   * enlace no lleve nunca a una página vacía.
+   */
+  directorio?: { ruta: string; texto: string }
   servicio: { nombre: string; categoria?: string }
 }
 
@@ -247,6 +253,7 @@ const PACIENTES: Guia = {
     '/odontologia-en-cuotas',
     '/cosmetologia-en-cuotas',
   ],
+  directorio: { ruta: '/directorio', texto: 'Encuentra tu médico' },
   servicio: { nombre: 'Pago de consultas de salud en dos cuotas' },
 }
 
@@ -441,6 +448,7 @@ const MEDICINA: Guia = {
     PREGUNTA_MI_MEDICO,
   ],
   relacionadas: ['/pacientes', '/odontologia-en-cuotas', '/medicos'],
+  directorio: { ruta: '/directorio', texto: 'Encuentra tu médico' },
   servicio: { nombre: 'Consulta médica en cuotas', categoria: 'Medicina' },
 }
 
@@ -505,6 +513,7 @@ const ODONTOLOGIA: Guia = {
     },
   ],
   relacionadas: ['/pacientes', '/consulta-medica-en-cuotas', '/medicos'],
+  directorio: { ruta: '/directorio/odontologia', texto: 'Encuentra tu odontólogo' },
   servicio: { nombre: 'Odontología en cuotas', categoria: 'Odontología' },
 }
 
@@ -572,6 +581,7 @@ const COSMETOLOGIA: Guia = {
     },
   ],
   relacionadas: ['/pacientes', '/odontologia-en-cuotas', '/medicos'],
+  directorio: { ruta: '/directorio', texto: 'Encuentra tu centro' },
   servicio: { nombre: 'Cosmetología en cuotas', categoria: 'Cosmetología' },
 }
 

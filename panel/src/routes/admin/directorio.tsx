@@ -12,6 +12,7 @@ import { SeccionSinLeer } from '@/components/admin/directorio/SeccionSinLeer'
 import { FichaDelDirectorio } from '@/components/admin/directorio-de-medicos/FichaDelDirectorio'
 import { columnasDelDirectorio } from '@/components/admin/directorio-de-medicos/columnas'
 import { columnasDeInteresados } from '@/components/admin/directorio-de-medicos/columnasDeInteresados'
+import { VistaDeOrigen } from '@/components/admin/directorio-de-medicos/VistaDeOrigen'
 import { BarChart } from '@/components/charts/barras'
 import { PageAction } from '@/components/layouts/PageAction'
 import {
@@ -36,6 +37,7 @@ import {
   TOPE_DE_INTERESADOS,
   consultaDirectorio,
   consultaInteresados,
+  consultaOrigenes,
   guardarTarjeta,
   refrescarDirectorio,
 } from '@/features/admin/directorioDeMedicos/api'
@@ -83,6 +85,7 @@ export const Route = createFileRoute('/admin/directorio')({
 const OPCIONES_VISTA: Array<{ value: VistaDelDirectorio; label: string }> = [
   { value: 'medicos', label: 'Médicos' },
   { value: 'interesados', label: 'Interesados' },
+  { value: 'origen', label: 'Origen' },
 ]
 
 const OPCIONES_VER: Array<{ value: QueSeVe; label: string }> = [
@@ -105,8 +108,11 @@ const cuenta = (n: number) => String(Math.round(n))
  * ficha donde se corrige la tarjeta (con la vista previa) y se ven sus clics
  * y sus interesados. «Interesados», una fila por persona que escribió al
  * WhatsApp de Helios desde una tarjeta, con si ya es paciente de ese médico.
+ * «Origen» (2026-10-30), de dónde vinieron las visitas que terminaron en un
+ * clic: Google, ChatGPT, Instagram… y por qué página entraron.
  * Nadie sale sin que alguien del equipo lo encienda. Los datos salen de
- * `admin_directorio` y `admin_directorio_interesados` (docs/01 §2.11, docs/04).
+ * `admin_directorio`, `admin_directorio_interesados` y
+ * `admin_directorio_origenes` (docs/01 §2.11, docs/04).
  */
 function DirectorioPage() {
   const navigate = useNavigate({ from: '/admin/directorio' })
@@ -122,6 +128,8 @@ function DirectorioPage() {
 
   // La lista de interesados solo se pide (y se relee) con su vista delante.
   const lista = useQuery({ ...consultaInteresados(), enabled: vista === 'interesados' })
+  // Y la del origen de los clics, con la suya.
+  const origenes = useQuery({ ...consultaOrigenes(), enabled: vista === 'origen' })
 
   const medicos = useMemo(() => filtrarMedicos(datos?.medicos ?? [], { q: search.q, ver }), [datos, search.q, ver])
   const interesados = useMemo(() => filtrarInteresados(lista.data ?? [], search.q), [lista.data, search.q])
@@ -279,6 +287,8 @@ function DirectorioPage() {
               </Filtro>
             )}
           </FilterBar>
+
+          {vista === 'origen' && <VistaDeOrigen consulta={origenes} />}
 
           {vista === 'interesados' && (
             <VistaDeInteresados

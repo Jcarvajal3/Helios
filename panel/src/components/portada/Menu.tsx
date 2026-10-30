@@ -6,6 +6,7 @@ import type { ReactNode } from 'react'
 import { MENU } from './datos'
 import { BotonAfiliarme } from './piezas'
 import { HeliosLogo } from '@/components/HeliosLogo'
+import { apuntarLlegada } from '@/features/directorio/origen'
 
 /**
  * Una ruta va con `Link` (navega sin recargar y precarga); una sección de
@@ -35,6 +36,10 @@ export function Menu() {
   const [bajo, setBajo] = useState(false)
   const [abierto, setAbierto] = useState(false)
   const enPortada = useLocation({ select: (l) => l.pathname === '/' })
+
+  // El menú está en todas las páginas públicas: la primera que se abre es la
+  // entrada de la visita, y se apunta de dónde vino (`features/directorio/origen.ts`).
+  useEffect(() => apuntarLlegada(), [])
 
   useEffect(() => {
     const alDesplazar = () => setBajo(window.scrollY > 24)

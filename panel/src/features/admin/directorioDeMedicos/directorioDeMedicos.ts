@@ -201,13 +201,16 @@ export function comoTarjetaPublica(id: string, d: DatosDeTarjeta): MedicoDelDire
     red: d.red,
     usuarioDeRed: d.usuarioDeRed?.trim() || null,
     codigo: null,
+    // La vista previa no lleva enlace a la ficha: no se sale del superadmin.
+    slug: null,
+    actualizado: null,
   }
 }
 
 // ── Filtrar la lista ───────────────────────────────────────────────────────
 
-/** Una fila por médico, o una por interesado. */
-export const VISTAS_DEL_DIRECTORIO = ['medicos', 'interesados'] as const
+/** Una fila por médico, una por interesado, o de dónde llegan los clics. */
+export const VISTAS_DEL_DIRECTORIO = ['medicos', 'interesados', 'origen'] as const
 export type VistaDelDirectorio = (typeof VISTAS_DEL_DIRECTORIO)[number]
 
 export const VALORES_QUE_SE_VE = ['todos', 'visibles', 'ocultos'] as const
@@ -436,3 +439,62 @@ export function cambioFrenteAlAnterior(actual: number, anterior: number): { labe
   if (pct === 0) return { label: 'igual', direction: 'flat' }
   return { label: `${Math.abs(pct)} % ${pct > 0 ? 'más' : 'menos'}`, direction: pct > 0 ? 'up' : 'down' }
 }
+
+// ── De dónde llegan los clics ──────────────────────────────────────────────
+
+export type FilaDeOrigen = { clave: string; clics: number; visitantes: number | null }
+
+export type OrigenesDelDirectorio = {
+  dias: number
+  /** Google, ChatGPT, Instagram, directo… del que más trae al que menos. */
+  porFuente: FilaDeOrigen[]
+  /** La página por la que entró la visita. */
+  porEntrada: FilaDeOrigen[]
+  /** La página donde se tocó el botón de WhatsApp. */
+  porPagina: FilaDeOrigen[]
+}
+
+/** `admin_directorio_origenes()` (migración 20261030120000). */
+export function leerOrigenes(raw: unknown): OrigenesDelDirectorio {
+  const r = comoFila(raw)
+  const lista = (v: unknown, campo: 'fuente' | 'pagina'): FilaDeOrigen[] =>
+    comoLista(v).map((x) => {
+      const f = comoFila(x)
+      return { clave: texto(f[campo]), clics: numero(f.clics), visitantes: numeroONulo(f.visitantes) }
+    })
+  return {
+    dias: numero(r.dias),
+    porFuente: lista(r.por_fuente, 'fuente'),
+    porEntrada: lista(r.por_entrada, 'pagina'),
+    porPagina: lista(r.por_pagina, 'pagina'),
+  }
+}
+
+/** Cómo se lee cada fuente en la pantalla. La que no está aquí, tal cual. */
+const NOMBRE_DE_FUENTE: Record<string, string> = {
+  google: 'Google',
+  bing: 'Bing',
+  chatgpt: 'ChatGPT',
+  perplexity: 'Perplexity',
+  gemini: 'Gemini',
+  copilot: 'Copilot',
+  duckduckgo: 'DuckDuckGo',
+  yahoo: 'Yahoo',
+  instagram: 'Instagram',
+  facebook: 'Facebook',
+  whatsapp: 'WhatsApp',
+  tiktok: 'TikTok',
+  x: 'X (Twitter)',
+  linkedin: 'LinkedIn',
+  directo: 'Directo (sin página de origen)',
+  otro: 'Otra web',
+  interno: 'Desde Helios',
+  sin_dato: 'Sin dato (antes del 30/10/2026)',
+}
+
+export function nombreDeFuente(clave: string): string {
+  return NOMBRE_DE_FUENTE[clave] ?? clave
+}
+
+/** Las fuentes que son buscadores (con IA o sin ella): las que mide el SEO. */
+export const FUENTES_DE_BUSQUEDA = ['google', 'bing', 'chatgpt', 'perplexity', 'gemini', 'copilot', 'duckduckgo', 'yahoo'] as const

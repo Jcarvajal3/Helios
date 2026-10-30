@@ -15,6 +15,12 @@ import { NOMBRE, urlAbsoluta } from '@/config/sitio'
 import { consultarDirectorio } from '@/features/directorio/api'
 import { especialidadDeTarjeta, lugarDeTarjeta } from '@/features/directorio/directorio'
 import type { MedicoDelDirectorio } from '@/features/directorio/directorio'
+import {
+  especialidadesConPagina,
+  profesionales,
+  rutaDeEspecialidad,
+  rutaDeFicha,
+} from '@/features/directorio/paginas'
 
 /**
  * `/llms.txt` — Helios en una página de texto, para los buscadores con IA
@@ -46,14 +52,22 @@ function texto(medicos: MedicoDelDirectorio[]) {
     .map((p) => `### ${p.pregunta}\n\n${p.respuesta}`)
     .join('\n\n')
 
+  // Cada médico con el enlace a su ficha, por orden alfabético (la lista de
+  // la base viene sorteada en cada llamada).
   const directorio = medicos.length
-    ? medicos
-        .map((m) =>
-          [m.nombre, especialidadDeTarjeta(m), lugarDeTarjeta(m)].filter(Boolean).join(' — '),
-        )
-        .map((linea) => `- ${linea}`)
+    ? [...medicos]
+        .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
+        .map((m) => {
+          const linea = [especialidadDeTarjeta(m), lugarDeTarjeta(m)].filter(Boolean).join(' — ')
+          const nombre = m.slug ? `[${m.nombre}](${urlAbsoluta(rutaDeFicha(m.slug))})` : m.nombre
+          return `- ${nombre}${linea ? `: ${linea}` : ''}`
+        })
         .join('\n')
     : '- Muy pronto: el directorio se está llenando.'
+
+  const especialidades = especialidadesConPagina(medicos)
+    .map((c) => `- [${profesionales(c)} con pago en cuotas](${urlAbsoluta(rutaDeEspecialidad(c))})`)
+    .join('\n')
 
   const contacto = [
     RESPONSABLE.soporte && `- Correo: ${RESPONSABLE.soporte}`,
@@ -106,6 +120,12 @@ ${calendario}
 ## Médicos que aceptan Helios
 
 Directorio completo, con filtro por especialidad y contacto por WhatsApp: ${urlAbsoluta('/directorio')}
+
+### Por especialidad
+
+${especialidades}
+
+### Médicos
 
 ${directorio}
 
