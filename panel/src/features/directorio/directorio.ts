@@ -35,9 +35,16 @@ export type MedicoDelDirectorio = {
    * Helios para que el bot sepa de qué médico se trata. `null` en datos viejos.
    */
   codigo: string | null
+  /**
+   * El enlace de su ficha (`/medico/<slug>`): nace al publicarse y no cambia.
+   * `null` solo en datos de antes del 2026-10-30.
+   */
+  slug: string | null
+  /** El último cambio de su tarjeta (ISO): el `lastmod` del sitemap. */
+  actualizado: string | null
 }
 
-/** `helios_directorio()`. Una fila sin WhatsApp no tiene botón: no entra. */
+/** `helios_directorio()` y `helios_directorio_medico()`. Una fila sin WhatsApp no tiene botón: no entra. */
 export function leerDirectorio(raw: unknown): MedicoDelDirectorio[] {
   return comoLista(raw)
     .map((fila) => {
@@ -53,6 +60,8 @@ export function leerDirectorio(raw: unknown): MedicoDelDirectorio[] {
         red: leerRed(r.social_network),
         usuarioDeRed: textoONulo(r.social_user),
         codigo: textoONulo(r.lead_code),
+        slug: textoONulo(r.slug),
+        actualizado: textoONulo(r.updated_at),
       }
     })
     .filter((m) => m.id !== '' && m.nombre !== '' && m.whatsapp !== '')
@@ -352,41 +361,54 @@ const ESPECIALIDAD_EN_SCHEMA: Partial<Record<ClaveDeEspecialidad, string>> = {
  * Los médicos del directorio como `ItemList` de `Physician`, para el
  * JSON-LD de `/directorio`: lo mismo que se lee en las tarjetas (nombre,
  * especialidad, dirección y red social), nunca su WhatsApp, que pasa por el
- * botón de la tarjeta. `url` es la de la página.
+ * botón de la tarjeta. `url` es la de la página; `urlDeFicha`, la de la
+ * ficha de cada médico (`/medico/<slug>`), si la tiene.
  */
-export function directorioEnSchema(medicos: readonly MedicoDelDirectorio[], url: string) {
+export function directorioEnSchema(
+  medicos: readonly MedicoDelDirectorio[],
+  url: string,
+  urlDeFicha?: (slug: string) => string,
+) {
   return {
     '@type': 'ItemList',
     '@id': `${url}#medicos`,
     name: 'Médicos que aceptan pago en cuotas con Helios',
     numberOfItems: medicos.length,
-    itemListElement: medicos.map((m, i) => {
-      const especialidad = especialidadDeTarjeta(m)
-      const schema = ESPECIALIDAD_EN_SCHEMA[m.clave]
-      const red = enlaceDeRed(m)
-      return {
-        '@type': 'ListItem',
-        position: i + 1,
-        item: {
-          '@type': 'Physician',
-          name: m.nombre,
-          ...(especialidad ? { description: especialidad } : {}),
-          ...(schema ? { medicalSpecialty: `https://schema.org/${schema}` } : {}),
-          ...(m.direccion || m.ciudad
-            ? {
-                address: {
-                  '@type': 'PostalAddress',
-                  ...(m.direccion ? { streetAddress: m.direccion } : {}),
-                  ...(m.ciudad ? { addressLocality: m.ciudad } : {}),
-                  addressCountry: 'VE',
-                },
-              }
-            : {}),
-          paymentAccepted: 'Pago en cuotas con Helios, en bolívares por Pago Móvil o transferencia',
-          ...(red ? { sameAs: [red.url] } : {}),
-        },
-      }
-    }),
+    itemListElement: medicos.map((m, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      item: medicoEnSchema(m, m.slug && urlDeFicha ? urlDeFicha(m.slug) : undefined),
+    })),
+  }
+}
+
+/**
+ * Un médico como `Physician`: el del directorio y el de su ficha. Con
+ * `urlDeFicha`, lleva su `@id` y su `url`, así que el de la lista y el de
+ * la ficha son el mismo para Google.
+ */
+export function medicoEnSchema(m: MedicoDelDirectorio, urlDeFicha?: string) {
+  const especialidad = especialidadDeTarjeta(m)
+  const schema = ESPECIALIDAD_EN_SCHEMA[m.clave]
+  const red = enlaceDeRed(m)
+  return {
+    '@type': 'Physician',
+    ...(urlDeFicha ? { '@id': `${urlDeFicha}#medico`, url: urlDeFicha } : {}),
+    name: m.nombre,
+    ...(especialidad ? { description: especialidad } : {}),
+    ...(schema ? { medicalSpecialty: `https://schema.org/${schema}` } : {}),
+    ...(m.direccion || m.ciudad
+      ? {
+          address: {
+            '@type': 'PostalAddress',
+            ...(m.direccion ? { streetAddress: m.direccion } : {}),
+            ...(m.ciudad ? { addressLocality: m.ciudad } : {}),
+            addressCountry: 'VE',
+          },
+        }
+      : {}),
+    paymentAccepted: 'Pago en cuotas con Helios, en bolívares por Pago Móvil o transferencia',
+    ...(red ? { sameAs: [red.url] } : {}),
   }
 }
 

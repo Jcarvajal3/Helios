@@ -68,6 +68,16 @@ export const PAGINAS_PUBLICAS = {
 
 export type RutaPublica = keyof typeof PAGINAS_PUBLICAS
 
+/**
+ * La clave de IndexNow (Bing, Yandex, Seznam…; Google no lo usa): con ella
+ * se avisa a los buscadores de que cambió una página sin esperar a que
+ * vuelvan a rastrear. Es pública a propósito: prueba que el aviso viene del
+ * dueño del dominio porque está publicada en `INDEXNOW_RUTA`
+ * (`routes/indexnow-clave[.]txt.ts`). Cambiarla es generar otra y publicarla.
+ */
+export const INDEXNOW_CLAVE = 'b2622e580bff6fd696fce93e2db9f4b3'
+export const INDEXNOW_RUTA = '/indexnow-clave.txt'
+
 export function urlAbsoluta(ruta: string): string {
   return `${SITIO_URL}${ruta === '/' ? '/' : ruta}`
 }
@@ -133,7 +143,11 @@ const SITIO = {
 }
 
 /** Los nombres de cada tramo de la miga de pan, para el JSON-LD. */
-export type Miga = { nombre: string; ruta: RutaPublica }
+/**
+ * Un tramo de la miga de pan. La ruta es una de `PAGINAS_PUBLICAS` o una que
+ * sale de la base (`/directorio/odontologia`, `/medico/dra-ana-lara`).
+ */
+export type Miga = { nombre: string; ruta: string }
 
 /**
  * Título, descripción, canonical, tarjetas para compartir y JSON-LD de una
@@ -144,7 +158,9 @@ export type Miga = { nombre: string; ruta: RutaPublica }
  * `migas` es el camino desde la portada sin incluirla (la portada no lleva);
  * `datos` son los nodos propios de la página (servicio, preguntas…), que se
  * suman al grafo común. `aspecto` dice qué fuentes descarga: las de la
- * portada o las del panel (`lib/fuentes.ts`).
+ * portada o las del panel (`lib/fuentes.ts`). Las páginas que salen de la
+ * base (especialidades y fichas del directorio) no están en
+ * `PAGINAS_PUBLICAS`: pasan su `actualizada`.
  */
 export function cabeceraPublica({
   titulo,
@@ -153,13 +169,19 @@ export function cabeceraPublica({
   migas = [],
   datos = [],
   aspecto,
+  actualizada,
+  indexar = true,
 }: {
   titulo: string
   descripcion: string
-  ruta: RutaPublica
+  ruta: RutaPublica | (string & {})
   migas?: Miga[]
   datos?: object[]
   aspecto: 'portada' | 'panel'
+  /** La fecha del último cambio (`YYYY-MM-DD`), si la ruta no está en `PAGINAS_PUBLICAS`. */
+  actualizada?: string
+  /** `false`: la página se puede visitar pero no sale en Google (`noindex, follow`). */
+  indexar?: boolean
 }) {
   const url = urlAbsoluta(ruta)
   const imagen = urlAbsoluta(IMAGEN_COMPARTIR.ruta)
@@ -173,7 +195,7 @@ export function cabeceraPublica({
     inLanguage: 'es-VE',
     isPartOf: { '@id': ID_SITIO },
     about: { '@id': ID_ORGANIZACION },
-    dateModified: PAGINAS_PUBLICAS[ruta].actualizada,
+    dateModified: actualizada ?? (PAGINAS_PUBLICAS as Record<string, { actualizada: string } | undefined>)[ruta]?.actualizada,
     primaryImageOfPage: { '@type': 'ImageObject', url: imagen },
     ...(migas.length ? { breadcrumb: { '@id': `${url}#migas` } } : {}),
   }
@@ -183,7 +205,7 @@ export function cabeceraPublica({
         {
           '@type': 'BreadcrumbList',
           '@id': `${url}#migas`,
-          itemListElement: [{ nombre: 'Inicio', ruta: '/' as RutaPublica }, ...migas].map(
+          itemListElement: [{ nombre: 'Inicio', ruta: '/' }, ...migas].map(
             (m, i) => ({
               '@type': 'ListItem',
               position: i + 1,
@@ -201,7 +223,9 @@ export function cabeceraPublica({
       { name: 'description', content: descripcion },
       {
         name: 'robots',
-        content: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
+        content: indexar
+          ? 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1'
+          : 'noindex, follow',
       },
       { property: 'og:type', content: 'website' },
       { property: 'og:site_name', content: NOMBRE },
@@ -239,7 +263,7 @@ export function cabeceraPublica({
 
 /** Las preguntas frecuentes de una página, como nodo `FAQPage` del JSON-LD. */
 export function preguntasFrecuentes(
-  ruta: RutaPublica,
+  ruta: string,
   preguntas: ReadonlyArray<{ pregunta: string; respuesta: string }>,
 ) {
   return {
@@ -265,7 +289,7 @@ export function servicio({
   publico,
   categoria,
 }: {
-  ruta: RutaPublica
+  ruta: RutaPublica | (string & {})
   nombre: string
   descripcion: string
   publico: 'Patient' | 'Clinician'

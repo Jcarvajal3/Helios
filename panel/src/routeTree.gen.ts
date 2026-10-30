@@ -17,6 +17,7 @@ import { Route as AgendaRouteImport } from './routes/agenda'
 import { Route as ConsultaMedicaEnCuotasRouteImport } from './routes/consulta-medica-en-cuotas'
 import { Route as CosmetologiaEnCuotasRouteImport } from './routes/cosmetologia-en-cuotas'
 import { Route as DirectorioRouteImport } from './routes/directorio'
+import { Route as IndexnowClaveDottxtRouteImport } from './routes/indexnow-clave[.]txt'
 import { Route as LlmsDottxtRouteImport } from './routes/llms[.]txt'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as MedicosRouteImport } from './routes/medicos'
@@ -49,8 +50,11 @@ import { Route as AdminPacientesRouteImport } from './routes/admin/pacientes'
 import { Route as AdminPagosClinicasRouteImport } from './routes/admin/pagos-clinicas'
 import { Route as AdminSeguimientoRouteImport } from './routes/admin/seguimiento'
 import { Route as AdminWhatsappRouteImport } from './routes/admin/whatsapp'
+import { Route as ApiIndexnowRouteImport } from './routes/api.indexnow'
+import { Route as DirectorioEspecialidadRouteImport } from './routes/directorio_.$especialidad'
 import { Route as LegalPrivacidadRouteImport } from './routes/legal.privacidad'
 import { Route as LegalTerminosRouteImport } from './routes/legal.terminos'
+import { Route as MedicoSlugRouteImport } from './routes/medico.$slug'
 import { Route as ComercioFinanciamientosIdRouteImport } from './routes/_comercio/financiamientos_.$id'
 import { Route as AdminClinicasIdRouteImport } from './routes/admin/clinicas_.$id'
 import { Route as AdminCobrosIdRouteImport } from './routes/admin/cobros_.$id'
@@ -96,6 +100,11 @@ const CosmetologiaEnCuotasRoute = CosmetologiaEnCuotasRouteImport.update({
 const DirectorioRoute = DirectorioRouteImport.update({
   id: '/directorio',
   path: '/directorio',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IndexnowClaveDottxtRoute = IndexnowClaveDottxtRouteImport.update({
+  id: '/indexnow-clave.txt',
+  path: '/indexnow-clave.txt',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LlmsDottxtRoute = LlmsDottxtRouteImport.update({
@@ -258,6 +267,16 @@ const AdminWhatsappRoute = AdminWhatsappRouteImport.update({
   path: '/whatsapp',
   getParentRoute: () => AdminRoute,
 } as any)
+const ApiIndexnowRoute = ApiIndexnowRouteImport.update({
+  id: '/api/indexnow',
+  path: '/api/indexnow',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DirectorioEspecialidadRoute = DirectorioEspecialidadRouteImport.update({
+  id: '/directorio_/$especialidad',
+  path: '/directorio/$especialidad',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LegalPrivacidadRoute = LegalPrivacidadRouteImport.update({
   id: '/legal/privacidad',
   path: '/legal/privacidad',
@@ -266,6 +285,11 @@ const LegalPrivacidadRoute = LegalPrivacidadRouteImport.update({
 const LegalTerminosRoute = LegalTerminosRouteImport.update({
   id: '/legal/terminos',
   path: '/legal/terminos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MedicoSlugRoute = MedicoSlugRouteImport.update({
+  id: '/medico/$slug',
+  path: '/medico/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ComercioFinanciamientosIdRoute =
@@ -314,6 +338,7 @@ export interface FileRoutesByFullPath {
   '/consulta-medica-en-cuotas': typeof ConsultaMedicaEnCuotasRoute
   '/cosmetologia-en-cuotas': typeof CosmetologiaEnCuotasRoute
   '/directorio': typeof DirectorioRoute
+  '/indexnow-clave.txt': typeof IndexnowClaveDottxtRoute
   '/llms.txt': typeof LlmsDottxtRoute
   '/login': typeof LoginRoute
   '/medicos': typeof MedicosRoute
@@ -345,8 +370,11 @@ export interface FileRoutesByFullPath {
   '/admin/pagos-clinicas': typeof AdminPagosClinicasRoute
   '/admin/seguimiento': typeof AdminSeguimientoRoute
   '/admin/whatsapp': typeof AdminWhatsappRoute
+  '/api/indexnow': typeof ApiIndexnowRoute
+  '/directorio/$especialidad': typeof DirectorioEspecialidadRoute
   '/legal/privacidad': typeof LegalPrivacidadRoute
   '/legal/terminos': typeof LegalTerminosRoute
+  '/medico/$slug': typeof MedicoSlugRoute
   '/admin/': typeof AdminIndexRoute
   '/financiamientos/$id': typeof ComercioFinanciamientosIdRoute
   '/admin/clinicas/$id': typeof AdminClinicasIdRoute
@@ -363,6 +391,7 @@ export interface FileRoutesByTo {
   '/consulta-medica-en-cuotas': typeof ConsultaMedicaEnCuotasRoute
   '/cosmetologia-en-cuotas': typeof CosmetologiaEnCuotasRoute
   '/directorio': typeof DirectorioRoute
+  '/indexnow-clave.txt': typeof IndexnowClaveDottxtRoute
   '/llms.txt': typeof LlmsDottxtRoute
   '/login': typeof LoginRoute
   '/medicos': typeof MedicosRoute
@@ -394,8 +423,11 @@ export interface FileRoutesByTo {
   '/admin/pagos-clinicas': typeof AdminPagosClinicasRoute
   '/admin/seguimiento': typeof AdminSeguimientoRoute
   '/admin/whatsapp': typeof AdminWhatsappRoute
+  '/api/indexnow': typeof ApiIndexnowRoute
+  '/directorio/$especialidad': typeof DirectorioEspecialidadRoute
   '/legal/privacidad': typeof LegalPrivacidadRoute
   '/legal/terminos': typeof LegalTerminosRoute
+  '/medico/$slug': typeof MedicoSlugRoute
   '/admin': typeof AdminIndexRoute
   '/financiamientos/$id': typeof ComercioFinanciamientosIdRoute
   '/admin/clinicas/$id': typeof AdminClinicasIdRoute
@@ -415,6 +447,7 @@ export interface FileRoutesById {
   '/consulta-medica-en-cuotas': typeof ConsultaMedicaEnCuotasRoute
   '/cosmetologia-en-cuotas': typeof CosmetologiaEnCuotasRoute
   '/directorio': typeof DirectorioRoute
+  '/indexnow-clave.txt': typeof IndexnowClaveDottxtRoute
   '/llms.txt': typeof LlmsDottxtRoute
   '/login': typeof LoginRoute
   '/medicos': typeof MedicosRoute
@@ -446,8 +479,11 @@ export interface FileRoutesById {
   '/admin/pagos-clinicas': typeof AdminPagosClinicasRoute
   '/admin/seguimiento': typeof AdminSeguimientoRoute
   '/admin/whatsapp': typeof AdminWhatsappRoute
+  '/api/indexnow': typeof ApiIndexnowRoute
+  '/directorio_/$especialidad': typeof DirectorioEspecialidadRoute
   '/legal/privacidad': typeof LegalPrivacidadRoute
   '/legal/terminos': typeof LegalTerminosRoute
+  '/medico/$slug': typeof MedicoSlugRoute
   '/admin/': typeof AdminIndexRoute
   '/_comercio/financiamientos_/$id': typeof ComercioFinanciamientosIdRoute
   '/admin/clinicas_/$id': typeof AdminClinicasIdRoute
@@ -467,6 +503,7 @@ export interface FileRouteTypes {
     | '/consulta-medica-en-cuotas'
     | '/cosmetologia-en-cuotas'
     | '/directorio'
+    | '/indexnow-clave.txt'
     | '/llms.txt'
     | '/login'
     | '/medicos'
@@ -498,8 +535,11 @@ export interface FileRouteTypes {
     | '/admin/pagos-clinicas'
     | '/admin/seguimiento'
     | '/admin/whatsapp'
+    | '/api/indexnow'
+    | '/directorio/$especialidad'
     | '/legal/privacidad'
     | '/legal/terminos'
+    | '/medico/$slug'
     | '/admin/'
     | '/financiamientos/$id'
     | '/admin/clinicas/$id'
@@ -516,6 +556,7 @@ export interface FileRouteTypes {
     | '/consulta-medica-en-cuotas'
     | '/cosmetologia-en-cuotas'
     | '/directorio'
+    | '/indexnow-clave.txt'
     | '/llms.txt'
     | '/login'
     | '/medicos'
@@ -547,8 +588,11 @@ export interface FileRouteTypes {
     | '/admin/pagos-clinicas'
     | '/admin/seguimiento'
     | '/admin/whatsapp'
+    | '/api/indexnow'
+    | '/directorio/$especialidad'
     | '/legal/privacidad'
     | '/legal/terminos'
+    | '/medico/$slug'
     | '/admin'
     | '/financiamientos/$id'
     | '/admin/clinicas/$id'
@@ -567,6 +611,7 @@ export interface FileRouteTypes {
     | '/consulta-medica-en-cuotas'
     | '/cosmetologia-en-cuotas'
     | '/directorio'
+    | '/indexnow-clave.txt'
     | '/llms.txt'
     | '/login'
     | '/medicos'
@@ -598,8 +643,11 @@ export interface FileRouteTypes {
     | '/admin/pagos-clinicas'
     | '/admin/seguimiento'
     | '/admin/whatsapp'
+    | '/api/indexnow'
+    | '/directorio_/$especialidad'
     | '/legal/privacidad'
     | '/legal/terminos'
+    | '/medico/$slug'
     | '/admin/'
     | '/_comercio/financiamientos_/$id'
     | '/admin/clinicas_/$id'
@@ -619,6 +667,7 @@ export interface RootRouteChildren {
   ConsultaMedicaEnCuotasRoute: typeof ConsultaMedicaEnCuotasRoute
   CosmetologiaEnCuotasRoute: typeof CosmetologiaEnCuotasRoute
   DirectorioRoute: typeof DirectorioRoute
+  IndexnowClaveDottxtRoute: typeof IndexnowClaveDottxtRoute
   LlmsDottxtRoute: typeof LlmsDottxtRoute
   LoginRoute: typeof LoginRoute
   MedicosRoute: typeof MedicosRoute
@@ -628,8 +677,11 @@ export interface RootRouteChildren {
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   SoporteRoute: typeof SoporteRoute
+  ApiIndexnowRoute: typeof ApiIndexnowRoute
+  DirectorioEspecialidadRoute: typeof DirectorioEspecialidadRoute
   LegalPrivacidadRoute: typeof LegalPrivacidadRoute
   LegalTerminosRoute: typeof LegalTerminosRoute
+  MedicoSlugRoute: typeof MedicoSlugRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -688,6 +740,13 @@ declare module '@tanstack/react-router' {
       path: '/directorio'
       fullPath: '/directorio'
       preLoaderRoute: typeof DirectorioRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/indexnow-clave.txt': {
+      id: '/indexnow-clave.txt'
+      path: '/indexnow-clave.txt'
+      fullPath: '/indexnow-clave.txt'
+      preLoaderRoute: typeof IndexnowClaveDottxtRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/llms.txt': {
@@ -914,6 +973,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminWhatsappRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/api/indexnow': {
+      id: '/api/indexnow'
+      path: '/api/indexnow'
+      fullPath: '/api/indexnow'
+      preLoaderRoute: typeof ApiIndexnowRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/directorio_/$especialidad': {
+      id: '/directorio_/$especialidad'
+      path: '/directorio/$especialidad'
+      fullPath: '/directorio/$especialidad'
+      preLoaderRoute: typeof DirectorioEspecialidadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/legal/privacidad': {
       id: '/legal/privacidad'
       path: '/legal/privacidad'
@@ -926,6 +999,13 @@ declare module '@tanstack/react-router' {
       path: '/legal/terminos'
       fullPath: '/legal/terminos'
       preLoaderRoute: typeof LegalTerminosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/medico/$slug': {
+      id: '/medico/$slug'
+      path: '/medico/$slug'
+      fullPath: '/medico/$slug'
+      preLoaderRoute: typeof MedicoSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_comercio/financiamientos_/$id': {
@@ -1067,6 +1147,7 @@ const rootRouteChildren: RootRouteChildren = {
   ConsultaMedicaEnCuotasRoute: ConsultaMedicaEnCuotasRoute,
   CosmetologiaEnCuotasRoute: CosmetologiaEnCuotasRoute,
   DirectorioRoute: DirectorioRoute,
+  IndexnowClaveDottxtRoute: IndexnowClaveDottxtRoute,
   LlmsDottxtRoute: LlmsDottxtRoute,
   LoginRoute: LoginRoute,
   MedicosRoute: MedicosRoute,
@@ -1076,8 +1157,11 @@ const rootRouteChildren: RootRouteChildren = {
   RobotsDottxtRoute: RobotsDottxtRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   SoporteRoute: SoporteRoute,
+  ApiIndexnowRoute: ApiIndexnowRoute,
+  DirectorioEspecialidadRoute: DirectorioEspecialidadRoute,
   LegalPrivacidadRoute: LegalPrivacidadRoute,
   LegalTerminosRoute: LegalTerminosRoute,
+  MedicoSlugRoute: MedicoSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

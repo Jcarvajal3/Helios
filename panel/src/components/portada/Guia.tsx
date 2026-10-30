@@ -135,10 +135,21 @@ function Cabecera({ guia: g }: { guia: DatosDeGuia }) {
                 </>
               ) : (
                 <>
-                  <Boton href="#como-funciona">Ver cómo funciona</Boton>
-                  <Boton href="#preguntas" tono="contorno">
-                    Preguntas frecuentes
-                  </Boton>
+                  {g.directorio ? (
+                    <>
+                      <Boton to={g.directorio.ruta}>{g.directorio.texto}</Boton>
+                      <Boton href="#como-funciona" tono="contorno">
+                        Ver cómo funciona
+                      </Boton>
+                    </>
+                  ) : (
+                    <>
+                      <Boton href="#como-funciona">Ver cómo funciona</Boton>
+                      <Boton href="#preguntas" tono="contorno">
+                        Preguntas frecuentes
+                      </Boton>
+                    </>
+                  )}
                 </>
               )}
             </div>

@@ -80,7 +80,36 @@ en `llms.txt` con cada médico, y se enlaza desde el menú y el pie. Su
 JSON-LD es un `ItemList` de `Physician` (`directorioEnSchema`) con nombre,
 especialidad (`medicalSpecialty` de schema.org donde hay equivalente),
 dirección y red social; **nunca su WhatsApp**, que pasa por el botón de la
-tarjeta. El `canonical` es `/directorio` también con `?especialidad=`.
+tarjeta.
+
+## Tercera ronda: el directorio como páginas (2026-10-30)
+
+La investigación de búsquedas (`docs/03-INVESTIGACION-BUSQUEDAS.md`) mostró
+que los directorios ganan con una página por especialidad («Los 20
+ginecólogos en Caracas») y que nadie cubre «especialista + en cuotas».
+Todo sale solo de la base (`features/directorio/paginas.ts`):
+
+| Página | Qué es |
+| --- | --- |
+| `/directorio/<especialidad>` | Los médicos de una especialidad, con título «Odontólogos con pago en cuotas, sin inicial \| Helios», H1, miga de pan visible y en JSON-LD, y su `ItemList` de `Physician`. Solo existe si tiene médicos (si no, 404); «Otras especialidades» se visita pero lleva `noindex`. Los filtros de `/directorio` son ahora enlaces a estas páginas (Google los sigue); el `?especialidad=` de antes redirige con 301. |
+| `/medico/<slug>` | La ficha de cada médico: nombre, especialidad, dirección (con «Ver en el mapa», que busca en Google Maps la dirección tal cual), red social, botón de WhatsApp (el mismo de la tarjeta), cómo se paga y otros médicos de su especialidad. Su `Physician` lleva el mismo `@id` que en la lista. El enlace nace al publicarse y no cambia (migración 20261030120000). En la tarjeta del directorio, el nombre lleva a la ficha; el resto sigue abriendo el chat. |
+| `sitemap.xml` | Las fijas, más una por especialidad con médicos y una por médico, con el `lastmod` de su tarjeta. |
+| `llms.txt` | Las especialidades y cada médico con el enlace a su ficha. |
+| IndexNow | `/indexnow-clave.txt` y `POST /api/indexnow`: al guardar una tarjeta en el superadmin se avisa a Bing (y por él Copilot, DuckDuckGo, Yahoo) de todas las páginas. Solo en producción. |
+| Guías | Las de pacientes llevan como botón principal su página del directorio («Encuentra tu odontólogo»); el directorio enlaza de vuelta a su guía. |
+
+**Medir pacientes, no visitas**: la primera página de cada visita apunta de
+dónde vino (Google, Bing, ChatGPT —que marca `utm_source=chatgpt.com`—,
+Perplexity, Instagram, directo…) y la página de entrada, sin nada de la
+persona. Cada clic al WhatsApp de un médico guarda ese origen y la página
+donde se tocó. Superadmin › Directorio de médicos › **Origen** enseña los
+clics de 30 días por fuente, por página de entrada y por página del clic.
+El resto del embudo ya existía: clic → interesado (el código DIR-XXXX en el
+WhatsApp de Helios) → paciente (orden confirmada con ese médico).
+
+Pendiente: unir el origen con el interesado (hoy el origen va por clic y el
+interesado por teléfono, sin un enlace entre los dos), y las páginas por
+zona («odontólogos en Chacao») cuando haya médicos suficientes por zona.
 
 Lo que no se hizo, por ahora: publicar cifras propias (médicos afiliados,
 consultas registradas, encuestas). Con pocos datos restan confianza; cuando
@@ -92,7 +121,9 @@ Todo respeta las reglas de vocabulario de CLAUDE.md (nada de «préstamo»,
 
 ## Lo que queda fuera del código (lo hace Javier)
 
-1. **Google Search Console**: dar de alta `conhelios.com` como *propiedad de
+1. **Bing Webmaster Tools, lo primero**: Bing no tiene ninguna página de
+   conhelios.com (docs/03); sin él no salimos en ChatGPT Search, Copilot ni
+   DuckDuckGo. **Google Search Console**: dar de alta `conhelios.com` como *propiedad de
    dominio* (verificación por registro TXT en el DNS), enviar
    `https://conhelios.com/sitemap.xml` y pedir la indexación de las 5 páginas
    nuevas. Lo mismo en **Bing Webmaster Tools** (puede importar de Search

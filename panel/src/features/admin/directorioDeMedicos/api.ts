@@ -2,7 +2,7 @@ import { queryOptions } from '@tanstack/react-query'
 import type { QueryClient } from '@tanstack/react-query'
 
 import { supabase } from '@/lib/supabase'
-import { leerInteresados, leerTablero } from './directorioDeMedicos'
+import { leerInteresados, leerOrigenes, leerTablero } from './directorioDeMedicos'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // La lectura y la escritura del Directorio de médicos del superadmin.
@@ -59,6 +59,24 @@ export function consultaInteresados(merchantId?: string) {
 }
 
 /**
+ * De dónde llegan los clics públicos de los últimos 30 días: por fuente
+ * (Google, ChatGPT, Instagram…), por página de entrada y por página del
+ * clic. Se relee como el tablero.
+ */
+export function consultaOrigenes() {
+  return queryOptions({
+    queryKey: [...CLAVE, 'origenes'],
+    refetchInterval: RELECTURA_MS,
+    refetchOnWindowFocus: true,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('admin_directorio_origenes', { p_dias: 30 })
+      if (error) throw error
+      return leerOrigenes(data)
+    },
+  })
+}
+
+/**
  * Publica u oculta una clínica, o corrige su tarjeta. La base rechaza, con
  * un mensaje que se puede enseñar tal cual, publicar una clínica que no se
  * puede publicar y un dato fuera de medida.
@@ -69,6 +87,23 @@ export async function guardarTarjeta(merchantId: string, cambios: Record<string,
     p_cambios: cambios,
   })
   if (error) throw error
+  avisarALosBuscadores()
+}
+
+/**
+ * Avisa a IndexNow (`/api/indexnow`) de que el directorio cambió. No se
+ * espera ni se avisa de un fallo: guardar ya salió bien, y si el aviso no
+ * llega, el buscador lo verá en su próximo rastreo.
+ */
+function avisarALosBuscadores(): void {
+  void supabase.auth
+    .getSession()
+    .then(({ data }) => {
+      const token = data.session?.access_token
+      if (!token) return
+      return fetch('/api/indexnow', { method: 'POST', headers: { Authorization: `Bearer ${token}` } })
+    })
+    .catch(() => undefined)
 }
 
 export function refrescarDirectorio(client: QueryClient): void {

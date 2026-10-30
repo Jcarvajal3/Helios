@@ -1,5 +1,6 @@
 import { SUPABASE_ANON_KEY, SUPABASE_URL, supabase } from '@/lib/supabase'
-import { leerDirectorio, visitante } from './directorio'
+import { INTERESADOS_POR_HELIOS, leerDirectorio, visitante } from './directorio'
+import { origenDelClic } from './origen'
 import type { MedicoDelDirectorio } from './directorio'
 
 /** Los médicos publicados. Pública: la lee cualquiera, con o sin sesión. */
@@ -7,6 +8,32 @@ export async function consultarDirectorio(): Promise<MedicoDelDirectorio[]> {
   const { data, error } = await supabase.rpc('helios_directorio')
   if (error) throw error
   return leerDirectorio(data)
+}
+
+/**
+ * Lo que necesitan `/directorio`, sus especialidades y las fichas: los
+ * médicos y el número de Helios, a la vez. El número nunca falla (sin él,
+ * cada botón va directo al médico); con `INTERESADOS_POR_HELIOS` apagado ni
+ * se pide. Si la lista falla, la página lo dice y deja reintentar.
+ */
+export async function cargarDirectorio(): Promise<{
+  medicos: MedicoDelDirectorio[]
+  fallo: boolean
+  whatsappHelios: string | null
+}> {
+  const whatsappHelios = INTERESADOS_POR_HELIOS ? consultarWhatsappDeHelios() : Promise.resolve(null)
+  try {
+    return { medicos: await consultarDirectorio(), fallo: false, whatsappHelios: await whatsappHelios }
+  } catch {
+    return { medicos: [], fallo: true, whatsappHelios: await whatsappHelios }
+  }
+}
+
+/** Un médico publicado por el enlace de su ficha; `null` si no existe o ya no sale. */
+export async function consultarMedico(slug: string): Promise<MedicoDelDirectorio | null> {
+  const { data, error } = await supabase.rpc('helios_directorio_medico', { p_slug: slug })
+  if (error) throw error
+  return leerDirectorio(data)[0] ?? null
 }
 
 /**
@@ -36,7 +63,12 @@ export async function consultarWhatsappDeHelios(): Promise<string | null> {
  * y no lo cuente.
  */
 export function apuntarContacto(merchantId: string): void {
-  const cuerpo = JSON.stringify({ p_merchant_id: merchantId, p_visitante: visitante() ?? null })
+  // Con el origen de la visita (`origen.ts`): qué buscador o red trajo el clic.
+  const cuerpo = JSON.stringify({
+    p_merchant_id: merchantId,
+    p_visitante: visitante() ?? null,
+    p_origen: origenDelClic(),
+  })
   void supabase.auth
     .getSession()
     // Sin sesión legible, el clic va igual, como de un paciente.

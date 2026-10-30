@@ -1237,6 +1237,49 @@ phone, desde)` (no se expone): la primera orden de ese médico con `status =
 
 Suite: `supabase/tests/directorio_interesados_smoke.sql`.
 
+### 2.13 Fichas del directorio y origen de los clics (2026-10-30, 20261030120000)
+
+Para el SEO (docs/02): cada médico tiene su página (`/medico/<slug>`), cada
+especialidad con médicos la suya (`/directorio/<especialidad>`, la clave con
+guiones), y cada clic al WhatsApp guarda de dónde vino la visita.
+
+- `directory_listings.slug`: el enlace de la ficha, `^[a-z0-9]+(-[a-z0-9]+)*$`,
+  único. Lo pone el trigger `directory_listings_pone_slug` la primera vez que
+  la fila queda `is_visible` (con el nombre de la tarjeta, sin tildes:
+  `helios_directorio_slug_base`; si ya existe, «-2», «-3»…) y **no cambia
+  después**, aunque cambie el nombre o se oculte y vuelva. Los publicados
+  antes de la migración lo recibieron en el orden en que se publicaron.
+- `helios_directorio()` añade `lead_code` (ya estaba en 20261027100000),
+  **`slug` y `updated_at`** (el `lastmod` del sitemap). Mismo orden sorteado.
+- `helios_directorio_medico(p_slug text) → table(…las mismas columnas)` —
+  **anon y authenticated**. El médico publicado con ese enlace (sin
+  distinguir mayúsculas ni espacios alrededor); nada si no existe o ya no
+  sale (la página da 404).
+- `helios_directorio_contacto(p_merchant_id uuid, p_visitante text default
+  null, p_origen jsonb default null) → boolean` — reemplaza a la de dos
+  argumentos (llamarla con dos sigue valiendo). `p_origen`: `{ fuente,
+  dominio, entrada, pagina, utm_source, utm_medium, utm_campaign }`; se
+  guardan en `directory_contact_clicks.source`, `referrer_host`,
+  `landing_path`, `page_path` y `utm_*`. Cada dato malformado se descarta
+  (null), sin rechazar el clic. `fuente` la decide el panel
+  (`features/directorio/origen.ts`): `google`, `bing`, `chatgpt`,
+  `perplexity`, `gemini`, `copilot`, `duckduckgo`, `yahoo`, `instagram`,
+  `facebook`, `whatsapp`, `tiktok`, `x`, `linkedin`, `directo`, `otro`, o la
+  `utm_source` limpia si la visita llegó con una propia.
+- `admin_directorio_origenes(p_dias integer default 30) → jsonb` —
+  `is_platform_admin()` (`42501` si no). `{ dias, por_fuente: [{ fuente,
+  clics, visitantes }], por_entrada: [{ pagina, clics }] (20), por_pagina:
+  [{ pagina, clics }] (20) }`, solo los clics `publico` de los últimos
+  `p_dias` días operativos (con hoy, 1–365). Los de antes de la migración
+  van como `sin_dato`. Lo usa superadmin › Directorio de médicos › Origen.
+
+Fuera de la base: `POST /api/indexnow` (ruta del panel) avisa a IndexNow de
+todas las páginas públicas cuando el superadmin guarda una tarjeta; solo con
+la sesión de alguien de `is_platform_admin()` y solo en producción. La clave
+se publica en `/indexnow-clave.txt`.
+
+Suite: `supabase/tests/directorio_fichas_smoke.sql`.
+
 ---
 
 ## 3. Parámetros nuevos (`business_parameters`)
