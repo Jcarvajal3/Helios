@@ -10,6 +10,7 @@
  * el de la ficha).
  */
 import {
+  buscarEspecialidades,
   directorioEnSchema,
   enlaceDeRed,
   enlaceDeWhatsApp,
@@ -22,7 +23,7 @@ import {
   lugarDeTarjeta,
   mensajeAHelios,
 } from './directorio'
-import { CLAVES_DE_ESPECIALIDAD, leerEspecialidad } from './especialidades'
+import { CLAVES_DE_ESPECIALIDAD, ESPECIALIDADES, leerEspecialidad } from './especialidades'
 import {
   borradorDe,
   cambiosDelBorrador,
@@ -84,9 +85,33 @@ comprueba(medicos[0]?.codigo === 'DIR-7K2P', 'lee el código de la tarjeta (lead
 comprueba(medicos[1]?.codigo === null, 'lead_code null → sin código', medicos[1])
 comprueba(medicos[2]?.codigo === null, 'sin lead_code (datos viejos) → sin código', medicos[2])
 comprueba(leerEspecialidad('pediatria') === 'pediatria', 'una clave conocida se queda')
-comprueba(CLAVES_DE_ESPECIALIDAD.length === 24, 'son las 24 claves de la base', CLAVES_DE_ESPECIALIDAD.length)
+comprueba(CLAVES_DE_ESPECIALIDAD.length === 43, 'son las 43 claves de la base', CLAVES_DE_ESPECIALIDAD.length)
+comprueba(new Set(CLAVES_DE_ESPECIALIDAD).size === CLAVES_DE_ESPECIALIDAD.length, 'ninguna clave repetida')
+{
+  const nombres = ESPECIALIDADES.filter((e) => e.clave !== 'otra').map((e) => e.nombre)
+  const ordenados = [...nombres].sort((a, b) => a.localeCompare(b, 'es'))
+  comprueba(nombres.join('|') === ordenados.join('|'), 'van por nombre (el desplegable las enseña así)', nombres)
+}
 comprueba(leerEspecialidad('vacunacion') === 'vacunacion', 'Vacunación es una categoría propia')
 comprueba(CLAVES_DE_ESPECIALIDAD.at(-1) === 'otra', '«Otras» sigue al final')
+
+console.log('── El desplegable de la especialidad (/afiliacion) ───────────')
+const nombresDe = (q: string) => buscarEspecialidades(q).map((e) => e.nombre)
+comprueba(buscarEspecialidades('').length === 43, 'sin escribir, todas', buscarEspecialidades('').length)
+comprueba(nombresDe('').at(-1) === 'Otras especialidades', 'sin escribir, «Otras» al final')
+comprueba(nombresDe('PEDIATRIA')[0] === 'Pediatría', 'sin tildes ni mayúsculas', nombresDe('PEDIATRIA'))
+comprueba(nombresDe('traumotologia').length === 1, 'una errata no casa con nada: solo queda «Otras»', nombresDe('traumotologia'))
+comprueba(nombresDe('dentista')[0] === 'Odontología', 'entiende otras formas de decirla', nombresDe('dentista'))
+comprueba(nombresDe('ojos')[0] === 'Oftalmología', '«ojos» es oftalmología', nombresDe('ojos'))
+comprueba(nombresDe('cirugia')[0] === 'Cirugía cardíaca', 'las que empiezan por lo escrito, primero', nombresDe('cirugia'))
+comprueba(
+  nombresDe('plastica').join('|') === 'Cirugía plástica y reconstructiva|Otras especialidades',
+  'por cualquier palabra del nombre',
+  nombresDe('plastica'),
+)
+comprueba(nombresDe('neuro').slice(0, 2).join('|') === 'Neurocirugía|Neurología', '«neuro» da las dos', nombresDe('neuro'))
+comprueba(nombresDe('obstetra')[0] === 'Ginecología y obstetricia', 'obstetra → ginecología y obstetricia')
+comprueba(nombresDe('psi').slice(0, 2).join('|') === 'Psicología|Psiquiatría', 'psicología y psiquiatría van aparte')
 
 console.log('── Lo que leen los buscadores ────────────────────────────────')
 const schema = directorioEnSchema(medicos, 'https://conhelios.com/directorio')

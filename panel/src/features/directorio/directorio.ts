@@ -2,7 +2,7 @@ import { whatsappNumber } from '@/components/ui'
 import { REDES_SOCIALES } from '@/features/admin/clinicas/clinicas'
 import type { RedSocial } from '@/features/admin/clinicas/clinicas'
 import { comoFila, comoLista, texto, textoONulo } from '@/lib/json'
-import { leerEspecialidad, nombreDeEspecialidad } from './especialidades'
+import { ESPECIALIDADES, leerEspecialidad, nombreDeEspecialidad } from './especialidades'
 import type { ClaveDeEspecialidad } from './especialidades'
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -220,7 +220,40 @@ export function filtrarDirectorio(
   })
 }
 
-export type EspecialidadPresente = { clave: ClaveDeEspecialidad; nombre: string; cuantos: number }
+export type Especialidad = (typeof ESPECIALIDADES)[number]
+
+/**
+ * Las especialidades del desplegable de `/afiliacion` que casan con lo
+ * escrito: cada palabra tiene que estar en su nombre o en una de sus otras
+ * formas (`busca`: «dentista», «ojos»), sin tildes ni mayúsculas. Primero
+ * las que empiezan por lo escrito, luego las que tienen una palabra que
+ * empieza así y luego el resto. «Otras especialidades» sale siempre, al
+ * final: es la salida cuando la suya no está.
+ */
+export function buscarEspecialidades(q: string): Especialidad[] {
+  const escrito = normalizar(q)
+  const palabras = escrito.split(' ').filter(Boolean)
+  const otra = ESPECIALIDADES.filter((e) => e.clave === 'otra')
+  const resto = ESPECIALIDADES.filter((e) => e.clave !== 'otra')
+  if (palabras.length === 0) return [...resto, ...otra]
+  const puesto = (e: Especialidad): number => {
+    const nombre = normalizar(e.nombre)
+    if (nombre.startsWith(escrito)) return 0
+    if (nombre.split(' ').some((p) => p.startsWith(palabras[0]))) return 1
+    return 2
+  }
+  const casan = resto
+    .filter((e) => {
+      const t = normalizar([e.nombre, ...e.busca].join(' '))
+      return palabras.every((p) => t.includes(p))
+    })
+    .map((e, i) => ({ e, i, p: puesto(e) }))
+    .sort((a, b) => a.p - b.p || a.i - b.i)
+    .map((x) => x.e)
+  return [...casan, ...otra]
+}
+
+export type EspecialidadPresente ={ clave: ClaveDeEspecialidad; nombre: string; cuantos: number }
 
 /**
  * Las especialidades que tienen algún médico, la de más médicos primero y
@@ -277,24 +310,42 @@ export function fichasQueCaben(
  * ninguna: basta su nombre en la descripción.
  */
 const ESPECIALIDAD_EN_SCHEMA: Partial<Record<ClaveDeEspecialidad, string>> = {
-  medicina_general: 'PrimaryCare',
-  pediatria: 'Pediatric',
-  ginecologia: 'Gynecologic',
-  traumatologia: 'Musculoskeletal',
+  anatomia_patologica: 'Pathology',
+  angiologia: 'Cardiovascular',
   cardiologia: 'Cardiovascular',
+  cirugia_cardiaca: 'Surgical',
+  cirugia_craneofacial: 'Surgical',
+  cirugia_general: 'Surgical',
+  cirugia_oncologica: 'Surgical',
+  cirugia_maxilofacial: 'Surgical',
+  cirugia_pediatrica: 'Surgical',
+  cirugia_plastica: 'PlasticSurgery',
+  cirugia_toracica: 'Surgical',
   dermatologia: 'Dermatology',
-  otorrinolaringologia: 'Otolaryngologic',
-  urologia: 'Urologic',
-  gastroenterologia: 'Gastroenterologic',
-  neurologia: 'Neurologic',
-  psicologia: 'Psychiatric',
-  nutricion: 'DietNutrition',
   endocrinologia: 'Endocrine',
-  neumologia: 'Pulmonary',
-  oncologia: 'Oncologic',
-  fisioterapia: 'Physiotherapy',
   enfermeria: 'Nursing',
+  fisioterapia: 'Physiotherapy',
+  gastroenterologia: 'Gastroenterologic',
+  ginecologia: 'Gynecologic',
+  hematologia: 'Hematologic',
+  hepatologia: 'Gastroenterologic',
+  medicina_general: 'PrimaryCare',
+  nefrologia: 'Renal',
+  neumologia: 'Pulmonary',
+  neurocirugia: 'Surgical',
+  neurologia: 'Neurologic',
+  nutricion: 'DietNutrition',
   odontologia: 'Dentistry',
+  oncologia: 'Oncologic',
+  ortodoncia: 'Dentistry',
+  otorrinolaringologia: 'Otolaryngologic',
+  pediatria: 'Pediatric',
+  // La psicología no tiene equivalente: `Psychiatric` es la psiquiatría.
+  psiquiatria: 'Psychiatric',
+  radiologia: 'Radiography',
+  reumatologia: 'Rheumatologic',
+  traumatologia: 'Musculoskeletal',
+  urologia: 'Urologic',
 }
 
 /**

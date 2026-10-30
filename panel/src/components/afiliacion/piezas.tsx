@@ -18,17 +18,17 @@ import type { LetraDocumento } from '@/lib/documento'
  * calendario y el teclado numérico del sistema son los más cómodos.
  */
 
-const ENTRADA =
+export const ENTRADA =
   'afiliacion-entrada h-[52px] w-full min-w-0 rounded-2xl border bg-white px-4 text-[1rem] tracking-[-0.01em] text-portada-tinta placeholder:text-portada-tinta-3/60 transition-[border-color,box-shadow] duration-300 outline-none focus:shadow-[0_0_0_4px_rgba(4,94,243,0.12)]'
 
-function bordeDe(error: string | null | undefined) {
+export function bordeDe(error: string | null | undefined) {
   return error
     ? 'border-[#E5867C] focus:border-[#C5372C] focus:shadow-[0_0_0_4px_rgba(197,55,44,0.12)]'
     : 'border-portada-linea hover:border-portada-tinta/20 focus:border-portada-azul'
 }
 
 /** Los `aria-describedby` de un campo: su ayuda y su error, si los tiene. */
-function descritoPor(id: string, ayuda: ReactNode, error?: string | null) {
+export function descritoPor(id: string, ayuda: ReactNode, error?: string | null) {
   const ids = [ayuda ? `${id}-ayuda` : '', error ? `${id}-error` : '']
   return ids.filter(Boolean).join(' ') || undefined
 }
@@ -140,7 +140,7 @@ export function CampoDeTexto({
   )
 }
 
-function Flechita() {
+export function Flechita() {
   return (
     <ChevronDown
       aria-hidden

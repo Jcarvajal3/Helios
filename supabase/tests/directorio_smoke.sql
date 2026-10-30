@@ -14,6 +14,9 @@
 --   5. Los clics: cuentan los públicos; el doble toque, una clínica oculta y
 --      los del equipo no. La pestaña los trae por médico y por día.
 --   6. Al pausar la clínica desaparece sola, y todo queda en la bitácora.
+--   7. El orden reparte los clics.
+--   8. La lista ampliada: cada nombre del desplegable da su clave y el texto
+--      libre de antes deduce lo mismo (20261030100000).
 --
 -- No manda nada: no llama a `helios_dispatch_*`.
 -- ============================================================================
@@ -361,6 +364,36 @@ begin
   end loop;
   if v_n < 150 then
     raise exception '7. el médico sin clics debía salir por encima casi siempre: % de 200', v_n;
+  end if;
+
+  -- =========================================================================
+  -- 8. La lista ampliada (20261030100000)
+  -- =========================================================================
+  -- El desplegable de `/afiliacion` guarda el nombre tal cual de la lista:
+  -- cada nombre tiene que dar su clave, y no la de una parecida.
+  if cardinality(public.helios_directorio_especialidades()) <> 43 then
+    raise exception '8. debían ser 43 claves, son %', cardinality(public.helios_directorio_especialidades());
+  end if;
+  if public.helios_directorio_especialidad_sugerida('Cirugía general') <> 'cirugia_general'
+     or public.helios_directorio_especialidad_sugerida('Cirugía pediátrica') <> 'cirugia_pediatrica'
+     or public.helios_directorio_especialidad_sugerida('Cirugía cardíaca') <> 'cirugia_cardiaca'
+     or public.helios_directorio_especialidad_sugerida('Neurocirugía') <> 'neurocirugia'
+     or public.helios_directorio_especialidad_sugerida('Psiquiatría') <> 'psiquiatria'
+     or public.helios_directorio_especialidad_sugerida('Psicología') <> 'psicologia'
+     or public.helios_directorio_especialidad_sugerida('Ortodoncia') <> 'ortodoncia'
+     or public.helios_directorio_especialidad_sugerida('Radiodiagnóstico (imágenes)') <> 'radiologia'
+     or public.helios_directorio_especialidad_sugerida('Angiología y cirugía vascular') <> 'angiologia'
+     or public.helios_directorio_especialidad_sugerida('Traumatología y ortopedia') <> 'traumatologia' then
+    raise exception '8. un nombre de la lista no dio su clave';
+  end if;
+  -- El texto libre de antes sigue deduciendo lo mismo.
+  if public.helios_directorio_especialidad_sugerida('Traumotología, cirugía cadera, rodilla y pelvis') <> 'traumatologia'
+     or public.helios_directorio_especialidad_sugerida('Medico internista y gastroenterologo') <> 'gastroenterologia'
+     or public.helios_directorio_especialidad_sugerida('Obstetricia, Ginecólogo Oncologo') <> 'ginecologia'
+     or public.helios_directorio_especialidad_sugerida('Pediatría, vacunación') <> 'pediatria'
+     or public.helios_directorio_especialidad_sugerida('Cardiologo/Neumonologo adultos') <> 'cardiologia'
+     or public.helios_directorio_especialidad_sugerida('') <> 'medicina_general' then
+    raise exception '8. el texto libre de siempre cambió de clave';
   end if;
 end;
 $$;

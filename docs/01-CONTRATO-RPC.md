@@ -1091,15 +1091,30 @@ Tablas (sin RLS de lectura: solo por estas RPC):
   (`publico | equipo | clinica`: quien llama está en `platform_admins` o es
   personal activo de una clínica). Solo cuentan los `publico`.
 
-`specialty_key` es una de `helios_directorio_especialidades()`:
-`medicina_general, medicina_interna, pediatria, ginecologia, traumatologia,
-cardiologia, dermatologia, oftalmologia, otorrinolaringologia, urologia,
-gastroenterologia, coloproctologia, neurologia, psicologia, nutricion,
-endocrinologia, neumologia, oncologia, fisioterapia, enfermeria, vacunacion
-(2026-10-28, 20261028100000), odontologia, cosmetologia, otra`. El panel
-tiene la misma lista con su nombre
-e icono (`features/directorio/especialidades.ts`): añadir una es tocar las
-dos.
+`specialty_key` es una de `helios_directorio_especialidades()`, 43 claves
+por nombre y `otra` al final (2026-10-30, 20261030100000; antes 24):
+`anatomia_patologica, angiologia, cardiologia, cirugia_cardiaca,
+cirugia_craneofacial, cirugia_general, cirugia_oncologica,
+cirugia_maxilofacial, cirugia_pediatrica, cirugia_plastica, cirugia_toracica,
+coloproctologia, cosmetologia, dermatologia, endocrinologia, enfermeria,
+fisioterapia, gastroenterologia, ginecologia, hematologia, hepatologia,
+inmunologia, medicina_general, medicina_interna, nefrologia, neumologia,
+neurocirugia, neurologia, nutricion, odontologia, oftalmologia, oncologia,
+ortodoncia, otorrinolaringologia, pediatria, psicologia, psiquiatria,
+radiologia, reumatologia, traumatologia, urologia, vacunacion, otra`.
+`psicologia` es solo psicología (la psiquiatría tiene su clave);
+`traumatologia` es «Traumatología y ortopedia» y `ginecologia`,
+«Ginecología y obstetricia». El panel tiene la misma lista, en el mismo
+orden, con su nombre, su icono y otras formas de decirla para el buscador
+(`features/directorio/especialidades.ts`): añadir una es tocar las dos.
+
+El alta de `/afiliacion` (`helios_solicitar_afiliacion`) elige la
+especialidad de esa lista con un desplegable con buscador y guarda en
+`specialty` **el nombre tal cual** («Cirugía general»); con «Otras
+especialidades», lo que escriba el médico. `helios_directorio_especialidad_sugerida`
+mira primero el nombre exacto de la lista y, si no es uno, el texto libre
+(las fichas de antes): por eso el panel no puede desplegarse con nombres que
+la base aún no conoce.
 
 Una clínica **se puede publicar** si está `active`, no es de prueba y tiene
 WhatsApp; si no, `blocked_reason` = `terminada | pausada | prueba |

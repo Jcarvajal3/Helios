@@ -4,6 +4,7 @@ import { Link } from '@tanstack/react-router'
 import { useMutation } from '@tanstack/react-query'
 import { ArrowLeft, CircleAlert, CircleCheck } from 'lucide-react'
 
+import { CampoDeEspecialidad } from './CampoDeEspecialidad'
 import {
   BotonPrincipal,
   CampoDeDocumento,
@@ -53,12 +54,6 @@ export type SolicitudEnviada = {
   /** La capacitación pedida (instante ISO), o `null`. */
   capacitacion: string | null
 }
-
-const ESPECIALIDADES_SUGERIDAS = [
-  'Medicina general',
-  'Odontología',
-  'Cosmetología',
-] as const
 
 /** El `id` de un campo en la página (el foco va ahí cuando tiene un error). */
 const idDe = (c: CampoDeAfiliacion) => `afiliacion-${c}`
@@ -300,30 +295,13 @@ export function FormularioDeAfiliacion({
                 letras={LETRAS_CEDULA}
               />
             )}
-            <div>
-              <CampoDeTexto
-                id={idDe('specialty')}
-                etiqueta="Especialidad"
-                value={alta.specialty}
-                onChange={campo('specialty')}
-                alSalir={tocar('specialty')}
-                error={error('specialty')}
-                autoCapitalize="sentences"
-                enterKeyHint="next"
-                placeholder="Pediatría, odontología…"
-              />
-              <div className="mt-3 flex flex-wrap gap-2">
-                {ESPECIALIDADES_SUGERIDAS.map((s) => (
-                  <Sugerencia
-                    key={s}
-                    activa={alta.specialty.trim() === s}
-                    onClick={() => setAlta((a) => ({ ...a, specialty: s }))}
-                  >
-                    {s}
-                  </Sugerencia>
-                ))}
-              </div>
-            </div>
+            <CampoDeEspecialidad
+              id={idDe('specialty')}
+              valor={alta.specialty}
+              onChange={campo('specialty')}
+              alSalir={tocar('specialty')}
+              error={error('specialty')}
+            />
             <Opcionales
               texto="Añadir N.º de Colegio o MPPS"
               conDatos={!!(alta.collegeNumber || alta.mppsNumber)}

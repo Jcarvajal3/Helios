@@ -161,7 +161,7 @@ export function erroresDelPaso(paso: Paso, b: Borrador, hoy: string): Errores {
       )
       if (cedula) e.ownerDocument = cedula
     }
-    if (!a.specialty.trim()) e.specialty = 'Escribe o elige tu especialidad.'
+    if (!a.specialty.trim()) e.specialty = 'Elige tu especialidad.'
   }
 
   if (paso === 1) {
