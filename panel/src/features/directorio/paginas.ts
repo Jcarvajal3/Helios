@@ -17,7 +17,10 @@ import type { ClaveDeEspecialidad } from './especialidades'
 //
 // La investigación (docs/03-INVESTIGACION-BUSQUEDAS.md) dice que se busca
 // por profesional («ginecólogo caracas») y que nadie cubre «… en cuotas»:
-// por eso el título lleva el profesional y «con pago en cuotas».
+// por eso el título lleva el profesional y «con pago en cuotas». OpenSEO
+// (docs/05-OPENSEO.md) midió que lo que tiene volumen es «profesional +
+// ciudad» («ginecologo caracas», 590 al mes): el título suma la ciudad de la
+// mayoría de sus médicos.
 // ═══════════════════════════════════════════════════════════════════════════
 
 /** «medicina_general» → «medicina-general»: la clave, como va en la URL. */
@@ -102,12 +105,35 @@ export function especialidadesConPagina(medicos: readonly MedicoDelDirectorio[])
   return CLAVES_DE_ESPECIALIDAD.filter((c) => c !== 'otra' && presentes.has(c))
 }
 
-/** Los textos de `/directorio/<especialidad>`. */
-export function textosDeEspecialidad(clave: ClaveDeEspecialidad) {
+/**
+ * La ciudad de más de la mitad de los médicos, tal como la escribe el
+ * primero de ellos; `null` si ninguna llega a la mitad. Se compara sin
+ * mayúsculas ni espacios de más.
+ */
+export function ciudadDeLaMayoria(medicos: ReadonlyArray<Pick<MedicoDelDirectorio, 'ciudad'>>): string | null {
+  const cuantos = new Map<string, { ciudad: string; n: number }>()
+  for (const { ciudad } of medicos) {
+    const limpia = ciudad?.trim()
+    if (!limpia) continue
+    const clave = limpia.toLowerCase()
+    const actual = cuantos.get(clave)
+    cuantos.set(clave, { ciudad: actual?.ciudad ?? limpia, n: (actual?.n ?? 0) + 1 })
+  }
+  for (const { ciudad, n } of cuantos.values()) if (n * 2 > medicos.length) return ciudad
+  return null
+}
+
+/**
+ * Los textos de `/directorio/<especialidad>`. Con `ciudad`, el título dice
+ * «Ginecólogos en Caracas con pago en cuotas»: lo que se busca.
+ */
+export function textosDeEspecialidad(clave: ClaveDeEspecialidad, ciudad: string | null = null) {
   const quienes = profesionales(clave)
   return {
     /** Hasta ~60 caracteres: lo que se busca delante, la marca detrás. */
-    titulo: `${quienes} con pago en cuotas, sin inicial | Helios`,
+    titulo: ciudad
+      ? `${quienes} en ${ciudad} con pago en cuotas | Helios`
+      : `${quienes} con pago en cuotas, sin inicial | Helios`,
     descripcion: `${quienes} que aceptan Helios en Venezuela. Escríbeles por WhatsApp y paga tu consulta en 2 cuotas, a los 7 y 14 días, sin inicial.`,
     h1: { antes: quienes, enfasis: 'con 0% de inicial.' },
     entrada: `${nombreDeEspecialidad(clave)}: escríbele por WhatsApp a tu especialista y paga tu consulta en 2 cuotas, a los 7 y 14 días.`,

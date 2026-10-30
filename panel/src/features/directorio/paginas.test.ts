@@ -12,6 +12,7 @@
 import { leerDirectorio } from './directorio'
 import { dominioDe, fuenteDeLaVisita, leerLlegada } from './origen'
 import {
+  ciudadDeLaMayoria,
   claveDeSegmento,
   enlaceDeMapa,
   especialidadesConPagina,
@@ -91,6 +92,20 @@ comprueba(!conPagina.includes('cardiologia'), 'sin médicos, sin página')
 comprueba(profesionales('ginecologia') === 'Ginecólogos', 'el profesional en plural')
 comprueba(profesionales('vacunacion') === 'Especialistas en Vacunación', 'sin nombre propio, «Especialistas en…»')
 comprueba(textosDeEspecialidad('odontologia').titulo.length <= 60, 'el título cabe en el resultado de Google')
+comprueba(
+  textosDeEspecialidad('ginecologia', 'Caracas').titulo === 'Ginecólogos en Caracas con pago en cuotas | Helios',
+  'con ciudad, el título dice dónde',
+  textosDeEspecialidad('ginecologia', 'Caracas').titulo,
+)
+comprueba(
+  textosDeEspecialidad('otorrinolaringologia', 'Caracas').titulo.length <= 60,
+  'el más largo, con ciudad, también cabe',
+)
+const enCiudad = (...ciudades: (string | null)[]) => ciudadDeLaMayoria(ciudades.map((ciudad) => ({ ciudad })))
+comprueba(enCiudad('Caracas', ' caracas ', 'Caracas', 'Caracas', 'Caracas', 'Los Teques') === 'Caracas', 'la ciudad de la mayoría')
+comprueba(enCiudad('Caracas', 'Valencia') === null, 'empate: sin ciudad')
+comprueba(enCiudad('Caracas', null, null) === null, 'los que no tienen ciudad cuentan como otra')
+comprueba(enCiudad() === null, 'sin médicos, sin ciudad')
 comprueba(guiaDeEspecialidad('odontologia').ruta === '/odontologia-en-cuotas', 'odontología enlaza a su guía')
 comprueba(guiaDeEspecialidad('pediatria').ruta === '/consulta-medica-en-cuotas', 'las demás, a la consulta médica')
 

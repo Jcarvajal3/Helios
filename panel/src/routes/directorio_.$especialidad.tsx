@@ -6,6 +6,7 @@ import { cabeceraPublica, urlAbsoluta } from '@/config/sitio'
 import { cargarDirectorio } from '@/features/directorio/api'
 import { directorioEnSchema } from '@/features/directorio/directorio'
 import {
+  ciudadDeLaMayoria,
   claveDeSegmento,
   guiaDeEspecialidad,
   rutaDeEspecialidad,
@@ -17,7 +18,8 @@ import {
 /**
  * UNA ESPECIALIDAD DEL DIRECTORIO — `/directorio/<especialidad>`
  * («/directorio/odontologia»). La misma página que `/directorio`, con sus
- * médicos marcados, su título («Odontólogos con pago en cuotas…»), su miga
+ * médicos marcados, su título («Odontólogos en Caracas con pago en cuotas»,
+ * con la ciudad de la mayoría de sus médicos), su miga
  * de pan y su JSON-LD.
  *
  * Una especialidad que no existe, o que no tiene médicos, es 404: no se
@@ -36,9 +38,9 @@ export const Route = createFileRoute('/directorio_/$especialidad')({
   head: ({ loaderData }) => {
     if (!loaderData) return PAGINA_NO_ENCONTRADA
     const { clave, medicos } = loaderData
-    const textos = textosDeEspecialidad(clave)
-    const ruta = rutaDeEspecialidad(clave)
     const suyos = medicos.filter((m) => m.clave === clave)
+    const textos = textosDeEspecialidad(clave, ciudadDeLaMayoria(suyos))
+    const ruta = rutaDeEspecialidad(clave)
     const base = cabeceraPublica({
       titulo: textos.titulo,
       descripcion: textos.descripcion,
