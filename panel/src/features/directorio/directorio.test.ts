@@ -10,6 +10,7 @@
  * el de la ficha).
  */
 import {
+  directorioEnSchema,
   enlaceDeRed,
   enlaceDeWhatsApp,
   especialidadDeTarjeta,
@@ -86,6 +87,21 @@ comprueba(leerEspecialidad('pediatria') === 'pediatria', 'una clave conocida se 
 comprueba(CLAVES_DE_ESPECIALIDAD.length === 24, 'son las 24 claves de la base', CLAVES_DE_ESPECIALIDAD.length)
 comprueba(leerEspecialidad('vacunacion') === 'vacunacion', 'Vacunación es una categoría propia')
 comprueba(CLAVES_DE_ESPECIALIDAD.at(-1) === 'otra', '«Otras» sigue al final')
+
+console.log('── Lo que leen los buscadores ────────────────────────────────')
+const schema = directorioEnSchema(medicos, 'https://conhelios.com/directorio')
+const primero = schema.itemListElement[0]
+comprueba(schema.numberOfItems === medicos.length, 'un elemento por médico', schema.numberOfItems)
+comprueba(!JSON.stringify(schema).includes('+58'), 'nunca lleva el WhatsApp del médico')
+comprueba(
+  primero.item.medicalSpecialty === 'https://schema.org/Dentistry',
+  'odontología es Dentistry en schema.org',
+  primero.item,
+)
+comprueba(
+  primero.item.address?.addressLocality === 'Barquisimeto' && primero.item.address.addressCountry === 'VE',
+  'la dirección lleva ciudad y país',
+)
 
 console.log('── La tarjeta ────────────────────────────────────────────────')
 const [nadia, jesus, carlos] = medicos

@@ -42,10 +42,15 @@ export function dineroCorto(n: number, moneda: Moneda = 'USD'): string {
   return dinero(n, moneda).replace(/,00$/, '')
 }
 
-export const comision = Math.round(CONSULTA * COMISION_PCT) / 100
-export const iva = Math.round(comision * IVA_PCT) / 100
-export const total = CONSULTA + comision + iva
-export const cuota = Math.round((total / 2) * 100) / 100
+/** Lo que paga el paciente por una consulta de `monto`: comisión, IVA, total y cada cuota. */
+export function desglose(monto: number) {
+  const comision = Math.round(monto * COMISION_PCT) / 100
+  const iva = Math.round(comision * IVA_PCT) / 100
+  const total = monto + comision + iva
+  return { comision, iva, total, cuota: Math.round((total / 2) * 100) / 100 }
+}
+
+export const { comision, iva, total, cuota } = desglose(CONSULTA)
 
 export const ESPECIALIDADES = [
   'Medicina',
@@ -56,9 +61,8 @@ export const ESPECIALIDADES = [
 /**
  * El menú, el mismo en la portada y en las páginas para buscadores. Médicos
  * y pacientes llevan a su página (son enlaces que Google sigue); los demás,
- * a su sección de la portada. El directorio (`/directorio`) es una página
- * para buscar médico: lleva `noindex`, pero desde el 2026-10-30 se llega a
- * ella desde aquí.
+ * a su sección de la portada. El directorio (`/directorio`) es la página
+ * para buscar médico; desde el 2026-10-30 sale en Google.
  */
 export const MENU = [
   { href: '/#como-funciona', texto: 'Cómo funciona' },
@@ -142,11 +146,18 @@ export const PARA_PACIENTES = [
   },
 ] as const
 
+/** La pregunta que más se hace: va en la portada y en las páginas de pacientes. */
+export const PREGUNTA_COSTO = {
+  pregunta: '¿Cuánto cuesta pagar en cuotas?',
+  respuesta: `La Comisión Helios es el ${COMISION_PCT}% del monto de la consulta, más el ${IVA_PCT}% de IVA sobre esa comisión, y va incluida en tus dos cuotas. Por una consulta de ${dineroCorto(CONSULTA)} pagas dos cuotas de ${dinero(cuota)}. No hay inicial, inscripción ni mensualidad.`,
+}
+
 export const PREGUNTAS = [
+  PREGUNTA_COSTO,
   {
     pregunta: '¿Dónde puedo usarlo?',
     respuesta:
-      'En los consultorios y centros de salud afiliados a Helios, de medicina, odontología y cosmetología. Pregunta antes de tu consulta.',
+      'En los consultorios y centros de salud afiliados a Helios, de medicina, odontología y cosmetología: búscalos en el directorio de médicos de Helios o pregunta antes de tu consulta.',
   },
   {
     pregunta: '¿Tengo que descargar algo o crear una cuenta?',

@@ -1,4 +1,14 @@
-import { COMISION_PCT, IVA_PCT, LIMITE, cuota, dinero } from './datos'
+import {
+  COMISION_PCT,
+  CONSULTA,
+  IVA_PCT,
+  LIMITE,
+  PREGUNTA_COSTO,
+  cuota,
+  desglose,
+  dinero,
+  dineroCorto,
+} from './datos'
 import type { RutaPublica } from '@/config/sitio'
 
 /**
@@ -20,6 +30,7 @@ import type { RutaPublica } from '@/config/sitio'
 
 export type Pregunta = { pregunta: string; respuesta: string }
 type Bloque = { titulo: string; texto: string }
+export type Dato = { termino: string; valor: string }
 
 export type Guia = {
   ruta: RutaPublica
@@ -33,6 +44,12 @@ export type Guia = {
   rotulo: string
   h1: { antes: string; enfasis: string }
   entrada: string
+  /**
+   * La respuesta corta, justo debajo de la cabecera: las cifras que se
+   * buscan, sueltas, para quien lee en diagonal y para los buscadores con
+   * IA, que extraen lo que va arriba.
+   */
+  resumen: Dato[]
   pasos: { titulo: { antes: string; enfasis: string }; lista: Bloque[] }
   ventajas: { titulo: { antes: string; enfasis: string }; lista: Bloque[] }
   /** Un aparte para el otro público: el médico de esa especialidad. */
@@ -64,10 +81,60 @@ const PASOS_PACIENTE: Bloque[] = [
   },
 ]
 
-const PREGUNTA_COSTO: Pregunta = {
-  pregunta: '¿Cuánto cuesta pagar en cuotas?',
-  respuesta: `La Comisión Helios es el ${COMISION_PCT}% del monto de la consulta, más el ${IVA_PCT}% de IVA sobre esa comisión, y va incluida en tus dos cuotas. Por una consulta de $100 pagas dos cuotas de ${CUOTA}. No hay inicial, inscripción ni mensualidad.`,
-}
+/** El resumen de las páginas del paciente. */
+const RESUMEN_PACIENTE: Dato[] = [
+  { termino: 'Cuotas', valor: '2, a los 7 y a los 14 días' },
+  { termino: 'Inicial', valor: '$0: hoy no pagas nada' },
+  {
+    termino: 'Comisión Helios',
+    valor: `${COMISION_PCT}% de la consulta + ${IVA_PCT}% de IVA sobre la comisión, incluida en las cuotas`,
+  },
+  {
+    termino: 'Ejemplo',
+    valor: `Consulta de ${dineroCorto(CONSULTA)} → 2 cuotas de ${CUOTA}`,
+  },
+  {
+    termino: 'Cómo pagas',
+    valor: 'En bolívares, por Pago Móvil o transferencia, a la tasa BCV del día',
+  },
+  { termino: 'Límite inicial', valor: `$${LIMITE} en cuotas a la vez` },
+]
+
+/**
+ * El resumen de la página del médico. Ningún total con la Comisión Helios
+ * (CLAUDE.md): el médico solo ve el precio de su consulta.
+ */
+const RESUMEN_MEDICO: Dato[] = [
+  { termino: 'Recibes', valor: 'El 100% del precio de la consulta' },
+  { termino: 'Cuándo', valor: 'La mitad a los 8 días y la otra mitad a los 15' },
+  { termino: 'Si el paciente no paga', valor: 'Te pagamos igual' },
+  { termino: 'Costo para ti', valor: '$0: sin inscripción ni mensualidad' },
+  { termino: 'Cómo registras', valor: 'Plataforma web o WhatsApp, sin punto de venta' },
+  { termino: 'Moneda', valor: 'Dólares o euros; te pagamos en bolívares a tasa BCV' },
+]
+
+/**
+ * La tabla «Cuánto pagas» de las páginas del paciente: lo que se paga por
+ * consultas de distintos montos, hasta el límite inicial. Sale de las mismas
+ * cifras que la portada (`desglose`): no se desactualiza sola.
+ */
+export const TABLA_DE_CUOTAS = [50, CONSULTA, LIMITE].map((monto) => ({
+  monto,
+  ...desglose(monto),
+}))
+
+/**
+ * El calendario de la página del médico: qué pasa cada día desde la
+ * consulta. A los 8 y 15 días, el día siguiente a cada cuota
+ * (`helios_settlement_run_for`).
+ */
+export const CALENDARIO_DE_COBRO: Dato[] = [
+  { termino: 'Día 0', valor: 'Registras la consulta y el paciente confirma por WhatsApp. Ese día no paga nada.' },
+  { termino: 'Día 7', valor: 'Vence la primera cuota del paciente.' },
+  { termino: 'Día 8', valor: 'Recibes la mitad del precio de la consulta.' },
+  { termino: 'Día 14', valor: 'Vence la segunda cuota del paciente.' },
+  { termino: 'Día 15', valor: 'Recibes la otra mitad: ya cobraste el 100%, pague o no el paciente.' },
+]
 
 const PREGUNTA_LIMITE: Pregunta = {
   pregunta: '¿Hasta cuánto puedo pagar en cuotas?',
@@ -83,7 +150,7 @@ const PREGUNTA_COMO_PAGO: Pregunta = {
 const PREGUNTA_MI_MEDICO: Pregunta = {
   pregunta: '¿Cómo sé si mi médico acepta Helios?',
   respuesta:
-    'Pregunta en el consultorio antes de tu cita. Si todavía no está afiliado, cuéntale de Helios: afiliarse no le cuesta nada y cobra el 100% de la consulta.',
+    'Búscalo en el directorio de médicos de Helios o pregunta en el consultorio antes de tu cita. Si todavía no está afiliado, cuéntale de Helios: afiliarse no le cuesta nada y cobra el 100% de la consulta.',
 }
 
 const APARTE_MEDICO =
@@ -101,7 +168,8 @@ const PACIENTES: Guia = {
   rotulo: 'Para pacientes',
   h1: { antes: 'Paga tu consulta médica', enfasis: 'en dos cuotas.' },
   entrada:
-    'Atiéndete hoy y paga después. Con Helios, la consulta o el tratamiento en un consultorio afiliado se paga en dos cuotas, a los 7 y a los 14 días, sin inicial y sin descargar nada.',
+    'Con Helios, la consulta o el tratamiento en un consultorio afiliado se paga en dos cuotas, a los 7 y a los 14 días, sin inicial y sin descargar nada. Atiéndete hoy y paga después.',
+  resumen: RESUMEN_PACIENTE,
   pasos: {
     titulo: { antes: 'Pagar en cuotas,', enfasis: 'en tres pasos.' },
     lista: PASOS_PACIENTE,
@@ -195,6 +263,7 @@ const MEDICOS: Guia = {
   h1: { antes: 'Ofrece pago en cuotas', enfasis: 'y cobra el 100%.' },
   entrada:
     'Tus pacientes pagan la consulta en dos cuotas y tú recibes el precio completo, la mitad a los 8 días y la otra mitad a los 15, pague o no el paciente. El cobro corre por cuenta de Helios.',
+  resumen: RESUMEN_MEDICO,
   pasos: {
     titulo: { antes: 'Así funciona', enfasis: 'en tu consultorio.' },
     lista: [
@@ -321,6 +390,7 @@ const MEDICINA: Guia = {
   h1: { antes: 'Tu consulta médica,', enfasis: 'en dos cuotas.' },
   entrada:
     'Con tu médico de cabecera o con el especialista: si el consultorio está afiliado a Helios, pagas la consulta en dos cuotas, a los 7 y a los 14 días, sin inicial.',
+  resumen: RESUMEN_PACIENTE,
   pasos: {
     titulo: { antes: 'Cómo pagar tu consulta', enfasis: 'en cuotas.' },
     lista: PASOS_PACIENTE,
@@ -385,6 +455,7 @@ const ODONTOLOGIA: Guia = {
   h1: { antes: 'Tu consulta con el odontólogo,', enfasis: 'en dos cuotas.' },
   entrada:
     'Una limpieza, un control o ese dolor de muela que no puede esperar. En los consultorios odontológicos afiliados a Helios pagas tu atención en dos cuotas, a los 7 y a los 14 días, sin inicial.',
+  resumen: RESUMEN_PACIENTE,
   pasos: {
     titulo: { antes: 'Cómo pagar al dentista', enfasis: 'en cuotas.' },
     lista: PASOS_PACIENTE,
@@ -430,7 +501,7 @@ const ODONTOLOGIA: Guia = {
     {
       pregunta: '¿Cómo sé si mi odontólogo acepta Helios?',
       respuesta:
-        'Pregúntale en el consultorio. Si todavía no está afiliado, cuéntale de Helios: afiliarse no le cuesta nada y cobra el 100% de la consulta.',
+        'Búscalo en el directorio de médicos de Helios o pregúntale en el consultorio. Si todavía no está afiliado, cuéntale de Helios: afiliarse no le cuesta nada y cobra el 100% de la consulta.',
     },
   ],
   relacionadas: ['/pacientes', '/consulta-medica-en-cuotas', '/medicos'],
@@ -448,6 +519,7 @@ const COSMETOLOGIA: Guia = {
   h1: { antes: 'Tu tratamiento de cosmetología,', enfasis: 'en dos cuotas.' },
   entrada:
     'Limpiezas faciales, tratamientos para la piel y otros servicios de cosmetología: en los centros afiliados a Helios los pagas en dos cuotas, a los 7 y a los 14 días, sin inicial.',
+  resumen: RESUMEN_PACIENTE,
   pasos: {
     titulo: { antes: 'Cómo pagar tu tratamiento', enfasis: 'en cuotas.' },
     lista: PASOS_PACIENTE,
@@ -496,7 +568,7 @@ const COSMETOLOGIA: Guia = {
     {
       pregunta: '¿Cómo sé si mi centro acepta Helios?',
       respuesta:
-        'Pregunta en el centro antes de tu cita. Si todavía no está afiliado, cuéntale de Helios: afiliarse no le cuesta nada y cobra el 100% del tratamiento.',
+        'Búscalo en el directorio de médicos de Helios o pregunta en el centro antes de tu cita. Si todavía no está afiliado, cuéntale de Helios: afiliarse no le cuesta nada y cobra el 100% del tratamiento.',
     },
   ],
   relacionadas: ['/pacientes', '/odontologia-en-cuotas', '/medicos'],

@@ -61,14 +61,30 @@ página.
 - Menú: «Médicos y centros» y «Pacientes» llevan a sus páginas; pie con
   columnas Pacientes / Médicos y centros / Helios / Legal.
 
-**`/directorio` (2026-10-26) va fuera de todo esto a propósito**: el
-directorio de médicos se comparte por URL y, desde el 2026-10-30 (Javier), se
-llega también por «Directorio» en el menú de la portada (`MENU`). Lleva
-`noindex, follow`, no está en `PAGINAS_PUBLICAS`
-(ni en el sitemap ni en `llms.txt`) y no usa `cabeceraPublica`; sí lleva sus
-etiquetas `og:`/`twitter:` para que la vista previa salga bien al mandarlo
-por WhatsApp. Si un día se quiere en Google, se pasa a `cabeceraPublica`, se
-añade a `PAGINAS_PUBLICAS` y se enlaza desde el menú o el pie.
+## Segunda ronda: buscadores con IA (2026-10-30)
+
+Cuatro recomendaciones para buscadores con IA (Google AI Overviews, ChatGPT,
+Perplexity) y lo que se hizo con cada una:
+
+| Recomendación | Lo que se hizo |
+| --- | --- |
+| **Respuesta directa arriba** | Cada guía lleva, justo debajo de la cabecera, un bloque «En resumen» (`<dl>`, `resumen` en `guias.ts`) con las cifras sueltas: cuotas, inicial, comisión, ejemplo, cómo se paga, límite (o, para el médico, cuánto y cuándo cobra). La entrada de `/pacientes` empieza por la respuesta, no por el eslogan. `llms.txt` abre con «En resumen». |
+| **Estructura legible** | Una tabla por guía: «Cuánto pagas» según el monto ($50, $100, $150; `TABLA_DE_CUOTAS`, sale de `desglose()` en `datos.ts`) y, para el médico, «Cuándo cobras» día por día (`CALENDARIO_DE_COBRO`, sin la Comisión Helios). Cada pregunta frecuente es un `<h3>`. La portada suma «¿Cuánto cuesta pagar en cuotas?» (`PREGUNTA_COSTO`), la más buscada. |
+| **Valor único (*information gain*)** | Las tablas son cifras propias de Helios. **El directorio de médicos sale en Google** (Javier): médicos reales con su especialidad y su dirección, que no están en ninguna otra web. Las respuestas sobre «¿mi médico acepta Helios?» mandan al directorio. |
+| **Autoridad de la marca** | El JSON-LD de `Organization` añade `taxID` y `contactPoint` en cuanto `RESPONSABLE` (`config/legal.ts`) tenga RIF, correo o WhatsApp; vacíos, no sale nada. `llms.txt` suma tabla, calendario, preguntas frecuentes, el directorio y el contacto. |
+
+**`/directorio` sale en Google desde el 2026-10-30** (Javier; del 26 al 30
+llevó `noindex`): usa `cabeceraPublica` (título «Médicos con pago en cuotas
+en Venezuela | Directorio Helios»), está en `PAGINAS_PUBLICAS` (sitemap) y
+en `llms.txt` con cada médico, y se enlaza desde el menú y el pie. Su
+JSON-LD es un `ItemList` de `Physician` (`directorioEnSchema`) con nombre,
+especialidad (`medicalSpecialty` de schema.org donde hay equivalente),
+dirección y red social; **nunca su WhatsApp**, que pasa por el botón de la
+tarjeta. El `canonical` es `/directorio` también con `?especialidad=`.
+
+Lo que no se hizo, por ahora: publicar cifras propias (médicos afiliados,
+consultas registradas, encuestas). Con pocos datos restan confianza; cuando
+haya volumen, una página de «Helios en cifras» es lo siguiente.
 
 Todo respeta las reglas de vocabulario de CLAUDE.md (nada de «préstamo»,
 «financiamiento», «crédito» ni «fee») y solo afirma lo que el sistema ya hace
@@ -89,10 +105,17 @@ Todo respeta las reglas de vocabulario de CLAUDE.md (nada de «préstamo»,
    desde su web, su Instagram o su perfil de Google («Aceptamos pagos en
    cuotas con Helios»). Es lo que más sube el posicionamiento a partir de
    aquí.
-4. **Contacto público**: cuando exista correo o WhatsApp de atención
-   (`RESPONSABLE` en `config/legal.ts`), añadirlo da `contactPoint` al
-   JSON-LD y confianza a Google en un sitio de salud y pagos.
-5. **Más adelante**: un blog o guías («¿Cuánto cuesta una consulta con el
+4. **Contacto público**: cuando exista correo o WhatsApp de atención, y el
+   RIF, basta con llenar `RESPONSABLE` en `config/legal.ts`: el JSON-LD
+   suma `contactPoint` y `taxID` solo, y `llms.txt` el contacto. Da
+   confianza a Google en un sitio de salud y pagos.
+5. **Misma identidad en todas partes**: la bio de Instagram, el Perfil de
+   Empresa de Google y, si se abre, la página de LinkedIn, con el mismo
+   nombre, la misma frase («pagar consultas y tratamientos de salud privada
+   en Venezuela en dos cuotas, sin inicial») y el enlace a `conhelios.com`.
+   Cada perfil nuevo se añade a `REDES` (`config/sitio.ts`) para el
+   `sameAs`.
+6. **Más adelante**: un blog o guías («¿Cuánto cuesta una consulta con el
    odontólogo en Venezuela?», «Cómo pagar al médico con Pago Móvil»)
    captaría búsquedas informativas; y una página por ciudad solo cuando haya
    clínicas afiliadas reales en ella (una página por ciudad sin clínicas sería

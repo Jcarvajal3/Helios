@@ -269,6 +269,76 @@ export function fichasQueCaben(
   return 1
 }
 
+// ── Lo que leen los buscadores ─────────────────────────────────────────────
+
+/**
+ * Las especialidades del directorio en el vocabulario de schema.org
+ * (`MedicalSpecialty`). Las que no tienen equivalente claro no llevan
+ * ninguna: basta su nombre en la descripción.
+ */
+const ESPECIALIDAD_EN_SCHEMA: Partial<Record<ClaveDeEspecialidad, string>> = {
+  medicina_general: 'PrimaryCare',
+  pediatria: 'Pediatric',
+  ginecologia: 'Gynecologic',
+  traumatologia: 'Musculoskeletal',
+  cardiologia: 'Cardiovascular',
+  dermatologia: 'Dermatology',
+  otorrinolaringologia: 'Otolaryngologic',
+  urologia: 'Urologic',
+  gastroenterologia: 'Gastroenterologic',
+  neurologia: 'Neurologic',
+  psicologia: 'Psychiatric',
+  nutricion: 'DietNutrition',
+  endocrinologia: 'Endocrine',
+  neumologia: 'Pulmonary',
+  oncologia: 'Oncologic',
+  fisioterapia: 'Physiotherapy',
+  enfermeria: 'Nursing',
+  odontologia: 'Dentistry',
+}
+
+/**
+ * Los médicos del directorio como `ItemList` de `Physician`, para el
+ * JSON-LD de `/directorio`: lo mismo que se lee en las tarjetas (nombre,
+ * especialidad, dirección y red social), nunca su WhatsApp, que pasa por el
+ * botón de la tarjeta. `url` es la de la página.
+ */
+export function directorioEnSchema(medicos: readonly MedicoDelDirectorio[], url: string) {
+  return {
+    '@type': 'ItemList',
+    '@id': `${url}#medicos`,
+    name: 'Médicos que aceptan pago en cuotas con Helios',
+    numberOfItems: medicos.length,
+    itemListElement: medicos.map((m, i) => {
+      const especialidad = especialidadDeTarjeta(m)
+      const schema = ESPECIALIDAD_EN_SCHEMA[m.clave]
+      const red = enlaceDeRed(m)
+      return {
+        '@type': 'ListItem',
+        position: i + 1,
+        item: {
+          '@type': 'Physician',
+          name: m.nombre,
+          ...(especialidad ? { description: especialidad } : {}),
+          ...(schema ? { medicalSpecialty: `https://schema.org/${schema}` } : {}),
+          ...(m.direccion || m.ciudad
+            ? {
+                address: {
+                  '@type': 'PostalAddress',
+                  ...(m.direccion ? { streetAddress: m.direccion } : {}),
+                  ...(m.ciudad ? { addressLocality: m.ciudad } : {}),
+                  addressCountry: 'VE',
+                },
+              }
+            : {}),
+          paymentAccepted: 'Pago en cuotas con Helios, en bolívares por Pago Móvil o transferencia',
+          ...(red ? { sameAs: [red.url] } : {}),
+        },
+      }
+    }),
+  }
+}
+
 // ── El visitante ───────────────────────────────────────────────────────────
 
 const CLAVE_VISITANTE = 'helios.directorio.visitante'

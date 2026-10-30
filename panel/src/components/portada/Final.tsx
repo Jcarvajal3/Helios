@@ -60,14 +60,16 @@ export function Preguntas({
                     teclado ya sabe manejarlo. El CSS anima la altura donde se puede. */}
                 <details className="portada-pregunta group rounded-[22px] border border-portada-linea bg-white transition-[border-color,box-shadow] duration-500 open:border-portada-azul/20 open:shadow-[0_24px_50px_-30px_rgba(0,39,112,0.3)]">
                   <summary className="flex cursor-pointer list-none items-center justify-between gap-6 px-6 py-5 [&::-webkit-details-marker]:hidden">
-                    <span className="flex items-baseline gap-4">
-                      <span className="portada-etiqueta text-portada-tinta-3/70">
-                        0{i + 1}
+                    {/* La pregunta es un `<h3>`: buscadores y lectores de
+                        pantalla la leen como pregunta, no como texto suelto. */}
+                    <h3 className="flex items-baseline gap-4">
+                      <span aria-hidden className="portada-etiqueta text-portada-tinta-3/70">
+                        {String(i + 1).padStart(2, '0')}
                       </span>
                       <span className="text-[1.06rem] font-medium leading-snug tracking-[-0.02em] text-portada-tinta">
                         {p.pregunta}
                       </span>
-                    </span>
+                    </h3>
                     <span
                       aria-hidden
                       className="grid size-9 shrink-0 place-items-center rounded-full bg-portada-niebla text-portada-tinta transition-all duration-500 group-open:rotate-[135deg] group-open:bg-portada-tinta group-open:text-white"
@@ -152,6 +154,11 @@ export function Pie() {
                 <li>
                   <Link to="/pacientes" className={enlace}>
                     Pagar en cuotas
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/directorio" className={enlace}>
+                    Directorio de médicos
                   </Link>
                 </li>
                 <li>

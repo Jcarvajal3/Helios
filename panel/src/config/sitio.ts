@@ -51,12 +51,15 @@ export const IMAGEN_COMPARTIR = {
  * cierto, así que se toca a mano cuando cambia el texto de la página.
  */
 export const PAGINAS_PUBLICAS = {
-  '/': { actualizada: '2026-10-14' },
-  '/pacientes': { actualizada: '2026-10-14' },
-  '/medicos': { actualizada: '2026-10-14' },
-  '/consulta-medica-en-cuotas': { actualizada: '2026-10-14' },
-  '/odontologia-en-cuotas': { actualizada: '2026-10-14' },
-  '/cosmetologia-en-cuotas': { actualizada: '2026-10-14' },
+  '/': { actualizada: '2026-10-30' },
+  '/pacientes': { actualizada: '2026-10-30' },
+  '/medicos': { actualizada: '2026-10-30' },
+  '/consulta-medica-en-cuotas': { actualizada: '2026-10-30' },
+  '/odontologia-en-cuotas': { actualizada: '2026-10-30' },
+  '/cosmetologia-en-cuotas': { actualizada: '2026-10-30' },
+  // La lista de médicos cambia sola (superadmin › Directorio); la fecha es
+  // la del texto y la estructura de la página.
+  '/directorio': { actualizada: '2026-10-30' },
   '/afiliacion': { actualizada: '2026-10-26' },
   '/soporte': { actualizada: '2026-10-09' },
   '/legal/terminos': { actualizada: '2026-10-07' },
@@ -77,6 +80,22 @@ export const NO_INDEXAR = {
 
 const ID_ORGANIZACION = `${SITIO_URL}/#organizacion`
 const ID_SITIO = `${SITIO_URL}/#sitio`
+
+/**
+ * Cómo se contacta a Helios, para el JSON-LD: el correo y el WhatsApp de
+ * `RESPONSABLE` (`config/legal.ts`). Vacíos, no sale nada; al llenarlos,
+ * entran solos.
+ */
+const CONTACTO = [
+  ...(RESPONSABLE.soporte ? [{ email: RESPONSABLE.soporte }] : []),
+  ...(RESPONSABLE.whatsapp ? [{ telephone: `+${RESPONSABLE.whatsapp}` }] : []),
+].map((canal) => ({
+  '@type': 'ContactPoint',
+  contactType: 'customer support',
+  areaServed: 'VE',
+  availableLanguage: 'es',
+  ...canal,
+}))
 
 /** Quién opera Helios y el sitio: van en el JSON-LD de todas las páginas públicas. */
 const ORGANIZACION = {
@@ -99,6 +118,8 @@ const ORGANIZACION = {
     'Pago Móvil',
   ],
   sameAs: REDES.map((r) => r.url),
+  ...(RESPONSABLE.rif ? { taxID: RESPONSABLE.rif } : {}),
+  ...(CONTACTO.length ? { contactPoint: CONTACTO } : {}),
 }
 
 const SITIO = {

@@ -9,10 +9,11 @@ import { Pie } from '@/components/portada'
 import { Menu } from '@/components/portada/Menu'
 import { Desglose } from '@/components/portada/Pacientes'
 import { BotonAfiliarme, Boton, Lienzo, Revelar, Rotulo } from '@/components/portada/piezas'
-import { IMAGEN_COMPARTIR, NOMBRE, urlAbsoluta } from '@/config/sitio'
+import { cabeceraPublica, urlAbsoluta } from '@/config/sitio'
 import { apuntarContacto, consultarDirectorio, consultarWhatsappDeHelios } from '@/features/directorio/api'
 import {
   INTERESADOS_POR_HELIOS,
+  directorioEnSchema,
   especialidadesPresentes,
   fichasQueCaben,
   filtrarDirectorio,
@@ -21,7 +22,6 @@ import type { EspecialidadPresente, MedicoDelDirectorio } from '@/features/direc
 import { CLAVES_DE_ESPECIALIDAD, nombreDeEspecialidad } from '@/features/directorio/especialidades'
 import type { ClaveDeEspecialidad } from '@/features/directorio/especialidades'
 import { unoDe } from '@/lib/busqueda'
-import { FUENTES_DE_LA_PORTADA } from '@/lib/fuentes'
 
 /**
  * EL DIRECTORIO DE MÉDICOS — `/directorio`.
@@ -35,16 +35,17 @@ import { FUENTES_DE_LA_PORTADA } from '@/lib/fuentes'
  * cada tarjeta entera lleva al chat. Sin buscador (2026-10-27): con pocos
  * médicos, las especialidades bastan.
  *
- * No sale en el sitemap y lleva `noindex` (decisión de Javier, 2026-10-26):
- * se llega compartiendo la URL y, desde el 2026-10-30, por «Directorio» en
- * el menú de la portada. Lleva su vista previa para WhatsApp: es por donde
- * se va a compartir. La especialidad vive en la URL
- * (`?especialidad=odontologia`), así que también se comparte un filtro.
+ * Sale en Google desde el 2026-10-30 (Javier; antes llevaba `noindex`):
+ * usa `cabeceraPublica`, está en el sitemap y en `llms.txt`, y su JSON-LD
+ * lleva cada médico como `Physician` (`directorioEnSchema`). Se llega por
+ * «Directorio» en el menú, por el pie y compartiendo la URL. La
+ * especialidad vive en la URL (`?especialidad=odontologia`), así que también
+ * se comparte un filtro; el `canonical` es siempre `/directorio`.
  *
  * Tiene el aspecto de la portada (`styles/portada.css`), siempre en claro.
  */
 
-const TITULO = 'Directorio de médicos que aceptan Helios'
+const TITULO = 'Médicos con pago en cuotas en Venezuela | Directorio Helios'
 const DESCRIPCION =
   'Encuentra médicos, odontólogos y especialistas que aceptan Helios, escríbeles por WhatsApp y paga tu consulta en dos cuotas, a los 7 y 14 días, sin inicial.'
 
@@ -70,32 +71,18 @@ export const Route = createFileRoute('/directorio')({
       return { medicos: [] as MedicoDelDirectorio[], fallo: true, whatsappHelios: await whatsappHelios }
     }
   },
-  head: () => {
-    const url = urlAbsoluta('/directorio')
-    const imagen = urlAbsoluta(IMAGEN_COMPARTIR.ruta)
-    return {
-      meta: [
-        { title: `${TITULO} | ${NOMBRE}` },
-        { name: 'description', content: DESCRIPCION },
-        { name: 'robots', content: 'noindex, follow' },
-        { name: 'color-scheme', content: 'light' },
-        { property: 'og:type', content: 'website' },
-        { property: 'og:site_name', content: NOMBRE },
-        { property: 'og:locale', content: 'es_VE' },
-        { property: 'og:url', content: url },
-        { property: 'og:title', content: TITULO },
-        { property: 'og:description', content: DESCRIPCION },
-        { property: 'og:image', content: imagen },
-        { property: 'og:image:width', content: String(IMAGEN_COMPARTIR.ancho) },
-        { property: 'og:image:height', content: String(IMAGEN_COMPARTIR.alto) },
-        { property: 'og:image:alt', content: IMAGEN_COMPARTIR.alt },
-        { name: 'twitter:card', content: 'summary_large_image' },
-        { name: 'twitter:title', content: TITULO },
-        { name: 'twitter:description', content: DESCRIPCION },
-        { name: 'twitter:image', content: imagen },
-      ],
-      links: [FUENTES_DE_LA_PORTADA],
-    }
+  head: ({ loaderData }) => {
+    const base = cabeceraPublica({
+      titulo: TITULO,
+      descripcion: DESCRIPCION,
+      ruta: '/directorio',
+      migas: [{ nombre: 'Directorio de médicos', ruta: '/directorio' }],
+      datos: loaderData?.medicos.length
+        ? [directorioEnSchema(loaderData.medicos, urlAbsoluta('/directorio'))]
+        : [],
+      aspecto: 'portada',
+    })
+    return { ...base, meta: [...base.meta, { name: 'color-scheme', content: 'light' }] }
   },
   component: Directorio,
 })
