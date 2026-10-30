@@ -10,7 +10,10 @@ import { LineaDeCobro } from './Medicos'
 import { Menu } from './Menu'
 import { Desglose } from './Pacientes'
 import { Boton, BotonAfiliarme, Lienzo, Revelar, Rotulo } from './piezas'
+import { TarjetaDeMedico } from '@/components/directorio/TarjetaDeMedico'
 import { REDES, cabeceraPublica, preguntasFrecuentes, servicio } from '@/config/sitio'
+import { apuntarContacto, cargarDirectorio } from '@/features/directorio/api'
+import type { MedicoDelDirectorio } from '@/features/directorio/directorio'
 
 /**
  * LAS PÁGINAS PARA BUSCADORES — `/pacientes`, `/medicos` y una por
@@ -23,13 +26,16 @@ import { REDES, cabeceraPublica, preguntasFrecuentes, servicio } from '@/config/
  *   Cifras       una tabla: cuánto paga el paciente según el monto, o
  *                cuándo cobra el médico, día por día
  *   Ventajas     lo que tiene que saber
+ *   Médicos      en las del paciente, hasta 6 médicos reales de su
+ *                especialidad, del directorio (`cargarMedicosDeGuia`)
  *   Aparte       en las especialidades, unas líneas para el médico
  *   Preguntas    las suyas, también en el JSON-LD
  *   Relacionadas enlaces a las otras páginas (enlazado interno)
  *   Cierre       la llamada a la acción
  *
- * El texto vive en `guias.ts`. Cada ruta es un fichero de tres líneas:
- * `head: () => cabeceraDeGuia(ruta)` y `component: () => <Guia ruta=… />`.
+ * El texto vive en `guias.ts`. Cada ruta es un fichero corto:
+ * `head: () => cabeceraDeGuia(ruta)`, `component: () => <Guia ruta=… />` y,
+ * en las del paciente, `loader: () => cargarMedicosDeGuia(ruta)`.
  */
 
 const NOCHE = '#020B24'
@@ -57,7 +63,7 @@ export function cabeceraDeGuia(ruta: RutaDeGuia) {
   return { ...base, meta: [...base.meta, { name: 'color-scheme', content: 'light' }] }
 }
 
-export function Guia({ ruta }: { ruta: RutaDeGuia }) {
+export function Guia({ ruta, medicos = SIN_MEDICOS }: { ruta: RutaDeGuia; medicos?: MedicosDeGuia }) {
   const g: DatosDeGuia = GUIAS[ruta]
   return (
     <div className="portada-raiz min-h-screen">
@@ -68,13 +74,14 @@ export function Guia({ ruta }: { ruta: RutaDeGuia }) {
         <Pasos guia={g} />
         {g.publico === 'medico' ? <CalendarioDeCobro /> : <CuantoPagas />}
         <Ventajas guia={g} />
+        <MedicosDeLaGuia guia={g} medicos={medicos} />
         {g.aparte && <Aparte {...g.aparte} />}
         <Preguntas
           lista={g.preguntas}
           titular={{ antes: 'Preguntas', enfasis: 'frecuentes.' }}
         />
         <Relacionadas rutas={g.relacionadas} />
-        <Cierre publico={g.publico} />
+        <Cierre guia={g} />
       </main>
       <Pie />
     </div>
@@ -437,17 +444,30 @@ function Relacionadas({ rutas }: { rutas: DatosDeGuia['relacionadas'] }) {
   )
 }
 
-function Cierre({ publico }: { publico: DatosDeGuia['publico'] }) {
+/**
+ * La llamada final. Al médico, afiliarse. Al paciente, desde el 2026-10-30,
+ * buscar a su médico en el directorio (su especialidad, si la guía la tiene);
+ * sin directorio, preguntar por Helios en la consulta.
+ */
+function Cierre({ guia: g }: { guia: DatosDeGuia }) {
+  const directorio = g.publico === 'paciente' ? g.directorio : undefined
   return (
     <section className="relative isolate overflow-hidden border-t border-portada-linea bg-portada-niebla">
       <Lienzo className="flex flex-col items-center py-24 text-center sm:py-32">
         <Rotulo>Medicina · Odontología · Cosmetología</Rotulo>
-        <h2 className="portada-titular mt-6 max-w-[16ch] text-portada-tinta">
-          {publico === 'medico' ? (
+        <h2 className="portada-titular mt-6 max-w-[18ch] text-portada-tinta">
+          {g.publico === 'medico' ? (
             <>
               Afilia tu consultorio,{' '}
               <em className="portada-serif portada-degradado pr-[0.06em]">
                 sin costo.
+              </em>
+            </>
+          ) : directorio ? (
+            <>
+              {directorio.cierre.antes}{' '}
+              <em className="portada-serif portada-degradado pr-[0.06em]">
+                {directorio.cierre.enfasis}
               </em>
             </>
           ) : (
@@ -460,7 +480,7 @@ function Cierre({ publico }: { publico: DatosDeGuia['publico'] }) {
           )}
         </h2>
         <div className="mt-10 flex flex-wrap justify-center gap-3">
-          {publico === 'medico' ? (
+          {g.publico === 'medico' ? (
             <>
               <BotonAfiliarme />
               <Boton to="/pacientes" tono="contorno">
@@ -469,22 +489,97 @@ function Cierre({ publico }: { publico: DatosDeGuia['publico'] }) {
             </>
           ) : (
             <>
-              <Boton to="/medicos">Soy médico</Boton>
-              {REDES.map((r) => (
-                <Boton
-                  key={r.url}
-                  href={r.url}
-                  externo
-                  flecha="fuera"
-                  tono="contorno"
-                >
-                  Síguenos en {r.nombre}
-                </Boton>
-              ))}
+              {directorio && <Boton to={directorio.ruta}>{directorio.texto}</Boton>}
+              <Boton to="/medicos" tono={directorio ? 'contorno' : 'tinta'}>
+                Soy médico
+              </Boton>
+              {!directorio &&
+                REDES.map((r) => (
+                  <Boton
+                    key={r.url}
+                    href={r.url}
+                    externo
+                    flecha="fuera"
+                    tono="contorno"
+                  >
+                    Síguenos en {r.nombre}
+                  </Boton>
+                ))}
             </>
           )}
         </div>
       </Lienzo>
     </section>
   )
+}
+
+/**
+ * Médicos de verdad, de la especialidad de la guía (hasta 6, en el orden
+ * sorteado del directorio, que reparte los clics): su tarjeta, con el mismo
+ * botón de WhatsApp y el nombre que lleva a su ficha, y «Ver todos». Sale de
+ * la base al cargar la página; sin médicos, no sale.
+ */
+function MedicosDeLaGuia({ guia: g, medicos }: { guia: DatosDeGuia; medicos: MedicosDeGuia }) {
+  const directorio = g.directorio
+  if (!directorio || medicos.lista.length === 0) return null
+  return (
+    <section className="relative border-t border-portada-linea bg-portada-niebla">
+      <Lienzo className="py-24 sm:py-32">
+        <Revelar>
+          <Rotulo>Directorio</Rotulo>
+          <h2 className="portada-titular mt-6 max-w-[20ch] text-portada-tinta">
+            {directorio.quienes} que{' '}
+            <em className="portada-serif text-portada-azul">ya aceptan Helios.</em>
+          </h2>
+          <p className="mt-5 max-w-[56ch] text-[1rem] leading-relaxed text-portada-tinta-2">
+            Escríbeles por WhatsApp para agendar tu cita y paga tu consulta en 2 cuotas, a los 7 y
+            14 días, sin inicial.
+          </p>
+        </Revelar>
+        <ul className="mt-12 grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+          {medicos.lista.map((m, i) => (
+            <Revelar key={m.id} como="li" retraso={(i % 3) * 60}>
+              <TarjetaDeMedico
+                medico={m}
+                whatsappHelios={medicos.whatsappHelios}
+                onContacto={() => apuntarContacto(m.id)}
+              />
+            </Revelar>
+          ))}
+        </ul>
+        {medicos.total > medicos.lista.length && (
+          <div className="mt-8">
+            <Boton to={directorio.ruta} tono="contorno">
+              Ver los {medicos.total} del directorio
+            </Boton>
+          </div>
+        )}
+      </Lienzo>
+    </section>
+  )
+}
+
+/** Lo que carga cada guía del paciente: hasta 6 médicos de lo suyo, cuántos hay y el WhatsApp de Helios. */
+export type MedicosDeGuia = {
+  lista: MedicoDelDirectorio[]
+  total: number
+  whatsappHelios: string | null
+}
+
+const SIN_MEDICOS: MedicosDeGuia = { lista: [], total: 0, whatsappHelios: null }
+
+/**
+ * El `loader` de una guía del paciente. Si el directorio no contesta, la
+ * guía sale igual, sin la franja: es un extra, no el contenido.
+ */
+export async function cargarMedicosDeGuia(ruta: RutaDeGuia): Promise<MedicosDeGuia> {
+  const g: DatosDeGuia = GUIAS[ruta]
+  const directorio = g.directorio
+  if (!directorio) return SIN_MEDICOS
+  const datos = await cargarDirectorio()
+  if (datos.fallo) return SIN_MEDICOS
+  const suyos = directorio.claves
+    ? datos.medicos.filter((m) => directorio.claves?.includes(m.clave))
+    : datos.medicos
+  return { lista: suyos.slice(0, 6), total: suyos.length, whatsappHelios: datos.whatsappHelios }
 }

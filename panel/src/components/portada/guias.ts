@@ -10,6 +10,8 @@ import {
   dineroCorto,
 } from './datos'
 import type { RutaPublica } from '@/config/sitio'
+import { CLAVES_DE_ESPECIALIDAD } from '@/features/directorio/especialidades'
+import type { ClaveDeEspecialidad } from '@/features/directorio/especialidades'
 
 /**
  * LAS PÁGINAS PARA BUSCADORES — `/pacientes`, `/medicos` y una por
@@ -61,7 +63,17 @@ export type Guia = {
    * (2026-10-30). Solo especialidades con médicos de sobra, para que el
    * enlace no lleve nunca a una página vacía.
    */
-  directorio?: { ruta: string; texto: string }
+  directorio?: {
+    ruta: string
+    /** El texto del botón: «Encuentra tu odontólogo». */
+    texto: string
+    /** El titular del cierre: «Encuentra a tu odontólogo, con 0% de inicial.» */
+    cierre: { antes: string; enfasis: string }
+    /** Quiénes salen en la franja de médicos; sin esto, todos. */
+    claves?: readonly ClaveDeEspecialidad[]
+    /** Cómo se llama a esos médicos en el titular de la franja. */
+    quienes: string
+  }
   servicio: { nombre: string; categoria?: string }
 }
 
@@ -253,7 +265,12 @@ const PACIENTES: Guia = {
     '/odontologia-en-cuotas',
     '/cosmetologia-en-cuotas',
   ],
-  directorio: { ruta: '/directorio', texto: 'Encuentra tu médico' },
+  directorio: {
+    ruta: '/directorio',
+    texto: 'Encuentra tu médico',
+    cierre: { antes: 'Encuentra a tu médico,', enfasis: 'con 0% de inicial.' },
+    quienes: 'Médicos',
+  },
   servicio: { nombre: 'Pago de consultas de salud en dos cuotas' },
 }
 
@@ -448,7 +465,14 @@ const MEDICINA: Guia = {
     PREGUNTA_MI_MEDICO,
   ],
   relacionadas: ['/pacientes', '/odontologia-en-cuotas', '/medicos'],
-  directorio: { ruta: '/directorio', texto: 'Encuentra tu médico' },
+  directorio: {
+    ruta: '/directorio',
+    texto: 'Encuentra tu médico',
+    cierre: { antes: 'Encuentra a tu médico,', enfasis: 'con 0% de inicial.' },
+    // Medicina: todos menos odontología y cosmetología, que tienen su guía.
+    claves: CLAVES_DE_ESPECIALIDAD.filter((c) => c !== 'odontologia' && c !== 'cosmetologia' && c !== 'otra'),
+    quienes: 'Médicos',
+  },
   servicio: { nombre: 'Consulta médica en cuotas', categoria: 'Medicina' },
 }
 
@@ -513,7 +537,13 @@ const ODONTOLOGIA: Guia = {
     },
   ],
   relacionadas: ['/pacientes', '/consulta-medica-en-cuotas', '/medicos'],
-  directorio: { ruta: '/directorio/odontologia', texto: 'Encuentra tu odontólogo' },
+  directorio: {
+    ruta: '/directorio/odontologia',
+    texto: 'Encuentra tu odontólogo',
+    cierre: { antes: 'Encuentra a tu odontólogo,', enfasis: 'con 0% de inicial.' },
+    claves: ['odontologia'],
+    quienes: 'Odontólogos',
+  },
   servicio: { nombre: 'Odontología en cuotas', categoria: 'Odontología' },
 }
 
@@ -581,7 +611,13 @@ const COSMETOLOGIA: Guia = {
     },
   ],
   relacionadas: ['/pacientes', '/odontologia-en-cuotas', '/medicos'],
-  directorio: { ruta: '/directorio', texto: 'Encuentra tu centro' },
+  directorio: {
+    ruta: '/directorio',
+    texto: 'Encuentra tu centro',
+    cierre: { antes: 'Encuentra tu centro,', enfasis: 'con 0% de inicial.' },
+    claves: ['cosmetologia'],
+    quienes: 'Centros de cosmetología',
+  },
   servicio: { nombre: 'Cosmetología en cuotas', categoria: 'Cosmetología' },
 }
 

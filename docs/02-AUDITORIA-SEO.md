@@ -96,7 +96,7 @@ Todo sale solo de la base (`features/directorio/paginas.ts`):
 | `sitemap.xml` | Las fijas, más una por especialidad con médicos y una por médico, con el `lastmod` de su tarjeta. |
 | `llms.txt` | Las especialidades y cada médico con el enlace a su ficha. |
 | IndexNow | `/indexnow-clave.txt` y `POST /api/indexnow`: al guardar una tarjeta en el superadmin se avisa a Bing (y por él Copilot, DuckDuckGo, Yahoo) de todas las páginas. Solo en producción. |
-| Guías | Las de pacientes llevan como botón principal su página del directorio («Encuentra tu odontólogo»); el directorio enlaza de vuelta a su guía. |
+| Guías | Las de pacientes llevan como botón principal su página del directorio («Encuentra tu odontólogo»), una franja con hasta 6 médicos reales de su especialidad (con su botón de WhatsApp y el enlace a su ficha; `cargarMedicosDeGuia`) y un cierre «Encuentra a tu médico, con 0% de inicial» que lleva al directorio. El directorio enlaza de vuelta a su guía. |
 
 **Medir pacientes, no visitas**: la primera página de cada visita apunta de
 dónde vino (Google, Bing, ChatGPT —que marca `utm_source=chatgpt.com`—,
