@@ -62,8 +62,9 @@ página.
   columnas Pacientes / Médicos y centros / Helios / Legal.
 
 **`/directorio` (2026-10-26) va fuera de todo esto a propósito**: el
-directorio de médicos se comparte por URL y no se enlaza desde ninguna página
-(decisión de Javier). Lleva `noindex, follow`, no está en `PAGINAS_PUBLICAS`
+directorio de médicos se comparte por URL y, desde el 2026-10-30 (Javier), se
+llega también por «Directorio» en el menú de la portada (`MENU`). Lleva
+`noindex, follow`, no está en `PAGINAS_PUBLICAS`
 (ni en el sitemap ni en `llms.txt`) y no usa `cabeceraPublica`; sí lleva sus
 etiquetas `og:`/`twitter:` para que la vista previa salga bien al mandarlo
 por WhatsApp. Si un día se quiere en Google, se pasa a `cabeceraPublica`, se

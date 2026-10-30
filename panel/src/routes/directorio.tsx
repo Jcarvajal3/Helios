@@ -35,9 +35,9 @@ import { FUENTES_DE_LA_PORTADA } from '@/lib/fuentes'
  * cada tarjeta entera lleva al chat. Sin buscador (2026-10-27): con pocos
  * médicos, las especialidades bastan.
  *
- * No se enlaza desde ninguna parte del sitio ni sale en el sitemap: se llega
- * escribiendo o compartiendo la URL (decisión de Javier, 2026-10-26). Por lo
- * mismo lleva `noindex`, pero sí su vista previa para WhatsApp: es por donde
+ * No sale en el sitemap y lleva `noindex` (decisión de Javier, 2026-10-26):
+ * se llega compartiendo la URL y, desde el 2026-10-30, por «Directorio» en
+ * el menú de la portada. Lleva su vista previa para WhatsApp: es por donde
  * se va a compartir. La especialidad vive en la URL
  * (`?especialidad=odontologia`), así que también se comparte un filtro.
  *

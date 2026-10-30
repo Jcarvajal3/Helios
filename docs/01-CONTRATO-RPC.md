@@ -1065,8 +1065,9 @@ defecto, hoy). No se parte por clínica. Guardia: `is_platform_admin()`.
 
 ### 2.11 Directorio de médicos (2026-10-26, 20261026190000)
 
-La página pública `/directorio` (sin enlace desde la portada ni el sitemap,
-`noindex`; se llega escribiendo o compartiendo la URL, decisión de Javier) y
+La página pública `/directorio` (sin sitemap y `noindex`; se llega por
+«Directorio» en el menú de la portada, desde el 2026-10-30, o compartiendo la
+URL; decisión de Javier) y
 la pestaña superadmin › Directorio › Directorio de médicos
 (`/admin/directorio`). Pestaña: `is_platform_admin()` (los dos roles), con
 bitácora al guardar.

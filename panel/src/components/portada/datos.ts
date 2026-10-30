@@ -56,12 +56,15 @@ export const ESPECIALIDADES = [
 /**
  * El menú, el mismo en la portada y en las páginas para buscadores. Médicos
  * y pacientes llevan a su página (son enlaces que Google sigue); los demás,
- * a su sección de la portada.
+ * a su sección de la portada. El directorio (`/directorio`) es una página
+ * para buscar médico: lleva `noindex`, pero desde el 2026-10-30 se llega a
+ * ella desde aquí.
  */
 export const MENU = [
   { href: '/#como-funciona', texto: 'Cómo funciona' },
   { href: '/medicos', texto: 'Médicos y centros' },
   { href: '/pacientes', texto: 'Pacientes' },
+  { href: '/directorio', texto: 'Directorio' },
   { href: '/#preguntas', texto: 'Preguntas' },
 ] as const
 
