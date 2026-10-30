@@ -10,6 +10,8 @@ primero cómo lo resuelve Ronda y reutilízalo.
 - Plan maestro y decisiones: `docs/00-PLAN-DE-IMPLEMENTACION.md`.
 - Contrato de las RPC nuevas: `docs/01-CONTRATO-RPC.md`.
 - SEO del sitio público (páginas para buscadores, JSON-LD, sitemap): `docs/02-AUDITORIA-SEO.md`.
+- Datos de SEO (volúmenes, resultados de Google, IA): OpenSEO hospedado por
+  MCP (`.mcp.json`), cada consulta cuesta: `docs/05-OPENSEO.md`.
 
 ## Estructura
 
