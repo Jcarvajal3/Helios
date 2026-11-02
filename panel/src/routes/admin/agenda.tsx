@@ -2,7 +2,19 @@ import { useMemo, useState } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { LucideIcon } from 'lucide-react'
-import { BadgeCheck, CalendarDays, MessageCircle, Phone, Plus, Settings2, UserPlus, Users } from 'lucide-react'
+import {
+  BadgeCheck,
+  CalendarDays,
+  MessageCircle,
+  Phone,
+  Plus,
+  QrCode,
+  Search,
+  Settings2,
+  UserPlus,
+  Users,
+  X,
+} from 'lucide-react'
 
 import { useToast } from '@/components/Toast'
 import { DataTable } from '@/components/DataTable'
@@ -58,7 +70,7 @@ import {
 } from '@/features/admin/agenda/agenda'
 import type { Alcance, EstadoDelLead, Fase, Lead } from '@/features/admin/agenda/agenda'
 import { describeError } from '@/lib/supabase'
-import { comoDia, comoId, comoTexto, unoDe } from '@/lib/busqueda'
+import { comoBooleano, comoDia, comoId, comoTexto, unoDe } from '@/lib/busqueda'
 
 /** En Visita: el calendario de las agendadas, o la lista de los afiliados. */
 type VerVisitas = 'agendadas' | 'afiliados'
@@ -74,6 +86,8 @@ type AgendaSearch = {
   /** El día 1 del mes del calendario. */
   mes?: string
   visitas?: VerVisitas
+  /** Solo los que llegaron por el QR (/agenda): tienen prioridad. */
+  qr?: true
 }
 
 export const Route = createFileRoute('/admin/agenda')({
@@ -89,6 +103,7 @@ export const Route = createFileRoute('/admin/agenda')({
       lead: comoId(search.lead),
       mes: mes ? `${mes.slice(0, 7)}-01` : undefined,
       visitas: unoDe(['agendadas', 'afiliados'] as const, search.visitas),
+      qr: comoBooleano(search.qr),
     }
   },
 })
@@ -151,16 +166,30 @@ function AgendaPage() {
     },
   })
 
-  // Lo de quién, con la búsqueda: de aquí salen las cifras de las pestañas.
-  const delQueMira = useMemo(() => delAlcance(todos, alcance, yo), [todos, alcance, yo])
-  const buscados = useMemo(() => filtrarAgenda(delQueMira, { texto: search.q }), [delQueMira, search.q])
-  const porFase = useMemo(() => cuentaPorFase(buscados), [buscados])
+  const deQuien = useMemo(() => delAlcance(todos, alcance, yo), [todos, alcance, yo])
+  // «Llegaron por el QR» deja solo esos en las tres pestañas.
+  const delQueMira = useMemo(
+    () => (search.qr ? filtrarAgenda(deQuien, { soloQr: true }) : deQuien),
+    [deQuien, search.qr],
+  )
+  const conQr = useMemo(() => deQuien.filter((l) => l.qrEl !== null).length, [deQuien])
+  // Con algo escrito en el buscador se busca en toda la Agenda (las tres
+  // fases, los afiliados y todo el equipo), no solo en lo que se está viendo:
+  // quien busca a un médico no sabe en qué pestaña está ni quién lo lleva.
+  const buscando = (search.q ?? '').trim() !== ''
+  const resultados = useMemo(
+    () => (buscando ? ordenarAgenda(filtrarAgenda(todos, { texto: search.q }), hoy, ahora) : []),
+    [buscando, todos, search.q, hoy, ahora],
+  )
+  // Los números de las pestañas: lo de quién, o lo encontrado si se busca.
+  const porFase = useMemo(() => cuentaPorFase(buscando ? resultados : delQueMira), [buscando, resultados, delQueMira])
 
   const filas = useMemo(
-    () => ordenarAgenda(filtrarAgenda(buscados, { fase, estado: search.estado }), hoy, ahora),
-    [buscados, fase, search.estado, hoy, ahora],
+    () => ordenarAgenda(filtrarAgenda(delQueMira, { fase, estado: search.estado }), hoy, ahora),
+    [delQueMira, fase, search.estado, hoy, ahora],
   )
   const columnas = useMemo(() => columnasDeLaAgenda(hoy, ahora, soloAgenda), [hoy, ahora, soloAgenda])
+  const columnasConFase = useMemo(() => columnasDeLaAgenda(hoy, ahora, soloAgenda, true), [hoy, ahora, soloAgenda])
   const sinAsignar = useMemo(
     () => todos.filter((l) => l.responsableId === null && l.estado !== 'convertido' && l.estado !== 'descartado').length,
     [todos],
@@ -209,7 +238,7 @@ function AgendaPage() {
   return (
     <>
       <CifrasDeArriba
-        leads={delQueMira}
+        leads={deQuien}
         todos={todos}
         alcance={alcance}
         ahora={ahora}
@@ -220,14 +249,15 @@ function AgendaPage() {
       <PestanasDeFase
         fase={fase}
         cuentas={porFase}
-        onFase={(f) => cambiar({ fase: f === 'mensaje' ? undefined : f, estado: undefined })}
+        // Elegir una pestaña mientras se busca deja la búsqueda y entra en ella.
+        onFase={(f) => cambiar({ fase: f === 'mensaje' ? undefined : f, estado: undefined, q: undefined })}
       />
 
       <FilterBar>
         <BuscadorEnUrl
           id="buscar-agenda"
           valor={search.q}
-          placeholder="Médico, consultorio, dirección o teléfono"
+          placeholder="Buscar en toda la Agenda: nombre o teléfono"
           onBuscar={(q) => cambiar({ q }, true)}
         />
         <Filtro label="De quién">
@@ -240,6 +270,11 @@ function AgendaPage() {
             onChange={(v) => cambiar({ de: v === 'mios' ? undefined : v })}
           />
         </Filtro>
+        <Filtro label="Prioridad">
+          <Chip selected={!!search.qr} onClick={() => cambiar({ qr: search.qr ? undefined : true })}>
+            <QrCode size={14} aria-hidden /> Llegaron por el QR ({conQr})
+          </Chip>
+        </Filtro>
         <div className="ml-auto flex flex-wrap gap-2">
           {botonAsignar}
           <Button size="sm" onClick={() => setApuntando(true)}>
@@ -250,9 +285,19 @@ function AgendaPage() {
 
       {asignar.isError && <ErrorBox title="No se pudieron asignar" detail={describeError(asignar.error)} />}
 
+      {agenda.isSuccess && buscando && (
+        <ResultadosDeLaBusqueda
+          texto={search.q ?? ''}
+          filas={resultados}
+          columnas={columnasConFase}
+          onAbrir={abrir}
+          onBorrar={() => cambiar({ q: undefined }, true)}
+        />
+      )}
+
       {/* Los estados de la fase, con cuántos hay de cada uno. En Visita, el
           calendario de las agendadas o la lista de los afiliados. */}
-      {fase === 'visita' ? (
+      {buscando ? null : fase === 'visita' ? (
         <div className="mb-4">
           <Segmented
             etiqueta="Qué visitas"
@@ -287,7 +332,7 @@ function AgendaPage() {
         />
       )}
 
-      {agenda.isSuccess && alcance === 'mios' && delQueMira.length === 0 && (
+      {agenda.isSuccess && !buscando && alcance === 'mios' && deQuien.length === 0 && (
         <EmptyState
           icon={<UserPlus size={40} />}
           title="Todavía no tienes médicos asignados"
@@ -307,13 +352,21 @@ function AgendaPage() {
         />
       )}
 
-      {agenda.isSuccess && delQueMira.length > 0 && fase !== 'visita' && filas.length === 0 && (
+      {agenda.isSuccess && !buscando && delQueMira.length > 0 && fase !== 'visita' && filas.length === 0 && (
         <EmptyState
           icon={fase === 'mensaje' ? <MessageCircle size={40} /> : <Phone size={40} />}
-          title={search.q || search.estado ? 'Nada coincide' : `Nada en ${ROTULO_FASE[fase].label}`}
+          title={
+            search.qr
+              ? `Nadie llegó por el QR en ${ROTULO_FASE[fase].label}`
+              : search.estado
+                ? 'Nada en este estado'
+                : `Nada en ${ROTULO_FASE[fase].label}`
+          }
           description={
-            search.q || search.estado
-              ? 'Prueba con otra parte del nombre o del teléfono, u otro estado.'
+            search.qr
+              ? 'Los que piden su capacitación por el QR suelen estar en Visita, con la cita ya agendada.'
+              : search.estado
+              ? 'Prueba con otro estado.'
               : fase === 'mensaje'
                 ? 'Todos tus médicos ya pasaron de Mensaje.'
                 : 'Cuando un médico diga que le interesa, aparecerá aquí para llamarlo.'
@@ -321,7 +374,7 @@ function AgendaPage() {
         />
       )}
 
-      {agenda.isSuccess && fase !== 'visita' && filas.length > 0 && (
+      {agenda.isSuccess && !buscando && fase !== 'visita' && filas.length > 0 && (
         <DataTable
           rows={filas}
           rowKey={(l) => l.id}
@@ -339,9 +392,9 @@ function AgendaPage() {
         />
       )}
 
-      {agenda.isSuccess && delQueMira.length > 0 && fase === 'visita' && verVisitas === 'agendadas' && (
+      {agenda.isSuccess && !buscando && delQueMira.length > 0 && fase === 'visita' && verVisitas === 'agendadas' && (
         <CalendarioDeReuniones
-          leads={filtrarAgenda(buscados, { fase: 'visita' })}
+          leads={filtrarAgenda(delQueMira, { fase: 'visita' })}
           mes={mes}
           hoy={hoy}
           conLlamadas={false}
@@ -350,9 +403,9 @@ function AgendaPage() {
         />
       )}
 
-      {agenda.isSuccess && delQueMira.length > 0 && fase === 'visita' && verVisitas === 'afiliados' && (
+      {agenda.isSuccess && !buscando && delQueMira.length > 0 && fase === 'visita' && verVisitas === 'afiliados' && (
         <ListaDeAfiliados
-          filas={ordenarAgenda(filtrarAgenda(buscados, { fase: 'visita', estado: 'convertido' }), hoy, ahora)}
+          filas={ordenarAgenda(filtrarAgenda(delQueMira, { fase: 'visita', estado: 'convertido' }), hoy, ahora)}
           columnas={columnas}
           onAbrir={abrir}
         />
@@ -440,6 +493,55 @@ function PestanasDeFase({
         )
       })}
     </div>
+  )
+}
+
+/**
+ * Lo encontrado con el buscador, en toda la Agenda: las tres fases, los
+ * afiliados y todo el equipo, con la fase y el encargado de cada uno.
+ */
+function ResultadosDeLaBusqueda({
+  texto,
+  filas,
+  columnas,
+  onAbrir,
+  onBorrar,
+}: {
+  texto: string
+  filas: Lead[]
+  columnas: ReturnType<typeof columnasDeLaAgenda>
+  onAbrir: (l: Lead) => void
+  onBorrar: () => void
+}) {
+  return (
+    <section className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <p className="type-panel-body text-on-surface">
+          {filas.length === 0
+            ? `Nadie en la Agenda coincide con «${texto}».`
+            : `${filas.length} ${filas.length === 1 ? 'médico coincide' : 'médicos coinciden'} con «${texto}» en toda la Agenda.`}
+        </p>
+        <Button size="sm" variant="text" onClick={onBorrar}>
+          <X size={14} aria-hidden /> Borrar la búsqueda
+        </Button>
+      </div>
+      {filas.length === 0 ? (
+        <EmptyState
+          icon={<Search size={40} />}
+          title="Nada coincide"
+          description="Busca por una parte del nombre, del consultorio o de la dirección, o por los dígitos del teléfono (0414 123…)."
+        />
+      ) : (
+        <DataTable
+          rows={filas}
+          rowKey={(l) => l.id}
+          columns={columnas}
+          noun={['médico', 'médicos']}
+          exportar={{ archivo: 'agenda-busqueda' }}
+          onRowClick={onAbrir}
+        />
+      )}
+    </section>
   )
 }
 

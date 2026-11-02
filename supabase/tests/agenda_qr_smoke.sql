@@ -12,7 +12,8 @@
 --   3. Uno que ya estaba (mismo teléfono) no se duplica: su lead pasa a la
 --      visita, conserva sus datos y la historia dice lo que dejó.
 --   4. El campo trampa no escribe nada.
---   5. El tablero devuelve la capacitación en `application_training_at`.
+--   5. El tablero devuelve la capacitación en `application_training_at` y
+--      cuándo llegó por el QR en `qr_at`.
 --
 -- No manda nada: no llama a `helios_dispatch_*`.
 -- ============================================================================
@@ -129,6 +130,10 @@ begin
   reset role;
   if (v_j->>'application_training_at')::timestamptz is distinct from v_capa then
     raise exception '5. el tablero no trae la capacitación: %', v_j;
+  end if;
+  -- Luis ya estaba en la agenda y llegó por el QR: el tablero lo dice (20261102120000).
+  if v_j->>'qr_at' is null then
+    raise exception '5. el tablero no dice que Luis llegó por el QR: %', v_j;
   end if;
 end;
 $$;

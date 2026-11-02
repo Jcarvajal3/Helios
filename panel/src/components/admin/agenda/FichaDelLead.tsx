@@ -209,6 +209,9 @@ export function FichaDelLead({
             <p className="type-panel-body text-on-surface">{quien || 'Sin especialidad ni consultorio'}</p>
             <p className="type-panel-caption text-on-surface-variant">
               Apuntado el {formatDay(lead.creado.slice(0, 10))}
+              {lead.qrEl && (
+                <span className="font-semibold text-primary"> · Llegó por el QR el {formatDateTime(lead.qrEl)}</span>
+              )}
             </p>
             <Encargados lead={lead} />
           </div>

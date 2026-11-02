@@ -237,6 +237,19 @@ console.log('\n── Las fases ────────────────
   )
 }
 
+console.log('\n── Los que llegaron por el QR ───────────────────────────────')
+{
+  const conQr = lead('qr', { status: 'reunion', meeting_at: '2026-10-29T14:00:00Z', qr_at: '2026-10-21T13:00:00Z' })
+  const sinQr = lead('sin', { status: 'reunion', meeting_at: '2026-10-29T14:00:00Z' })
+  igual('el tablero trae cuándo llegó por el QR', conQr.qrEl, '2026-10-21T13:00:00Z')
+  igual('«Llegaron por el QR» deja solo esos', filtrarAgenda([sinQr, conQr], { soloQr: true }).map((l) => l.id), ['qr'])
+  igual(
+    'a igual urgencia, el del QR va primero',
+    ordenarAgenda([sinQr, conQr], HOY, AHORA).map((l) => l.id),
+    ['qr', 'sin'],
+  )
+}
+
 console.log('\n── De quién ─────────────────────────────────────────────────')
 {
   const mio = lead('mio', { assigned_to: 'yo', assigned_name: 'Ana' })

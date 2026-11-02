@@ -978,6 +978,10 @@ superadmin › Agenda.
   `training_requested_at`. `admin_doctor_leads()` devuelve en
   `application_training_at` la del QR o, si no hay, la del formulario: el
   calendario la enseña como «Capacitación».
+- `admin_doctor_leads()` devuelve también `qr_at` (= `training_requested_at`):
+  cuándo pidió su capacitación por el QR, en un médico nuevo o en uno que ya
+  estaba (20261102120000). El panel los marca «QR», los pone primero a igual
+  urgencia y los filtra con «Llegaron por el QR».
 
 **La agenda por fases** (2026-10-28, 20261028150000). La Agenda se trabaja en
 tres fases, que son sus pestañas, y cada persona ve al entrar los médicos que

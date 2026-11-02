@@ -308,6 +308,11 @@ export type Lead = {
   solicitudEstado: 'pending' | 'approved' | 'rejected' | null
   /** La capacitación presencial que pidió en el formulario (instante ISO). */
   capacitacion: string | null
+  /**
+   * Cuándo pidió su capacitación por el QR (/agenda), o `null` si nunca. Los
+   * que llegan por el QR tienen prioridad (20261102120000).
+   */
+  qrEl: string | null
   clinicaId: string | null
   clinica: string | null
   /** Su clínica ya tiene sus accesos: es lo que lo deja afiliado. */
@@ -372,6 +377,7 @@ export function leerAgenda(raw: unknown): Lead[] {
       solicitudId: textoONulo(r.application_id),
       solicitudEstado: unoDe(ESTADOS_SOLICITUD, r.application_status) ?? null,
       capacitacion: textoONulo(r.application_training_at),
+      qrEl: textoONulo(r.qr_at),
       clinicaId: textoONulo(r.merchant_id),
       clinica: textoONulo(r.merchant_name),
       conAccesos: r.merchant_has_access === true,
@@ -544,6 +550,10 @@ export function ordenarAgenda(leads: ReadonlyArray<Lead>, hoy: string, ahora: Da
     const na = pa === null ? 9 : PUESTO[pa]
     const nb = pb === null ? 9 : PUESTO[pb]
     if (na !== nb) return na - nb
+    // A igual urgencia, primero los que llegaron por el QR.
+    const qa = a.qrEl ? 0 : 1
+    const qb = b.qrEl ? 0 : 1
+    if (qa !== qb) return qa - qb
     const xa = proxima(a)
     const xb = proxima(b)
     if (xa !== xb) return xa < xb ? -1 : 1
@@ -586,13 +596,19 @@ function sinTildes(t: string): string {
  */
 export function filtrarAgenda(
   leads: ReadonlyArray<Lead>,
-  { texto: buscado = '', fase, estado }: { texto?: string; fase?: Fase; estado?: EstadoDelLead },
+  {
+    texto: buscado = '',
+    fase,
+    estado,
+    soloQr = false,
+  }: { texto?: string; fase?: Fase; estado?: EstadoDelLead; soloQr?: boolean },
 ): Lead[] {
   const aguja = sinTildes(buscado)
   const digitos = buscado.replace(/\D/g, '').replace(/^0/, '')
   return leads.filter((l) => {
     if (fase && l.fase !== fase) return false
     if (estado && l.estado !== estado) return false
+    if (soloQr && l.qrEl === null) return false
     if (!aguja) return true
     const textos = [l.nombre, l.consultorio, l.especialidad, l.direccion]
     if (textos.some((t) => t !== null && sinTildes(t).includes(aguja))) return true

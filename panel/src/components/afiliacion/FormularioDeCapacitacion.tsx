@@ -3,7 +3,8 @@ import type { FormEvent } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { CircleAlert } from 'lucide-react'
 
-import { BotonPrincipal, CampoDeTexto, Sugerencia } from './piezas'
+import { CampoDeEspecialidad } from './CampoDeEspecialidad'
+import { BotonPrincipal, CampoDeTexto } from './piezas'
 import { sumarDias } from '@/components/kit/rango'
 import {
   CAPACITACION_HASTA_DIAS,
@@ -48,12 +49,6 @@ const ORDEN: readonly Campo[] = [
   'dia',
   'hora',
 ]
-
-const ESPECIALIDADES_SUGERIDAS = [
-  'Medicina general',
-  'Odontología',
-  'Cosmetología',
-] as const
 
 const idDe = (c: Campo) => `capacitacion-${c}`
 
@@ -185,30 +180,16 @@ export function FormularioDeCapacitacion({
           enterKeyHint="next"
           placeholder="0414 1234567"
         />
-        <div>
-          <CampoDeTexto
-            id={idDe('especialidad')}
-            etiqueta="Especialidad"
-            value={datos.especialidad}
-            onChange={campo('especialidad')}
-            alSalir={tocar('especialidad')}
-            error={error('especialidad')}
-            autoCapitalize="sentences"
-            enterKeyHint="next"
-            placeholder="Pediatría, odontología…"
-          />
-          <div className="mt-3 flex flex-wrap gap-2">
-            {ESPECIALIDADES_SUGERIDAS.map((s) => (
-              <Sugerencia
-                key={s}
-                activa={datos.especialidad.trim() === s}
-                onClick={() => setDatos((d) => ({ ...d, especialidad: s }))}
-              >
-                {s}
-              </Sugerencia>
-            ))}
-          </div>
-        </div>
+        {/* El mismo desplegable con buscador e iconos que el alta (/afiliacion):
+            la lista cerrada del directorio, con «Otras especialidades» para
+            escribirla. */}
+        <CampoDeEspecialidad
+          id={idDe('especialidad')}
+          valor={datos.especialidad}
+          onChange={campo('especialidad')}
+          alSalir={tocar('especialidad')}
+          error={error('especialidad')}
+        />
         <CampoDeTexto
           id={idDe('direccion')}
           etiqueta="Dirección del consultorio"

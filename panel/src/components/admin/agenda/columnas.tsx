@@ -1,12 +1,16 @@
+import { QrCode } from 'lucide-react'
+
 import type { Column } from '@/components/DataTable'
 import { TelefonoConAcciones } from '@/components/admin/seguimiento/Contacto'
 import { Badge, formatDateTime, formatDay, formatPhone } from '@/components/ui'
 import { haceCuanto } from '@/features/admin/cobranza/senales'
 import {
   ESTADO_DEL_LEAD,
+  FASES,
   PENDIENTE,
   ROTULO_AFILIACION_EN_CURSO,
   ROTULO_CANAL,
+  ROTULO_FASE,
   ROTULO_MODO,
   ROTULO_RESULTADO,
   afiliacionEnCurso,
@@ -39,8 +43,15 @@ export function EstadoDelLeadBadge({ lead, hoy, ahora }: { lead: Lead; hoy: stri
  * Una fila por médico: quién es y dónde atiende, cómo llamarlo, en qué quedó,
  * la próxima cita y la última gestión. `hoy` es el día de Caracas.
  * `soloAgenda`: quien mira tiene el rol de la agenda y no puede abrir el inbox.
+ * `conFase`: añade la fase detrás del médico, para los resultados de una
+ * búsqueda, que mezclan las tres.
  */
-export function columnasDeLaAgenda(hoy: string, ahora: Date, soloAgenda = false): Array<Column<Lead>> {
+export function columnasDeLaAgenda(
+  hoy: string,
+  ahora: Date,
+  soloAgenda = false,
+  conFase = false,
+): Array<Column<Lead>> {
   return [
     {
       key: 'medico',
@@ -50,13 +61,38 @@ export function columnasDeLaAgenda(hoy: string, ahora: Date, soloAgenda = false)
       csv: (l) => l.nombre,
       cell: (l) => (
         <div className="min-w-0">
-          <p className="font-medium text-on-surface">{l.nombre}</p>
+          <p className="flex flex-wrap items-center gap-1.5 font-medium text-on-surface">
+            {l.nombre}
+            {l.qrEl && (
+              <span title={`Pidió su capacitación por el QR el ${formatDateTime(l.qrEl)}: tiene prioridad.`}>
+                <Badge tone="brand">
+                  <QrCode size={12} aria-hidden /> QR
+                </Badge>
+              </span>
+            )}
+          </p>
           <p className="type-panel-caption text-on-surface-variant">
             {[l.especialidad, l.consultorio].filter(Boolean).join(' · ') || 'Sin especialidad ni consultorio'}
           </p>
         </div>
       ),
     },
+
+    ...(conFase
+      ? [
+          {
+            key: 'fase',
+            header: 'Fase',
+            sort: (l: Lead) => (l.estado === 'convertido' ? FASES.length : FASES.indexOf(l.fase)),
+            csv: (l: Lead) => (l.estado === 'convertido' ? 'Afiliado' : ROTULO_FASE[l.fase].label),
+            cell: (l: Lead) => (
+              <Badge tone={l.estado === 'convertido' ? 'success' : 'neutral'}>
+                {l.estado === 'convertido' ? 'Afiliado' : ROTULO_FASE[l.fase].label}
+              </Badge>
+            ),
+          },
+        ]
+      : []),
 
     {
       key: 'telefono',
