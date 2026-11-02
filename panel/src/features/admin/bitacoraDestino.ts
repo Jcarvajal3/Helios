@@ -117,6 +117,7 @@ const SECCION_DE_AJUSTES: Record<string, PestanaAjustes | undefined> = {
   'platform_admin.set': 'equipo',
   'platform_admin.revoke': 'equipo',
   'platform_admin.restore': 'equipo',
+  'platform_admin.set_role': 'equipo',
   'security.require_mfa': 'seguridad',
   'demo.phone_added': 'demo',
   'demo.phone_removed': 'demo',

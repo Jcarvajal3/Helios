@@ -1321,6 +1321,27 @@ superadmin › Agenda y a superadmin › Clínicas, ve el perfil de cada médico
   ficha de una clínica es de solo lectura, con «Darle su acceso» si aún no
   tiene personal.
 
+### 2.15 El super admin cambia el rol del equipo (2026-11-02, 20261102210000)
+
+- `admin_set_platform_admin_role(p_user_id uuid, p_role platform_role,
+  p_note text default null) → void`: cambia el rol de alguien del equipo
+  (`platform_admins`, no el personal de las clínicas) con acceso activo.
+  Acepta los cuatro roles (`agenda`, `capacitador`, `operador`,
+  `super_admin`).
+  - Guardia: `helios_assert_super_admin()` (segundo factor si se exige;
+    si no, `42501`).
+  - `22023`: cambiarse el rol a sí mismo, una persona revocada (el rol se
+    elige al devolverle el acceso con `admin_restore_platform_admin`), el
+    mismo rol que ya tiene, o dejar al equipo sin ningún super admin activo.
+    `P0002`: no es del equipo.
+  - Bitácora: `platform_admin.set_role` con `{from, role, note}`.
+- Panel: Ajustes › Equipo, «Cambiar el rol» en cada fila. Solo lo pulsa un
+  super admin, y no en su propia fila ni en la de alguien revocado (el botón
+  apagado dice por qué). Hacer super admin a alguien o quitárselo es
+  `critico` (motivo y palabra); los demás cambios, `sensible` (motivo).
+
+Suite: `supabase/tests/rol_del_equipo_smoke.sql`.
+
 ## 3. Parámetros nuevos (`business_parameters`)
 
 | key | valor inicial | uso |

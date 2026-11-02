@@ -26,6 +26,7 @@ import {
   fetchTeam,
   restoreTeamMember,
   revokeTeamMember,
+  setTeamMemberRole,
 } from '@/features/admin/ops'
 import type { RolDelPanel, TeamMember } from '@/features/admin/ops'
 import { generatePassword } from '@/features/admin/password'
@@ -49,6 +50,15 @@ function rotuloDeRol(rol: RolDelPanel): string {
   return ROTULO_DE_ROL[rol]
 }
 
+/** Lo que puede cada rol, para el resumen del cambio de rol. */
+const LO_QUE_PUEDE: Record<RolDelPanel, string> = {
+  agenda: 'solo entrará a la Agenda: apunta médicos, anota cada gestión y agenda visitas',
+  capacitador: 'entrará a la Agenda y a Clínicas, verá el perfil de cada médico sin su dinero y podrá afiliar',
+  operador: 'registrará y aprobará pagos, mandará los avisos y trabajará la cobranza',
+  super_admin:
+    'podrá mover dinero, cambiar la tasa, los parámetros y la cuenta de cobro, y dar, quitar o cambiar el acceso de otras personas',
+}
+
 /**
  * Quién entra al panel.
  *
@@ -67,7 +77,7 @@ export function Equipo() {
 
       <Seccion
         titulo="Quién entra a este panel"
-        info="Retirar un acceso o devolverlo pide motivo y queda en la bitácora. Las acciones de quien pierde el acceso se conservan."
+        info="Cambiar el rol de alguien, retirarle el acceso o devolvérselo pide motivo y queda en la bitácora. Solo un super admin puede hacerlo, nunca consigo mismo, y el equipo nunca se queda sin un super admin. Las acciones de quien pierde el acceso se conservan."
       >
         {query.isLoading && <SkeletonTable rows={5} columns={7} />}
         {query.isError && (
@@ -231,6 +241,7 @@ function TablaDelEquipo({
   const avisar = useToast()
   const client = useQueryClient()
   const [cambio, setCambio] = useState<Cambio | null>(null)
+  const [cambiandoRol, setCambiandoRol] = useState<TeamMember | null>(null)
 
   const mutation = useMutation({
     mutationFn: ({ c, nota }: { c: Cambio; nota: string }) =>
@@ -259,6 +270,13 @@ function TablaDelEquipo({
             : soyYo && m.isActive
               ? 'No puedes revocar tu propio acceso.'
               : undefined
+          const motivoSinRol = !isSuperAdmin
+            ? SOLO_SUPER_ADMIN
+            : soyYo
+              ? 'No puedes cambiar tu propio rol.'
+              : !m.isActive
+                ? 'Para cambiar su rol, devuélvele el acceso: ahí se elige el rol.'
+                : undefined
           return (
             <Tr key={m.userId}>
               <Td className="font-medium">{m.fullName ?? 'Sin nombre'}</Td>
@@ -280,7 +298,16 @@ function TablaDelEquipo({
                   <Badge>Revocado</Badge>
                 )}
               </Td>
-              <Td>
+              <Td className="whitespace-nowrap">
+                <Button
+                  size="sm"
+                  variant="text"
+                  disabled={motivoSinRol !== undefined}
+                  motivoApagado={motivoSinRol}
+                  onClick={() => setCambiandoRol(m)}
+                >
+                  Cambiar el rol
+                </Button>
                 <Button
                   size="sm"
                   variant="text"
@@ -326,6 +353,59 @@ function TablaDelEquipo({
           onClose={() => setCambio(null)}
         />
       )}
+
+      {cambiandoRol && (
+        <CambiarRol miembro={cambiandoRol} onClose={() => setCambiandoRol(null)} />
+      )}
     </>
+  )
+}
+
+/**
+ * Elegir el rol nuevo y confirmarlo con motivo. Hacer super admin a alguien,
+ * o quitárselo, es crítico: pide además escribir la palabra.
+ */
+function CambiarRol({ miembro, onClose }: { miembro: TeamMember; onClose: () => void }) {
+  const avisar = useToast()
+  const client = useQueryClient()
+  const [rol, setRol] = useState<RolDelPanel>(miembro.role)
+  const quien = miembro.fullName ?? miembro.email ?? 'Esta persona'
+
+  const mutation = useMutation({
+    mutationFn: (nota: string) => setTeamMemberRole(miembro.userId, rol, nota),
+    onSuccess: () => {
+      avisar(`${quien} ahora es ${rotuloDeRol(rol).toLowerCase()}.`)
+      void client.invalidateQueries({ queryKey: ['admin-team'] })
+      onClose()
+    },
+  })
+
+  const igual = rol === miembro.role
+  const critico = rol === 'super_admin' || miembro.role === 'super_admin'
+
+  return (
+    <ConfirmDialog
+      nivel={critico ? 'critico' : 'sensible'}
+      title="Cambiar el rol"
+      summary={
+        igual
+          ? `${quien} es ${rotuloDeRol(miembro.role).toLowerCase()}. Elige su rol nuevo.`
+          : `${quien} pasará de ${rotuloDeRol(miembro.role).toLowerCase()} a ${rotuloDeRol(rol).toLowerCase()}: ${LO_QUE_PUEDE[rol]}. Su sesión abierta toma el rol nuevo al volver a cargar el panel.`
+      }
+      detail={
+        <div className="flex flex-col gap-shell-gap-stack">
+          <DataLabel>Rol nuevo</DataLabel>
+          <Segmented etiqueta="Rol nuevo" options={ROLES} value={rol} onChange={setRol} />
+          <p className="type-panel-caption text-on-surface-variant">Correo: {miembro.email ?? '—'}</p>
+        </div>
+      }
+      reasonPlaceholder={rol === 'super_admin' ? 'Se encarga de la caja' : 'Pasa a capacitar a los médicos'}
+      confirmLabel={igual ? 'Cambiar el rol' : `Cambiar a ${rotuloDeRol(rol).toLowerCase()}`}
+      bloqueo={igual ? 'Elige un rol distinto del que tiene.' : undefined}
+      busy={mutation.isPending}
+      error={mutation.isError ? describeError(mutation.error) : undefined}
+      onConfirm={(nota) => mutation.mutate(nota)}
+      onClose={onClose}
+    />
   )
 }

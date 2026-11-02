@@ -461,6 +461,23 @@ export async function revokeTeamMember(userId: string, note?: string | null): Pr
   if (error) throw error
 }
 
+/** Cambia el rol de alguien del equipo con acceso activo (20261102210000).
+ *
+ *  Solo un super admin, nunca el suyo, y sin dejar al equipo sin super
+ *  admin: lo comprueba la base. El motivo va a la bitácora. */
+export async function setTeamMemberRole(
+  userId: string,
+  role: RolDelPanel,
+  note?: string | null,
+): Promise<void> {
+  const { error } = await supabase.rpc('admin_set_platform_admin_role', {
+    p_user_id: userId,
+    p_role: role,
+    p_note: note || null,
+  })
+  if (error) throw error
+}
+
 /** Vuelve a activar una fila revocada.
  *
  *  No es `addTeamMember`: aquella crea la cuenta de Auth y contra un correo
