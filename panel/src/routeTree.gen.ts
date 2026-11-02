@@ -57,6 +57,7 @@ import { Route as LegalTerminosRouteImport } from './routes/legal.terminos'
 import { Route as MedicoSlugRouteImport } from './routes/medico.$slug'
 import { Route as ComercioFinanciamientosIdRouteImport } from './routes/_comercio/financiamientos_.$id'
 import { Route as AdminClinicasIdRouteImport } from './routes/admin/clinicas_.$id'
+import { Route as AdminClinicasAltaRouteImport } from './routes/admin/clinicas_.alta'
 import { Route as AdminCobrosIdRouteImport } from './routes/admin/cobros_.$id'
 import { Route as AdminFinanciamientosIdRouteImport } from './routes/admin/financiamientos_.$id'
 import { Route as AdminPacientesIdRouteImport } from './routes/admin/pacientes_.$id'
@@ -303,6 +304,11 @@ const AdminClinicasIdRoute = AdminClinicasIdRouteImport.update({
   path: '/clinicas/$id',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminClinicasAltaRoute = AdminClinicasAltaRouteImport.update({
+  id: '/clinicas_/alta',
+  path: '/clinicas/alta',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminCobrosIdRoute = AdminCobrosIdRouteImport.update({
   id: '/cobros_/$id',
   path: '/cobros/$id',
@@ -378,6 +384,7 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AdminIndexRoute
   '/financiamientos/$id': typeof ComercioFinanciamientosIdRoute
   '/admin/clinicas/$id': typeof AdminClinicasIdRoute
+  '/admin/clinicas/alta': typeof AdminClinicasAltaRoute
   '/admin/cobros/$id': typeof AdminCobrosIdRoute
   '/admin/financiamientos/$id': typeof AdminFinanciamientosIdRoute
   '/admin/pacientes/$id': typeof AdminPacientesIdRoute
@@ -431,6 +438,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminIndexRoute
   '/financiamientos/$id': typeof ComercioFinanciamientosIdRoute
   '/admin/clinicas/$id': typeof AdminClinicasIdRoute
+  '/admin/clinicas/alta': typeof AdminClinicasAltaRoute
   '/admin/cobros/$id': typeof AdminCobrosIdRoute
   '/admin/financiamientos/$id': typeof AdminFinanciamientosIdRoute
   '/admin/pacientes/$id': typeof AdminPacientesIdRoute
@@ -487,6 +495,7 @@ export interface FileRoutesById {
   '/admin/': typeof AdminIndexRoute
   '/_comercio/financiamientos_/$id': typeof ComercioFinanciamientosIdRoute
   '/admin/clinicas_/$id': typeof AdminClinicasIdRoute
+  '/admin/clinicas_/alta': typeof AdminClinicasAltaRoute
   '/admin/cobros_/$id': typeof AdminCobrosIdRoute
   '/admin/financiamientos_/$id': typeof AdminFinanciamientosIdRoute
   '/admin/pacientes_/$id': typeof AdminPacientesIdRoute
@@ -543,6 +552,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/financiamientos/$id'
     | '/admin/clinicas/$id'
+    | '/admin/clinicas/alta'
     | '/admin/cobros/$id'
     | '/admin/financiamientos/$id'
     | '/admin/pacientes/$id'
@@ -596,6 +606,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/financiamientos/$id'
     | '/admin/clinicas/$id'
+    | '/admin/clinicas/alta'
     | '/admin/cobros/$id'
     | '/admin/financiamientos/$id'
     | '/admin/pacientes/$id'
@@ -651,6 +662,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/_comercio/financiamientos_/$id'
     | '/admin/clinicas_/$id'
+    | '/admin/clinicas_/alta'
     | '/admin/cobros_/$id'
     | '/admin/financiamientos_/$id'
     | '/admin/pacientes_/$id'
@@ -1022,6 +1034,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminClinicasIdRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/clinicas_/alta': {
+      id: '/admin/clinicas_/alta'
+      path: '/clinicas/alta'
+      fullPath: '/admin/clinicas/alta'
+      preLoaderRoute: typeof AdminClinicasAltaRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/cobros_/$id': {
       id: '/admin/cobros_/$id'
       path: '/cobros/$id'
@@ -1104,6 +1123,7 @@ interface AdminRouteChildren {
   AdminWhatsappRoute: typeof AdminWhatsappRoute
   AdminIndexRoute: typeof AdminIndexRoute
   AdminClinicasIdRoute: typeof AdminClinicasIdRoute
+  AdminClinicasAltaRoute: typeof AdminClinicasAltaRoute
   AdminCobrosIdRoute: typeof AdminCobrosIdRoute
   AdminFinanciamientosIdRoute: typeof AdminFinanciamientosIdRoute
   AdminPacientesIdRoute: typeof AdminPacientesIdRoute
@@ -1129,6 +1149,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminWhatsappRoute: AdminWhatsappRoute,
   AdminIndexRoute: AdminIndexRoute,
   AdminClinicasIdRoute: AdminClinicasIdRoute,
+  AdminClinicasAltaRoute: AdminClinicasAltaRoute,
   AdminCobrosIdRoute: AdminCobrosIdRoute,
   AdminFinanciamientosIdRoute: AdminFinanciamientosIdRoute,
   AdminPacientesIdRoute: AdminPacientesIdRoute,
