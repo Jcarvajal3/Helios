@@ -49,6 +49,10 @@ begin
   values ('pago_movil', 'BNC (0191)', 'J504967866', '04121714930', 'Quarto Latam, C.A.', true, 1);
   update public.notification_templates set enabled = true
    where key in ('cuota_en_3_dias', 'cuota_manana', 'cuota_hoy', 'cuota_vencida_d1', 'pago_recibido');
+  -- Conectadas desde el 2026-11-02 (20261102200000): se desconectan aquí para
+  -- probar primero que, sin ellas, sale la plantilla de siempre.
+  update public.notification_templates set wa_template_name = null
+   where key in ('cuota_con_vencidas', 'cuotas_vencidas');
 
   insert into auth.users (id, instance_id, aud, role, email, email_confirmed_at, created_at, updated_at)
   select u, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
