@@ -510,6 +510,20 @@ Implementado en 20261003000700 y 000800. Precisiones:
 - `admin_user_directory(...)` (heredada) añade al final
   `registered_merchant_name` y `email_invalid_at`.
 
+**La foto de la cédula** (2026-11-02, 20261102233000, docs/00 §15.11). Solo el
+equipo de Helios (`is_platform_admin()`; si no, `42501`):
+
+- `admin_patient_id_photo(p_user uuid) → jsonb`: `{has_photo, needs_photo}` y,
+  si alguna vez mandó una, la de su perfil (o la última): `photo_id,
+  received_at, stored, mime, status (pendiente|leyendo|coincide|no_coincide|
+  no_es_cedula|no_se_pudo_leer|no_se_pudo_bajar), reason (numero|nombre|
+  numero_y_nombre), read_number, read_name, reviewed_at, order_number`. No deja
+  bitácora. Paciente que no existe → `P0002`.
+- `admin_open_patient_id_photo(p_user uuid) → jsonb`: `{bucket: 'patient-ids',
+  path, mime}` de la foto guardada, que el panel firma por diez minutos (el
+  bucket solo deja leer al equipo). Deja `patient.id_photo_viewed` en la
+  bitácora (`{photo_id, path}`). Sin foto guardada → `P0002`.
+
 ### 2.5 Clínicas
 
 **El alta y la solicitud de afiliación (20261009000200).** El alta pide los
@@ -735,7 +749,12 @@ va: la cédula ya es única):
 - `telefono_repetido`, `correo_repetido`, `correo_rebotado`;
 - `rafaga_de_altas`, `rafaga_de_pacientes_nuevos`, `secretaria_concentrada`;
 - `impago_primera_cuota_clinica`, `exposicion_clinica`;
-- `referencia_repetida`, `cupo_al_limite_al_estrenar`, `consultas_de_cedula_excesivas`.
+- `referencia_repetida`, `cupo_al_limite_al_estrenar`, `consultas_de_cedula_excesivas`;
+- `cedula_no_coincide` (2026-11-02, 20261102233000): la foto de la cédula con la
+  que confirmó no coincide con sus datos, no parece una cédula o no se pudo
+  revisar o bajar. Clave `cedula_no_coincide:<paciente>:<foto>`; `detail`:
+  `photo_id, status, reason, read_number, read_name, document, charge_id,
+  order_number, merchant_name`.
 
 Cada fila trae:
 - `kind`, `severity` (`alta`/`media`), `subject_type` (`paciente`/`clinica`/`personal`), `subject_id`, `subject_name`;
@@ -1523,6 +1542,25 @@ Las del webhook **no lanzan** errores de negocio: devuelven
   `{ok: false, reason: no_pendiente|vencida|otro_telefono|no_disponible}`. En
   `no_disponible` (la revalidación falló) la orden queda `declined`, al paciente
   no se le dice el motivo y la clínica ve el texto neutro de siempre.
+  **Desde el 2026-11-02** (docs/00 §15.11): un «Sí» de un paciente sin foto de
+  su cédula no confirma. Devuelve `{ok: true, status: 'pending', reason:
+  'pide_cedula'}`, anota `charges.id_photo_requested_at` y le pide la foto. La
+  respuesta no se anota: la orden sigue pendiente, con su plazo.
+- `helios_patient_id_photo(p_from_phone text, p_wa_message_id text, p_media_id text, p_mime text) → jsonb`
+  (2026-11-02; solo `service_role`). Una imagen o un documento. Si ese teléfono
+  tiene una orden que espera la foto (pendiente, o vencida sin respuesta y sin
+  foto en el perfil; pedida hace menos de 24 h), la anota en
+  `patient_id_photos`, la deja en el perfil y llama a `helios_patient_decision`
+  con `si`: devuelve lo mismo más `{handled: true, id_photo_id}`, y si quedó
+  confirmada encola el acuse antes que la bienvenida. Un archivo que no es
+  imagen ni PDF: `{handled: true, reason: 'formato'}` y se le vuelve a pedir.
+  Si no se esperaba: `{handled: false, reason: 'no_esperada'}` y el webhook
+  sigue como antes. Un reintento: `{handled: true, duplicate: true}`.
+- El lector (`service_role`): `lector_cedula_tomar(p_limit)` →
+  `[{id, media_id, mime, ruta, guardada}]`, `lector_cedula_guardada(p_id)`,
+  `lector_cedula_leida(p_id, p_extraction, p_model, p_usage) → status` y
+  `lector_cedula_fallo(p_id, p_error) → status` (tres intentos).
+  `helios_lector_despertar()` mira también esta cola.
 - `helios_whatsapp_status(p_wa_message_id text, p_status text, p_error jsonb default null, p_at timestamptz default null) → boolean`
   (implementado en 20261005000400). Solo avanza (sent < delivered < read); un
   `failed` deja el mensaje `fallido` con el motivo. Devuelve si encontró el

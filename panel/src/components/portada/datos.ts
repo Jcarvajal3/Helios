@@ -83,7 +83,7 @@ export const PASOS = [
     n: '02',
     titulo: 'El paciente confirma',
     texto:
-      'Le llega un WhatsApp con el monto, la Comisión Helios y sus dos cuotas con fecha. Responde «Sí» y el comprobante le llega por correo.',
+      'Le llega un WhatsApp con el monto, la Comisión Helios y sus dos cuotas con fecha. Lo confirma por WhatsApp y el comprobante le llega por correo.',
   },
   {
     n: '03',

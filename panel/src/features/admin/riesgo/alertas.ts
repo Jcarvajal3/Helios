@@ -27,6 +27,7 @@ export type TipoAlerta =
   | 'referencia_repetida'
   | 'cupo_al_limite_al_estrenar'
   | 'consultas_de_cedula_excesivas'
+  | 'cedula_no_coincide'
 
 export type Gravedad = 'alta' | 'media'
 export const GRAVEDADES: readonly Gravedad[] = ['alta', 'media']
@@ -139,6 +140,13 @@ export const TIPOS: Record<
     gravedad: 'alta',
     sujeto: 'personal',
     parametro: 'eligibility_lookups_per_staff_day',
+  },
+  cedula_no_coincide: {
+    rotulo: 'La foto de la cédula no cuadra',
+    descripcion:
+      'La foto de la cédula con la que confirmó su pago en cuotas no coincide con sus datos, no parece una cédula o no se pudo revisar. La orden ya quedó confirmada: hay que mirarla.',
+    gravedad: 'alta',
+    sujeto: 'paciente',
   },
 }
 
@@ -411,6 +419,25 @@ function describirAlertaNueva(tipo: TipoAlerta, d: Record<string, unknown>): str
     }
     case 'consultas_de_cedula_excesivas':
       return `Hizo ${veces(n('lookups') ?? n('count'), 'consulta de cédula', 'consultas de cédula')}${elDia}${umbral !== null ? `; el límite es ${umbral}` : ''}.`
+    case 'cedula_no_coincide': {
+      const orden = n('order_number')
+      const conOrden = orden !== null ? ` (orden #${orden})` : ''
+      const leido = [t('read_number'), t('read_name')].filter(Boolean).join(' · ')
+      const suyo = t('document')
+      switch (t('status')) {
+        case 'no_coincide': {
+          const que =
+            t('reason') === 'numero' ? 'El número' : t('reason') === 'nombre' ? 'El nombre' : 'El número y el nombre'
+          return `${que} de la cédula que envió${conOrden} no coincide${t('reason') === 'numero' || t('reason') === 'nombre' ? '' : 'n'} con sus datos${leido ? `: se lee «${leido}»` : ''}${suyo ? `, y su cédula registrada es ${suyo}` : ''}.`
+        }
+        case 'no_es_cedula':
+          return `Lo que envió para confirmar${conOrden} no parece una cédula.`
+        case 'no_se_pudo_bajar':
+          return `No se pudo descargar la foto de la cédula que envió${conOrden}: se le pedirá de nuevo en su próxima orden.`
+        default:
+          return `No se pudo revisar la foto de la cédula que envió${conOrden}: mírala en su ficha.`
+      }
+    }
     default:
       return TIPOS[tipo].descripcion
   }

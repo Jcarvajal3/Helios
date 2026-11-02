@@ -263,7 +263,7 @@ export async function atenderAlPersonal({
         ? r.mensaje
         : confirmado
           ? `Listo, le reenviamos el comprobante de la orden #${orden.data.order_number} a su correo.`
-          : `Listo, le reenviamos la pregunta al paciente de la orden #${orden.data.order_number}. Tiene 2 horas para responder Sí.`,
+          : `Listo, le reenviamos la pregunta al paciente de la orden #${orden.data.order_number}. Tiene 2 horas para confirmarla: responderá «Sí» y, si se lo pedimos, enviará una foto de su cédula.`,
     )
     return { paso: 'reenviar', ok: r.ok }
   }
@@ -303,7 +303,7 @@ export async function atenderAlPersonal({
         '2. Si es nuevo, envíame sus datos en un solo mensaje.\n' +
         '3. Elige si cobras la consulta en dólares o en euros y escribe el monto.\n' +
         '4. Revisa el resumen y confírmalo.\n' +
-        '5. Al paciente le llega un WhatsApp: cuando responda Sí, la orden queda confirmada y te aviso aquí.\n\n' +
+        '5. Al paciente le llega un WhatsApp para que la confirme (responderá «Sí» y, si se lo pedimos, enviará una foto de su cédula). Cuando la confirme, te aviso aquí.\n\n' +
         'El paciente paga siempre en bolívares, a la tasa BCV del día en que paga.\n\n' +
         'Escribe «menú» para volver al inicio en cualquier momento. El equipo de Helios ve este chat: si algo no funciona, escríbenos aquí.',
       MENU,
@@ -537,7 +537,7 @@ export async function atenderAlPersonal({
     if (f.status === 'pending') {
       await enviar(
         `Listo. Orden #${f.order_number} enviada. Le escribimos a ${quien}` +
-          `${conf.telefono_enmascarado ? ` al ${conf.telefono_enmascarado}` : ''} para que responda Sí.\n` +
+          `${conf.telefono_enmascarado ? ` al ${conf.telefono_enmascarado}` : ''} para que lo confirme: responderá «Sí» y, si se lo pedimos, enviará una foto de su cédula.\n` +
           `Tiene hasta las ${horaCaracas(String(f.expires_at ?? ''))}. Te aviso aquí cuando responda.`,
         MENU,
       )
@@ -658,7 +658,7 @@ export async function atenderAlPersonal({
         `IVA de la Comisión Helios: ${en(v.consumer_fee_vat_cur, v.consumer_fee_vat_usd)} (Lo paga el paciente)\n` +
         `Cuotas:\n${cuotas}\n\n` +
         `El paciente paga en bolívares a la tasa BCV del ${nombreDeLaMoneda(m)} del día en que pague.\n` +
-        'Al confirmar, le llega un WhatsApp al paciente y tiene 2 horas para responder Sí.',
+        'Al confirmar, le llega un WhatsApp al paciente y tiene 2 horas para confirmarlo: responderá «Sí» y, si se lo pedimos, enviará una foto de su cédula.',
       RESUMEN,
     )
     return { paso: 'resumen' }

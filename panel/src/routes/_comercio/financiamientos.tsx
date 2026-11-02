@@ -315,7 +315,7 @@ function Financiamientos({ staff }: { staff: StaffContext }) {
                   ? [
                       {
                         label: 'Comprobante',
-                        info: 'Si al paciente le llegó el correo con sus cuotas. «Rebotado» quiere decir que el correo no existe: avisa a Helios. Mientras la orden espera el Sí del paciente, aquí se ve cómo va.',
+                        info: 'Si al paciente le llegó el correo con sus cuotas. «Rebotado» quiere decir que el correo no existe: avisa a Helios. Mientras la orden espera que el paciente la confirme, aquí se ve cómo va.',
                       } as const,
                     ]
                   : []),

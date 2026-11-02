@@ -1,7 +1,9 @@
 import { queryOptions } from '@tanstack/react-query'
 
 import { llamarRpc } from '@/features/admin/metricas/consulta'
-import { comoLista } from '@/lib/json'
+import { comoFila, comoLista, texto } from '@/lib/json'
+import { supabase } from '@/lib/supabase'
+import { leerFotoDeCedula } from './cedula'
 import { leerCambioPropuesto } from './datos'
 import type { CampoEditable, EstadoDeCambio } from './datos'
 
@@ -47,4 +49,28 @@ export async function resolverCambioPropuesto(params: {
     p_approve: params.aprobar,
     p_note: params.nota.trim() || null,
   })
+}
+
+// ── La foto de la cédula (docs/00 §15.11) ──────────────────────────────────
+
+export const CLAVE_FOTO_DE_CEDULA = ['admin-patient-id-photo'] as const
+
+export function consultaFotoDeCedula(userId: string) {
+  return queryOptions({
+    queryKey: [...CLAVE_FOTO_DE_CEDULA, userId],
+    queryFn: ({ signal }) =>
+      llamarRpc('admin_patient_id_photo', { p_user: userId }, { signal, leer: leerFotoDeCedula }),
+  })
+}
+
+/**
+ * Abre la foto: la base deja `patient.id_photo_viewed` en la bitácora y da su
+ * ruta en el bucket privado `patient-ids`, que aquí se firma por diez
+ * minutos (el bucket solo deja leer al equipo de Helios).
+ */
+export async function enlaceDeLaFotoDeCedula(userId: string): Promise<string> {
+  const r = comoFila(await llamarRpc<unknown>('admin_open_patient_id_photo', { p_user: userId }))
+  const { data, error } = await supabase.storage.from(texto(r.bucket)).createSignedUrl(texto(r.path), 600)
+  if (error) throw error
+  return data.signedUrl
 }

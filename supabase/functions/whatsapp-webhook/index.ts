@@ -6,7 +6,12 @@
 // propio: todo lo demás vive en la base, y aquí solo se enruta.
 //
 //   1. Estados de entrega            → helios_whatsapp_status
-//   2. El botón de la pregunta       → helios_patient_decision
+//   2. El botón de la pregunta       → helios_patient_decision (sin foto de
+//                                      su cédula, el «Sí» la pide)
+//   2b. Una foto o un PDF de quien tocó «Sí» sin foto de su cédula
+//                                    → helios_patient_id_photo: la guarda y
+//                                      confirma (docs/00 §15.11); antes que el
+//                                      personal, por los números de prueba
 //   3. Un código del directorio (DIR-XXXX, docs/04)
 //                                    → el contacto del médico (directorio.ts);
 //                                      antes que el personal, para que un
@@ -99,6 +104,23 @@ async function mensaje(m: EventoDeMensaje): Promise<void> {
     return
   }
 
+  // 2b. La foto de la cédula de quien tocó «Sí» sin tenerla: la confirma. Si
+  // no se esperaba una cédula de ese teléfono, sigue como cualquier adjunto
+  // (el lector de comprobantes). El lector la baja al bucket y la revisa.
+  if (m.adjunto) {
+    const res = await rpc<{ handled?: boolean; duplicate?: boolean }>('helios_patient_id_photo', {
+      p_from_phone: m.from,
+      p_wa_message_id: m.id,
+      p_media_id: m.adjunto.id,
+      p_mime: m.adjunto.mime,
+    })
+    if (res.handled) {
+      if (!res.duplicate) despertarAlLector()
+      await listo('paciente', res)
+      return
+    }
+  }
+
   // 3. Un código del directorio: el contacto del médico de esa tarjeta.
   const codigo = codigoDelDirectorio(m.texto)
   if (codigo) {
@@ -133,7 +155,7 @@ async function mensaje(m: EventoDeMensaje): Promise<void> {
 }
 
 /**
- * Una captura quedó encolada (docs/03): la base despierta a
+ * Una captura o una foto de cédula quedó encolada (docs/03): la base despierta a
  * `lector-comprobantes`. Sin esperar: 360dialog quiere su 200 ya, y si falla,
  * el cron de cada minuto lo vuelve a intentar.
  */

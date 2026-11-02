@@ -534,12 +534,12 @@ export function fraseDeLaEspera(c: Confirmacion | null): string {
     case 'fallida':
       return `No pudimos escribirle por WhatsApp${a}. Revisa con Helios que el teléfono tenga WhatsApp y reenvía.`
     case 'leida':
-      return 'El paciente ya leyó el mensaje. Falta que responda Sí.'
+      return 'El paciente ya leyó el mensaje. Falta que lo confirme.'
     case 'entregada':
     case 'enviada':
-      return `Le enviamos un WhatsApp${a} con el resumen. Tiene que responder Sí para aceptar.`
+      return `Le enviamos un WhatsApp${a} con el resumen. Para aceptar, responderá «Sí» y, si se lo pedimos, enviará una foto de su cédula.`
     default:
-      return `Enviando un WhatsApp${a} con el resumen. Tiene que responder Sí para aceptar.`
+      return `Enviando un WhatsApp${a} con el resumen. Para aceptar, responderá «Sí» y, si se lo pedimos, enviará una foto de su cédula.`
   }
 }
 

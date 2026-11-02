@@ -225,6 +225,10 @@ begin
   -- =========================================================================
   -- 5. El «Sí» confirma
   -- =========================================================================
+  -- Quien ya tiene la foto de su cédula (sin ella, el «Sí» la pide y la foto
+  -- confirma: id_photo_smoke).
+  update public.profiles set id_photo_at = now(), id_photo_path = v_profile || '/prueba.jpg' where id = v_profile;
+
   v_j := public.helios_patient_decision(v_charge, 'si', '584141234567', 'wamid.si.1');
   if not (v_j->>'ok')::boolean or v_j->>'status' <> 'confirmed' then
     raise exception 'El «Sí» debía confirmar: %', v_j;
@@ -394,7 +398,7 @@ begin
   reset role;
   v_charge4 := (v_j->>'id')::uuid;
 
-  update public.profiles set is_blacklisted = true
+  update public.profiles set is_blacklisted = true, id_photo_at = now(), id_photo_path = 'prueba.jpg'
    where id = (select user_id from public.charges where id = v_charge4);
 
   v_j := public.helios_patient_decision(v_charge4, 'si', '584261112233', 'wamid.si.4');

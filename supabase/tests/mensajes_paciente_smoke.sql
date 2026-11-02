@@ -218,6 +218,8 @@ begin
   select public.helios_wa_e164(p.phone_e164), now() from public.profiles p where p.id = v_p1
   on conflict (phone_e164) do update set last_inbound_at = now();
 
+  -- Ya tiene la foto de su cédula (sin ella, el «Sí» la pide: id_photo_smoke).
+  update public.profiles set id_photo_at = now(), id_photo_path = 'prueba.jpg' where id = v_p1;
   v_j := public.helios_patient_decision(v_c1, 'si', '584141230001', 'wamid.msj.1');
   if v_j->>'status' <> 'confirmed' then
     raise exception 'El «Sí» debía confirmar: %', v_j;

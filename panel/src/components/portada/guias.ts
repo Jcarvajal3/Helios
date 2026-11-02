@@ -90,7 +90,7 @@ const PASOS_PACIENTE: Bloque[] = [
   {
     titulo: 'Confirma por WhatsApp',
     texto:
-      'Te llega un mensaje con el monto, la Comisión Helios y tus dos cuotas con su fecha. Respondes «Sí» y el comprobante te llega por correo.',
+      'Te llega un mensaje con el monto, la Comisión Helios y tus dos cuotas con su fecha. Lo confirmas por WhatsApp y el comprobante te llega por correo.',
   },
   {
     titulo: 'Paga a los 7 y a los 14 días',
@@ -299,7 +299,7 @@ const MEDICOS: Guia = {
       {
         titulo: 'El paciente confirma',
         texto:
-          'Le llega un WhatsApp con su monto y sus dos cuotas. Responde «Sí» y recibe el comprobante por correo. Tú lo ves confirmado en la plataforma.',
+          'Le llega un WhatsApp con su monto y sus dos cuotas. Lo confirma por WhatsApp y recibe el comprobante por correo. Tú lo ves confirmado en la plataforma.',
       },
       {
         titulo: 'Te pagamos a los 8 y a los 15 días',

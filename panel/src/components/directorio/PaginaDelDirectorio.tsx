@@ -482,7 +482,7 @@ const PASOS_DEL_PACIENTE = [
   },
   {
     titulo: 'Confirma por WhatsApp',
-    texto: 'El día de la consulta te llega el monto con tus dos cuotas. Respondes «Sí» y listo: hoy no pagas nada.',
+    texto: 'El día de la consulta te llega el monto con tus dos cuotas. Lo confirmas por WhatsApp y listo: hoy no pagas nada.',
   },
   {
     titulo: 'Paga en dos cuotas',

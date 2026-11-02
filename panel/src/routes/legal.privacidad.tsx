@@ -47,6 +47,13 @@ function Privacidad() {
             médico o el centro registra para un pago en cuotas se usan solo para
             gestionarlo y cobrarlo, y no se comparten con otros centros.
           </P>
+          <P>
+            Cuando te la pedimos para confirmar un pago en cuotas, guardamos la
+            foto de tu cédula que envías por WhatsApp. La usamos solo para
+            identificarte y para gestionar el cobro de tus cuotas. Se guarda en
+            un archivo privado al que solo accede el equipo de Helios y no se
+            comparte con ningún médico ni centro.
+          </P>
         </Card>
 
         <div className="mt-[var(--spacing-shell-gap-block)] flex flex-wrap gap-x-6 gap-y-2">

@@ -32,6 +32,7 @@ const PESTANA_PACIENTE: Partial<
   correo_rebotado: 'datos',
   referencia_repetida: 'pagos',
   cupo_al_limite_al_estrenar: 'consumos',
+  cedula_no_coincide: 'datos',
 }
 
 /**

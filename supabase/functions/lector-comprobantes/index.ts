@@ -15,6 +15,14 @@
 // Si algo falla, `lector_fallo`: se reintenta hasta tres veces, con dos
 // minutos de espera entre una y otra, y luego va al equipo con su captura.
 //
+// Lee también las fotos de la cédula con las que los pacientes confirman su
+// pago en cuotas (docs/00 §15.11; `lector_cedula_tomar`): la baja al bucket
+// privado `patient-ids` (<perfil>/<wamid>.<ext>, la ruta la fija la base),
+// Claude transcribe el número y el nombre y la base los compara
+// (`lector_cedula_leida`). La orden ya está confirmada: lo que no cuadre es
+// una alerta para el equipo. Los fallos, igual: tres intentos
+// (`lector_cedula_fallo`).
+//
 // Es pública (sin JWT): la protege la clave del encabezado `x-helios-clave`,
 // que conocen esta función (LECTOR_CLAVE) y el vault (`lector_clave`).
 //
@@ -34,7 +42,10 @@ import { encodeBase64 } from 'jsr:@std/encoding@1/base64'
 
 import {
   ESQUEMA,
+  ESQUEMA_CEDULA,
   INSTRUCCIONES,
+  INSTRUCCIONES_CEDULA,
+  esCedula,
   esComprobante,
   extensionDe,
   igualSeguro,
@@ -66,6 +77,7 @@ async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<T> {
 }
 
 type Tomada = { id: string; media_id: string; mime: string; profile_id: string }
+type CedulaTomada = { id: string; media_id: string; mime: string; ruta: string; guardada: boolean }
 type Config = { d360_api_key: string | null; d360_base_url: string | null }
 
 /** Baja un adjunto de 360dialog: primero su URL, luego el archivo. */
@@ -87,8 +99,8 @@ async function bajarAdjunto(mediaId: string, cfg: Config): Promise<Uint8Array> {
   return bytes
 }
 
-/** Le pasa la captura a Claude y devuelve lo que leyó, el modelo que respondió y su consumo. */
-async function leer(bytes: Uint8Array, mime: string) {
+/** Le pasa un adjunto a Claude con unas instrucciones y un esquema cerrados; devuelve el JSON, el modelo y su consumo. */
+async function transcribir(bytes: Uint8Array, mime: string, instrucciones: string, esquema: unknown, pedido: string) {
   const data = encodeBase64(bytes)
   const adjunto =
     mime === 'application/pdf'
@@ -102,25 +114,71 @@ async function leer(bytes: Uint8Array, mime: string) {
     max_tokens: 4000,
     betas: ['server-side-fallback-2026-07-01'],
     fallbacks: 'default',
-    system: INSTRUCCIONES,
-    output_config: { effort: 'low', format: { type: 'json_schema', schema: ESQUEMA } },
+    system: instrucciones,
+    output_config: { effort: 'low', format: { type: 'json_schema', schema: esquema } },
     messages: [
-      { role: 'user', content: [adjunto, { type: 'text', text: 'Transcribe los datos de este comprobante.' }] },
+      { role: 'user', content: [adjunto, { type: 'text', text: pedido }] },
     ],
   }
   const respuesta = await claude.beta.messages.create(
     params as unknown as Parameters<typeof claude.beta.messages.create>[0],
   ) as Anthropic.Beta.Messages.BetaMessage
 
-  if (respuesta.stop_reason === 'refusal') throw new Error('El modelo declinó leer la captura')
+  if (respuesta.stop_reason === 'refusal') throw new Error('El modelo declinó leer el adjunto')
   if (respuesta.stop_reason === 'max_tokens') throw new Error('La lectura se cortó (max_tokens)')
 
   const texto = respuesta.content.find((b) => b.type === 'text')
   if (!texto || texto.type !== 'text') throw new Error('El modelo no devolvió texto')
   const leido: unknown = JSON.parse(texto.text)
-  if (!esComprobante(leido)) throw new Error('La respuesta del modelo no tiene la forma esperada')
-
   return { leido, modelo: respuesta.model, consumo: respuesta.usage }
+}
+
+/** Le pasa la captura a Claude y devuelve lo que leyó, el modelo que respondió y su consumo. */
+async function leer(bytes: Uint8Array, mime: string) {
+  const r = await transcribir(bytes, mime, INSTRUCCIONES, ESQUEMA, 'Transcribe los datos de este comprobante.')
+  if (!esComprobante(r.leido)) throw new Error('La respuesta del modelo no tiene la forma esperada')
+  return { ...r, leido: r.leido }
+}
+
+/**
+ * Una foto de cédula: la baja de 360dialog y la sube al bucket (o, si ya se
+ * subió en un intento anterior, la lee de ahí), y le pasa a la base lo que
+ * leyó el modelo.
+ */
+async function procesarCedula(t: CedulaTomada, cfg: Config): Promise<void> {
+  try {
+    let bytes: Uint8Array
+    if (t.guardada) {
+      const bajada = await db.storage.from('patient-ids').download(t.ruta)
+      if (bajada.error) throw new Error(`No se pudo leer la cédula del bucket: ${bajada.error.message}`)
+      bytes = new Uint8Array(await bajada.data.arrayBuffer())
+    } else {
+      bytes = await bajarAdjunto(t.media_id, cfg)
+      const subida = await db.storage
+        .from('patient-ids')
+        .upload(t.ruta, bytes, { contentType: t.mime, upsert: true })
+      if (subida.error) throw new Error(`No se pudo guardar la cédula: ${subida.error.message}`)
+      await rpc('lector_cedula_guardada', { p_id: t.id })
+    }
+
+    const r = await transcribir(bytes, t.mime, INSTRUCCIONES_CEDULA, ESQUEMA_CEDULA, 'Transcribe los datos de esta cédula.')
+    if (!esCedula(r.leido)) throw new Error('La respuesta del modelo no tiene la forma esperada')
+    const status = await rpc<string>('lector_cedula_leida', {
+      p_id: t.id,
+      p_extraction: r.leido,
+      p_model: r.modelo,
+      p_usage: r.consumo,
+    })
+    console.log('lector: cédula leída', { id: t.id, status })
+  } catch (err) {
+    const mensaje = err instanceof Error ? err.message : String(err)
+    console.error('lector: no se pudo leer la cédula', { id: t.id, mensaje })
+    try {
+      await rpc('lector_cedula_fallo', { p_id: t.id, p_error: mensaje })
+    } catch (e) {
+      console.error('lector: tampoco se pudo anotar el fallo de la cédula', e)
+    }
+  }
 }
 
 async function procesar(t: Tomada, cfg: Config): Promise<void> {
@@ -158,12 +216,19 @@ async function procesar(t: Tomada, cfg: Config): Promise<void> {
   }
 }
 
-/** Lee lo pendiente, de tres en tres, hasta vaciar la cola o agotar el tiempo. */
+/** Lee lo pendiente, de tres en tres, hasta vaciar la cola o agotar el tiempo: primero las cédulas, luego las capturas. */
 async function vuelta(): Promise<void> {
   const inicio = Date.now()
   let leidas = 0
   try {
     const cfg = await rpc<Config>('lector_config', {})
+    while (leidas < MAX_POR_VUELTA && Date.now() - inicio < MAX_MS) {
+      const cedulas = await rpc<CedulaTomada[]>('lector_cedula_tomar', { p_limit: 3 })
+      if (!cedulas || cedulas.length === 0) break
+      await Promise.all(cedulas.map((t) => procesarCedula(t, cfg)))
+      leidas += cedulas.length
+    }
+    leidas = 0
     while (leidas < MAX_POR_VUELTA && Date.now() - inicio < MAX_MS) {
       const tomadas = await rpc<Tomada[]>('lector_tomar', { p_limit: 3 })
       if (!tomadas || tomadas.length === 0) break

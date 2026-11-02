@@ -171,8 +171,8 @@ export function PasoConfirmar({
                 <li>{reglaDelAtraso(vista.data, formatUsd)}</li>
               )}
               <li>
-                {/* Con la confirmación, nada sale hasta el Sí: ni el comprobante ni la bienvenida. */}
-                {conConfirmacion ? 'Cuando responda Sí, le llega el comprobante a ' : 'El comprobante con las cuotas le llega a '}
+                {/* Con la confirmación, nada sale hasta que la confirma: ni el comprobante ni la bienvenida. */}
+                {conConfirmacion ? 'Cuando lo confirme, le llega el comprobante a ' : 'El comprobante con las cuotas le llega a '}
                 <strong className="text-on-surface">{correoDestino ?? 'su correo registrado'}</strong>
                 {conConfirmacion ? ' y un WhatsApp con sus cuotas.' : '.'}
               </li>
@@ -208,7 +208,7 @@ export function PasoConfirmar({
 
           <p className="type-panel-body text-on-surface">
             {conConfirmacion
-              ? 'Léele al paciente las fechas y los montos de sus cuotas. Al enviar, le llega un WhatsApp con este resumen y tiene 2 horas para responder Sí. Sin su Sí no hay pago en cuotas.'
+              ? 'Léele al paciente las fechas y los montos de sus cuotas. Al enviar, le llega un WhatsApp con este resumen y tiene 2 horas para confirmarlo: responderá «Sí» y, si se lo pedimos, enviará una foto de su cédula. Sin su confirmación no hay pago en cuotas.'
               : 'Léele al paciente las fechas y los montos de sus cuotas. Si está de acuerdo, confirma.'}
           </p>
 

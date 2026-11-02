@@ -5,6 +5,8 @@
  */
 import {
   ESQUEMA,
+  ESQUEMA_CEDULA,
+  esCedula,
   esComprobante,
   extensionDe,
   leerFechaIso,
@@ -137,6 +139,23 @@ comprueba(
   'por el host de 360dialog, con la misma ruta',
 )
 comprueba(extensionDe('image/png') === 'png' && extensionDe('application/pdf') === 'pdf' && extensionDe('image/jpeg') === 'jpg', 'la extensión')
+
+console.log('La cédula (docs/00 §15.11)')
+comprueba(
+  ESQUEMA_CEDULA.additionalProperties === false &&
+    ESQUEMA_CEDULA.required.length === Object.keys(ESQUEMA_CEDULA.properties).length &&
+    ESQUEMA_CEDULA.required.every((k) => k in ESQUEMA_CEDULA.properties),
+  'el esquema, cerrado y todo obligatorio',
+)
+comprueba(
+  Object.values(ESQUEMA_CEDULA.properties).every((p) => !Array.isArray((p as Record<string, unknown>).type)),
+  'sin listas de tipos',
+)
+comprueba(esCedula({ es_cedula: true, numero: 'V-12.345.678', nombres: 'ANA', apellidos: 'LARA' }), 'una lectura completa')
+comprueba(esCedula({ es_cedula: false, numero: null, nombres: null, apellidos: null }), 'lo que no es una cédula')
+comprueba(!esCedula({ es_cedula: 'si', numero: null, nombres: null, apellidos: null }), 'es_cedula tiene que ser booleano')
+comprueba(!esCedula({ es_cedula: true, numero: 12345678, nombres: null, apellidos: null }), 'el número viene como texto')
+comprueba(!esCedula(null), 'nada no es una lectura')
 
 if (fallos > 0) {
   console.log(`\n${fallos} fallo(s)`)

@@ -502,5 +502,31 @@ console.log('\n── Las alertas de Helios (H10) ──────────
 }
 
 
+console.log('── La foto de la cédula no cuadra (docs/00 §15.11) ──────────')
+{
+  const fila = (detail: Record<string, unknown>) => ({
+    alert_key: 'cedula_no_coincide:u1:f1', kind: 'cedula_no_coincide', severity: 'alta',
+    subject_type: 'paciente', subject_id: 'u1', subject_name: 'José Pérez', detail,
+  })
+  const a = leerAlertas({
+    rows: [
+      fila({ status: 'no_coincide', reason: 'numero', read_number: 'V-9.999.999', read_name: 'JOSE PEREZ', document: 'V20000201', order_number: 41 }),
+      fila({ status: 'no_coincide', reason: 'numero_y_nombre' }),
+      fila({ status: 'no_es_cedula', order_number: 41 }),
+      fila({ status: 'no_se_pudo_bajar' }),
+    ],
+  })
+  const [numero, ambos, gato, perdida] = a.filas.map((x) => describirAlerta(x.detalle))
+  comprueba(a.filas.length === 4 && a.filas[0].personaId === 'u1', 'se lee y enlaza al paciente')
+  comprueba(
+    numero === 'El número de la cédula que envió (orden #41) no coincide con sus datos: se lee «V-9.999.999 · JOSE PEREZ», y su cédula registrada es V20000201.',
+    'el número que no coincide, con lo leído y lo registrado',
+    numero,
+  )
+  comprueba(ambos === 'El número y el nombre de la cédula que envió no coinciden con sus datos.', 'los dos, en plural', ambos)
+  comprueba(gato === 'Lo que envió para confirmar (orden #41) no parece una cédula.', 'lo que no es una cédula', gato)
+  comprueba(perdida.startsWith('No se pudo descargar la foto'), 'la que no se pudo bajar', perdida)
+}
+
 console.log(fallos === 0 ? '\nTODO BIEN' : `\n${fallos} FALLOS`)
 process.exit(fallos === 0 ? 0 : 1)

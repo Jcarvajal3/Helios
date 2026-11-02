@@ -61,8 +61,15 @@ function Terminos() {
             <li>
               El médico o el centro registra la consulta. Recibes un WhatsApp con
               el monto, la Comisión Helios y tus dos cuotas con sus fechas, y
-              el pago en cuotas solo existe si respondes «Sí». Después te llega el
-              comprobante por correo.
+              el pago en cuotas solo existe si lo confirmas: respondiendo «Sí»
+              y, cuando te lo pidamos, enviando una foto de tu cédula. Después te
+              llega el comprobante por correo.
+            </li>
+            <li>
+              Si aún no la tenemos, te pedimos por WhatsApp una foto de tu
+              cédula, y al enviarla confirmas tu pago en cuotas. La guardamos para
+              identificarte y para gestionar el cobro de tus cuotas. Solo la ve el
+              equipo de Helios: ningún médico ni centro tiene acceso a ella.
             </li>
             <li>
               Pagas en dos cuotas iguales, a los 7 y a los 14 días de la

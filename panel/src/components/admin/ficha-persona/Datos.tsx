@@ -23,7 +23,13 @@ import {
   formatPhone,
 } from '@/components/ui'
 import { consultaCorreosRecientes, reenviarComprobante } from '@/features/admin/avisos/api'
-import { actualizarContactoDelPaciente, consultaCambiosPropuestos } from '@/features/admin/pacientes/api'
+import {
+  actualizarContactoDelPaciente,
+  consultaCambiosPropuestos,
+  consultaFotoDeCedula,
+  enlaceDeLaFotoDeCedula,
+} from '@/features/admin/pacientes/api'
+import { insigniaDeLaRevision } from '@/features/admin/pacientes/cedula'
 import {
   NOMBRE_DEL_CAMPO,
   SEXO,
@@ -98,6 +104,8 @@ export function PestanaDatos({ user, onDone }: { user: UserDetail; onDone: () =>
         </Card>
       </Seccion>
 
+      <FotoDeLaCedula userId={user.userId} />
+
       <Seccion
         titulo="Contacto de referencia"
         info="A quién se llama si no se localiza al paciente. Lo pide la clínica al registrarlo."
@@ -154,6 +162,81 @@ export function PestanaDatos({ user, onDone }: { user: UserDetail; onDone: () =>
         />
       )}
     </div>
+  )
+}
+
+/**
+ * La foto de la cédula con la que confirmó su pago en cuotas (docs/00
+ * §15.11). Solo el equipo de Helios: abrirla queda en la bitácora y el enlace
+ * dura diez minutos. Lo que leyó el lector no deshace nada: si no cuadra,
+ * sale también en Alertas.
+ */
+function FotoDeLaCedula({ userId }: { userId: string }) {
+  const avisar = useToast()
+  const client = useQueryClient()
+  const foto = useQuery(consultaFotoDeCedula(userId))
+  const abrir = useMutation({
+    mutationFn: () => enlaceDeLaFotoDeCedula(userId),
+    onSuccess: (url) => {
+      window.open(url, '_blank', 'noopener,noreferrer')
+      void client.invalidateQueries({ queryKey: ['admin-audit'] })
+    },
+    onError: () => avisar('No se pudo abrir la foto de la cédula'),
+  })
+  const f = foto.data
+  const ultima = f?.ultima ?? null
+  const insignia = ultima ? insigniaDeLaRevision(ultima.revision, ultima.motivo) : null
+
+  return (
+    <Seccion
+      titulo="Foto de la cédula"
+      info="La envía por WhatsApp para confirmar su primer pago en cuotas (y el de quien aún no la tenía). El lector compara el número y el nombre con los de arriba; si no cuadran, lo avisa en Alertas. Solo la ve el equipo de Helios: abrirla queda en la bitácora."
+    >
+      <Card>
+        {foto.isError ? (
+          <NoSePudoLeer onReintentar={() => void foto.refetch()} />
+        ) : foto.isPending ? (
+          <p className="type-panel-body text-on-surface-variant">Leyendo…</p>
+        ) : !ultima ? (
+          <p className="type-panel-body text-on-surface-variant">
+            Aún no la ha enviado: se le pide al tocar «Sí» en su próxima orden.
+          </p>
+        ) : (
+          <div className="flex flex-col gap-4">
+            <Datos>
+              <Dato rotulo="Recibida">
+                {ultima.recibidaEl ? formatDateTime(ultima.recibidaEl) : '—'}
+                {ultima.orden !== null ? ` · orden #${ultima.orden}` : ''}
+              </Dato>
+              <Dato rotulo="Revisión">
+                {insignia && (
+                  <Badge tone={insignia.tono} icono={insignia.tono !== 'neutral'}>
+                    {insignia.texto}
+                  </Badge>
+                )}
+              </Dato>
+              <Dato rotulo="Lo que se lee">
+                {[ultima.numeroLeido, ultima.nombreLeido]
+                  .filter(Boolean)
+                  .join(' · ') || '—'}
+              </Dato>
+            </Datos>
+            {!f?.tieneFoto && (
+              <p className="type-panel-caption text-on-surface-variant">
+                No quedó guardada en su perfil: se le vuelve a pedir en su próxima orden.
+              </p>
+            )}
+            {ultima.guardada && (
+              <div>
+                <Button size="sm" variant="tonal" disabled={abrir.isPending} onClick={() => abrir.mutate()}>
+                  {abrir.isPending ? 'Abriendo…' : 'Ver la foto'}
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+      </Card>
+    </Seccion>
   )
 }
 

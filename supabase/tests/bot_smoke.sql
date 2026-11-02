@@ -159,6 +159,9 @@ begin
   insert into public.whatsapp_contacts (phone_e164, last_inbound_at, staff_user_id)
   values ('+' || v_tel, now(), v_doc);
 
+  -- Ya tiene la foto de su cédula (sin ella, el «Sí» la pide: id_photo_smoke).
+  update public.profiles set id_photo_at = now(), id_photo_path = 'prueba.jpg'
+   where id = (select user_id from public.charges where id = v_charge);
   v_j := public.helios_patient_decision(v_charge, 'si', '584141234567', 'wamid.bot.si');
   if not (v_j->>'ok')::boolean then
     raise exception 'El paciente debía poder aceptar: %', v_j;
@@ -202,6 +205,8 @@ begin
   if (select channel from public.charges where id = v_charge2) <> 'panel' then
     raise exception 'La orden debía ser del panel';
   end if;
+  update public.profiles set id_photo_at = now(), id_photo_path = 'prueba.jpg'
+   where id = (select user_id from public.charges where id = v_charge2);
   perform public.helios_patient_decision(v_charge2, 'si', '584161114455', 'wamid.bot.panel.si');
   if not exists (select 1 from public.outbound_messages
                   where recipient_staff_id = v_doc and template_key = 'bot_respuesta'
