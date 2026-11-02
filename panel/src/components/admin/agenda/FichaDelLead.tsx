@@ -39,6 +39,7 @@ import {
   Input,
   Menu,
   Modal,
+  Select,
   SkeletonList,
   Textarea,
   claseDeBoton,
@@ -50,7 +51,14 @@ import {
 } from '@/components/ui'
 import { MESES_CORTOS, sumarDias } from '@/components/kit/rango'
 import { haceCuanto } from '@/features/admin/cobranza/senales'
-import { anotarGestion, borrarLead, consultaHistoria, refrescarAgenda } from '@/features/admin/agenda/api'
+import {
+  anotarGestion,
+  borrarLead,
+  cambiarEncargado,
+  consultaEquipoDeLaAgenda,
+  consultaHistoria,
+  refrescarAgenda,
+} from '@/features/admin/agenda/api'
 import {
   AVANZAN_DE_FASE,
   ESTADO_DEL_LEAD,
@@ -84,6 +92,7 @@ import {
 import type {
   BorradorDeGestion,
   CanalDelLead,
+  Fase,
   Gestion,
   Lead,
   ModoDeVisita,
@@ -261,10 +270,18 @@ export function FichaDelLead({
  * Quién lo lleva en cada fase: «Mensaje: Lis · Llamada: Juan Vicente ·
  * Visita: Carlos». La fase en que está, en negrita; las que aún no tocan, no
  * salen. Al pasar de fase se le asigna solo a alguien de esa fase.
+ *
+ * «Cambiar» abre ahí mismo un selector por fase (no otra ventana: la ficha ya
+ * es una, y se usa desde el móvil). El de la fase en que está es su
+ * «Gestionado por»; el de una fase que aún no toca queda para cuando llegue.
  */
 function Encargados({ lead }: { lead: Lead }) {
+  const [cambiando, setCambiando] = useState(false)
   const hasta = FASES.indexOf(lead.fase)
   const partes = FASES.filter((f, i) => i <= hasta || lead.encargados[f] !== null)
+
+  if (cambiando) return <CambiarEncargados lead={lead} onClose={() => setCambiando(false)} />
+
   return (
     <p className="type-panel-caption text-on-surface-variant">
       {partes.map((f, i) => {
@@ -278,8 +295,81 @@ function Encargados({ lead }: { lead: Lead }) {
             </span>
           </span>
         )
-      })}
+      })}{' '}
+      <button
+        type="button"
+        onClick={() => setCambiando(true)}
+        className="font-semibold text-primary underline underline-offset-2"
+      >
+        Cambiar
+      </button>
     </p>
+  )
+}
+
+const NADIE = '__nadie__'
+
+/** Un selector por fase con todo el equipo activo; guarda solo lo que cambió. */
+function CambiarEncargados({ lead, onClose }: { lead: Lead; onClose: () => void }) {
+  const client = useQueryClient()
+  const avisar = useToast()
+  const equipo = useQuery(consultaEquipoDeLaAgenda())
+  const [elegidos, setElegidos] = useState<Record<Fase, string>>(() => ({
+    mensaje: lead.encargados.mensaje?.id ?? NADIE,
+    llamada: lead.encargados.llamada?.id ?? NADIE,
+    visita: lead.encargados.visita?.id ?? NADIE,
+  }))
+
+  const cambios = FASES.filter((f) => elegidos[f] !== (lead.encargados[f]?.id ?? NADIE))
+
+  const guardar = useMutation({
+    mutationFn: async () => {
+      for (const f of cambios) {
+        await cambiarEncargado(lead.id, f, elegidos[f] === NADIE ? null : elegidos[f])
+      }
+    },
+    onSuccess: () => {
+      refrescarAgenda(client)
+      avisar('Encargados guardados.')
+      onClose()
+    },
+  })
+
+  // Quien ya lo lleva sale aunque ya no esté en el equipo activo.
+  const opciones = [
+    { value: NADIE, label: 'Nadie' },
+    ...(equipo.data ?? []).map((m) => ({ value: m.userId, label: m.nombre })),
+    ...FASES.flatMap((f) => {
+      const e = lead.encargados[f]
+      return e && !(equipo.data ?? []).some((m) => m.userId === e.id) ? [{ value: e.id, label: e.nombre }] : []
+    }).filter((o, i, todas) => todas.findIndex((x) => x.value === o.value) === i),
+  ]
+
+  return (
+    <div className="mt-2 flex flex-col gap-3 rounded-panel-card border border-panel-hairline p-3">
+      <div className="grid gap-3 sm:grid-cols-3">
+        {FASES.map((f) => (
+          <Select
+            key={f}
+            id={`encargado-${f}`}
+            label={f === lead.fase && lead.estado !== 'convertido' ? `${ROTULO_FASE[f].label} (ahora)` : ROTULO_FASE[f].label}
+            value={elegidos[f]}
+            options={opciones}
+            onChange={(v) => setElegidos((e) => ({ ...e, [f]: v }))}
+          />
+        ))}
+      </div>
+      {equipo.isError && <ErrorBox title="No se pudo leer el equipo" detail={describeError(equipo.error)} />}
+      {guardar.isError && <ErrorBox title="No se pudo guardar" detail={describeError(guardar.error)} />}
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <Button size="sm" variant="text" onClick={onClose}>
+          Cancelar
+        </Button>
+        <Button size="sm" disabled={cambios.length === 0 || guardar.isPending} onClick={() => guardar.mutate()}>
+          {guardar.isPending ? 'Guardando…' : 'Guardar'}
+        </Button>
+      </div>
+    </div>
   )
 }
 

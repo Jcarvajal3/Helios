@@ -149,23 +149,41 @@ export function YaDadaDeAlta({
 
   return (
     <Modal title={`${alta.clinicName.trim()} ya está dada de alta`} width="md" onClose={irALaFicha}>
-      <div className="flex flex-col gap-4">
-        {despues.usuario && 'password' in despues.usuario && (
-          <>
-            <p className="type-panel-body text-on-surface-variant">
-              {alta.ownerName.trim()} entra al panel como administrador con estos datos:
-            </p>
-            <Credenciales email={despues.usuario.email} password={despues.usuario.password} />
-          </>
-        )}
-        <ResumenDelAlta despues={despues} telefono={alta.phone} />
-        <div>
-          <Button size="md" onClick={irALaFicha}>
-            Ir a su ficha
-          </Button>
-        </div>
-      </div>
+      <ResultadoDelAlta despues={despues} alta={alta} onIrALaFicha={irALaFicha} />
     </Modal>
+  )
+}
+
+/**
+ * Lo de dentro de `YaDadaDeAlta`, sin la ventana: la página de alta lo
+ * enseña en su sitio (en el móvil, una ventana encima de otra no se lee).
+ */
+export function ResultadoDelAlta({
+  despues,
+  alta,
+  onIrALaFicha,
+}: {
+  despues: DespuesDelAlta
+  alta: AltaDeClinica
+  onIrALaFicha: () => void
+}) {
+  return (
+    <div className="flex flex-col gap-4">
+      {despues.usuario && 'password' in despues.usuario && (
+        <>
+          <p className="type-panel-body text-on-surface-variant">
+            {alta.ownerName.trim()} entra al panel como administrador con estos datos:
+          </p>
+          <Credenciales email={despues.usuario.email} password={despues.usuario.password} />
+        </>
+      )}
+      <ResumenDelAlta despues={despues} telefono={alta.phone} />
+      <div>
+        <Button size="md" onClick={onIrALaFicha}>
+          Ir a su ficha
+        </Button>
+      </div>
+    </div>
   )
 }
 

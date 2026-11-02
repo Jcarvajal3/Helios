@@ -5,7 +5,6 @@ import type { UseQueryResult } from '@tanstack/react-query'
 import { FileDown, Inbox, Plus, Store } from 'lucide-react'
 
 import { DataTable } from '@/components/DataTable'
-import { AltaLocal } from '@/components/admin/directorio/AltaLocal'
 import { RevisarSolicitud, columnasSolicitudes } from '@/components/admin/directorio/Solicitudes'
 import { BuscadorEnUrl } from '@/components/FiltrosDeLista'
 import { SeccionSinLeer } from '@/components/admin/directorio/SeccionSinLeer'
@@ -20,6 +19,7 @@ import {
   NoSePudoLeer,
   Segmented,
   SkeletonTable,
+  claseDeBoton,
   formatUsd,
 } from '@/components/ui'
 import { fetchMerchantPayables, fetchMerchants } from '@/features/admin/api'
@@ -91,7 +91,6 @@ function ListaDeLocales() {
   // clínica ni los datos de alta (con su cuenta de cobro).
   const puedeAfiliar = usePuedeAfiliar()
   const sinDinero = useEsCapacitador()
-  const [dandoDeAlta, setDandoDeAlta] = useState(false)
   const [revisando, setRevisando] = useState<SolicitudDeAfiliacion | null>(null)
   const datosDeAlta = useDatosDeContrato()
 
@@ -161,14 +160,16 @@ function ListaDeLocales() {
             un botón apagado va en el globo: escrito debajo, lo sacaría de la
             línea de los demás controles. */}
         <div className="ml-auto">
-          <Button
-            size="sm"
-            disabled={!puedeAfiliar}
-            title={puedeAfiliar ? undefined : SOLO_QUIEN_AFILIA}
-            onClick={() => setDandoDeAlta(true)}
-          >
-            <Plus size={14} aria-hidden /> Dar de alta una clínica
-          </Button>
+          {/* Una página y no una ventana: se llena sobre todo desde el móvil. */}
+          {puedeAfiliar ? (
+            <Link to="/admin/clinicas/alta" className={claseDeBoton('filled', 'sm')}>
+              <Plus size={14} aria-hidden /> Dar de alta una clínica
+            </Link>
+          ) : (
+            <Button size="sm" disabled title={SOLO_QUIEN_AFILIA}>
+              <Plus size={14} aria-hidden /> Dar de alta una clínica
+            </Button>
+          )}
         </div>
       </FilterBar>
 
@@ -264,7 +265,6 @@ function ListaDeLocales() {
         </>
       )}
 
-      {dandoDeAlta && <AltaLocal onClose={() => setDandoDeAlta(false)} />}
       {revisando && <RevisarSolicitud solicitud={revisando} onClose={() => setRevisando(null)} />}
     </>
   )

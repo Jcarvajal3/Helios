@@ -91,6 +91,7 @@ SUITES=(
   agenda_encargados_smoke
   agenda_qr_smoke
   capacitador_smoke
+  rol_del_equipo_smoke
   directorio_smoke
   directorio_interesados_smoke
 )

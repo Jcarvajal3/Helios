@@ -101,6 +101,7 @@ export const ACCION_VERBO: Record<string, string | undefined> = {
   'platform_admin.set': 'dio acceso al panel',
   'platform_admin.revoke': 'revocó un acceso al panel',
   'platform_admin.restore': 'devolvió un acceso al panel',
+  'platform_admin.set_role': 'cambió el rol de alguien del equipo',
   'security.require_mfa': 'cambió la exigencia del segundo factor',
 
   // ── Asistente (fase 6) ───────────────────────────────────────────────────
@@ -244,6 +245,7 @@ export const FILTROS_BITACORA: ReadonlyArray<TemaBitacora> = [
       'platform_admin.set',
       'platform_admin.revoke',
       'platform_admin.restore',
+      'platform_admin.set_role',
       'security.require_mfa',
     ],
   },

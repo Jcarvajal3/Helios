@@ -1293,7 +1293,7 @@ Ejemplo: María · $56,96 · la Dra. Nadia Andi Khabbaze Alfaro · mañana, lune
 
 Ejemplo: María · $56,96 · la Dra. Nadia Andi Khabbaze Alfaro · lunes 02/11 · 2 cuotas pendientes por $113,92 · Bs 10.624,18 · lunes 26/10 · $56,96 · dólar · Bs 21.248,36 · tus 2 cuotas ($113,92) · BNC (0191) · 0412-1714930 · J-50496786-6.
 
-**Al aprobarse** (leerlas en vivo de 360dialog y comprobar que sean UTILITY): `update public.notification_templates set wa_template_name = 'helios_cuota_con_vencidas' where key = 'cuota_con_vencidas';` y lo mismo con `helios_cuotas_vencidas` / `cuotas_vencidas`. Las variables y los botones ya están puestos.
+**Aprobadas y conectadas el 2026-11-02** (`20261102200000`; leídas en vivo de 360dialog: las dos UTILITY, en `es`, con el texto corregido y los dos botones). Desde ahí, fuera de la ventana de 24 h, los avisos con cuotas vencidas usan `helios_cuota_con_vencidas` y `helios_cuotas_vencidas`.
 
 Piezas nuevas (internas): `helios_vencidas_de(user, hoy, excluir_fecha, excluir_ids) → jsonb`, `helios_payment_block_doble`, `helios_wa_template_for(key, vars)`, `helios_bs_de`, `helios_moneda_de`, `helios_dia_text`. Variables nuevas de los avisos: `tu_cuota`, `tu_cuota_inicio`, `vence`, `vencio`, `aviso_vencidas`, `aviso_vencidas_html`, `situacion_vencida`, `opciones_vencidas`.
 
