@@ -30,6 +30,8 @@ import { fetchLevelConfig } from '@/features/admin/ops'
 import { ORDENES_DEL_PADRON, fetchPaginaDeUsuarios } from '@/features/admin/users'
 import type { OrdenDelPadron, ProfileStatus, UserRow } from '@/features/admin/users'
 import { comoBooleano, comoEntero, comoTexto, unoDe } from '@/lib/busqueda'
+import { PacientesLite } from '@/lite/PersonasLite'
+import { conLite } from '@/lite/espacio'
 
 /**
  * Cuántas personas por página. El servidor filtra y cuenta: la página es solo
@@ -56,7 +58,8 @@ type PersonasSearch = {
 
 export const Route = createFileRoute('/admin/pacientes')({
   staticData: { title: 'Pacientes', width: 'wide' },
-  component: PersonasPage,
+  // En Helios Lite, «Pacientes» de la maqueta (`lite/PersonasLite`).
+  component: conLite(PersonasPage, PacientesLite),
   validateSearch: (search: Record<string, unknown>): PersonasSearch => ({
     vista: unoDe(['cambios'], search.vista),
     q: comoTexto(search.q),

@@ -1,3 +1,4 @@
+import type { JSX } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { ShieldCheck } from 'lucide-react'
@@ -24,6 +25,8 @@ import {
 import type { Alertas, EstadoRevision, Gravedad, TipoAlerta } from '@/features/admin/riesgo/alertas'
 import { CLAVES_RIESGO, fetchAlertas } from '@/features/admin/riesgo/consultas'
 import { unoDe } from '@/lib/busqueda'
+import { AlertasLite } from '@/lite/OperacionesLite'
+import { conLite } from '@/lite/espacio'
 
 /** Cuántas alertas se piden. Si hay más, la pantalla lo dice. */
 const TOPE = 500
@@ -42,7 +45,8 @@ type AlertasSearch = {
 
 export const Route = createFileRoute('/admin/alertas')({
   staticData: { title: 'Alertas', width: 'wide' },
-  component: AlertasPage,
+  // En Helios Lite, «Alertas» de la maqueta (`lite/OperacionesLite`).
+  component: conLite(AlertasPage, AlertasLite),
   validateSearch: (s: Record<string, unknown>): AlertasSearch => ({
     tipo: unoDe(TIPOS_ALERTA, s.tipo),
     gravedad: unoDe(GRAVEDADES, s.gravedad),
@@ -64,7 +68,7 @@ export const Route = createFileRoute('/admin/alertas')({
  * las altas falsas. Lo único que se guarda es que alguien la revisó, con su
  * nota. Por defecto se ven las pendientes: es una cola.
  */
-function AlertasPage() {
+function AlertasPage(): JSX.Element {
   const navigate = useNavigate({ from: '/admin/alertas' })
   const { tipo, gravedad, estado = 'pendientes' } = Route.useSearch()
 

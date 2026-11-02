@@ -26,7 +26,7 @@ export function diasDe(periodo: Periodo): number {
 }
 
 /** Un menú que se cierra al pulsar fuera o con Escape. */
-function useMenu() {
+export function useMenu() {
   const [abierto, setAbierto] = useState(false)
   const caja = useRef<HTMLDivElement>(null)
 
@@ -208,3 +208,16 @@ export function inicialesDeMedico(nombre: string): string {
   const partes = limpio.split(/\s+/).filter(Boolean)
   return ((partes[0]?.[0] ?? '') + (partes[1]?.[0] ?? '')).toUpperCase() || '·'
 }
+
+/** Las barritas de la maqueta: los clics de cada uno de los últimos siete días. */
+export function Barritas({ serie }: { serie: number[] }) {
+  const tope = Math.max(1, ...serie)
+  return (
+    <span className="lt-barritas" aria-hidden>
+      {serie.map((n, i) => (
+        <i key={i} style={{ height: `${Math.max(3, (n / tope) * 22)}px` }} />
+      ))}
+    </span>
+  )
+}
+

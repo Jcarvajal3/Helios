@@ -16,10 +16,13 @@ import { TasaBcv } from '@/components/admin/ajustes/TasaBcv'
 import { Terminos } from '@/components/admin/ajustes/Terminos'
 import { hoyCaracas } from '@/components/ui'
 import { PESTANAS_ANCHAS, leerBusquedaAjustes, pestanaActiva } from '@/features/admin/ajustesNavegacion'
+import { AjustesLite } from '@/lite/AjustesLite'
+import { conLite } from '@/lite/espacio'
 
 export const Route = createFileRoute('/admin/ajustes')({
   staticData: { title: 'Ajustes', width: 'wide' },
-  component: AjustesPage,
+  // En Helios Lite, los temas agrupados de la maqueta (`lite/AjustesLite`).
+  component: conLite(AjustesPage, AjustesLitePage, 'todas'),
   validateSearch: leerBusquedaAjustes,
 })
 
@@ -35,6 +38,31 @@ export const Route = createFileRoute('/admin/ajustes')({
  * año de los feriados— va en la URL.
  */
 function AjustesPage() {
+  const tab = pestanaActiva(Route.useSearch().tab)
+
+  return (
+    <div className="grid gap-5 lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-8">
+      <SubmenuAjustes activa={tab} />
+
+      <div className={PESTANAS_ANCHAS.includes(tab) ? undefined : 'max-w-(--panel-measure-normal)'}>
+        <ContenidoDeAjustes />
+      </div>
+    </div>
+  )
+}
+
+/** En Helios Lite, los mismos ajustes con los temas agrupados de la maqueta. */
+function AjustesLitePage() {
+  const tab = pestanaActiva(Route.useSearch().tab)
+  return (
+    <AjustesLite activa={tab}>
+      <ContenidoDeAjustes />
+    </AjustesLite>
+  )
+}
+
+/** El ajuste de la pestaña elegida: el mismo en Pro y en Lite. */
+function ContenidoDeAjustes() {
   const navigate = useNavigate({ from: '/admin/ajustes' })
   const search = Route.useSearch()
   const tab = pestanaActiva(search.tab)
@@ -44,10 +72,7 @@ function AjustesPage() {
   }
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-8">
-      <SubmenuAjustes activa={tab} />
-
-      <div className={PESTANAS_ANCHAS.includes(tab) ? undefined : 'max-w-(--panel-measure-normal)'}>
+    <>
         {tab === 'tasa' && <TasaBcv />}
         {tab === 'parametros' && <Parametros />}
         {tab === 'niveles' && <Niveles />}
@@ -76,7 +101,6 @@ function AjustesPage() {
           />
         )}
         {tab === 'mantenimiento' && <MaintenanceTab />}
-      </div>
-    </div>
+    </>
   )
 }

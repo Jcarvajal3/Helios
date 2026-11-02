@@ -26,6 +26,8 @@ import type {
   QueSeVe,
 } from '@/features/admin/seguimiento/seguimiento'
 import { comoId, comoTexto, unoDe } from '@/lib/busqueda'
+import { SeguimientoLite } from '@/lite/PersonasLite'
+import { conLite } from '@/lite/espacio'
 
 type Vista = 'clinicas' | 'personas'
 
@@ -42,7 +44,8 @@ type SeguimientoSearch = {
 
 export const Route = createFileRoute('/admin/seguimiento')({
   staticData: { title: 'Seguimiento', width: 'wide' },
-  component: SeguimientoPage,
+  // En Helios Lite, «Seguimiento» de la maqueta (`lite/PersonasLite`).
+  component: conLite(SeguimientoPage, SeguimientoLite),
   validateSearch: (search: Record<string, unknown>): SeguimientoSearch => ({
     vista: unoDe(['clinicas', 'personas'] as const, search.vista),
     ver: unoDe(VALORES_QUE_SE_VE, search.ver),

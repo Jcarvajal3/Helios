@@ -11,6 +11,8 @@ import { Tabs, diaOperativo } from '@/components/ui'
 import { comoMes, mesAnteriorA, mesDe, nombreDelMes } from '@/features/admin/cierreMes'
 import { VALORES_TIPO_DE_ASIENTO } from '@/features/admin/contabilidad'
 import { comoDia, comoId, unoDe } from '@/lib/busqueda'
+import { ContabilidadLite } from '@/lite/OperacionesLite'
+import { conLite } from '@/lite/espacio'
 
 type Vista = 'cierre' | 'libro' | 'exportacion'
 
@@ -28,7 +30,8 @@ type ContabilidadSearch = FiltrosLibro & { vista?: Vista; mes?: string }
 
 export const Route = createFileRoute('/admin/contabilidad')({
   staticData: { title: 'Libro y cierre de mes', width: 'wide' },
-  component: ContabilidadPage,
+  // En Helios Lite, «Contabilidad» de la maqueta (`lite/OperacionesLite`).
+  component: conLite(ContabilidadPage, ContabilidadLite),
   validateSearch: (search: Record<string, unknown>): ContabilidadSearch => ({
     vista: VISTAS.find((v) => v.value === search.vista)?.value,
     mes: comoMes(search.mes),

@@ -1365,3 +1365,149 @@ a.lt-cifra-rotulo:hover {
     width: 100%;
   }
 }
+
+/* ── El espacio de trabajo (Operaciones, Personas, Mensajes) ──────────── */
+
+/* Las vistas de una pestaña: botones de vidrio, el elegido en celeste. */
+.lt-opciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: -4px 0 16px;
+}
+
+.lt-opcion {
+  padding: 8px 13px;
+  border-radius: var(--lt-radio-boton);
+  font-size: 11.5px;
+  color: var(--lt-tinta-2);
+  background: var(--lt-vidrio);
+  border: 0.67px solid rgb(255 255 255 / 0.85);
+  box-shadow: var(--lt-sombra-boton);
+  backdrop-filter: var(--lt-desenfoque);
+}
+
+.lt-opcion:hover {
+  color: var(--lt-tinta);
+}
+
+.lt-opcion[aria-pressed='true'] {
+  font-weight: 600;
+  color: var(--lt-azul-fuerte);
+  background: linear-gradient(140deg, #ffffff, #dcebff);
+  border-color: #cfe2fb;
+}
+
+/* El interruptor de un médico en el directorio (publicado / oculto). */
+.lt-interruptor-fila {
+  position: relative;
+  width: 38px;
+  height: 22px;
+  border-radius: 999px;
+  background: #cfd9e6;
+  transition: background 150ms;
+  vertical-align: middle;
+}
+
+.lt-interruptor-fila::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(15 26 46 / 0.25);
+  transition: translate 150ms;
+}
+
+.lt-interruptor-fila[aria-checked='true'] {
+  background: #1f9d55;
+}
+
+.lt-interruptor-fila[aria-checked='true']::after {
+  translate: 16px 0;
+}
+
+.lt-interruptor-fila:disabled {
+  opacity: 0.5;
+}
+
+.lt-acciones-fila {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.lt-punto-estado {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #1f9d55;
+  margin-right: 8px;
+}
+
+.lt-punto-estado[data-apagado] {
+  background: #b9c4d2;
+}
+
+/* Ajustes: la lista de temas a la izquierda y el panel a la derecha. */
+.lt-ajustes {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.lt-ajustes-nav {
+  display: grid;
+  gap: 18px;
+  position: sticky;
+  top: 110px;
+}
+
+.lt-ajustes-nav h2 {
+  margin: 0 0 6px;
+  padding: 0 12px;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--lt-tinta-3);
+}
+
+.lt-ajustes-nav a {
+  display: block;
+  padding: 9px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  color: var(--lt-tinta);
+}
+
+.lt-ajustes-nav a:hover {
+  background: var(--lt-azul-pastilla);
+}
+
+.lt-ajustes-nav a[aria-current='page'] {
+  color: var(--lt-azul-fuerte);
+  font-weight: 600;
+  background: linear-gradient(140deg, #ffffff, #dcebff);
+  box-shadow:
+    0 3px 10px 0 rgb(23 78 140 / 0.082),
+    inset 0 1px 1px 0 #fff;
+}
+
+.lt-ajustes-cuerpo {
+  padding: 24px;
+}
+
+@media (max-width: 900px) {
+  .lt-ajustes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .lt-ajustes-nav {
+    position: static;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  }
+}

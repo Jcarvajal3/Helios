@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import type { JSX } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { LucideIcon } from 'lucide-react'
@@ -71,7 +72,7 @@ import {
 import type { Alcance, EstadoDelLead, Fase, Lead } from '@/features/admin/agenda/agenda'
 import { describeError } from '@/lib/supabase'
 import { AgendaLite } from '@/lite/AgendaLite'
-import { useVersionDelAdmin } from '@/lite/version'
+import { conLite } from '@/lite/espacio'
 import { comoBooleano, comoDia, comoId, comoTexto, unoDe } from '@/lib/busqueda'
 
 /** En Visita: el calendario de las agendadas, o la lista de los afiliados. */
@@ -94,7 +95,8 @@ type AgendaSearch = {
 
 export const Route = createFileRoute('/admin/agenda')({
   staticData: { title: 'Agenda', width: 'wide' },
-  component: PaginaDeLaAgenda,
+  // En Helios Lite, la Agenda de la maqueta (`lite/AgendaLite`).
+  component: conLite(AgendaPage, AgendaLite),
   validateSearch: (search: Record<string, unknown>): AgendaSearch => {
     const mes = comoDia(search.mes)
     return {
@@ -130,19 +132,7 @@ const ICONO_FASE: Record<Fase, LucideIcon> = {
  * nadie; «Sin asignar» y «Todos» dejan ver el resto. La fase la pone la base
  * a partir del estado (20261028150000).
  */
-/**
- * En Helios Lite, la Agenda de la maqueta (`AgendaLite`); en Pro, la de
- * siempre. El rol de la agenda y el capacitador no tienen Lite: su marco es
- * el reducido de Pro, y su Agenda, la de siempre.
- */
-function PaginaDeLaAgenda() {
-  const version = useVersionDelAdmin()
-  const rol = useRolDelEquipo()
-  const conLite = version === 'lite' && (rol === 'super_admin' || rol === 'operador')
-  return conLite ? <AgendaLite /> : <AgendaPage />
-}
-
-function AgendaPage() {
+function AgendaPage(): JSX.Element {
   const navigate = useNavigate({ from: '/admin/agenda' })
   const search = Route.useSearch()
   const fase = search.fase ?? 'mensaje'

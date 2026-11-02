@@ -32,6 +32,8 @@ import { SOLO_QUIEN_AFILIA, useEsCapacitador, usePuedeAfiliar } from '@/features
 import { comoTexto, unoDe } from '@/lib/busqueda'
 import { ESTADOS_LOCAL, VALORES_ESTADO_LOCAL } from '@/features/admin/estados'
 import type { EstadoLocal } from '@/features/admin/estados'
+import { ClinicasLite } from '@/lite/PersonasLite'
+import { conLite } from '@/lite/espacio'
 
 /** `pendiente`: las solicitudes de afiliación de la portada, que aún no son clínicas. */
 type EstadoDeLista = EstadoLocal | 'pendiente'
@@ -43,7 +45,8 @@ type LocalesSearch = {
 
 export const Route = createFileRoute('/admin/clinicas')({
   staticData: { title: 'Clínicas', width: 'wide' },
-  component: LocalesPage,
+  // En Helios Lite, «Médicos y centros» de la maqueta (`lite/PersonasLite`).
+  component: conLite(LocalesPage, ClinicasLite),
   validateSearch: (search: Record<string, unknown>): LocalesSearch => ({
     q: comoTexto(search.q),
     estado: unoDe([...VALORES_ESTADO_LOCAL, 'pendiente'] as const, search.estado),

@@ -10,6 +10,8 @@ import { Tabs, diaOperativo } from '@/components/ui'
 import { consultaColaDeAvisos, consultaCorreosRecientes } from '@/features/admin/avisos/api'
 import { colaDeTrabajo, rebotadosSinCorregir } from '@/features/admin/avisos/avisos'
 import { comoBooleano, comoDia, comoEntero, comoTexto, unoDe } from '@/lib/busqueda'
+import { MensajesLite } from '@/lite/MensajesLite'
+import { conLite } from '@/lite/espacio'
 
 type Vista = 'hoy' | 'correos' | 'plantillas'
 const VISTAS: readonly Vista[] = ['hoy', 'correos', 'plantillas']
@@ -31,7 +33,8 @@ type AvisosSearch = {
 
 export const Route = createFileRoute('/admin/avisos')({
   staticData: { title: 'Avisos', width: 'wide' },
-  component: AvisosPage,
+  // En Helios Lite, Avisos de hoy, Correos y Plantillas de la maqueta (`lite/MensajesLite`).
+  component: conLite(AvisosPage, MensajesLite),
   validateSearch: (search: Record<string, unknown>): AvisosSearch => ({
     vista: unoDe(VISTAS, search.vista),
     dia: comoDia(search.dia),

@@ -17,6 +17,8 @@ import { VALORES_ESTADO_PROMESA } from '@/features/admin/estados'
 import type { EstadoPromesa } from '@/features/admin/estados'
 import { lunesDe } from '@/features/admin/semana'
 import { comoDia, unoDe } from '@/lib/busqueda'
+import { CobranzaLite } from '@/lite/OperacionesLite'
+import { conLite } from '@/lite/espacio'
 
 type Vista = 'lista' | 'morosos' | 'semana' | 'calendario' | 'promesas'
 
@@ -58,7 +60,8 @@ type PorCobrarSearch = {
 
 export const Route = createFileRoute('/admin/cobranza')({
   staticData: { title: 'Por cobrar', width: 'wide' },
-  component: PorCobrarPage,
+  // En Helios Lite, «Por cobrar» de la maqueta (`lite/OperacionesLite`).
+  component: conLite(PorCobrarPage, CobranzaLite),
   validateSearch: (search: Record<string, unknown>): PorCobrarSearch => {
     // Cualquier día vale y se lleva a su lunes: un enlace con el miércoles
     // enseña la semana de ese miércoles.

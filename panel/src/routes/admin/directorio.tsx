@@ -58,6 +58,8 @@ import type {
 import { FUENTES_DE_LA_PORTADA } from '@/lib/fuentes'
 import { comoId, comoTexto, unoDe } from '@/lib/busqueda'
 import { describeError } from '@/lib/supabase'
+import { ClicsLite } from '@/lite/ClicsLite'
+import { conLite } from '@/lite/espacio'
 
 /** La vista, el filtro, la búsqueda y la ficha abierta: todo en la URL. */
 type DirectorioSearch = {
@@ -73,7 +75,8 @@ export const Route = createFileRoute('/admin/directorio')({
   staticData: { title: 'Directorio de médicos', width: 'wide' },
   // La vista previa de la tarjeta lleva la letra de la portada.
   head: () => ({ links: [FUENTES_DE_LA_PORTADA] }),
-  component: DirectorioPage,
+  // En Helios Lite, «Clics por médico (Ads)» de la maqueta (`lite/ClicsLite`).
+  component: conLite(DirectorioPage, ClicsLite),
   validateSearch: (search: Record<string, unknown>): DirectorioSearch => ({
     vista: unoDe(VISTAS_DEL_DIRECTORIO, search.vista),
     ver: unoDe(VALORES_QUE_SE_VE, search.ver),

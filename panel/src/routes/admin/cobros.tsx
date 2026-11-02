@@ -60,6 +60,8 @@ import { etiquetaDeLaTasa, partesDelPago } from '@/features/admin/tasaDelPago'
 import { comoBooleano, comoDia, comoId, unoDe } from '@/lib/busqueda'
 import { csvDinero, csvInstante } from '@/lib/csv'
 import { describeError } from '@/lib/supabase'
+import { CobrosLite } from '@/lite/OperacionesLite'
+import { conLite } from '@/lite/espacio'
 
 /**
  * Las cuatro pestañas: lo que registró el equipo (pagos reportados), lo que
@@ -114,7 +116,8 @@ type CobrosSearch = Omit<FiltrosPagos, 'tab'> & {
 
 export const Route = createFileRoute('/admin/cobros')({
   staticData: { title: 'Pagos reportados', width: 'wide' },
-  component: CobrosPage,
+  // En Helios Lite, «Pagos reportados» de la maqueta (`lite/OperacionesLite`).
+  component: conLite(CobrosPage, CobrosLite),
   beforeLoad: ({ search }) => {
     if (search.tab === 'sin-dueno') {
       throw redirect({ to: '/admin/cobros', search: { vista: 'abonos' } })

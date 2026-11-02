@@ -26,6 +26,8 @@ import type { EstadoConsumo } from '@/features/admin/estados'
 import { fetchCharges } from '@/features/admin/ops'
 import type { ChargeRow } from '@/features/admin/ops'
 import { comoDia, comoId, comoTexto, unoDe } from '@/lib/busqueda'
+import { OrdenesLite } from '@/lite/PersonasLite'
+import { conLite } from '@/lite/espacio'
 
 type ConsumosSearch = {
   q?: string
@@ -43,7 +45,8 @@ const LIMITE = 200
 
 export const Route = createFileRoute('/admin/financiamientos')({
   staticData: { title: 'Financiamientos', width: 'wide' },
-  component: ConsumosPage,
+  // En Helios Lite, «Órdenes» de la maqueta (`lite/PersonasLite`).
+  component: conLite(ConsumosPage, OrdenesLite),
   validateSearch: (search: Record<string, unknown>): ConsumosSearch => ({
     q: comoTexto(search.q),
     estado: unoDe(VALORES_ESTADO_CONSUMO, search.estado),

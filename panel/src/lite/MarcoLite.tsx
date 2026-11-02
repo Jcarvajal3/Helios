@@ -63,7 +63,8 @@ export function MarcoLite({
 
   const { title, width } = useMarcoDeLaRuta()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
-  const lugar = ubicar(pathname)
+  const vista = useRouterState({ select: (s) => vistaDe(s.location.search) })
+  const lugar = ubicar(pathname, vista)
 
   useEstiloDeLite()
   useTituloDeLaPestana(titulo ?? (lugar?.pestana.rotulo || title), 'Helios Lite')
@@ -99,6 +100,7 @@ export function MarcoLite({
                           seccion={lugar.seccion}
                           ruta={titulo}
                           pathname={pathname}
+                          vista={vista}
                           contadores={contadores}
                         />
                       )}
@@ -119,6 +121,12 @@ export function MarcoLite({
       </div>
     </CuentaProvider>
   )
+}
+
+/** La `vista` de la búsqueda de la ruta, si es un texto. */
+function vistaDe(search: unknown): string | undefined {
+  const v = (search as Record<string, unknown> | undefined)?.vista
+  return typeof v === 'string' ? v : undefined
 }
 
 /** Pone `data-helios-lite` y el tema claro en `<html>` mientras Lite está en pantalla. */
@@ -312,14 +320,17 @@ function Cabecera({
   seccion,
   ruta,
   pathname,
+  vista,
   contadores,
 }: {
   seccion: SeccionLite
   ruta: string | null
   pathname: string
+  /** La `?vista=` de la dirección: elige entre las pestañas que comparten ruta. */
+  vista: string | undefined
   contadores: Contadores
 }) {
-  const pestana = seccion.pestanas.find((p) => esDeLaPestana(pathname, p))
+  const pestana = seccion.pestanas.find((p) => esDeLaPestana(pathname, vista, p, seccion.pestanas))
   const enFicha = pestana !== undefined && pathname !== pestana.to
 
   return (
@@ -340,13 +351,15 @@ function Cabecera({
       {seccion.pestanas.length > 1 && (
         <nav className="lt-pestanas" aria-label={`Vistas de ${seccion.titulo}`}>
           {seccion.pestanas.map((p) => {
-            const contador = contadores[p.to]
+            // El contador de una ruta va en su primera pestaña, no en las de sus vistas.
+            const contador = p.vista ? undefined : contadores[p.to]
             return (
               <Link
-                key={p.to}
+                key={`${p.to}?${p.vista ?? ''}`}
                 to={p.to}
+                search={(p.vista ? { vista: p.vista } : {}) as never}
                 className="lt-pestana"
-                aria-current={esDeLaPestana(pathname, p) ? 'page' : undefined}
+                aria-current={esDeLaPestana(pathname, vista, p, seccion.pestanas) ? 'page' : undefined}
               >
                 {p.rotulo}
                 {contador && contador.n > 0 && (

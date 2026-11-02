@@ -19,7 +19,7 @@ import { nombreDeEspecialidad } from '@/features/directorio/especialidades'
 import type { ClaveDeEspecialidad } from '@/features/directorio/especialidades'
 import { comoFila, comoLista, numero } from '@/lib/json'
 import { supabase } from '@/lib/supabase'
-import { SelectorDePeriodo, cambio, diasDe, inicialesDeMedico, textoDeCambio } from './kit'
+import { Barritas, SelectorDePeriodo, cambio, diasDe, inicialesDeMedico, textoDeCambio } from './kit'
 import type { Periodo } from './kit'
 
 /**
@@ -451,18 +451,6 @@ function Reparto({ titulo, partes }: { titulo: string; partes: Parte[] }) {
         </>
       )}
     </div>
-  )
-}
-
-/** Las barritas de la maqueta: los clics de cada uno de los últimos siete días. */
-function Barritas({ serie }: { serie: number[] }) {
-  const tope = Math.max(1, ...serie)
-  return (
-    <span className="lt-barritas" aria-hidden>
-      {serie.map((n, i) => (
-        <i key={i} style={{ height: `${Math.max(3, (n / tope) * 22)}px` }} />
-      ))}
-    </span>
   )
 }
 

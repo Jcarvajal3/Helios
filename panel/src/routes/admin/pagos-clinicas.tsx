@@ -11,6 +11,8 @@ import { METODOS_DE_PAGO } from '@/features/admin/liquidaciones'
 import type { PayoutMethod } from '@/features/admin/liquidaciones'
 import { comoDia, comoId, unoDe } from '@/lib/busqueda'
 import { describeError } from '@/lib/supabase'
+import { PagosClinicasLite } from '@/lite/OperacionesLite'
+import { conLite } from '@/lite/espacio'
 
 type PagosSearch = {
   /** `pagos` es el histórico de transferencias; sin valor, lo que se debe. */
@@ -30,7 +32,8 @@ const SOLOS: readonly SoloLocales[] = ['atrasados', 'este-cierre', 'todos']
 
 export const Route = createFileRoute('/admin/pagos-clinicas')({
   staticData: { title: 'Pagos a clínicas', width: 'wide' },
-  component: PagosALocales,
+  // En Helios Lite, «Pagos a médicos» de la maqueta (`lite/OperacionesLite`).
+  component: conLite(PagosALocales, PagosClinicasLite),
   validateSearch: (search: Record<string, unknown>): PagosSearch => ({
     vista: unoDe(['pagos'], search.vista),
     cierre: comoDia(search.cierre),
