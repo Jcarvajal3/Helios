@@ -1,7 +1,7 @@
 import { useDeferredValue, useState } from 'react'
+import { Link } from '@tanstack/react-router'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 
-import { AltaLocal } from '@/components/admin/directorio/AltaLocal'
 import { RevisarSolicitud } from '@/components/admin/directorio/Solicitudes'
 import { consultaDeudaConLocales } from '@/components/admin/inicio/consultas'
 import { diaOperativo, formatPhone, formatUsd } from '@/components/ui'
@@ -36,7 +36,6 @@ type VistaDeMedicos = 'directorio' | 'clinicas' | 'solicitudes' | 'interesados'
 
 export function ClinicasLite() {
   const [vista, setVista] = useState<VistaDeMedicos>('directorio')
-  const [dandoDeAlta, setDandoDeAlta] = useState(false)
   const puedeAfiliar = usePuedeAfiliar()
 
   return (
@@ -52,22 +51,21 @@ export function ClinicasLite() {
           valor={vista}
           onCambio={setVista}
         />
-        <button
-          type="button"
-          className="lt-opcion"
-          style={{ marginTop: -4 }}
-          disabled={!puedeAfiliar}
-          title={puedeAfiliar ? undefined : SOLO_QUIEN_AFILIA}
-          onClick={() => setDandoDeAlta(true)}
-        >
-          + Registrar médico
-        </button>
+        {/* El alta es la página de Pro (`/admin/clinicas/alta`), dentro del marco de Lite. */}
+        {puedeAfiliar ? (
+          <Link to="/admin/clinicas/alta" className="lt-opcion" style={{ marginTop: -4 }}>
+            + Registrar médico
+          </Link>
+        ) : (
+          <span className="lt-opcion" style={{ marginTop: -4, opacity: 0.55 }} title={SOLO_QUIEN_AFILIA}>
+            + Registrar médico
+          </span>
+        )}
       </div>
       {vista === 'directorio' && <ClicsLite />}
       {vista === 'clinicas' && <Clinicas />}
       {vista === 'solicitudes' && <Solicitudes />}
       {vista === 'interesados' && <Interesados />}
-      {dandoDeAlta && <AltaLocal onClose={() => setDandoDeAlta(false)} />}
     </>
   )
 }
