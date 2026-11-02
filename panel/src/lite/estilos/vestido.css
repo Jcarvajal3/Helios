@@ -1,0 +1,131 @@
+/*
+ * ═══════════════════════════════════════════════════════════════════════════
+ * Helios Lite · cómo se visten las pantallas de Pro
+ *
+ * Dentro de Lite, cada pestaña abre la pantalla real de Pro (la misma ruta,
+ * las mismas acciones). Para que se vean como la maqueta sin tocar su código,
+ * aquí se redefinen, solo mientras Lite está en pantalla:
+ *
+ *   1. los tokens del panel (colores, letra, radios) con los valores de la
+ *      maqueta, en `:root[data-helios-lite]`, para que alcancen también a
+ *      las ventanas que se abren fuera del marco (diálogos, la paleta);
+ *   2. unas pocas piezas comunes (tarjetas, pestañas, tablas, campos) dentro
+ *      del contenido de Lite (`.lt-contenido`).
+ *
+ * Esta hoja no se importa desde `styles.css` ni desde Pro: la carga
+ * `MarcoLite`. Las reglas no van en ninguna capa (`@layer`), así que ganan a
+ * las utilidades de Tailwind sin `!important`.
+ *
+ * Lite es siempre claro, como la maqueta: `MarcoLite` pone el tema claro al
+ * montarse y devuelve el que había al salir.
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+/* 1 ── Los tokens del panel, con los valores de la maqueta ─────────────── */
+
+:root[data-helios-lite][data-helios-lite] {
+  --font-display: var(--lt-fuente);
+  --font-body: var(--lt-fuente);
+
+  --color-primary: #157efd;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #e0edff;
+  --color-on-primary-container: #0965ce;
+
+  --color-on-surface: #183655;
+  --color-on-surface-variant: #52677e;
+  --color-on-surface-faint: #65748a;
+  --color-surface: #ffffff;
+  --color-shell-canvas: #ffffff;
+
+  --color-panel-bar: #ffffff;
+  --color-panel-card: #fcfdff;
+  --color-panel-raised: #edf5ff;
+  --color-panel-control: #e7f0fb;
+  --color-panel-hairline: #dce7f3;
+  --color-panel-hairline-strong: #c4d6eb;
+  --color-panel-muted: #52677e;
+
+  --radius-panel-card: 21px;
+  --radius-panel-hero: 24px;
+  --radius-panel-control: 13px;
+}
+
+/* 2 ── Las piezas comunes, dentro del contenido de Lite ─────────────────── */
+
+/* Tarjetas: el vidrio de la maqueta, con su sombra en lugar del borde. */
+:root[data-helios-lite] .lt-contenido .rounded-panel-card,
+:root[data-helios-lite] .lt-contenido .rounded-panel-hero {
+  border-color: rgb(255 255 255 / 0.82);
+  box-shadow: var(--lt-sombra-panel);
+}
+
+/* Pestañas de una pantalla: píldoras, como las vistas de la maqueta
+   («Revisión · Abonos sin dueño · Avisos BNC»). */
+:root[data-helios-lite] .lt-contenido [role='tablist'] {
+  gap: 6px;
+  border-bottom: 0;
+  padding-bottom: 2px;
+}
+
+:root[data-helios-lite] .lt-contenido [role='tab'] {
+  height: auto;
+  margin: 0;
+  padding: 8px 13px;
+  border: 0.67px solid rgb(255 255 255 / 0.9);
+  border-radius: 12px;
+  font-size: 11.5px;
+  font-weight: 450;
+  color: var(--lt-tinta-2);
+  background: linear-gradient(140deg, rgb(255 255 255 / 0.72), rgb(229 240 255 / 0.4));
+  box-shadow:
+    0 4px 12px -9px rgb(23 78 140 / 0.35),
+    inset 0 1px 1px 0 #fff;
+}
+
+:root[data-helios-lite] .lt-contenido [role='tab']:hover {
+  color: var(--lt-tinta);
+}
+
+:root[data-helios-lite] .lt-contenido [role='tab'][aria-selected='true'] {
+  font-weight: 600;
+  color: var(--lt-azul-fuerte);
+  background: linear-gradient(140deg, #ffffff, #dcebff);
+  border-color: #cfe2fb;
+}
+
+/* Tablas: cabecera celeste, letra de 11 y 12 como la maqueta. */
+:root[data-helios-lite] .lt-contenido table th {
+  background: rgb(237 244 251 / 0.5);
+  color: var(--lt-tinta-2);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+:root[data-helios-lite] .lt-contenido table td {
+  font-size: 12.5px;
+}
+
+/* Campos: la cápsula de vidrio del buscador de la maqueta. */
+:root[data-helios-lite] .lt-contenido input:not([type='checkbox']):not([type='radio']):not([type='range']),
+:root[data-helios-lite] .lt-contenido select,
+:root[data-helios-lite] .lt-contenido textarea {
+  border-color: #e7eff9;
+  background-image: linear-gradient(140deg, rgb(255 255 255 / 0.81), rgb(229 240 255 / 0.61));
+  box-shadow:
+    0 3px 12px -9px rgb(23 78 140 / 0.27),
+    inset 0 1px 1px 0 #fff;
+}
+
+/* Los títulos de zona y las cifras de Pro, con la letra y el azul de la
+   maqueta. */
+:root[data-helios-lite] .lt-contenido .type-panel-section {
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -0.2px;
+  color: var(--lt-tinta-titulo);
+}
+
+:root[data-helios-lite] .lt-contenido .type-panel-body {
+  font-size: 13px;
+}

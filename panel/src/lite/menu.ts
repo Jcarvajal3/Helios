@@ -41,7 +41,7 @@ export const PRINCIPALES: ReadonlyArray<SeccionLite> = [
   {
     id: 'operaciones',
     titulo: 'Operaciones',
-    descripcion: 'Cada pendiente con su contexto y un próximo paso claro.',
+    descripcion: 'Revisa los pendientes y abre cada caso para trabajar.',
     icono: Wallet,
     pestanas: [
       { rotulo: 'Pagos reportados', to: '/admin/cobros' },
@@ -54,7 +54,7 @@ export const PRINCIPALES: ReadonlyArray<SeccionLite> = [
   {
     id: 'personas',
     titulo: 'Personas',
-    descripcion: 'Encuentra al médico, al paciente y el historial que necesitas.',
+    descripcion: 'Médicos, pacientes y sus expedientes, sin perder el contexto.',
     icono: Users,
     pestanas: [
       { rotulo: 'Médicos y centros', to: '/admin/clinicas' },
@@ -77,14 +77,14 @@ export const HERRAMIENTAS: ReadonlyArray<SeccionLite> = [
   {
     id: 'agenda',
     titulo: 'Agenda',
-    descripcion: 'Los médicos por afiliar, sus visitas y capacitaciones.',
+    descripcion: 'Contactos y visitas de capacitación, con fecha, dirección y teléfono.',
     icono: CalendarDays,
     pestanas: [{ rotulo: 'Agenda', to: '/admin/agenda' }],
   },
   {
     id: 'mensajes',
     titulo: 'Mensajes',
-    descripcion: 'Conversaciones de WhatsApp y los avisos que salen hoy.',
+    descripcion: 'WhatsApp de Helios · conversaciones con pacientes y médicos, y los avisos.',
     icono: MessageCircle,
     pestanas: [
       { rotulo: 'WhatsApp', to: '/admin/whatsapp' },
@@ -94,7 +94,7 @@ export const HERRAMIENTAS: ReadonlyArray<SeccionLite> = [
   {
     id: 'ajustes',
     titulo: 'Ajustes',
-    descripcion: 'La configuración, organizada por tema.',
+    descripcion: 'La configuración original, organizada por tema.',
     icono: Settings,
     pestanas: [{ rotulo: 'Ajustes', to: '/admin/ajustes' }],
   },

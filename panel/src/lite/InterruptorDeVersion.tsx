@@ -1,5 +1,5 @@
-import { cambiarVersionDelAdmin, useVersionDelAdmin } from '@/features/admin/version'
-import type { VersionDelAdmin } from '@/features/admin/version'
+import { cambiarVersionDelAdmin, useVersionDelAdmin } from './version'
+import type { VersionDelAdmin } from './version'
 
 const OPCIONES: ReadonlyArray<{ version: VersionDelAdmin; rotulo: string; corto: string }> = [
   { version: 'pro', rotulo: 'Helios Pro', corto: 'Pro' },
@@ -13,11 +13,39 @@ const OPCIONES: ReadonlyArray<{ version: VersionDelAdmin; rotulo: string; corto:
  * así que se sigue en el mismo sitio con el otro marco. Solo Inicio y el
  * Resumen comparten dirección (`/admin`) y cambian entre sí.
  *
+ * Se viste de cada versión: en Pro con las utilidades del panel, en Lite con
+ * las clases de la maqueta (`lt-interruptor`, en `estilos/maqueta.css`).
+ *
  * `compacto`: en una barra de iconos (Pro plegado, Lite) no cabe «Helios
  * Pro»; quedan «Pro» y «Lite», uno encima del otro.
  */
-export function InterruptorDeVersion({ compacto = false }: { compacto?: boolean }) {
+export function InterruptorDeVersion({
+  compacto = false,
+  estilo = 'pro',
+}: {
+  compacto?: boolean
+  estilo?: VersionDelAdmin
+}) {
   const version = useVersionDelAdmin()
+
+  if (estilo === 'lite') {
+    return (
+      <div role="radiogroup" aria-label="Versión del panel" className="lt-interruptor">
+        {OPCIONES.map((o) => (
+          <button
+            key={o.version}
+            type="button"
+            role="radio"
+            aria-checked={version === o.version}
+            title={o.rotulo}
+            onClick={() => cambiarVersionDelAdmin(o.version)}
+          >
+            {o.corto}
+          </button>
+        ))}
+      </div>
+    )
+  }
 
   return (
     <div
