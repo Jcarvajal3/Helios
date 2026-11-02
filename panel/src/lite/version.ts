@@ -1,17 +1,21 @@
 import { useSyncExternalStore } from 'react'
 
+import { useRolDelEquipo } from '@/features/admin/role'
+
 /**
- * Las dos versiones del superadmin, con las mismas pantallas por dentro:
+ * Las dos versiones del superadmin, con las mismas rutas por dentro:
  *
  *   pro   el superadmin de siempre, con su menú por bloques e Inicio.
- *   lite  el menú simplificado (Resumen, Operaciones, Personas, Resultados y
- *         las herramientas), con pestañas por sección y el Resumen como
- *         portada. Cada pestaña abre la pantalla real de Pro, así que no se
- *         pierde ninguna acción ni ninguna regla: solo cambia cómo se llega.
+ *   lite  el diseño y la estructura de la maqueta del rediseño
+ *         (Resumen, Operaciones, Personas, Resultados y las herramientas).
  *
  * Es una preferencia de cada navegador, no un permiso: la seguridad sigue en
  * la base. Se guarda en localStorage y se reparte a todas las pestañas
  * abiertas por el evento `storage`.
+ *
+ * Sin nada guardado, la de su rol: Lite para el super admin y Pro para los
+ * demás (Javier, 2026-11-02). En cuanto alguien usa el interruptor, manda lo
+ * que eligió.
  */
 export type VersionDelAdmin = 'pro' | 'lite'
 
@@ -20,12 +24,14 @@ const CLAVE = 'helios-admin:version'
 /** Los que escuchan en esta pestaña: `storage` solo avisa a las demás. */
 const oyentes = new Set<() => void>()
 
-function leer(): VersionDelAdmin {
+/** Lo elegido en este navegador, o `null` si nunca se usó el interruptor. */
+function leer(): VersionDelAdmin | null {
   try {
-    return window.localStorage.getItem(CLAVE) === 'lite' ? 'lite' : 'pro'
+    const guardada = window.localStorage.getItem(CLAVE)
+    return guardada === 'lite' || guardada === 'pro' ? guardada : null
   } catch {
-    // Modo privado o almacenamiento bloqueado: Pro, que es el de siempre.
-    return 'pro'
+    // Modo privado o almacenamiento bloqueado: la de su rol.
+    return null
   }
 }
 
@@ -45,12 +51,17 @@ export function cambiarVersionDelAdmin(version: VersionDelAdmin): void {
   try {
     window.localStorage.setItem(CLAVE, version)
   } catch {
-    // Sin almacenamiento el cambio dura lo que la pestaña: igual se avisa.
+    // Sin almacenamiento el cambio no se guarda: igual se avisa.
   }
   for (const avisar of oyentes) avisar()
 }
 
-/** La versión elegida. En el servidor, Pro: allí no hay localStorage. */
+/**
+ * La versión que se ve: la elegida en este navegador o, sin elegir, la de su
+ * rol. En el servidor y mientras se lee el rol, Pro.
+ */
 export function useVersionDelAdmin(): VersionDelAdmin {
-  return useSyncExternalStore(suscribir, leer, () => 'pro')
+  const elegida = useSyncExternalStore(suscribir, leer, () => null)
+  const rol = useRolDelEquipo()
+  return elegida ?? (rol === 'super_admin' ? 'lite' : 'pro')
 }
