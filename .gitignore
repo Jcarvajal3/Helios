@@ -30,3 +30,6 @@ desktop.ini
 
 # Worktrees de subagentes
 .claude/worktrees/
+
+# Documentación del BNC (Soluciones en Línea): se queda fuera del repo.
+docs/banco/
