@@ -15,6 +15,9 @@
 --   6. «Asignarme médicos» da médicos por contactar, no los de otras fases
 --      (20261029120000).
 --   7. Lo que hizo cada persona se cuenta por quien anotó la gestión.
+--   8. La ficha cambia el encargado de cualquier fase (20261102220000): el de
+--      la actual mueve «Gestionado por»; el de otra queda para cuando llegue;
+--      null la deja sin nadie; queda en la bitácora.
 --
 -- No manda nada: no llama a `helios_dispatch_*`.
 -- ============================================================================
@@ -175,6 +178,44 @@ begin
     raise exception '7. lo hecho no se cuenta por quien lo anotó: %',
       (select json_agg(p) from public.admin_agenda_activity_by_person() p where p.user_id = v_jefe);
   end if;
+
+  -- =========================================================================
+  -- 8. Cambiar el encargado de una fase desde la ficha
+  -- =========================================================================
+  v_a := (public.admin_save_doctor_lead(null, jsonb_build_object(
+    'name', 'Dra. Encargada Ocho', 'phone', '04147200008', 'assigned_to', v_lis)) ->> 'id')::uuid;
+  -- En Mensaje: el de Mensaje es «Gestionado por».
+  perform public.admin_set_doctor_lead_owner(v_a, 'mensaje', v_juan);
+  select * into v_l from public.doctor_leads where id = v_a;
+  if v_l.assigned_to <> v_juan or v_l.message_owner <> v_juan then
+    raise exception '8. cambiar el de la fase actual no movió «Gestionado por»: %', to_jsonb(v_l);
+  end if;
+  -- El de Visita, puesto antes de tiempo, lo hereda al llegar a Visita.
+  perform public.admin_set_doctor_lead_owner(v_a, 'visita', v_juan2);
+  select * into v_l from public.doctor_leads where id = v_a;
+  if v_l.assigned_to <> v_juan or v_l.visit_owner <> v_juan2 then
+    raise exception '8. el de otra fase tocó «Gestionado por»: %', to_jsonb(v_l);
+  end if;
+  perform public.admin_log_doctor_lead_contact(v_a, 'visita_agendada', 'llamada', null, v_manana);
+  select * into v_l from public.doctor_leads where id = v_a;
+  if v_l.stage <> 'visita' or v_l.assigned_to <> v_juan2 then
+    raise exception '8. al llegar a Visita no pasó a quien se dejó puesto: %', to_jsonb(v_l);
+  end if;
+  -- Sin nadie.
+  perform public.admin_set_doctor_lead_owner(v_a, 'visita', null);
+  select * into v_l from public.doctor_leads where id = v_a;
+  if v_l.assigned_to is not null or v_l.visit_owner is not null then
+    raise exception '8. dejar la fase sin encargado no la vació: %', to_jsonb(v_l);
+  end if;
+  if (select count(*) from audit.admin_actions where action = 'doctor_lead.assigned' and target_id = v_a) <> 3 then
+    raise exception '8. los cambios de encargado no quedaron en la bitácora';
+  end if;
+  v_fallo := false;
+  begin
+    perform public.admin_set_doctor_lead_owner(v_a, 'reunion', v_juan);
+  exception when sqlstate '22023' then v_fallo := true;
+  end;
+  if not v_fallo then raise exception '8. aceptó una fase desconocida'; end if;
 end;
 $$;
 

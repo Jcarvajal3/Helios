@@ -1039,6 +1039,13 @@ tiene asignados.
 - `admin_doctor_leads()` devuelve `owners` y `owner_names` (`{mensaje,
   llamada, visita}`).
 
+- `admin_set_doctor_lead_owner(p_lead_id uuid, p_stage text, p_user_id uuid) → jsonb {id, changed}`
+  (20261102220000, `helios_puede_usar_la_agenda()`): cambia el encargado de una fase
+  (`mensaje | llamada | visita`; `p_user_id` null = nadie; tiene que ser del equipo
+  activo, si no `22023`). En la fase actual mueve también `assigned_to`; en otra,
+  queda para cuando llegue. Bitácora `doctor_lead.assigned` con `{stage, from, to}`.
+  La ficha del médico lo usa en «Cambiar», junto a los encargados.
+
 ### 2.10 Métricas › Juan Pablo (2026-10-23, 20261023160000)
 
 La primera pestaña de Métricas (y la de por defecto): las cifras que mira Juan

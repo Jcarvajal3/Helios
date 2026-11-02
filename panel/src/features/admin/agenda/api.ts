@@ -159,6 +159,20 @@ export async function asignarmeMedicos(cantidad = 20): Promise<number> {
   return typeof data === 'number' ? data : Number(data ?? 0)
 }
 
+/**
+ * Cambia quién lleva a un médico en una fase (`null`: nadie). En la fase en
+ * que está, cambia también «Gestionado por»; en otra, queda para cuando
+ * llegue.
+ */
+export async function cambiarEncargado(leadId: string, fase: Fase, userId: string | null): Promise<void> {
+  const { error } = await supabase.rpc('admin_set_doctor_lead_owner', {
+    p_lead_id: leadId,
+    p_stage: fase,
+    p_user_id: userId,
+  })
+  if (error) throw error
+}
+
 /** Borra un lead y su historia. La bitácora guarda sus datos. */
 export async function borrarLead(leadId: string): Promise<void> {
   const { error } = await supabase.rpc('admin_delete_doctor_lead', { p_lead_id: leadId })
