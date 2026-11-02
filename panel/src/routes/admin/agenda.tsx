@@ -51,7 +51,7 @@ import {
   consultaEquipoDeLaAgenda,
   refrescarAgenda,
 } from '@/features/admin/agenda/api'
-import { useSoloAgenda } from '@/features/admin/role'
+import { useRolDelEquipo } from '@/features/admin/role'
 import { useSession } from '@/features/auth/session'
 import {
   ALCANCES,
@@ -138,7 +138,10 @@ function AgendaPage() {
   const [ahora] = useState(() => new Date())
   const mes = search.mes ?? `${hoy.slice(0, 7)}-01`
   const yo = useSession()?.user.id ?? null
-  const soloAgenda = useSoloAgenda()
+  const rol = useRolDelEquipo()
+  // El rol de la agenda no abre las clínicas; ni él ni el capacitador, el inbox.
+  const soloAgenda = rol === 'agenda'
+  const sinInbox = soloAgenda || rol === 'capacitador'
   const client = useQueryClient()
   const avisar = useToast()
 
@@ -188,8 +191,8 @@ function AgendaPage() {
     () => ordenarAgenda(filtrarAgenda(delQueMira, { fase, estado: search.estado }), hoy, ahora),
     [delQueMira, fase, search.estado, hoy, ahora],
   )
-  const columnas = useMemo(() => columnasDeLaAgenda(hoy, ahora, soloAgenda), [hoy, ahora, soloAgenda])
-  const columnasConFase = useMemo(() => columnasDeLaAgenda(hoy, ahora, soloAgenda, true), [hoy, ahora, soloAgenda])
+  const columnas = useMemo(() => columnasDeLaAgenda(hoy, ahora, sinInbox), [hoy, ahora, sinInbox])
+  const columnasConFase = useMemo(() => columnasDeLaAgenda(hoy, ahora, sinInbox, true), [hoy, ahora, sinInbox])
   const sinAsignar = useMemo(
     () => todos.filter((l) => l.responsableId === null && l.estado !== 'convertido' && l.estado !== 'descartado').length,
     [todos],

@@ -28,7 +28,7 @@ import { consultaSolicitudes } from '@/features/admin/clinicas/api'
 import type { SolicitudDeAfiliacion } from '@/features/admin/clinicas/clinicas'
 import { useDatosDeContrato } from '@/features/admin/clinicas/useDatosDeContrato'
 import { filtrarLocales, normalizarTexto } from '@/features/admin/directorio/locales'
-import { SOLO_SUPER_ADMIN, useIsSuperAdmin } from '@/features/admin/role'
+import { SOLO_QUIEN_AFILIA, useEsCapacitador, usePuedeAfiliar } from '@/features/admin/role'
 import { comoTexto, unoDe } from '@/lib/busqueda'
 import { ESTADOS_LOCAL, VALORES_ESTADO_LOCAL } from '@/features/admin/estados'
 import type { EstadoLocal } from '@/features/admin/estados'
@@ -84,7 +84,10 @@ function LocalesPage() {
 function ListaDeLocales() {
   const navigate = useNavigate({ from: '/admin/clinicas' })
   const search = Route.useSearch()
-  const isSuperAdmin = useIsSuperAdmin()
+  // El capacitador afilia, pero no ve dinero: ni lo que se le debe a cada
+  // clínica ni los datos de alta (con su cuenta de cobro).
+  const puedeAfiliar = usePuedeAfiliar()
+  const sinDinero = useEsCapacitador()
   const [dandoDeAlta, setDandoDeAlta] = useState(false)
   const [revisando, setRevisando] = useState<SolicitudDeAfiliacion | null>(null)
   const datosDeAlta = useDatosDeContrato()
@@ -102,6 +105,7 @@ function ListaDeLocales() {
   const payables = useQuery({
     queryKey: ['merchant-payables'],
     queryFn: fetchMerchantPayables,
+    enabled: !sinDinero,
   })
 
   const porPagar = useMemo<PorPagar>(() => {
@@ -117,7 +121,10 @@ function ListaDeLocales() {
     return { estado: 'listo', porLocal }
   }, [payables.data, payables.isError])
 
-  const columnas = useMemo(() => columnasLocales(porPagar), [porPagar])
+  const columnas = useMemo(
+    () => columnasLocales(porPagar).filter((c) => !sinDinero || !COLUMNAS_CON_DINERO.has(c.key)),
+    [porPagar, sinDinero],
+  )
 
   const filas = filtrarLocales(merchants.data ?? [], {
     texto: search.q,
@@ -153,8 +160,8 @@ function ListaDeLocales() {
         <div className="ml-auto">
           <Button
             size="sm"
-            disabled={!isSuperAdmin}
-            title={isSuperAdmin ? undefined : SOLO_SUPER_ADMIN}
+            disabled={!puedeAfiliar}
+            title={puedeAfiliar ? undefined : SOLO_QUIEN_AFILIA}
             onClick={() => setDandoDeAlta(true)}
           >
             <Plus size={14} aria-hidden /> Dar de alta una clínica
@@ -219,15 +226,18 @@ function ListaDeLocales() {
               columns={columnas}
               noun={['clínica', 'clínicas']}
               summary={
+                sinDinero ? undefined : (
                 <ResumenLocales
                   filas={filas}
                   payables={payables.data}
                   error={payables.isError}
                   onReintentar={() => void payables.refetch()}
                 />
+                )
               }
               exportar={{ archivo: 'locales' }}
               acciones={
+                sinDinero ? undefined : (
                 <Button
                   size="sm"
                   variant="text"
@@ -238,6 +248,7 @@ function ListaDeLocales() {
                   <FileDown size={15} aria-hidden />
                   {datosDeAlta.pendiente ? 'Leyendo…' : 'Datos de alta'}
                 </Button>
+                )
               }
               onRowClick={(m) =>
                 void navigate({
@@ -255,6 +266,12 @@ function ListaDeLocales() {
     </>
   )
 }
+
+/**
+ * Las columnas que el capacitador no ve: lo financiado, lo que se le debe y
+ * el personal (la base no le enseña el personal de cada clínica).
+ */
+const COLUMNAS_CON_DINERO = new Set(['ventas', 'consumos-30', 'por-pagar', 'personal'])
 
 /** La búsqueda de la lista también filtra las solicitudes: consultorio, médico o cédula. */
 function filtrarSolicitudes(lista: Array<SolicitudDeAfiliacion>, q: string | undefined) {

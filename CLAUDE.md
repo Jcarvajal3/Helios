@@ -94,7 +94,9 @@ docs/       plan, contrato, reglas
 - Toda acción de admin escribe en `audit.admin_actions` (`audit.log`).
 - Escrituras de admin pasan por `helios_assert_super_admin()` / `is_platform_admin()` (MFA).
   El rol `agenda` no pasa `is_platform_admin()`: solo `helios_puede_usar_la_agenda()`,
-  la guardia de las RPC de superadmin › Agenda (docs/01 §2.9).
+  la guardia de las RPC de superadmin › Agenda (docs/01 §2.9). El `capacitador`
+  tampoco: la Agenda, `helios_puede_ver_clinicas()` (Clínicas sin dinero) y
+  `helios_assert_puede_afiliar()` (alta y solicitudes; docs/01 §2.14).
 
 ## Nombres
 

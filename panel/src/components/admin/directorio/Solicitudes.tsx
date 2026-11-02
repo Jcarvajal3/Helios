@@ -11,7 +11,7 @@ import { Badge, Button, ErrorBox, Modal, Textarea, formatDateTime } from '@/comp
 import { CLAVE_SOLICITUDES, aprobarSolicitud, rechazarSolicitud } from '@/features/admin/clinicas/api'
 import { correccionesDeSolicitud, motivoDeAlta } from '@/features/admin/clinicas/clinicas'
 import type { AltaDeClinica, SolicitudDeAfiliacion } from '@/features/admin/clinicas/clinicas'
-import { SOLO_SUPER_ADMIN, useIsSuperAdmin } from '@/features/admin/role'
+import { SOLO_QUIEN_AFILIA, usePuedeAfiliar } from '@/features/admin/role'
 import { describeError } from '@/lib/supabase'
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -97,7 +97,7 @@ export function RevisarSolicitud({ solicitud, onClose }: { solicitud: SolicitudD
   const avisar = useToast()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
-  const isSuperAdmin = useIsSuperAdmin()
+  const puedeAfiliar = usePuedeAfiliar()
 
   const [alta, setAlta] = useState<AltaDeClinica>(solicitud.alta)
   const [rechazando, setRechazando] = useState(false)
@@ -146,9 +146,9 @@ export function RevisarSolicitud({ solicitud, onClose }: { solicitud: SolicitudD
   if (despues) return <YaDadaDeAlta despues={despues} alta={alta} onClose={onClose} />
 
   const ocupado = aprobar.isPending || rechazar.isPending
-  const bloqueoAprobar = !isSuperAdmin ? SOLO_SUPER_ADMIN : (motivoDeAlta(alta) ?? undefined)
-  const bloqueoRechazar = !isSuperAdmin
-    ? SOLO_SUPER_ADMIN
+  const bloqueoAprobar = !puedeAfiliar ? SOLO_QUIEN_AFILIA : (motivoDeAlta(alta) ?? undefined)
+  const bloqueoRechazar = !puedeAfiliar
+    ? SOLO_QUIEN_AFILIA
     : motivo.trim() === ''
       ? 'Escribe el motivo del rechazo.'
       : undefined
@@ -218,8 +218,8 @@ export function RevisarSolicitud({ solicitud, onClose }: { solicitud: SolicitudD
             <Button
               variant="text"
               size="md"
-              disabled={!isSuperAdmin || ocupado}
-              title={isSuperAdmin ? undefined : SOLO_SUPER_ADMIN}
+              disabled={!puedeAfiliar || ocupado}
+              title={puedeAfiliar ? undefined : SOLO_QUIEN_AFILIA}
               onClick={() => setRechazando(true)}
             >
               Rechazar…

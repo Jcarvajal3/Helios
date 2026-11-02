@@ -42,14 +42,14 @@ export function EstadoDelLeadBadge({ lead, hoy, ahora }: { lead: Lead; hoy: stri
 /**
  * Una fila por médico: quién es y dónde atiende, cómo llamarlo, en qué quedó,
  * la próxima cita y la última gestión. `hoy` es el día de Caracas.
- * `soloAgenda`: quien mira tiene el rol de la agenda y no puede abrir el inbox.
+ * `sinInbox`: quien mira (el rol de la agenda o el capacitador) no puede abrir el inbox.
  * `conFase`: añade la fase detrás del médico, para los resultados de una
  * búsqueda, que mezclan las tres.
  */
 export function columnasDeLaAgenda(
   hoy: string,
   ahora: Date,
-  soloAgenda = false,
+  sinInbox = false,
   conFase = false,
 ): Array<Column<Lead>> {
   return [
@@ -100,7 +100,7 @@ export function columnasDeLaAgenda(
       csv: (l) => (l.telefono ? formatPhone(l.telefono) : null),
       cell: (l) =>
         l.telefono ? (
-          <TelefonoConAcciones telefono={l.telefono} nombre={l.nombre} conWaMe conInbox={!soloAgenda} />
+          <TelefonoConAcciones telefono={l.telefono} nombre={l.nombre} conWaMe conInbox={!sinInbox} />
         ) : (
           <span className={APAGADO}>Sin teléfono</span>
         ),

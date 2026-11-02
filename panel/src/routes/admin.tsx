@@ -36,7 +36,13 @@ import { Badge, diaOperativo } from '@/components/ui'
 import { PanelShell } from '@/components/layouts/PanelShell'
 import { contadorDeCola, sumarContadores } from '@/components/layouts/contadores'
 import type { Contador } from '@/components/layouts/contadores'
-import { agendaNavGroups, superAdminNavGroups, superAdminNavPie, visibleGroups } from '@/config/navigation'
+import {
+  agendaNavGroups,
+  capacitadorNavGroups,
+  superAdminNavGroups,
+  superAdminNavPie,
+  visibleGroups,
+} from '@/config/navigation'
 import { consultaCartera, consultaPromesas } from '@/features/admin/cobranza/consultas'
 import { useSession } from '@/features/auth/session'
 import type { PlatformAdmin } from '@/features/admin/api'
@@ -57,8 +63,8 @@ function SuperAdminLayoutRoute() {
   return (
     <PlatformGate>
       {(admin) =>
-        admin.role === 'agenda' ? (
-          <ShellDeLaAgenda admin={admin} />
+        admin.role === 'agenda' || admin.role === 'capacitador' ? (
+          <ShellReducido admin={admin} />
         ) : (
           // El asistente solo existe con un admin confirmado: su conversación
           // viaja con el JWT de quien pregunta.
@@ -135,29 +141,36 @@ function AdminShell({ admin }: { admin: PlatformAdmin }) {
 
 const AGENDA = '/admin/agenda'
 
+/** Lo que abre cada rol reducido; la primera ruta es a la que se le lleva. */
+const DEL_ROL_REDUCIDO = {
+  agenda: { rol: 'Agenda', groups: agendaNavGroups, rutas: [AGENDA] },
+  capacitador: { rol: 'Capacitador', groups: capacitadorNavGroups, rutas: [AGENDA, '/admin/clinicas'] },
+} as const
+
 /**
- * El marco del rol de la agenda: la Agenda y nada más. Sin buscador, sin
- * asistente y sin contadores, que leen colas que la base no le enseña
- * (`is_platform_admin()` lo deja fuera). Cualquier otra ruta del superadmin,
- * Inicio incluido, lo lleva a la Agenda.
+ * El marco del rol de la agenda (la Agenda y nada más) y del capacitador (la
+ * Agenda y Clínicas). Sin buscador, sin asistente y sin contadores, que leen
+ * colas que la base no les enseña (`is_platform_admin()` los deja fuera).
+ * Cualquier otra ruta del superadmin, Inicio incluido, los lleva a la Agenda.
  */
-function ShellDeLaAgenda({ admin }: { admin: PlatformAdmin }) {
+function ShellReducido({ admin }: { admin: PlatformAdmin }) {
   const session = useSession()
   const { pathname } = useLocation()
-  const enLaAgenda = pathname === AGENDA || pathname.startsWith(`${AGENDA}/`)
+  const marco = DEL_ROL_REDUCIDO[admin.role === 'capacitador' ? 'capacitador' : 'agenda']
+  const permitida = marco.rutas.some((r) => pathname === r || pathname.startsWith(`${r}/`))
 
   return (
     <PanelShell
-      groups={agendaNavGroups}
+      groups={marco.groups}
       sitio="Helios Admin"
-      logo={(plegado) => <LogoDelEquipo plegado={plegado} rol="Agenda" />}
+      logo={(plegado) => <LogoDelEquipo plegado={plegado} rol={marco.rol} />}
       account={{
         name: admin.fullName ?? session?.user.email ?? 'Equipo de Helios',
-        detail: 'Agenda',
+        detail: marco.rol,
         nombreCompleto: admin.fullName,
       }}
     >
-      {enLaAgenda ? <Outlet /> : <Navigate to={AGENDA} replace />}
+      {permitida ? <Outlet /> : <Navigate to={AGENDA} replace />}
     </PanelShell>
   )
 }

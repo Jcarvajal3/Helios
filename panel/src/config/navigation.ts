@@ -215,6 +215,14 @@ export const superAdminNavGroups: NavGroup[] = MENU_ADMIN.map((bloque) => ({
  */
 export const agendaNavGroups: NavGroup[] = [{ espacio: 'seguimiento', items: [itemDePantalla('agenda')] }]
 
+/**
+ * El menú del capacitador: la Agenda y Clínicas, donde afilia médicos y
+ * aprueba solicitudes (20261102130100). Lo demás le diría que no.
+ */
+export const capacitadorNavGroups: NavGroup[] = [
+  { espacio: 'seguimiento', items: [itemDePantalla('agenda'), itemDePantalla('locales')] },
+]
+
 /** El pie del menú del super admin. */
 export const superAdminNavPie: NavItem[] = PIE_ADMIN.map(itemDePantalla)
 

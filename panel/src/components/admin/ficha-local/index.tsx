@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import type { QueryClient } from '@tanstack/react-query'
 
 import { PersonalDelLocal } from '@/components/PersonalDelLocal'
 import { MarcoDeFicha, VolverA } from '@/components/admin/ficha'
@@ -8,6 +9,7 @@ import { ErrorBox, SkeletonList, Tabs } from '@/components/ui'
 import { fetchMerchantDetail, fetchMerchants } from '@/features/admin/api'
 import type { MerchantDetail, MerchantRow } from '@/features/admin/api'
 import { fichaParaCompartir } from '@/features/admin/clinicas/clinicas'
+import { useEsCapacitador } from '@/features/admin/role'
 import { useDatosDeContrato } from '@/features/admin/clinicas/useDatosDeContrato'
 import { valorDe } from '@/features/admin/parametros'
 import { useParametros } from '@/features/admin/useParametros'
@@ -20,6 +22,7 @@ import type { VentanaLocal } from './Cifras'
 import { Condiciones } from './Condiciones'
 import { useEstadoDelLocal } from './Estado'
 import { Perfil } from './Perfil'
+import { FichaDeSoloLectura } from './SoloLectura'
 
 export { VENTANAS_LOCAL } from './Cifras'
 export type { VentanaLocal } from './Cifras'
@@ -82,6 +85,9 @@ export function PaginaLocal(props: Props) {
   })
 
   usePageTitle(merchant?.name ?? null)
+  const queryClient = useQueryClient()
+  // El capacitador lee el perfil, sin el dinero ni los botones de la ficha.
+  const soloLectura = useEsCapacitador()
 
   return (
     <>
@@ -112,9 +118,25 @@ export function PaginaLocal(props: Props) {
         />
       )}
 
-      {detalle.data && merchant && <FichaLocal {...props} merchant={merchant} detalle={detalle.data} />}
+      {detalle.data && merchant && soloLectura && (
+        <FichaDeSoloLectura
+          merchant={merchant}
+          detalle={detalle.data}
+          onDone={() => refrescarLocal(queryClient, merchantId)}
+        />
+      )}
+      {detalle.data && merchant && !soloLectura && (
+        <FichaLocal {...props} merchant={merchant} detalle={detalle.data} />
+      )}
     </>
   )
+}
+
+/** Lo que se vuelve a leer después de tocar un local. */
+function refrescarLocal(queryClient: QueryClient, merchantId: string) {
+  void queryClient.invalidateQueries({ queryKey: ['merchant-detail', merchantId] })
+  void queryClient.invalidateQueries({ queryKey: ['merchants'] })
+  void queryClient.invalidateQueries({ queryKey: ['merchant-payables'] })
 }
 
 /**
@@ -135,9 +157,7 @@ function FichaLocal({
   const cifras = useCifrasDelLocal(merchantId, dias)
 
   function refrescar() {
-    void queryClient.invalidateQueries({ queryKey: ['merchant-detail', merchantId] })
-    void queryClient.invalidateQueries({ queryKey: ['merchants'] })
-    void queryClient.invalidateQueries({ queryKey: ['merchant-payables'] })
+    refrescarLocal(queryClient, merchantId)
   }
 
   const estado = useEstadoDelLocal({ merchant, pendingUsd: detalle.pendingUsd, onDone: refrescar })
@@ -194,7 +214,7 @@ function FichaLocal({
           <Perfil merchantId={merchantId} initial={detalle.profile} datos={detalle.datos} titular={detalle.titular} onDone={refrescar} />
         )}
 
-        {tab === 'condiciones' && (
+        {tab === 'condiciones' && detalle.terms && (
           <Condiciones
             merchantId={merchantId}
             initial={detalle.terms}

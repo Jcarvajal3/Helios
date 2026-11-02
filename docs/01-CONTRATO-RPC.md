@@ -1286,6 +1286,41 @@ Suite: `supabase/tests/directorio_fichas_smoke.sql`.
 
 ---
 
+### 2.14 El rol capacitador (2026-11-02, 20261102130100)
+
+Un cuarto rol del equipo, `capacitador` (enum en 20261102130000): entra a
+superadmin › Agenda y a superadmin › Clínicas, ve el perfil de cada médico
+(solo lectura) y afilia. `is_platform_admin()` lo deja fuera, como al rol
+`agenda`: no lee pacientes, pagos, el libro ni la bitácora.
+
+- `helios_puede_usar_la_agenda()` incluye al capacitador (los cuatro roles).
+- `helios_puede_ver_clinicas() → boolean` = `helios_es_del_equipo` con
+  super admin, operador y capacitador. Es la guardia de la RLS
+  `merchants_read_admin` (y con ella de `merchant_directory`; sus cuentas de
+  personal y de ventas salen en 0 para el capacitador, que no lee esas
+  tablas), de `admin_merchant_applications` y de `admin_merchant_detail`.
+- `admin_merchant_detail`, a quien no pasa `is_platform_admin()`, devuelve
+  `terms`, `pending_usd` y `payout_account` en `null`: el perfil y el
+  personal, sin el dinero.
+- `helios_assert_puede_afiliar(p_what) → uuid` (super admin o capacitador,
+  segundo factor si se exige; interna) sustituye a `helios_assert_super_admin`
+  en `admin_create_clinic`, `admin_approve_merchant_application`,
+  `admin_reject_merchant_application`, `admin_set_staff_whatsapp` y
+  `admin_send_staff_whatsapp_welcome`. El operador sigue sin afiliar.
+- El primer acceso del titular: `merchant_staff_add` y
+  `merchant_staff_send_welcome` pasan por `helios_assert_alta_de_personal`
+  (interna). Al capacitador le deja crear un usuario solo en una clínica sin
+  personal activo (si no, `42501`) y mandar la bienvenida a una cuenta que
+  no es del equipo; a los demás, `helios_assert_staff_manager` de siempre.
+  `admin_set_staff_whatsapp`, para el capacitador, solo con alguien que
+  recibió su acceso en esa clínica hace menos de un día (si no, `42501`).
+  Cambiar, quitar o ponerle contraseña al personal sigue siendo del equipo
+  (`is_platform_admin`) y del administrador de la clínica.
+- Panel: el capacitador tiene el marco reducido (Agenda y Clínicas). En
+  Clínicas no ve lo financiado, lo que se debe ni los datos de alta; su
+  ficha de una clínica es de solo lectura, con «Darle su acceso» si aún no
+  tiene personal.
+
 ## 3. Parámetros nuevos (`business_parameters`)
 
 | key | valor inicial | uso |

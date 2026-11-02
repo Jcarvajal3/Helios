@@ -397,8 +397,11 @@ export function datosDe(cuenta: CuentaEnBolivares) {
 
 // ── Equipo de Ronda ────────────────────────────────────────────────────────
 
-/** `agenda` solo entra a superadmin › Agenda (20261022220100). */
-export type RolDelPanel = 'operador' | 'super_admin' | 'agenda'
+/**
+ * `agenda` solo entra a superadmin › Agenda (20261022220100); `capacitador`,
+ * a la Agenda y a Clínicas, donde afilia (20261102130100).
+ */
+export type RolDelPanel = 'operador' | 'super_admin' | 'agenda' | 'capacitador'
 
 export type TeamMember = {
   userId: string
@@ -423,7 +426,8 @@ export async function fetchTeam(): Promise<TeamMember[]> {
       email: textoONulo(row.email),
       // Un rol que no se conoce se lee como el de menos poder: pintar a alguien
       // como super admin sin serlo es peor que al revés.
-      role: row.role === 'super_admin' || row.role === 'operador' ? row.role : 'agenda',
+      role:
+        row.role === 'super_admin' || row.role === 'operador' || row.role === 'capacitador' ? row.role : 'agenda',
       isActive: Boolean(row.is_active),
       createdAt: String(row.created_at),
       actionCount: Number(row.action_count),

@@ -89,6 +89,8 @@ SUITES=(
   agenda_smoke
   agenda_fases_smoke
   agenda_encargados_smoke
+  agenda_qr_smoke
+  capacitador_smoke
   directorio_smoke
   directorio_interesados_smoke
 )

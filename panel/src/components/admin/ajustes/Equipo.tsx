@@ -35,12 +35,13 @@ import { describeError } from '@/lib/supabase'
 
 const ROTULO_DE_ROL: Record<RolDelPanel, string> = {
   agenda: 'Agenda',
+  capacitador: 'Capacitador',
   operador: 'Operador',
   super_admin: 'Super admin',
 }
 
 /** De menos a más poder. */
-const ROLES: Array<{ value: RolDelPanel; label: string }> = (['agenda', 'operador', 'super_admin'] as const).map(
+const ROLES: Array<{ value: RolDelPanel; label: string }> = (['agenda', 'capacitador', 'operador', 'super_admin'] as const).map(
   (value) => ({ value, label: ROTULO_DE_ROL[value] }),
 )
 

@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 
 import { fetchPlatformAdmin } from '@/features/admin/api'
+import type { PlatformRole } from '@/features/admin/api'
 import { useSession } from '@/features/auth/session'
 
 /**
@@ -30,12 +31,8 @@ export function useIsSuperAdmin(): boolean {
   return admin.data?.role === 'super_admin'
 }
 
-/**
- * Si quien mira tiene el rol de la agenda: solo entra a superadmin › Agenda.
- * Las pantallas que comparte con el resto (la Agenda) esconden con esto los
- * enlaces a lo que no puede abrir (el inbox, la ficha de una clínica).
- */
-export function useSoloAgenda(): boolean {
+/** El rol de quien mira, o `null` mientras se lee (o si no es del equipo). */
+export function useRolDelEquipo(): PlatformRole | null {
   const session = useSession()
 
   const admin = useQuery({
@@ -44,8 +41,29 @@ export function useSoloAgenda(): boolean {
     enabled: !!session,
   })
 
-  return admin.data?.role === 'agenda'
+  return admin.data?.role ?? null
 }
+
+/**
+ * Si quien mira es capacitador: entra a la Agenda y a Clínicas, ve el perfil
+ * de cada médico sin su dinero y afilia (20261102130100).
+ */
+export function useEsCapacitador(): boolean {
+  return useRolDelEquipo() === 'capacitador'
+}
+
+/**
+ * Si quien mira puede afiliar médicos: darlos de alta, aprobar o rechazar
+ * solicitudes y darle al titular su primer acceso. El super admin y el
+ * capacitador (`helios_assert_puede_afiliar`).
+ */
+export function usePuedeAfiliar(): boolean {
+  const rol = useRolDelEquipo()
+  return rol === 'super_admin' || rol === 'capacitador'
+}
+
+/** El globo de un botón de afiliar apagado (alta, aprobar, rechazar). */
+export const SOLO_QUIEN_AFILIA = 'Solo un super admin o un capacitador puede afiliar médicos'
 
 /** El texto que explica un botón apagado por falta de permiso. Vive en el
  *  kit (`ui.tsx`) para que `Button motivoApagado` no dependa de la sesión. */

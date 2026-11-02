@@ -9,8 +9,8 @@ import { comoTitulo, leerConsultasYComisiones } from '@/features/admin/clinicas/
 import type { ConsultasYComisiones, TituloDelMedico } from '@/features/admin/clinicas/clinicas'
 import type { LineaParaGuardar, LineaParaRegistrar } from '@/features/admin/pagoMasivo'
 
-/** `agenda` solo entra a superadmin › Agenda (20261022220100). */
-export type PlatformRole = 'operador' | 'super_admin' | 'agenda'
+/** `agenda` solo entra a superadmin › Agenda (20261022220100); `capacitador`, a la Agenda y a Clínicas (20261102130100). */
+export type PlatformRole = 'operador' | 'super_admin' | 'agenda' | 'capacitador'
 
 export type PlatformAdmin = {
   userId: string
@@ -1366,7 +1366,8 @@ export type MerchantDetail = {
   profile: MerchantProfile
   datos: DatosDeLaClinica
   titular: TitularDeLaClinica
-  terms: MerchantTerms
+  /** `null` para el capacitador: la ficha le llega sin dinero. */
+  terms: MerchantTerms | null
   staff: MerchantStaff[]
   /** Lo devengado y todavía sin transferir. Cerrar un comercio con esto por
    *  encima de cero está bloqueado en el servidor. */
@@ -1404,7 +1405,9 @@ export async function fetchMerchantDetail(merchantId: string): Promise<MerchantD
       doctorTitle: comoTitulo(raw.profile.doctor_title),
       doctorName: textoONulo(raw.profile.doctor_name),
     },
-    terms: {
+    // Al capacitador la ficha le llega sin dinero (20261102130100): sin
+    // condiciones y sin lo que se le debe.
+    terms: raw.terms == null ? null : {
       upfrontPct: Number(raw.terms.upfront_pct),
       perInstallmentPct: Number(raw.terms.per_installment_pct),
       commissionPct: Number(raw.terms.commission_pct),
@@ -1419,7 +1422,7 @@ export async function fetchMerchantDetail(merchantId: string): Promise<MerchantD
       role: s.role as MerchantStaff['role'],
       branch: (s.branch as string | null) ?? null,
     })),
-    pendingUsd: Number(raw.pending_usd),
+    pendingUsd: Number(raw.pending_usd ?? 0),
   }
 }
 

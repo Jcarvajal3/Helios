@@ -85,7 +85,7 @@ export function Cabecera({
 }
 
 /** Copia el nombre, la especialidad, el teléfono y la dirección del médico, listos para pegar. */
-function CopiarDatos({ texto }: { texto: string }) {
+export function CopiarDatos({ texto }: { texto: string }) {
   const avisar = useToast()
   const [copiado, setCopiado] = useState(false)
 
