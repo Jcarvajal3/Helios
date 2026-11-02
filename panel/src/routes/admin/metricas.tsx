@@ -4,6 +4,9 @@ import { MarcoMetricas } from '@/components/admin/metricas/MarcoMetricas'
 import { diaOperativo } from '@/components/ui'
 import { validarBusquedaMetricas } from '@/features/admin/metricas/busqueda'
 import type { BusquedaMetricas } from '@/features/admin/metricas/busqueda'
+import { MetricasOriginalesLite } from '@/lite/MetricasOriginalesLite'
+import { ResultadosLite } from '@/lite/ResultadosLite'
+import { useVersionDelAdmin } from '@/lite/version'
 
 /**
  * Métricas: todas las cifras del super admin en una pantalla, con la semana
@@ -18,8 +21,25 @@ export const Route = createFileRoute('/admin/metricas')({
   // entra sin elegir nada.
   validateSearch: (search: Record<string, unknown>): BusquedaMetricas =>
     validarBusquedaMetricas(search, diaOperativo()),
-  component: MetricasPage,
+  component: PaginaDeMetricas,
 })
+
+/**
+ * En Helios Lite, sin `vista`, es «Cobranza y caja» (Resultados); con una
+ * `vista`, la de Pro, que se abre desde «Más vistas del admin original».
+ */
+function PaginaDeMetricas() {
+  const lite = useVersionDelAdmin() === 'lite'
+  const { vista } = Route.useSearch()
+  if (!lite) return <MetricasPage />
+  return vista ? (
+    <MetricasOriginalesLite>
+      <MetricasPage />
+    </MetricasOriginalesLite>
+  ) : (
+    <ResultadosLite />
+  )
+}
 
 function MetricasPage() {
   const navigate = useNavigate({ from: '/admin/metricas' })

@@ -70,6 +70,8 @@ import {
 } from '@/features/admin/agenda/agenda'
 import type { Alcance, EstadoDelLead, Fase, Lead } from '@/features/admin/agenda/agenda'
 import { describeError } from '@/lib/supabase'
+import { AgendaLite } from '@/lite/AgendaLite'
+import { useVersionDelAdmin } from '@/lite/version'
 import { comoBooleano, comoDia, comoId, comoTexto, unoDe } from '@/lib/busqueda'
 
 /** En Visita: el calendario de las agendadas, o la lista de los afiliados. */
@@ -92,7 +94,7 @@ type AgendaSearch = {
 
 export const Route = createFileRoute('/admin/agenda')({
   staticData: { title: 'Agenda', width: 'wide' },
-  component: AgendaPage,
+  component: PaginaDeLaAgenda,
   validateSearch: (search: Record<string, unknown>): AgendaSearch => {
     const mes = comoDia(search.mes)
     return {
@@ -128,6 +130,18 @@ const ICONO_FASE: Record<Fase, LucideIcon> = {
  * nadie; «Sin asignar» y «Todos» dejan ver el resto. La fase la pone la base
  * a partir del estado (20261028150000).
  */
+/**
+ * En Helios Lite, la Agenda de la maqueta (`AgendaLite`); en Pro, la de
+ * siempre. El rol de la agenda y el capacitador no tienen Lite: su marco es
+ * el reducido de Pro, y su Agenda, la de siempre.
+ */
+function PaginaDeLaAgenda() {
+  const version = useVersionDelAdmin()
+  const rol = useRolDelEquipo()
+  const conLite = version === 'lite' && (rol === 'super_admin' || rol === 'operador')
+  return conLite ? <AgendaLite /> : <AgendaPage />
+}
+
 function AgendaPage() {
   const navigate = useNavigate({ from: '/admin/agenda' })
   const search = Route.useSearch()

@@ -11,10 +11,12 @@ import type { LucideIcon } from 'lucide-react'
 
 /**
  * El menú de Helios Lite: cuatro áreas y tres herramientas, como en la
- * propuesta del rediseño. Cada pestaña es una pantalla de Pro, con su ruta de
- * siempre: Lite no tiene pantallas propias salvo el Resumen, así que todo lo
- * que se puede hacer en Pro se puede hacer aquí, y un enlace copiado en una
- * versión abre lo mismo en la otra.
+ * propuesta del rediseño. Cada pestaña es una ruta de Pro: un enlace copiado
+ * en una versión abre lo mismo en la otra.
+ *
+ * Resumen, Resultados y Agenda son pantallas de Lite, con la estructura de la
+ * maqueta (`ResumenLite`, `ResultadosLite`, `AgendaLite`). En las demás
+ * pestañas, la pantalla de Pro con el vestido de Lite.
  *
  * Lo que la propuesta tenía y no se trae: «AI SEO», que era una foto fija sin
  * fuente de datos en el panel, y «Equipo», que no existe en la base.
@@ -26,6 +28,12 @@ export type SeccionLite = {
   titulo: string
   descripcion: string
   icono: LucideIcon
+  /**
+   * La pantalla pinta su propia cabecera (Resumen, Resultados, Agenda: son
+   * pantallas de Lite, con la estructura de la maqueta). Las demás llevan la
+   * del marco, encima de la pantalla de Pro.
+   */
+  cabeceraPropia?: boolean
   /** La primera es a la que lleva el menú. */
   pestanas: ReadonlyArray<PestanaLite>
 }
@@ -33,6 +41,7 @@ export type SeccionLite = {
 export const PRINCIPALES: ReadonlyArray<SeccionLite> = [
   {
     id: 'resumen',
+    cabeceraPropia: true,
     titulo: 'Resumen',
     descripcion: 'Cómo va el negocio y qué necesita atención.',
     icono: LayoutGrid,
@@ -66,6 +75,7 @@ export const PRINCIPALES: ReadonlyArray<SeccionLite> = [
   },
   {
     id: 'resultados',
+    cabeceraPropia: true,
     titulo: 'Resultados',
     descripcion: 'Negocio, cobranza y caja, con sus periodos.',
     icono: BarChart3,
@@ -76,6 +86,7 @@ export const PRINCIPALES: ReadonlyArray<SeccionLite> = [
 export const HERRAMIENTAS: ReadonlyArray<SeccionLite> = [
   {
     id: 'agenda',
+    cabeceraPropia: true,
     titulo: 'Agenda',
     descripcion: 'Contactos y visitas de capacitación, con fecha, dirección y teléfono.',
     icono: CalendarDays,

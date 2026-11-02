@@ -5,10 +5,10 @@ La segunda versión del superadmin, con el diseño de la maqueta del rediseño
 menú; la elección se guarda en el navegador (`version.ts`). No es un permiso:
 la seguridad sigue en la base.
 
-Lite no duplica pantallas. Cada pestaña de su menú abre la pantalla de Pro de
-esa ruta, con todas sus acciones. Lo único propio de Lite es su marco
-(`MarcoLite.tsx`) y el Resumen de `/admin` (`ResumenLite.tsx`), que usa las
-mismas lecturas que Pro.
+Lite usa las rutas de Pro. Tres son pantallas propias, con la estructura de
+la maqueta y las mismas lecturas que Pro: el Resumen (`/admin`), Resultados
+(`/admin/metricas`, «Cobranza y caja») y la Agenda (`/admin/agenda`). En las
+demás pestañas se ve la pantalla de Pro, con el vestido de Lite.
 
 ## Qué hay aquí
 
@@ -18,7 +18,11 @@ mismas lecturas que Pro.
 | `InterruptorDeVersion.tsx` | El interruptor Pro / Lite. Se viste de cada versión. |
 | `menu.ts` | Las secciones de Lite y sus pestañas (rutas de Pro). |
 | `MarcoLite.tsx` | El marco: barra de iconos, cápsula de Helios Intelligence, cabecera y pestañas de cada sección. |
-| `ResumenLite.tsx` | El Resumen, con datos reales. |
+| `kit.tsx` | Piezas comunes: cabecera, vistas en píldoras, franja de cifras, periodo. |
+| `ResumenLite.tsx` | El Resumen (`/admin`). |
+| `ResultadosLite.tsx` | «Cobranza y caja» (`/admin/metricas` sin `vista`). |
+| `MetricasOriginalesLite.tsx` | Las Métricas de Pro (`?vista=…`) desde «Más vistas del admin original». |
+| `AgendaLite.tsx` | La Agenda; «Abrir contacto» abre la ficha del médico de Pro. |
 | `estilos/maqueta.css` | El sistema de diseño de la maqueta: tokens `--lt-*` y clases `lt-*`. |
 | `estilos/vestido.css` | Cómo se ven las pantallas de Pro dentro de Lite (redefine tokens del panel solo con Lite en pantalla). |
 
@@ -39,7 +43,11 @@ mismas lecturas que Pro.
    `<PanelShell>`.
 3. `panel/src/routes/admin/index.tsx`: quitar los imports de `@/lite/…` y
    volver a `component: InicioPage` (borrando `PortadaDelAdmin`).
-4. Opcional: la prop `cabeceraDelMenu` de `PanelShell` y `cabecera` de
+4. `panel/src/routes/admin/metricas.tsx`: quitar los imports de `@/lite/…` y
+   volver a `component: MetricasPage` (borrando `PaginaDeMetricas`).
+5. `panel/src/routes/admin/agenda.tsx`: quitar los imports de `@/lite/…` y
+   volver a `component: AgendaPage` (borrando `PaginaDeLaAgenda`).
+6. Opcional: la prop `cabeceraDelMenu` de `PanelShell` y `cabecera` de
    `Sidebar` quedan sin uso; se pueden quitar o dejar (no pintan nada).
 
 Con eso el panel vuelve a ser solo Pro. La clave `helios-admin:version` que

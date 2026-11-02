@@ -1,14 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
 import { queryOptions, useQuery } from '@tanstack/react-query'
-import { CalendarDays, ChevronDown } from 'lucide-react'
 
 import { ordenarColas, tieneTrabajo } from '@/components/admin/inicio/colas'
 import { useColas } from '@/components/admin/inicio/useColas'
 import type { ColaDeInicio } from '@/components/admin/inicio/useColas'
 import { useImpagoPrimeraCuota } from '@/components/admin/inicio/useCifrasDeHoy'
-import { iniciales, useCuentaDelPanel } from '@/components/layouts/cuenta'
+import { useCuentaDelPanel } from '@/components/layouts/cuenta'
 import { diaOperativo, formatPct, formatUsd } from '@/components/ui'
 import { sumarDias } from '@/components/kit/rango'
 import { fetchMerchants } from '@/features/admin/api'
@@ -20,6 +19,8 @@ import { nombreDeEspecialidad } from '@/features/directorio/especialidades'
 import type { ClaveDeEspecialidad } from '@/features/directorio/especialidades'
 import { comoFila, comoLista, numero } from '@/lib/json'
 import { supabase } from '@/lib/supabase'
+import { SelectorDePeriodo, cambio, diasDe, inicialesDeMedico, textoDeCambio } from './kit'
+import type { Periodo } from './kit'
 
 /**
  * El Resumen de Helios Lite, con la estructura de la maqueta: el saludo y el
@@ -34,13 +35,6 @@ import { supabase } from '@/lib/supabase'
  * guardan por día los últimos 30 (`admin_directorio`). Cada cifra se compara
  * con el periodo igual de antes, cuando la base lo tiene.
  */
-type Periodo = 'hoy' | '7d' | '30d'
-
-const PERIODOS: ReadonlyArray<{ id: Periodo; rotulo: string; dias: number }> = [
-  { id: 'hoy', rotulo: 'Hoy', dias: 1 },
-  { id: '7d', rotulo: 'Últimos 7 días', dias: 7 },
-  { id: '30d', rotulo: 'Últimos 30 días', dias: 30 },
-]
 
 const ENTERO = new Intl.NumberFormat('es-VE')
 
@@ -49,7 +43,7 @@ const TONOS = ['#1559df', '#5d83ce', '#87a6dc', '#bdcdeb', '#e3ebf8']
 
 export function ResumenLite() {
   const [periodo, setPeriodo] = useState<Periodo>('7d')
-  const dias = PERIODOS.find((p) => p.id === periodo)?.dias ?? 7
+  const dias = diasDe(periodo)
   const hoy = diaOperativo()
   const rango = { from: sumarDias(hoy, -(dias - 1)), to: hoy }
   const anterior = { from: sumarDias(hoy, -(2 * dias - 1)), to: sumarDias(hoy, -dias) }
@@ -210,12 +204,6 @@ function consultaCitasAgendadas(desde: string) {
   })
 }
 
-/** El cambio contra el periodo anterior, en %. `undefined` si antes fue cero. */
-function cambio(ahora: number, antes: number): number | undefined {
-  if (antes <= 0) return undefined
-  return ((ahora - antes) / antes) * 100
-}
-
 function suma(serie: ReadonlyArray<number>): number {
   return serie.reduce((s, n) => s + n, 0)
 }
@@ -271,66 +259,7 @@ function fechaLarga(dia: string): string {
   return new Date(`${dia}T12:00:00Z`).toLocaleDateString('es-VE', { day: 'numeric', month: 'long', timeZone: 'UTC' })
 }
 
-function textoDeCambio(pct: number): string {
-  return `${pct >= 0 ? '↑' : '↓'} ${formatPct(Math.abs(pct))}`
-}
-
 // ── Piezas ─────────────────────────────────────────────────────────────────
-
-/** El periodo, en el menú de vidrio de la maqueta. */
-function SelectorDePeriodo({ periodo, onCambio }: { periodo: Periodo; onCambio: (p: Periodo) => void }) {
-  const [abierto, setAbierto] = useState(false)
-  const caja = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!abierto) return
-    const fuera = (e: PointerEvent) => {
-      if (!caja.current?.contains(e.target as Node)) setAbierto(false)
-    }
-    const alTeclear = (e: KeyboardEvent) => e.key === 'Escape' && setAbierto(false)
-    document.addEventListener('pointerdown', fuera)
-    document.addEventListener('keydown', alTeclear)
-    return () => {
-      document.removeEventListener('pointerdown', fuera)
-      document.removeEventListener('keydown', alTeclear)
-    }
-  }, [abierto])
-
-  return (
-    <div ref={caja} className="lt-periodo">
-      <button
-        type="button"
-        className="lt-boton"
-        aria-haspopup="menu"
-        aria-expanded={abierto}
-        onClick={() => setAbierto((v) => !v)}
-      >
-        <CalendarDays size={15} aria-hidden />
-        {PERIODOS.find((p) => p.id === periodo)?.rotulo}
-        <ChevronDown size={13} aria-hidden />
-      </button>
-      {abierto && (
-        <div className="lt-periodo-menu" role="menu" aria-label="Periodo">
-          {PERIODOS.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              role="menuitemradio"
-              aria-checked={p.id === periodo}
-              onClick={() => {
-                onCambio(p.id)
-                setAbierto(false)
-              }}
-            >
-              {p.rotulo}
-              <span aria-hidden>{p.id === periodo ? '✓' : ''}</span>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
 
 function Grupo({ titulo, children }: { titulo: string; children: ReactNode }) {
   return (
@@ -584,7 +513,7 @@ function ActividadPorMedico({ filas, cargando }: { filas: FilaDeActividad[] | nu
                 <td>
                   <div className="lt-medico">
                     <span className="lt-medico-avatar" aria-hidden>
-                      {iniciales(f.nombre.replace(/^(Dra?\.|Lcd[ao]\.)\s+/i, ''))}
+                      {inicialesDeMedico(f.nombre)}
                     </span>
                     <div>
                       <strong>{f.nombre}</strong>

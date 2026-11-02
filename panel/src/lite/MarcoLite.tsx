@@ -94,7 +94,7 @@ export function MarcoLite({
                   <main data-area={tonoDeRuta(pathname)} className="lt-contenido">
                     <div className="lt-medida" style={{ maxWidth: `var(--panel-measure-${width})` }}>
                       <MaintenanceBanner />
-                      {lugar && lugar.seccion.id !== 'resumen' && (
+                      {lugar && !lugar.seccion.cabeceraPropia && (
                         <Cabecera
                           seccion={lugar.seccion}
                           ruta={titulo}
