@@ -10,6 +10,8 @@ import { Heroe } from '@/components/admin/inicio/Heroe'
 import { Pendiente } from '@/components/admin/inicio/Pendiente'
 import { TARJETAS_EN_LA_FILA } from '@/components/admin/inicio/tarjetasDePendiente'
 import { hoyOperativo } from '@/components/admin/inicio/reloj'
+import { ResumenLite } from '@/components/admin/lite/ResumenLite'
+import { useVersionDelAdmin } from '@/features/admin/version'
 import { asistenteActivo } from '@/lib/asistente'
 import { comoBooleano } from '@/lib/busqueda'
 
@@ -22,8 +24,13 @@ export const Route = createFileRoute('/admin/')({
   validateSearch: (search: Record<string, unknown>): BusquedaDeInicio => ({
     charla: comoBooleano(search.charla),
   }),
-  component: InicioPage,
+  component: PortadaDelAdmin,
 })
+
+/** `/admin` es Inicio en Helios Pro y el Resumen en Helios Lite. */
+function PortadaDelAdmin() {
+  return useVersionDelAdmin() === 'lite' ? <ResumenLite /> : <InicioPage />
+}
 
 /**
  * Inicio: lo que pide atención hoy y, debajo, la barra del asistente.

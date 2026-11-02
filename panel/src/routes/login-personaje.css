@@ -1,0 +1,85 @@
+/*
+ * El personaje del login: el médico de Helios sobre un fondo celeste,
+ * respirando (un vaivén de 2 px) y parpadeando cada seis segundos y pico.
+ * Los párpados son dos manchas del color de la piel que se cierran desde
+ * arriba, puestas sobre los ojos de la ilustración de 1024 × 1536.
+ */
+.login-personaje {
+  background: #def0fe;
+}
+
+.login-personaje-cuerpo {
+  position: relative;
+  width: min(100%, calc((100dvh - 4rem) * 2 / 3));
+  aspect-ratio: 2 / 3;
+  animation: login-respira 8s ease-in-out infinite;
+  transform-origin: 50% 90%;
+}
+
+.login-personaje-cuerpo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+@keyframes login-respira {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-0.35deg) scale(1);
+  }
+  50% {
+    transform: translateY(-2px) rotate(0.35deg) scale(1.008);
+  }
+}
+
+.login-parpado {
+  position: absolute;
+  top: 16.35%;
+  width: 4.6%;
+  height: 2.85%;
+  border-radius: 48%;
+  background: radial-gradient(ellipse at 50% 30%, #f3c08e, #ecb381);
+  clip-path: inset(0 0 100% 0);
+  animation: login-parpadea 6.4s linear infinite;
+}
+
+.login-parpado::after {
+  content: '';
+  position: absolute;
+  left: 14%;
+  right: 14%;
+  bottom: 10%;
+  height: 1px;
+  border-radius: 50%;
+  background: #925d3e99;
+}
+
+.login-parpado-izquierdo {
+  left: 41.2%;
+}
+
+.login-parpado-derecho {
+  left: 52.8%;
+  top: 16.05%;
+}
+
+@keyframes login-parpadea {
+  0%,
+  43%,
+  47%,
+  100% {
+    clip-path: inset(0 0 100% 0);
+  }
+  44.5%,
+  45% {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-personaje-cuerpo,
+  .login-parpado {
+    animation: none;
+  }
+}

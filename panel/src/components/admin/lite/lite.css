@@ -1,0 +1,156 @@
+/*
+ * Helios Lite: el dibujo de la propuesta (fondo azulado, la app en una
+ * tarjeta redonda, barra de iconos con el activo en azul lleno, pestañas
+ * subrayadas). Todo sale de los tokens del tema, así que el oscuro también
+ * funciona; el único color fijo es el azul de la marca.
+ */
+.helios-lite {
+  --lite-azul: #157efd;
+  --lite-azul-suave: color-mix(in srgb, var(--lite-azul) 8%, var(--color-panel-bar));
+  --lite-borde: color-mix(in srgb, var(--lite-azul) 14%, var(--color-panel-hairline));
+  background: color-mix(in srgb, var(--lite-azul) 7%, var(--color-shell-canvas));
+}
+
+@media (min-width: 1024px) {
+  .helios-lite .lite-app {
+    border-radius: 26px;
+    background: var(--color-panel-bar);
+    box-shadow: 0 18px 65px rgb(18 60 107 / 0.06);
+  }
+}
+
+.helios-lite .lite-riel {
+  background: var(--color-panel-bar);
+}
+
+@media (min-width: 1024px) {
+  .helios-lite .lite-riel {
+    background: transparent;
+    border-right: 1px solid var(--lite-borde);
+  }
+}
+
+.helios-lite .lite-marca {
+  background: var(--lite-azul-suave);
+  color: var(--lite-azul);
+}
+
+.helios-lite .lite-enlace {
+  color: var(--color-panel-muted);
+  transition:
+    background-color 150ms,
+    color 150ms;
+}
+
+.helios-lite .lite-enlace:hover {
+  background: var(--lite-azul-suave);
+  color: var(--color-on-surface);
+}
+
+.helios-lite .lite-enlace-activo,
+.helios-lite .lite-enlace-activo:hover {
+  background: var(--lite-azul);
+  color: #fff;
+  box-shadow: 0 5px 12px rgb(21 126 253 / 0.22);
+}
+
+.helios-lite .lite-barra {
+  background: color-mix(in srgb, var(--color-panel-bar) 92%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+@media (min-width: 1024px) {
+  .helios-lite .lite-barra {
+    border-radius: 26px 26px 0 0;
+  }
+}
+
+.helios-lite .lite-capsula {
+  background: var(--lite-azul-suave);
+  border: 1px solid var(--lite-borde);
+  color: var(--color-panel-muted);
+  transition: border-color 150ms;
+}
+
+.helios-lite .lite-capsula:hover {
+  border-color: var(--lite-azul);
+}
+
+.helios-lite .lite-simbolo {
+  color: var(--lite-azul);
+}
+
+.helios-lite .lite-pestanas {
+  border-bottom: 1px solid var(--lite-borde);
+}
+
+.helios-lite .lite-pestana {
+  color: var(--color-panel-muted);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.helios-lite .lite-pestana:hover {
+  color: var(--color-on-surface);
+}
+
+.helios-lite .lite-pestana-activa,
+.helios-lite .lite-pestana-activa:hover {
+  color: var(--lite-azul);
+  border-color: var(--lite-azul);
+  font-weight: 600;
+}
+
+/* El Resumen. */
+.helios-lite .lite-tarjeta {
+  background: var(--color-panel-bar);
+  border: 1px solid var(--lite-borde);
+  border-radius: 18px;
+}
+
+.helios-lite .lite-grupo {
+  background: var(--lite-azul-suave);
+  border: 1px solid var(--lite-borde);
+  border-radius: 18px;
+}
+
+.helios-lite .lite-cifra {
+  color: var(--lite-azul);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+}
+
+.helios-lite .lite-reparto {
+  background: linear-gradient(135deg, rgb(21 126 253 / 0.95), rgb(21 126 253 / 0.74));
+  color: #fff;
+  border-radius: 18px;
+}
+
+.helios-lite .lite-tabla th {
+  background: var(--lite-azul-suave);
+  color: var(--color-panel-muted);
+  font-weight: 500;
+}
+
+/* Los rayos del símbolo del Resumen, uno detrás de otro. */
+.helios-lite .lite-rayos g {
+  animation: lite-rayo 3.2s ease-in-out infinite;
+  transform-origin: center;
+  transform-box: fill-box;
+}
+
+@keyframes lite-rayo {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .helios-lite .lite-rayos g {
+    animation: none;
+  }
+}

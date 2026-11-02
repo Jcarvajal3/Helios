@@ -46,6 +46,7 @@ const TOPE: Record<PageWidth, string> = {
 export function PanelShell({
   groups,
   pie,
+  cabeceraDelMenu,
   logo,
   account,
   sitio = 'Helios',
@@ -60,6 +61,8 @@ export function PanelShell({
   groups: NavGroup[]
   /** Lo que va al pie del menú, junto a la cuenta. Solo lo pasa el super admin. */
   pie?: ReadonlyArray<NavItem>
+  /** Lo que va arriba del todo del menú: el interruptor Pro/Lite del superadmin. */
+  cabeceraDelMenu?: (plegado: boolean) => ReactNode
   /**
    * La identidad de la cabecera de la barra: el logo del local, o el de Ronda.
    * Recibe si la barra está plegada porque a 64 px no cabe un nombre y hay que
@@ -160,6 +163,7 @@ export function PanelShell({
         <Sidebar
           groups={groups}
           pie={pie}
+          cabecera={cabeceraDelMenu}
           logoSlot={logo(plegado)}
           account={account}
           contadores={contadores}
@@ -244,7 +248,7 @@ export function PanelShell({
  * cambiado entretanto: si la ruta de destino trae el suyo (la portada), ya
  * está puesto cuando esto se limpia, y no hay que pisarlo.
  */
-function useTituloDeLaPestana(titulo: string, sitio: string) {
+export function useTituloDeLaPestana(titulo: string, sitio: string) {
   useEffect(() => {
     const anterior = document.title
     const puesto = titulo ? `${titulo} · ${sitio}` : sitio

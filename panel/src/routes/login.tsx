@@ -11,9 +11,9 @@ import {
 
 import type { CSSProperties, ReactNode } from 'react'
 import { HeliosLogo } from '@/components/HeliosLogo'
-import { CampoDePuntos } from '@/components/portada/CampoDePuntos'
 import { Rotulo } from '@/components/portada/piezas'
 import { NO_INDEXAR } from '@/config/sitio'
+import './login-personaje.css'
 import { fetchPlatformAdmin } from '@/features/admin/api'
 import { FUENTES_DE_LA_PORTADA } from '@/lib/fuentes'
 import { describeError, supabase } from '@/lib/supabase'
@@ -41,8 +41,6 @@ export const Route = createFileRoute('/login')({
   }),
   component: Login,
 })
-
-const NOCHE = '#020B24'
 
 /** Entra al cargar, escalonado (la animación es la de la portada). */
 function Entra({
@@ -319,39 +317,18 @@ function Login() {
         </footer>
       </div>
 
-      {/* ── El bloque oscuro (solo escritorio) ────────────────────────── */}
+      {/* ── El personaje (solo escritorio) ─────────────────────────────
+          El médico de Helios, respirando y parpadeando. `lazy`: en el
+          teléfono el bloque no se pinta y la imagen no se descarga. */}
       <aside
         aria-hidden
-        className="relative isolate hidden w-[min(46%,720px)] shrink-0 flex-col justify-between overflow-hidden rounded-[36px] p-12 lg:flex xl:p-14"
-        style={{ backgroundColor: NOCHE }}
+        className="login-personaje relative isolate hidden w-[min(46%,720px)] shrink-0 items-center justify-center overflow-hidden rounded-[36px] p-4 lg:flex"
       >
-        <div className="portada-aparece absolute inset-0 -z-10 opacity-90">
-          <CampoDePuntos
-            escena="marea"
-            fondo={NOCHE}
-            tintas={['#062460', '#0D4CC0', '#2F86F0']}
-            celda={7}
-            semilla={11}
-            intensidad={0.6}
-          />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(2,11,36,0.95)_25%,transparent_70%)]" />
+        <div className="login-personaje-cuerpo">
+          <img src="/images/login-personaje.png" alt="" width={1024} height={1536} loading="lazy" decoding="async" />
+          <span className="login-parpado login-parpado-izquierdo" />
+          <span className="login-parpado login-parpado-derecho" />
         </div>
-
-        <Entra retraso={200}>
-          <Rotulo tono="oscuro">Para médicos y centros</Rotulo>
-        </Entra>
-
-        <Entra retraso={360}>
-          <p className="portada-titular max-w-[12ch] !text-[clamp(2.6rem,1.4rem+2.6vw,4.2rem)] text-white">
-            Atiendes hoy.{' '}
-            <em className="portada-serif text-portada-cielo-2">
-              Cobras completo.
-            </em>
-          </p>
-          <p className="portada-entrada mt-6 max-w-[36ch] text-white/65">
-            Recibes el 100% de cada consulta, pague o no el paciente.
-          </p>
-        </Entra>
       </aside>
     </div>
   )

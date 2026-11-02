@@ -37,6 +37,7 @@ import { claveDeGrupo, useGruposPlegados } from './useGruposPlegados'
 export function Sidebar({
   groups,
   pie,
+  cabecera,
   logoSlot,
   account,
   contadores,
@@ -48,6 +49,12 @@ export function Sidebar({
   groups: NavGroup[]
   /** Lo que va al pie, junto a la cuenta: hoy, la ruta de QA del piloto. */
   pie?: ReadonlyArray<NavItem>
+  /**
+   * Lo que va arriba del todo, encima del logo: en el superadmin, el
+   * interruptor entre Helios Pro y Helios Lite. Recibe si se pinta en la
+   * barra plegada a iconos.
+   */
+  cabecera?: (plegado: boolean) => React.ReactNode
   logoSlot: React.ReactNode
   account: Account
   /** Cuántos esperan en cada cola, por `path`. Lo decide el panel que lo pasa. */
@@ -138,6 +145,14 @@ export function Sidebar({
           abierto ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
+        {cabecera && (
+          <div className="mx-3 mb-3 shrink-0">
+            {/* El cajón sale siempre ancho: la versión plegada, solo de lg arriba. */}
+            <div className={plegado ? 'lg:hidden' : undefined}>{cabecera(false)}</div>
+            {plegado && <div className="hidden lg:block">{cabecera(true)}</div>}
+          </div>
+        )}
+
         <div
           className={`mx-3 flex min-h-9 shrink-0 items-center gap-2 pl-2.5 ${
             plegado ? 'lg:flex-col lg:pl-0' : ''

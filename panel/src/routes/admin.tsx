@@ -30,6 +30,8 @@ import { consultaCambiosPropuestos } from '@/features/admin/pacientes/api'
 import { hoyOperativo } from '@/components/admin/inicio/reloj'
 import { NO_INDEXAR } from '@/config/sitio'
 import { BuscadorDeLaBarra, PaletaDelPanel } from '@/components/admin/paleta'
+import { InterruptorDeVersion } from '@/components/admin/InterruptorDeVersion'
+import { MarcoLite } from '@/components/admin/lite/MarcoLite'
 import { PlatformGate } from '@/components/PlatformGate'
 import { HeliosIsotipo, HeliosLogo } from '@/components/HeliosLogo'
 import { Badge, diaOperativo } from '@/components/ui'
@@ -45,6 +47,7 @@ import {
 } from '@/config/navigation'
 import { consultaCartera, consultaPromesas } from '@/features/admin/cobranza/consultas'
 import { useSession } from '@/features/auth/session'
+import { useVersionDelAdmin } from '@/features/admin/version'
 import type { PlatformAdmin } from '@/features/admin/api'
 import { asistenteActivo } from '@/lib/asistente'
 import { entorno } from '@/lib/entorno'
@@ -103,19 +106,43 @@ function AdminShell({ admin }: { admin: PlatformAdmin }) {
   // permiso.
   const groups = useMemo(() => visibleGroups(superAdminNavGroups, esSuperAdmin), [esSuperAdmin])
 
+  const account = {
+    name: admin.fullName ?? session?.user.email ?? 'Equipo de Helios',
+    detail: rol,
+    // De aquí sale el nombre de pila con el que saluda Inicio.
+    nombreCompleto: admin.fullName,
+  }
+
+  // Helios Lite: otro marco y otro menú sobre las mismas rutas. La paleta,
+  // el asistente y los contadores son los mismos.
+  const version = useVersionDelAdmin()
+  if (version === 'lite') {
+    return (
+      <MarcoLite
+        account={account}
+        contadores={contadores}
+        asistente={conAsistente ? <BotonAsistente /> : undefined}
+        lateral={conAsistente ? { abierto: asistente.abierto, contenido: <PanelAsistente /> } : undefined}
+      >
+        {conAsistente ? (
+          <PaletaDelPanel onPreguntar={asistente.preguntar} siNoHayNada={siNoHayNadaDelAsistente} />
+        ) : (
+          <PaletaDelPanel />
+        )}
+        <Outlet />
+      </MarcoLite>
+    )
+  }
+
   return (
     <PanelShell
       groups={groups}
       pie={superAdminNavPie}
+      cabeceraDelMenu={(plegado) => <InterruptorDeVersion compacto={plegado} />}
       sitio="Helios Admin"
       contadores={contadores}
       logo={(plegado) => <LogoDelEquipo plegado={plegado} rol={rol} />}
-      account={{
-        name: admin.fullName ?? session?.user.email ?? 'Equipo de Helios',
-        detail: rol,
-        // De aquí sale el nombre de pila con el que saluda Inicio.
-        nombreCompleto: admin.fullName,
-      }}
+      account={account}
       // Casi toda llamada empieza con un teléfono, una cédula o una
       // referencia, y antes había que adivinar en qué pantalla buscarlos. En
       // la barra de arriba está a la misma distancia desde todas, y con
