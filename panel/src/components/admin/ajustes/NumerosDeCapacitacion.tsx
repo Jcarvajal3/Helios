@@ -250,7 +250,7 @@ function ConfirmarReinicio({ numero, onClose }: { numero: NumeroDeCapacitacion |
   return (
     <ConfirmDialog
       title={numero ? `Reiniciar el número de ${numero.label}` : 'Reiniciar todos los números'}
-      summary="Se borran del todo los pacientes de prueba de este número y sus órdenes, también la que esté esperando el «sí». Sus cédulas vuelven a estar libres y las órdenes desaparecen de la lista del médico."
+      summary="Se borran del todo los pacientes de prueba de este número, las fotos de sus cédulas y sus órdenes, también la que esté esperando el «sí». Sus cédulas vuelven a estar libres y las órdenes desaparecen de la lista del médico."
       confirmLabel="Reiniciar"
       busy={reiniciar.isPending}
       error={reiniciar.isError ? describeError(reiniciar.error) : undefined}

@@ -18,6 +18,9 @@
 --      lo que no cuadra sale en superadmin › Alertas.
 --   7. Privacidad: la clínica no ve nada; el equipo ve la foto y abrirla
 --      queda en la bitácora; solo el webhook la registra.
+--   8. El reinicio de la capacitación (20261104120000): el de medianoche y
+--      el de un número borran la foto y dejan el archivo por borrar; la misma
+--      cédula y la misma imagen sirven en otra ronda.
 --
 -- Nada de esto llama a `helios_dispatch_*`: los mensajes se quedan en la cola
 -- de la transacción y se van con el rollback.
@@ -42,6 +45,7 @@ declare
   v_p3      uuid;
   v_f1      uuid;
   v_f3      uuid;
+  v_demo    uuid;
   v_row     record;
   v_txt     text;
   v_failed  boolean;
@@ -382,6 +386,94 @@ begin
     raise exception 'Abrir la foto debía quedar en la bitácora';
   end if;
   raise notice 'TEST CÉDULA 7 OK — solo el equipo la ve, y queda en la bitácora';
+
+  -- =========================================================================
+  -- 8. El reinicio de la capacitación
+  -- =========================================================================
+  set local role authenticated;
+  perform set_config('request.jwt.claims', json_build_object('sub', v_admin::text, 'role', 'authenticated', 'aal', 'aal2')::text, true);
+  perform public.admin_add_demo_phone('0412 999 0102', 'Carla');
+  perform set_config('request.jwt.claims', json_build_object('sub', v_cajero::text, 'role', 'authenticated')::text, true);
+  perform public.helios_patient_eligibility(v_m, 'V99000011');
+  v_c2 := (public.create_patient_charge(v_m, null,
+             v_base || jsonb_build_object('document', 'V99000011', 'phone', '04129990102'), 30, null, null, 'ced-demo-1')->>'id')::uuid;
+  reset role;
+  select user_id into v_demo from public.charges where id = v_c2;
+  insert into public.whatsapp_contacts (phone_e164, last_inbound_at)
+  values ('+584129990102', now())
+  on conflict (phone_e164) do update set last_inbound_at = now();
+
+  v_j := public.helios_patient_decision(v_c2, 'si', '584129990102', 'wamid.ced.demo.si.1');
+  if v_j->>'reason' <> 'pide_cedula' or not (select is_demo from public.profiles where id = v_demo) then
+    raise exception 'Un paciente de capacitación sin foto también la da: %', v_j;
+  end if;
+  v_j := public.helios_patient_id_photo('584129990102', 'wamid.ced.demo.1', 'media-demo', 'image/jpeg');
+  v_f3 := (v_j->>'id_photo_id')::uuid;
+  if v_j->>'status' <> 'confirmed' then
+    raise exception 'La foto debía confirmar la orden de capacitación: %', v_j;
+  end if;
+  v_txt := v_demo || '/wamid.ced.demo.1.jpg';
+
+  -- Lo que hizo fallar el reinicio: abrirla deja bitácora, que no se borra.
+  update public.patient_id_photos set stored_at = now() where id = v_f3;
+  set local role authenticated;
+  perform set_config('request.jwt.claims', json_build_object('sub', v_admin::text, 'role', 'authenticated', 'aal', 'aal2')::text, true);
+  perform public.admin_open_patient_id_photo(v_demo);
+  reset role;
+
+  -- El de medianoche, con todos los números.
+  v_j := public.helios_demo_reset();
+  if (v_j->>'borrados')::int < 1
+     or exists (select 1 from public.profiles where id = v_demo)
+     or exists (select 1 from public.patient_id_photos where id = v_f3)
+     or not exists (select 1 from public.patient_id_photo_removals where storage_path = v_txt)
+     or not exists (select 1 from audit.admin_actions where action = 'patient.id_photo_viewed' and target_id = v_demo) then
+    raise exception 'El reinicio debía borrar al paciente y su foto y dejar el archivo por borrar: %', v_j;
+  end if;
+
+  -- El lector: toma el archivo una vez, y lo que se subía tras el reinicio no sigue.
+  v_j := public.lector_cedula_por_borrar(100);
+  if not exists (select 1 from jsonb_array_elements(v_j) e where e->>'ruta' = v_txt) then
+    raise exception 'El lector debía tomar el archivo por borrar: %', v_j;
+  end if;
+  if exists (select 1 from jsonb_array_elements(public.lector_cedula_por_borrar(100)) e where e->>'ruta' = v_txt) then
+    raise exception 'Un archivo ya tomado no se vuelve a tomar enseguida';
+  end if;
+  if public.lector_cedula_guardada(v_f3) or not public.lector_cedula_guardada(v_f1) then
+    raise exception 'El lector debía saber qué fotos siguen existiendo';
+  end if;
+  perform public.lector_cedula_borrada(array(select (e->>'id')::uuid from jsonb_array_elements(v_j) e));
+  if exists (select 1 from public.patient_id_photo_removals where storage_path = v_txt) then
+    raise exception 'El archivo borrado no debía quedar en la cola';
+  end if;
+
+  -- La misma cédula y la misma imagen, otra ronda; ahora con el botón del panel.
+  set local role authenticated;
+  perform set_config('request.jwt.claims', json_build_object('sub', v_cajero::text, 'role', 'authenticated')::text, true);
+  v_j := public.helios_patient_eligibility(v_m, 'V99000011');
+  if v_j->>'estado' <> 'nuevo' then
+    raise exception 'Tras el reinicio, la cédula vuelve a ser nueva: %', v_j;
+  end if;
+  v_c2 := (public.create_patient_charge(v_m, null,
+             v_base || jsonb_build_object('document', 'V99000011', 'phone', '04129990102'), 30, null, null, 'ced-demo-2')->>'id')::uuid;
+  reset role;
+  v_j := public.helios_patient_decision(v_c2, 'si', '584129990102', 'wamid.ced.demo.si.2');
+  if v_j->>'reason' <> 'pide_cedula' then
+    raise exception 'El paciente nuevo vuelve a dar la foto: %', v_j;
+  end if;
+  v_j := public.helios_patient_id_photo('584129990102', 'wamid.ced.demo.2', 'media-demo', 'image/jpeg');
+  if v_j->>'status' <> 'confirmed' then
+    raise exception 'La misma imagen en otra ronda debía confirmar: %', v_j;
+  end if;
+  set local role authenticated;
+  perform set_config('request.jwt.claims', json_build_object('sub', v_admin::text, 'role', 'authenticated', 'aal', 'aal2')::text, true);
+  v_j := public.admin_reset_demo('+584129990102');
+  reset role;
+  if (v_j->>'borrados')::int <> 1 or (v_j->>'ordenes_borradas')::int <> 1
+     or exists (select 1 from public.patient_id_photos where phone_e164 = '+584129990102') then
+    raise exception 'El reinicio de un número debía borrar también su foto: %', v_j;
+  end if;
+  raise notice 'TEST CÉDULA 8 OK — el reinicio de la capacitación borra las fotos';
 end;
 $$;
 

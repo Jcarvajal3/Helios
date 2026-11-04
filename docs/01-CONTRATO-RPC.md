@@ -1557,10 +1557,14 @@ Las del webhook **no lanzan** errores de negocio: devuelven
   Si no se esperaba: `{handled: false, reason: 'no_esperada'}` y el webhook
   sigue como antes. Un reintento: `{handled: true, duplicate: true}`.
 - El lector (`service_role`): `lector_cedula_tomar(p_limit)` →
-  `[{id, media_id, mime, ruta, guardada}]`, `lector_cedula_guardada(p_id)`,
+  `[{id, media_id, mime, ruta, guardada}]`, `lector_cedula_guardada(p_id) → boolean`
+  (false: el reinicio de la capacitación borró esa foto),
   `lector_cedula_leida(p_id, p_extraction, p_model, p_usage) → status` y
   `lector_cedula_fallo(p_id, p_error) → status` (tres intentos).
-  `helios_lector_despertar()` mira también esta cola.
+  `lector_cedula_por_borrar(p_limit)` → `[{id, ruta}]` y
+  `lector_cedula_borrada(p_ids)`: los archivos que dejó el reinicio de la
+  capacitación (20261104120000), que se borran con la API de Storage.
+  `helios_lector_despertar()` mira también estas colas.
 - `helios_whatsapp_status(p_wa_message_id text, p_status text, p_error jsonb default null, p_at timestamptz default null) → boolean`
   (implementado en 20261005000400). Solo avanza (sent < delivered < read); un
   `failed` deja el mensaje `fallido` con el motivo. Devuelve si encontró el
@@ -1875,7 +1879,9 @@ la pregunta le llega a quien capacita.
   antes de 20261014100300); **borra** con `helios_demo_purge(p_phone)` a
   todo paciente demo sin rastro en el libro, sin cuotas pagadas, sin pagos
   reportados y sin liquidaciones, con todo lo suyo (cotizaciones, cuotas,
-  mensajes, órdenes, notificaciones, límite, consultas de cédula; las
+  mensajes, órdenes, notificaciones, límite, consultas de cédula, fotos de
+  su cédula, cuyo archivo queda en `patient_id_photo_removals` para el
+  lector; las
   sesiones del bot que lo recordaban vuelven al menú y los contactos de
   WhatsApp se quedan sin paciente); y **retira** (sin cédula,
   `profiles.demo_retired_at`) a los que quedan por tener historia en el

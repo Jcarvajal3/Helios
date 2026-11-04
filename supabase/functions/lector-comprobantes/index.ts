@@ -21,7 +21,9 @@
 // Claude transcribe el número y el nombre y la base los compara
 // (`lector_cedula_leida`). La orden ya está confirmada: lo que no cuadre es
 // una alerta para el equipo. Los fallos, igual: tres intentos
-// (`lector_cedula_fallo`).
+// (`lector_cedula_fallo`). Y borra del bucket los archivos de las fotos que
+// borró el reinicio de la capacitación (`lector_cedula_por_borrar`): desde SQL
+// no se puede.
 //
 // Es pública (sin JWT): la protege la clave del encabezado `x-helios-clave`,
 // que conocen esta función (LECTOR_CLAVE) y el vault (`lector_clave`).
@@ -158,7 +160,12 @@ async function procesarCedula(t: CedulaTomada, cfg: Config): Promise<void> {
         .from('patient-ids')
         .upload(t.ruta, bytes, { contentType: t.mime, upsert: true })
       if (subida.error) throw new Error(`No se pudo guardar la cédula: ${subida.error.message}`)
-      await rpc('lector_cedula_guardada', { p_id: t.id })
+      // El reinicio de la capacitación la borró mientras se subía: no queda nada.
+      if (!(await rpc<boolean>('lector_cedula_guardada', { p_id: t.id }))) {
+        const borrado = await db.storage.from('patient-ids').remove([t.ruta])
+        if (borrado.error) console.error('lector: no se pudo borrar la cédula huérfana', { id: t.id, mensaje: borrado.error.message })
+        return
+      }
     }
 
     const r = await transcribir(bytes, t.mime, INSTRUCCIONES_CEDULA, ESQUEMA_CEDULA, 'Transcribe los datos de esta cédula.')
@@ -216,10 +223,30 @@ async function procesar(t: Tomada, cfg: Config): Promise<void> {
   }
 }
 
+/**
+ * Borra del bucket los archivos de las fotos que borró el reinicio de la
+ * capacitación. Si falla, se reintenta en una vuelta posterior: lo que se tomó
+ * vuelve a estar disponible a los dos minutos.
+ */
+async function borrarCedulas(): Promise<void> {
+  try {
+    while (true) {
+      const filas = await rpc<Array<{ id: string; ruta: string }>>('lector_cedula_por_borrar', { p_limit: 50 })
+      if (!filas || filas.length === 0) return
+      const { error } = await db.storage.from('patient-ids').remove(filas.map((f) => f.ruta))
+      if (error) throw new Error(error.message)
+      await rpc('lector_cedula_borrada', { p_ids: filas.map((f) => f.id) })
+    }
+  } catch (err) {
+    console.error('lector: no se pudieron borrar las cédulas', err)
+  }
+}
+
 /** Lee lo pendiente, de tres en tres, hasta vaciar la cola o agotar el tiempo: primero las cédulas, luego las capturas. */
 async function vuelta(): Promise<void> {
   const inicio = Date.now()
   let leidas = 0
+  await borrarCedulas()
   try {
     const cfg = await rpc<Config>('lector_config', {})
     while (leidas < MAX_POR_VUELTA && Date.now() - inicio < MAX_MS) {
