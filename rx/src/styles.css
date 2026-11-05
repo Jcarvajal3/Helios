@@ -1,0 +1,83 @@
+@import 'tailwindcss';
+@import './styles/tokens.gen.css';
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RX. Los tokens son una copia de panel/src/styles/tokens.gen.css: al integrar
+   RX al panel, este archivo se va y quedan las clases.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+html {
+  background: var(--color-surface-container-lowest);
+  color: var(--color-on-surface);
+  font-family: var(--font-body);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: default;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* La vista previa: una hoja de media carta que escala con su contenedor.
+   `--u` es un punto del PDF, así las medidas de aquí y las de recipe/pdf.ts
+   son los mismos números. */
+.hoja {
+  container-type: inline-size;
+  width: 100%;
+}
+
+.hoja-papel {
+  --u: calc(100cqw / 396);
+  aspect-ratio: 396 / 612;
+  display: flex;
+  flex-direction: column;
+  padding: calc(var(--u) * 28);
+  background: #fff;
+  color: #0f1a2e;
+  font-family: Helvetica, Arial, sans-serif;
+  border-radius: 4px;
+  box-shadow:
+    0 1px 2px rgb(10 16 32 / 0.08),
+    0 8px 24px rgb(10 16 32 / 0.08);
+  overflow-wrap: anywhere;
+}
+
+@keyframes rx-aparecer {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.aparecer {
+  animation: rx-aparecer 220ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aparecer {
+    animation: none;
+  }
+}

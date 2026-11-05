@@ -1,0 +1,29 @@
+{
+  "name": "helios-rx",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 3002",
+    "demo": "vite --port 3003 --mode demo",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --port 3002",
+    "test": "node --test \"src/**/*.test.ts\""
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.112.3",
+    "@tailwindcss/vite": "^4.1.18",
+    "lucide-react": "^1.33.0",
+    "pdf-lib": "^1.17.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "tailwindcss": "^4.1.18"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^6.0.1",
+    "typescript": "^6.0.2",
+    "vite": "^8.0.0"
+  }
+}

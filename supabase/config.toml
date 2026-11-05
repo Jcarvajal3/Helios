@@ -439,3 +439,8 @@ verify_jwt = false
 # equipo (`is_platform_admin`, con el segundo factor).
 [functions.whatsapp-inbox]
 verify_jwt = true
+
+# El correo de los récipes de RX: lo llama la app con la sesión del médico. Se
+# comprueba el JWT, y la base (`rx_preparar_envio`) decide si puede enviar.
+[functions.rx-enviar]
+verify_jwt = true

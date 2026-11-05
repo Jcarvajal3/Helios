@@ -95,6 +95,7 @@ SUITES=(
   rol_del_equipo_smoke
   directorio_smoke
   directorio_interesados_smoke
+  rx_smoke
 )
 if [ "$#" -gt 0 ]; then SUITES=("$@"); fi
 

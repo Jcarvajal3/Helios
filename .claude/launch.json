@@ -12,6 +12,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["--prefix", "panel", "exec", "--", "vite", "dev", "panel", "--port", "3001"],
       "port": 3001
+    },
+    {
+      "name": "rx-demo",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "rx", "run", "demo"],
+      "port": 3003
     }
   ]
 }

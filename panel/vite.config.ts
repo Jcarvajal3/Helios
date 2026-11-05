@@ -53,6 +53,12 @@ const config = defineConfig({
               },
               continue: true,
             },
+            // RX (récipes) es un proyecto aparte, en prueba: `rx/` en la raíz
+            // del repo. Nada enlaza aquí y responde con noindex.
+            {
+              src: '^/rx(?:/(.*))?$',
+              dest: 'https://helios-rx.vercel.app/rx/$1',
+            },
           ],
         },
       },
