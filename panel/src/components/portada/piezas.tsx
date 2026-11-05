@@ -311,7 +311,7 @@ export function Boton({
   )
 }
 
-/** «Quiero afiliarme»: al formulario de solicitud (`/afiliacion`). */
+/** «Quiero afiliarme»: al formulario que agenda la capacitación (`/afiliacion`). */
 export function BotonAfiliarme({
   tono = 'tinta',
   className = '',
