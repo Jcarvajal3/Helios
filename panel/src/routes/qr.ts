@@ -8,7 +8,7 @@ const DESTINO_DEL_QR = '/agenda'
 
 /**
  * `/qr` — la dirección fija que llevan los QR impresos (volantes, afiches),
- * hoy hacia la afiliación de médicos. Redirige con un 302 y sin caché, a
+ * hoy hacia la capacitación de médicos. Redirige con un 302 y sin caché, a
  * propósito: un 301 se queda guardado en el teléfono que ya lo escaneó y
  * cambiar el destino no le llegaría. Desde el 2026-10-26 lleva a la página
  * corta que agenda la capacitación (antes, a `/afiliacion`). Lo que traiga la dirección
