@@ -9,7 +9,7 @@
     "tokens": "node ../tokens/build.mjs",
     "dev": "vite dev --port 3000",
     "generate-routes": "tsr generate",
-    "build": "vite build",
+    "build": "node scripts/construir-rx.mjs && vite build",
     "preview": "vite preview",
     "lint": "eslint",
     "format": "prettier --write . && eslint --fix",

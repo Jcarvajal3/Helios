@@ -27,8 +27,7 @@ function comprueba(ok: boolean, titulo: string, detalle = '') {
 
 // ─── CORS ────────────────────────────────────────────────────────────────────
 
-for (const o of ['https://conhelios.com', 'https://www.conhelios.com', 'http://localhost:3002',
-                 'https://helios-rx.vercel.app']) {
+for (const o of ['https://conhelios.com', 'https://www.conhelios.com', 'http://localhost:3002']) {
   comprueba(cabecerasCors(o)['Access-Control-Allow-Origin'] === o, `CORS: ${o} entra`)
 }
 for (const o of ['https://evil.com', 'http://conhelios.com', 'https://conhelios.com.evil.com', 'http://localhost:3003',

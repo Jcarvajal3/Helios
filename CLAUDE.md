@@ -17,7 +17,7 @@ primero cómo lo resuelve Ronda y reutilízalo.
 
 ```
 panel/      TanStack Start + React 19 + Tailwind v4 (fork de Ronda-panel)
-rx/         Récipes digitales, en prueba y aparte del panel: conhelios.com/rx, proyecto `helios-rx` de Vercel (rx/README.md)
+rx/         Récipes digitales, en prueba y sin enlaces: conhelios.com/rx, se publica con el panel (rx/README.md)
 supabase/   config, migrations/ (1 base consolidada + migraciones de Helios), tests/, poda/
 tokens/     helios.tokens.json + build.mjs → panel/src/styles/tokens.gen.css, panel/src/theme/tokens.gen.ts
 scripts/    portar-de-ronda.mjs (transforma SQL de Ronda al vocabulario de Helios)

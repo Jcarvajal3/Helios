@@ -10,7 +10,7 @@ enlaza aquí, y la app pide a los buscadores que no la indexen.
 | Pieza | Dónde | Notas |
 |---|---|---|
 | App | `rx/` | Vite + React + Tailwind v4, con los tokens de Helios |
-| Dirección | `conhelios.com/rx` | Proyecto `helios-rx` de Vercel, raíz `rx/`: despliega al pushear a `main` si el último commit toca `rx/`. El panel le pasa la ruta (`panel/vite.config.ts`) |
+| Dirección | `conhelios.com/rx` | Se publica con el panel, en el proyecto `helios`: `panel/scripts/construir-rx.mjs` lo compila a `public/rx`. Un cambio que solo toque `rx/` no despliega: hace falta que el último commit del push toque `panel/` |
 | Base | proyecto `Helios` (producción) | Mismo login que el panel. Tablas `rx_*`, sin tocar las demás |
 | Archivos | bucket privado `rx` | `<merchant>/firma/…`, `<merchant>/logo/…`, `<merchant>/recipes/<id>.pdf` |
 | Correo | Edge Function `rx-enviar` | PDF adjunto por Resend. No pasa por `outbound_messages` |

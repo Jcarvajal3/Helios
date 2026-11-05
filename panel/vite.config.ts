@@ -53,12 +53,20 @@ const config = defineConfig({
               },
               continue: true,
             },
-            // RX (récipes) es un proyecto aparte, en prueba: `rx/` en la raíz
-            // del repo. Nada enlaza aquí y responde con noindex.
+            // RX (récipes), en prueba: `rx/` en la raíz del repo, compilado a
+            // `public/rx` por scripts/construir-rx.mjs. Nada enlaza aquí y
+            // responde con noindex.
             {
-              src: '^/rx(?:/(.*))?$',
-              dest: 'https://helios-rx.vercel.app/rx/$1',
+              src: '^/rx(?:/.*)?$',
+              headers: {
+                'X-Robots-Tag': 'noindex, nofollow, noarchive',
+                'Referrer-Policy': 'no-referrer',
+                'Content-Security-Policy':
+                  "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' blob: data:; connect-src 'self' https://ahyfbnfsbyzdoyjzjvfb.supabase.co; base-uri 'self'; form-action 'self'; frame-ancestors 'none'",
+              },
+              continue: true,
             },
+            { src: '^/rx/?$', dest: '/rx/index.html' },
           ],
         },
       },

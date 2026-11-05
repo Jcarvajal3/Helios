@@ -8,7 +8,6 @@
 const ORIGENES = new Set([
   'https://conhelios.com',
   'https://www.conhelios.com',
-  'https://helios-rx.vercel.app',
   'http://localhost:3002',
 ])
 

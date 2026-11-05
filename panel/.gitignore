@@ -12,6 +12,9 @@ dist-ssr
 __unconfig*
 todos.json
 
+# RX compilado (scripts/construir-rx.mjs)
+public/rx/
+
 .vercel
 .env*
 !.env.example
