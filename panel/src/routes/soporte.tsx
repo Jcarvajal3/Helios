@@ -48,7 +48,7 @@ function Soporte() {
           <P>
             ¿Eres médico o tienes un centro de salud?{' '}
             <Link to="/afiliacion" className="text-primary underline-offset-4 hover:underline">
-              Manda tu solicitud de afiliación
+              Agenda tu capacitación
             </Link>
             .
           </P>

@@ -390,7 +390,7 @@ const MEDICOS: Guia = {
     {
       pregunta: '¿Cómo me afilio?',
       respuesta:
-        'Llena la solicitud de afiliación con los datos de tu consultorio o centro. La revisamos y te escribimos para activar tu cuenta.',
+        'Déjanos tus datos y elige el día de tu capacitación presencial. Vamos a tu consultorio o centro y te enseñamos a usar Helios.',
     },
   ],
   relacionadas: [

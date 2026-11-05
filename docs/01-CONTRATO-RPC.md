@@ -1001,6 +1001,15 @@ superadmin › Agenda.
   cuándo pidió su capacitación por el QR, en un médico nuevo o en uno que ya
   estaba (20261102120000). El panel los marca «QR», los pone primero a igual
   urgencia y los filtra con «Llegaron por el QR».
+- **`/afiliacion` usa el mismo formulario** (2026-11-05, 20261105120000):
+  `helios_agendar_capacitacion` acepta `origin` (`web` desde `/afiliacion`;
+  cualquier otra cosa, o nada, es `qr`). `doctor_leads.training_requested_via`
+  (`qr | web`) guarda por dónde la pidió, y un lead nuevo nace con ese `source`.
+  `admin_doctor_leads()` devuelve `web_at`, y `qr_at` pasa a ser solo el de los
+  del QR. El panel los marca «Web», los filtra con «Llegaron por la web» y los
+  pone los primeros de la lista entre los abiertos, por encima de la urgencia y
+  del QR. `helios_solicitar_afiliacion` sigue en la base, pero ya no la llama
+  ninguna página pública.
 
 **La agenda por fases** (2026-10-28, 20261028150000). La Agenda se trabaja en
 tres fases, que son sus pestañas, y cada persona ve al entrar los médicos que

@@ -3,8 +3,8 @@ import type { CSSProperties, ReactNode } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { ArrowLeft, Check, CircleCheck } from 'lucide-react'
 
-import { FormularioDeAfiliacion } from '@/components/afiliacion/Formulario'
-import type { SolicitudEnviada } from '@/components/afiliacion/Formulario'
+import { FormularioDeCapacitacion } from '@/components/afiliacion/FormularioDeCapacitacion'
+import type { CapacitacionAgendada } from '@/components/afiliacion/FormularioDeCapacitacion'
 import { HeliosLogo } from '@/components/HeliosLogo'
 import { CampoDePuntos } from '@/components/portada/CampoDePuntos'
 import { Boton, Rotulo } from '@/components/portada/piezas'
@@ -16,7 +16,7 @@ export const Route = createFileRoute('/afiliacion')({
     const base = cabeceraPublica({
       titulo: 'Afilia tu consultorio y ofrece pago en cuotas | Helios',
       descripcion:
-        'Solicita la afiliación de tu consultorio o centro de salud: tus pacientes pagan en 2 cuotas y tú cobras el 100% a los 8 y 15 días. Sin costo ni permanencia.',
+        'Afilia tu consultorio y agenda tu capacitación: tus pacientes pagan en 2 cuotas y tú cobras el 100% a los 8 y 15 días. Sin costo ni permanencia.',
       ruta: '/afiliacion',
       migas: [
         { nombre: 'Médicos y centros', ruta: '/medicos' },
@@ -55,17 +55,15 @@ const PROMESAS = [
  *
  * Con el aspecto de la portada y el molde del login: el formulario a la
  * izquierda y, en escritorio, el bloque oscuro con lo que gana el médico.
- * El formulario va en tres pasos cortos (`FormularioDeAfiliacion`) y pide lo
- * mismo que el alta del equipo. La solicitud queda pendiente en Clínicas ›
- * Pendientes del superadmin; al aprobarla nace la clínica. La base valida lo
- * mismo que aquí y frena el abuso (`helios_solicitar_afiliacion`).
- *
- * Si quiere, pide además su capacitación presencial: entra a la agenda del
- * equipo como su visita.
+ * Desde el 2026-11-05 el formulario es el de `/agenda`: datos de contacto y la
+ * fecha de la capacitación presencial. Entra a Superadmin › Agenda como su
+ * visita, marcado «Web» para distinguirlo de los del QR y de primero en la
+ * lista (`helios_agendar_capacitacion`). Los datos de la clínica se toman
+ * después, con el equipo.
  */
 function Afiliacion() {
   const hoy = hoyCaracas()
-  const [enviada, setEnviada] = useState<SolicitudEnviada | null>(null)
+  const [agendada, setAgendada] = useState<CapacitacionAgendada | null>(null)
 
   return (
     <div className="portada-raiz flex min-h-dvh bg-white lg:items-start lg:p-4">
@@ -97,8 +95,8 @@ function Afiliacion() {
 
         <main className="flex flex-1 py-6 sm:py-10">
           <div className="mx-auto w-full max-w-[580px]">
-            {enviada ? (
-              <Recibida solicitud={enviada} />
+            {agendada ? (
+              <Agendada agendada={agendada} />
             ) : (
               <>
                 <Entra>
@@ -116,8 +114,8 @@ function Afiliacion() {
                 </h1>
                 <Entra retraso={260}>
                   <p className="portada-entrada mt-4 max-w-[46ch] text-portada-tinta-2">
-                    Son tres pasos cortos. Ten a mano tu cédula y el número de
-                    la cuenta donde quieres cobrar.
+                    Te enseñamos en tu consultorio a ofrecer pago en cuotas a
+                    tus pacientes. Déjanos tus datos y elige cuándo.
                   </p>
                   <ul
                     aria-label="Lo que recibes"
@@ -139,9 +137,19 @@ function Afiliacion() {
                   </ul>
                 </Entra>
                 <Entra retraso={360} className="mt-8">
-                  <FormularioDeAfiliacion hoy={hoy} alEnviar={setEnviada} />
+                  <FormularioDeCapacitacion origen="web" hoy={hoy} alEnviar={setAgendada} />
                 </Entra>
-                <p className="mt-6 text-center text-[0.92rem] text-portada-tinta-2">
+                <p className="mt-6 text-center text-[0.82rem] leading-relaxed text-portada-tinta-3">
+                  Al enviarlo aceptas que tratemos estos datos según nuestra{' '}
+                  <Link
+                    to="/legal/privacidad"
+                    className="font-medium text-portada-azul underline-offset-4 hover:underline"
+                  >
+                    política de privacidad
+                  </Link>
+                  .
+                </p>
+                <p className="mt-3 text-center text-[0.92rem] text-portada-tinta-2">
                   ¿Ya tienes cuenta?{' '}
                   <Link
                     to="/login"
@@ -264,8 +272,8 @@ function diaYHora(instante: string): string {
   return `${dia}, a las ${hora}`
 }
 
-/** La solicitud ya llegó: qué pasa ahora. */
-function Recibida({ solicitud }: { solicitud: SolicitudEnviada }) {
+/** La capacitación quedó anotada: qué pasa ahora. */
+function Agendada({ agendada }: { agendada: CapacitacionAgendada }) {
   return (
     <div role="status" className="portada-entra pt-4 sm:pt-10">
       <span
@@ -274,33 +282,25 @@ function Recibida({ solicitud }: { solicitud: SolicitudEnviada }) {
       >
         <CircleCheck className="size-7" />
       </span>
-      <Rotulo className="mt-8">Solicitud enviada</Rotulo>
+      <Rotulo className="mt-8">Capacitación agendada</Rotulo>
       <h1 className="portada-titular mt-5 !text-[clamp(2.2rem,1.5rem+2.4vw,3.4rem)] text-portada-tinta">
-        Recibimos tu{' '}
-        <em className="portada-serif portada-degradado pr-[0.06em]">
-          solicitud.
-        </em>
+        ¡Nos{' '}
+        <em className="portada-serif portada-degradado pr-[0.06em]">vemos!</em>
       </h1>
-      <p className="portada-entrada mt-5 max-w-[48ch] text-portada-tinta-2">
-        La revisamos y te escribimos a{' '}
-        <span className="break-all font-medium text-portada-tinta">
-          {solicitud.email}
-        </span>{' '}
-        o al{' '}
-        <span className="whitespace-nowrap font-medium text-portada-tinta">
-          {solicitud.phone}
-        </span>{' '}
-        para activar tu cuenta.
+      <p className="mt-5 max-w-[48ch] rounded-2xl border border-portada-linea bg-portada-niebla px-4 py-3.5 text-[0.95rem] leading-relaxed text-portada-tinta-2">
+        Anotamos tu capacitación presencial para el{' '}
+        <span className="font-medium text-portada-tinta">
+          {diaYHora(agendada.capacitacion)}
+        </span>
+        .
       </p>
-      {solicitud.capacitacion && (
-        <p className="mt-4 max-w-[48ch] rounded-2xl border border-portada-linea bg-portada-niebla px-4 py-3.5 text-[0.95rem] leading-relaxed text-portada-tinta-2">
-          Anotamos tu capacitación presencial para el{' '}
-          <span className="font-medium text-portada-tinta">
-            {diaYHora(solicitud.capacitacion)}
-          </span>
-          .
-        </p>
-      )}
+      <p className="portada-entrada mt-4 max-w-[48ch] text-portada-tinta-2">
+        Te escribimos al{' '}
+        <span className="whitespace-nowrap font-medium text-portada-tinta">
+          {agendada.phone}
+        </span>{' '}
+        para confirmarla.
+      </p>
       <div className="mt-9">
         <Boton to="/">Volver a la portada</Boton>
       </div>

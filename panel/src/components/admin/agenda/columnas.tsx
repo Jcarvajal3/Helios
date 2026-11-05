@@ -1,4 +1,4 @@
-import { QrCode } from 'lucide-react'
+import { Globe, QrCode } from 'lucide-react'
 
 import type { Column } from '@/components/DataTable'
 import { TelefonoConAcciones } from '@/components/admin/seguimiento/Contacto'
@@ -63,6 +63,13 @@ export function columnasDeLaAgenda(
         <div className="min-w-0">
           <p className="flex flex-wrap items-center gap-1.5 font-medium text-on-surface">
             {l.nombre}
+            {l.webEl && (
+              <span title={`Pidió su capacitación por la web el ${formatDateTime(l.webEl)}: va de primero.`}>
+                <Badge tone="success">
+                  <Globe size={12} aria-hidden /> Web
+                </Badge>
+              </span>
+            )}
             {l.qrEl && (
               <span title={`Pidió su capacitación por el QR el ${formatDateTime(l.qrEl)}: tiene prioridad.`}>
                 <Badge tone="brand">

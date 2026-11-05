@@ -6,6 +6,7 @@ import type { LucideIcon } from 'lucide-react'
 import {
   BadgeCheck,
   CalendarDays,
+  Globe,
   MessageCircle,
   Phone,
   Plus,
@@ -66,6 +67,7 @@ import {
   cuentaPorFase,
   delAlcance,
   filtrarAgenda,
+  estaCerrado,
   ordenarAgenda,
   pendienteDe,
 } from '@/features/admin/agenda/agenda'
@@ -91,6 +93,8 @@ type AgendaSearch = {
   visitas?: VerVisitas
   /** Solo los que llegaron por el QR (/agenda): tienen prioridad. */
   qr?: true
+  /** Solo los que llegaron por la web (/afiliacion): van de primeros. */
+  web?: true
 }
 
 export const Route = createFileRoute('/admin/agenda')({
@@ -108,6 +112,7 @@ export const Route = createFileRoute('/admin/agenda')({
       mes: mes ? `${mes.slice(0, 7)}-01` : undefined,
       visitas: unoDe(['agendadas', 'afiliados'] as const, search.visitas),
       qr: comoBooleano(search.qr),
+      web: comoBooleano(search.web),
     }
   },
 })
@@ -174,12 +179,25 @@ function AgendaPage(): JSX.Element {
   })
 
   const deQuien = useMemo(() => delAlcance(todos, alcance, yo), [todos, alcance, yo])
-  // «Llegaron por el QR» deja solo esos en las tres pestañas.
+  // «Llegaron por el QR» o «por la web» dejan solo esos en las tres pestañas.
   const delQueMira = useMemo(
-    () => (search.qr ? filtrarAgenda(deQuien, { soloQr: true }) : deQuien),
-    [deQuien, search.qr],
+    () => (search.qr || search.web ? filtrarAgenda(deQuien, { soloQr: search.qr, soloWeb: search.web }) : deQuien),
+    [deQuien, search.qr, search.web],
   )
   const conQr = useMemo(() => deQuien.filter((l) => l.qrEl !== null).length, [deQuien])
+  // De todo el equipo: nacen sin encargado y en Mis médicos no se verían. Por
+  // eso el filtro lleva a «Todos» y a Visita, donde caen al agendarse.
+  const conWeb = useMemo(() => todos.filter((l) => l.webEl !== null && !estaCerrado(l)).length, [todos])
+  // En Visita manda el calendario: la lista va encima para que no esperen su fecha.
+  const webPorAtender = useMemo(
+    () =>
+      ordenarAgenda(
+        filtrarAgenda(delQueMira, { fase: 'visita', estado: 'reunion', soloWeb: true }),
+        hoy,
+        ahora,
+      ),
+    [delQueMira, hoy, ahora],
+  )
   // Con algo escrito en el buscador se busca en toda la Agenda (las tres
   // fases, los afiliados y todo el equipo), no solo en lo que se está viendo:
   // quien busca a un médico no sabe en qué pestaña está ni quién lo lleva.
@@ -278,9 +296,26 @@ function AgendaPage(): JSX.Element {
           />
         </Filtro>
         <Filtro label="Prioridad">
-          <Chip selected={!!search.qr} onClick={() => cambiar({ qr: search.qr ? undefined : true })}>
-            <QrCode size={14} aria-hidden /> Llegaron por el QR ({conQr})
-          </Chip>
+          <span className="flex flex-wrap gap-1.5">
+            <Chip
+              selected={!!search.web}
+              onClick={() =>
+                cambiar(
+                  search.web
+                    ? { web: undefined }
+                    : { web: true, qr: undefined, de: 'todos', fase: 'visita', estado: undefined, q: undefined },
+                )
+              }
+            >
+              <Globe size={14} aria-hidden /> Llegaron por la web ({conWeb})
+            </Chip>
+            <Chip
+              selected={!!search.qr}
+              onClick={() => cambiar({ qr: search.qr ? undefined : true, web: undefined })}
+            >
+              <QrCode size={14} aria-hidden /> Llegaron por el QR ({conQr})
+            </Chip>
+          </span>
         </Filtro>
         <div className="ml-auto flex flex-wrap gap-2">
           {botonAsignar}
@@ -363,14 +398,18 @@ function AgendaPage(): JSX.Element {
         <EmptyState
           icon={fase === 'mensaje' ? <MessageCircle size={40} /> : <Phone size={40} />}
           title={
-            search.qr
+            search.web
+              ? `Nadie llegó por la web en ${ROTULO_FASE[fase].label}`
+              : search.qr
               ? `Nadie llegó por el QR en ${ROTULO_FASE[fase].label}`
               : search.estado
                 ? 'Nada en este estado'
                 : `Nada en ${ROTULO_FASE[fase].label}`
           }
           description={
-            search.qr
+            search.web
+              ? 'Los que piden su capacitación por la web suelen estar en Visita, con la cita ya agendada.'
+              : search.qr
               ? 'Los que piden su capacitación por el QR suelen estar en Visita, con la cita ya agendada.'
               : search.estado
               ? 'Prueba con otro estado.'
@@ -397,6 +436,20 @@ function AgendaPage(): JSX.Element {
           exportar={{ archivo: `agenda-${fase}` }}
           onRowClick={abrir}
         />
+      )}
+
+      {agenda.isSuccess && !buscando && fase === 'visita' && verVisitas === 'agendadas' && webPorAtender.length > 0 && (
+        <section className="mb-6 flex flex-col gap-3">
+          <h2 className="type-panel-label text-on-surface-variant">Llegaron por la web ({webPorAtender.length})</h2>
+          <DataTable
+            rows={webPorAtender}
+            rowKey={(l) => l.id}
+            columns={columnas}
+            noun={['médico', 'médicos']}
+            exportar={{ archivo: 'agenda-web' }}
+            onRowClick={abrir}
+          />
+        </section>
       )}
 
       {agenda.isSuccess && !buscando && delQueMira.length > 0 && fase === 'visita' && verVisitas === 'agendadas' && (

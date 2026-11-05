@@ -78,18 +78,22 @@ function erroresDe(d: Datos, hoy: string): Partial<Record<Campo, string>> {
 }
 
 /**
- * EL FORMULARIO DEL QR — un solo paso: nombre, teléfono, especialidad,
- * dirección del consultorio y el día y la hora de la capacitación
- * presencial. Va a `helios_agendar_capacitacion`, que lo deja en
- * Superadmin › Agenda como la visita del médico.
+ * EL FORMULARIO DE LA CAPACITACIÓN — un solo paso: nombre, teléfono,
+ * especialidad, dirección del consultorio y el día y la hora de la
+ * capacitación presencial. Va a `helios_agendar_capacitacion`, que lo deja en
+ * Superadmin › Agenda como la visita del médico. Lo usan `/agenda` (el QR) y
+ * `/afiliacion` (la web); `origen` le dice a la Agenda de cuál vino.
  *
  * Los errores salen como en la afiliación: el de un campo mal escrito al
  * dejarlo, el de uno vacío al pulsar el botón (y el foco va al primero).
  */
 export function FormularioDeCapacitacion({
+  origen,
   hoy,
   alEnviar,
 }: {
+  /** De qué página viene: `qr` (/agenda) o `web` (/afiliacion). */
+  origen: 'qr' | 'web'
   /** El día de Caracas, 'YYYY-MM-DD'. */
   hoy: string
   alEnviar: (agendada: CapacitacionAgendada) => void
@@ -143,6 +147,7 @@ export function FormularioDeCapacitacion({
         specialty: datos.especialidad.trim(),
         address: datos.direccion.trim(),
         training_at: instante,
+        origin: origen,
         sitio_web: sitioWeb,
       },
       {

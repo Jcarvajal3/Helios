@@ -250,6 +250,26 @@ console.log('\n── Los que llegaron por el QR ──────────�
   )
 }
 
+console.log('\n── Los que llegaron por la web ──────────────────────────────')
+{
+  const web = lead('web', { status: 'reunion', meeting_at: '2026-11-20T14:00:00Z', web_at: '2026-10-21T13:00:00Z' })
+  const conQr = lead('qr', { status: 'reunion', meeting_at: '2026-10-29T14:00:00Z', qr_at: '2026-10-21T13:00:00Z' })
+  const atrasado = lead('atrasado', { status: 'reunion', meeting_at: '2026-10-20T14:00:00Z' })
+  const cerrado = lead('cerrado', { status: 'descartado', web_at: '2026-10-21T13:00:00Z' })
+  igual('el tablero trae cuándo llegó por la web', web.webEl, '2026-10-21T13:00:00Z')
+  igual('uno de la web no cuenta como del QR', web.qrEl, null)
+  igual(
+    '«Llegaron por la web» deja solo esos',
+    filtrarAgenda([conQr, web, atrasado], { soloWeb: true }).map((l) => l.id),
+    ['web'],
+  )
+  igual(
+    'el de la web va primero, antes que lo atrasado y que el del QR; cerrado, al final',
+    ordenarAgenda([cerrado, conQr, atrasado, web], HOY, AHORA).map((l) => l.id),
+    ['web', 'atrasado', 'qr', 'cerrado'],
+  )
+}
+
 console.log('\n── De quién ─────────────────────────────────────────────────')
 {
   const mio = lead('mio', { assigned_to: 'yo', assigned_name: 'Ana' })

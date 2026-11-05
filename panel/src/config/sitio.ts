@@ -53,15 +53,15 @@ export const IMAGEN_COMPARTIR = {
 export const PAGINAS_PUBLICAS = {
   '/': { actualizada: '2026-10-30' },
   '/pacientes': { actualizada: '2026-10-30' },
-  '/medicos': { actualizada: '2026-10-30' },
+  '/medicos': { actualizada: '2026-11-05' },
   '/consulta-medica-en-cuotas': { actualizada: '2026-10-30' },
   '/odontologia-en-cuotas': { actualizada: '2026-10-30' },
   '/cosmetologia-en-cuotas': { actualizada: '2026-10-30' },
   // La lista de médicos cambia sola (superadmin › Directorio); la fecha es
   // la del texto y la estructura de la página.
   '/directorio': { actualizada: '2026-10-30' },
-  '/afiliacion': { actualizada: '2026-10-26' },
-  '/soporte': { actualizada: '2026-10-09' },
+  '/afiliacion': { actualizada: '2026-11-05' },
+  '/soporte': { actualizada: '2026-11-05' },
   '/legal/terminos': { actualizada: '2026-10-07' },
   '/legal/privacidad': { actualizada: '2026-10-07' },
 } as const satisfies Record<string, { actualizada: string }>

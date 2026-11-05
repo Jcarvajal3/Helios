@@ -313,6 +313,11 @@ export type Lead = {
    * que llegan por el QR tienen prioridad (20261102120000).
    */
   qrEl: string | null
+  /**
+   * Cuándo pidió su capacitación por la web (/afiliacion), o `null` si nunca.
+   * Van los primeros de la lista (20261105120000).
+   */
+  webEl: string | null
   clinicaId: string | null
   clinica: string | null
   /** Su clínica ya tiene sus accesos: es lo que lo deja afiliado. */
@@ -378,6 +383,7 @@ export function leerAgenda(raw: unknown): Lead[] {
       solicitudEstado: unoDe(ESTADOS_SOLICITUD, r.application_status) ?? null,
       capacitacion: textoONulo(r.application_training_at),
       qrEl: textoONulo(r.qr_at),
+      webEl: textoONulo(r.web_at),
       clinicaId: textoONulo(r.merchant_id),
       clinica: textoONulo(r.merchant_name),
       conAccesos: r.merchant_has_access === true,
@@ -529,9 +535,10 @@ const PUESTO: Record<Pendiente, number> = {
 }
 
 /**
- * El orden de trabajo: lo pendiente primero (lo atrasado, lo de hoy, los que
- * nadie ha llamado), después los abiertos por su próxima cita (visita o
- * llamada), y al final los cerrados, el más reciente primero.
+ * El orden de trabajo: los que llegaron por la web, y dentro de cada grupo lo
+ * pendiente primero (lo atrasado, lo de hoy, los que nadie ha llamado),
+ * después los abiertos por su próxima cita (visita o llamada), y al final los
+ * cerrados, el más reciente primero.
  */
 export function ordenarAgenda(leads: ReadonlyArray<Lead>, hoy: string, ahora: Date): Lead[] {
   const proxima = (l: Lead) => {
@@ -545,6 +552,10 @@ export function ordenarAgenda(leads: ReadonlyArray<Lead>, hoy: string, ahora: Da
     const cb = estaCerrado(b) ? 1 : 0
     if (ca !== cb) return ca - cb
     if (ca === 1) return b.creado.localeCompare(a.creado)
+    // Los que llegaron por la web van antes que todos los demás abiertos.
+    const wa = a.webEl ? 0 : 1
+    const wb = b.webEl ? 0 : 1
+    if (wa !== wb) return wa - wb
     const pa = pendienteDe(a, hoy, ahora)
     const pb = pendienteDe(b, hoy, ahora)
     const na = pa === null ? 9 : PUESTO[pa]
@@ -601,7 +612,8 @@ export function filtrarAgenda(
     fase,
     estado,
     soloQr = false,
-  }: { texto?: string; fase?: Fase; estado?: EstadoDelLead; soloQr?: boolean },
+    soloWeb = false,
+  }: { texto?: string; fase?: Fase; estado?: EstadoDelLead; soloQr?: boolean; soloWeb?: boolean },
 ): Lead[] {
   const aguja = sinTildes(buscado)
   const digitos = buscado.replace(/\D/g, '').replace(/^0/, '')
@@ -609,6 +621,7 @@ export function filtrarAgenda(
     if (fase && l.fase !== fase) return false
     if (estado && l.estado !== estado) return false
     if (soloQr && l.qrEl === null) return false
+    if (soloWeb && l.webEl === null) return false
     if (!aguja) return true
     const textos = [l.nombre, l.consultorio, l.especialidad, l.direccion]
     if (textos.some((t) => t !== null && sinTildes(t).includes(aguja))) return true

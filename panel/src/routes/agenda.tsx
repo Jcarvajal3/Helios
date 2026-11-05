@@ -85,7 +85,7 @@ function Agenda() {
                   </p>
                 </Entra>
                 <Entra retraso={360} className="mt-7">
-                  <FormularioDeCapacitacion hoy={hoy} alEnviar={setAgendada} />
+                  <FormularioDeCapacitacion origen="qr" hoy={hoy} alEnviar={setAgendada} />
                 </Entra>
                 <p className="mt-6 text-center text-[0.82rem] leading-relaxed text-portada-tinta-3">
                   Al enviarlo aceptas que tratemos estos datos según nuestra{' '}

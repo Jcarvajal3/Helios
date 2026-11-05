@@ -14,6 +14,9 @@
 --   4. El campo trampa no escribe nada.
 --   5. El tablero devuelve la capacitación en `application_training_at` y
 --      cuándo llegó por el QR en `qr_at`.
+--   6. Lo que llega de /afiliacion (`origin = 'web'`) nace con origen `web`, y
+--      el tablero lo devuelve en `web_at` y no en `qr_at`; un médico que ya
+--      estaba conserva su origen y queda marcado igual (20261105120000).
 --
 -- No manda nada: no llama a `helios_dispatch_*`.
 -- ============================================================================
@@ -30,6 +33,8 @@ declare
   v_lejos  timestamptz := ((public.helios_business_date(now()) + 91)::timestamp + time '09:00') at time zone 'America/Caracas';
   v_datos  jsonb;
   v_viejo  uuid;
+  v_web_nuevo uuid;
+  v_web_viejo uuid;
   v_lead   public.doctor_leads%rowtype;
   v_n      integer;
   v_fallo  boolean;
@@ -132,8 +137,50 @@ begin
     raise exception '5. el tablero no trae la capacitación: %', v_j;
   end if;
   -- Luis ya estaba en la agenda y llegó por el QR: el tablero lo dice (20261102120000).
-  if v_j->>'qr_at' is null then
+  if v_j->>'qr_at' is null or v_j->>'web_at' is not null then
     raise exception '5. el tablero no dice que Luis llegó por el QR: %', v_j;
+  end if;
+
+  -- =========================================================================
+  -- 6. Por la web (/afiliacion)
+  -- =========================================================================
+  insert into public.doctor_leads (name, phone, source, status)
+  values ('Marta Web Prueba', '+584147000904', 'referido', 'contactado')
+  returning id into v_web_viejo;
+
+  set local role anon;
+  perform set_config('request.jwt.claims', '{"role":"anon"}', true);
+  perform public.helios_agendar_capacitacion(v_datos || jsonb_build_object(
+    'name', 'Dra. Rosa Web Prueba', 'phone', '0414 700 0903', 'origin', 'web'));
+  perform public.helios_agendar_capacitacion(v_datos || jsonb_build_object(
+    'name', 'Marta Web Prueba', 'phone', '0414 700 0904', 'origin', 'web'));
+  reset role;
+
+  select * into v_lead from public.doctor_leads where phone = '+584147000903';
+  if v_lead.source <> 'web' or v_lead.training_requested_via <> 'web' or v_lead.status <> 'reunion' then
+    raise exception '6. Rosa quedó mal: %', row_to_json(v_lead);
+  end if;
+  v_web_nuevo := v_lead.id;
+  if not exists (select 1 from public.doctor_lead_activities
+                  where lead_id = v_web_nuevo and kind = 'creado'
+                    and note like 'Agendó su capacitación presencial desde la web%') then
+    raise exception '6. la historia de Rosa no dice que vino de la web';
+  end if;
+  select * into v_lead from public.doctor_leads where id = v_web_viejo;
+  if v_lead.source <> 'referido' or v_lead.training_requested_via <> 'web' then
+    raise exception '6. Marta quedó mal: %', row_to_json(v_lead);
+  end if;
+
+  set local role authenticated;
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', v_admin::text, 'role', 'authenticated', 'aal', 'aal2')::text, true);
+  select coalesce(jsonb_agg(e), '[]'::jsonb) into v_j from jsonb_array_elements(public.admin_doctor_leads()) e
+   where e->>'id' in (v_web_nuevo::text, v_web_viejo::text);
+  reset role;
+  if jsonb_array_length(v_j) <> 2 or exists (
+       select 1 from jsonb_array_elements(v_j) e
+        where e->>'web_at' is null or e->>'qr_at' is not null) then
+    raise exception '6. el tablero no los marca como web: %', v_j;
   end if;
 end;
 $$;

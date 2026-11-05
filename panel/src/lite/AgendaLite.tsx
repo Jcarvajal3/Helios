@@ -72,8 +72,9 @@ export function AgendaLite() {
           ? todos.filter((l) => l.responsableId === null && !terminado(l))
           : delAlcance(todos, vista === 'mios' ? 'mios' : 'todos', yo)
     const ordenadas = ordenarAgenda(filtrarAgenda(deLaVista, { texto }), hoy, ahora)
-    // Los que llegaron por el QR, primero: nos contactaron ellos.
-    return [...ordenadas].sort((a, b) => Number(b.qrEl !== null) - Number(a.qrEl !== null))
+    // Los que nos contactaron ellos, primero: por la web y luego por el QR.
+    const puesto = (l: (typeof ordenadas)[number]) => (l.webEl !== null ? 0 : l.qrEl !== null ? 1 : 2)
+    return [...ordenadas].sort((a, b) => puesto(a) - puesto(b))
   }, [todos, vista, texto, yo, hoy, ahora])
 
   const asignar = useMutation({
@@ -229,6 +230,11 @@ function FilaDeLaAgenda({ lead: l, ahora, onAbrir }: { lead: Lead; ahora: Date; 
           </span>
           <div>
             <strong>{l.nombre}</strong>
+            {l.webEl && (
+              <span className="lt-etiqueta" data-tono="verde" style={{ marginTop: 5 }}>
+                ★ Prioridad · Web · nos contactó
+              </span>
+            )}
             {l.qrEl && (
               <span className="lt-etiqueta" data-tono="verde" style={{ marginTop: 5 }}>
                 ★ Prioridad · QR · nos contactó
