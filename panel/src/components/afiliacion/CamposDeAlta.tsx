@@ -35,8 +35,9 @@ const NOMBRES_DE_LA_LISTA: ReadonlySet<string> = new Set(OPCIONES_ESPECIALIDAD.m
  *    quedará), «Cédula o RIF» (con un RIF de empresa se pide además su
  *    cédula), la especialidad de la lista del directorio y, opcionales, el
  *    Colegio y el MPPS.
- * 2. El consultorio: nombre, dirección, teléfono, correo y, opcional, la red
- *    social.
+ * 2. El consultorio: nombre, dirección, teléfono personal, teléfono de
+ *    contacto (opcional, el que sale en el directorio), correo y, opcional,
+ *    la red social.
  * 3. Dónde se le paga: a nombre de quién está la cuenta (del médico, o del
  *    consultorio u otra persona) y el número de cuenta, del que sale el
  *    banco. El equipo puede añadir además el Pago Móvil.
@@ -218,12 +219,22 @@ export function CamposDeAlta({
         />
         <Input
           id={`${id}-telefono`}
-          label="Teléfono"
+          label="Teléfono personal"
           value={valor.phone}
           onChange={campo('phone')}
           inputMode="tel"
           autoComplete="tel"
           placeholder="0414 1234567"
+        />
+        <Input
+          id={`${id}-telefono-contacto`}
+          label="Teléfono de contacto (opcional)"
+          value={valor.contactPhone}
+          onChange={campo('contactPhone')}
+          inputMode="tel"
+          autoComplete="off"
+          placeholder="0424 7654321"
+          hint="El que sale en su ficha del directorio. En blanco, sale el personal."
         />
         <Input
           id={`${id}-correo`}
@@ -233,6 +244,7 @@ export function CamposDeAlta({
           onChange={campo('email')}
           autoComplete="email"
           placeholder="consultorio@correo.com"
+          className="sm:col-span-2"
         />
         <Opcional abierto={conRed} onAbrir={() => setConRed(true)} texto="Añadir red social">
           <Select<RedSocial>

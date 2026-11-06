@@ -58,6 +58,7 @@ const alta: AltaDeClinica = {
   clinicName: 'Consultorio Demo',
   address: 'Av. Principal, piso 3',
   phone: '0212 555 12 34',
+  contactPhone: '',
   email: 'demo@consultorio.com',
   socialNetwork: '',
   socialUser: '',
@@ -69,6 +70,13 @@ const alta: AltaDeClinica = {
   pagoMovilPhone: '',
 }
 igual('un alta con transferencia pasa (sin RIF, Colegio ni MPPS)', motivoDeAlta(alta), null)
+igual('el teléfono de contacto es opcional', motivoDeAlta({ ...alta, contactPhone: '  ' }), null)
+igual('uno bueno pasa', motivoDeAlta({ ...alta, contactPhone: '0424 7654321' }), null)
+igual(
+  'uno que no parece venezolano no',
+  motivoDeAlta({ ...alta, contactPhone: '123' }),
+  'El teléfono de contacto no parece venezolano: 0212 5551234 o 0414 1234567.',
+)
 igual('y en la portada también', motivoDeAlta(alta, 'portada'), null)
 igual('sin nombre no', motivoDeAlta({ ...alta, ownerName: ' ' }), 'Falta el nombre completo.')
 igual(

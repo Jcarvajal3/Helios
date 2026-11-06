@@ -28,6 +28,8 @@ declare
   v_app2     uuid;
   v_merchant uuid;
   v_res      jsonb;
+  v_con_contacto uuid;
+  v_sin_contacto uuid;
   v_failed   boolean;
   v_m        public.merchants%rowtype;
   v_cuenta   public.merchant_payout_accounts%rowtype;
@@ -293,7 +295,29 @@ begin
   exception when invalid_parameter_value then v_failed := true;
   end;
   if not v_failed then raise exception 'Sin transferencia ni Pago Móvil no debía crearse'; end if;
+
+  -- El teléfono de contacto (20261106210000): valida, y manda en el directorio.
+  v_failed := false;
+  begin
+    perform public.admin_create_clinic(v_datos || '{"email":"mal.contacto@example.com","owner_document":"V11222335","contact_phone":"123"}');
+  exception when invalid_parameter_value then v_failed := true;
+  end;
+  if not v_failed then raise exception 'Aceptó un teléfono de contacto que no vale'; end if;
+  v_res := public.admin_create_clinic(v_datos || '{"email":"con.contacto@example.com","owner_document":"V11222336","phone":"0414 700 0905","contact_phone":"0424-700.0906"}');
+  v_con_contacto := (v_res->>'merchant_id')::uuid;
+  v_res := public.admin_create_clinic(v_datos || '{"email":"sin.contacto@example.com","owner_document":"V11222337","phone":"0414 700 0907","contact_phone":" "}');
+  v_sin_contacto := (v_res->>'merchant_id')::uuid;
   reset role;
+  if (select contact_phone from public.merchants where id = v_con_contacto) is distinct from '+584247000906' then
+    raise exception 'El alta no guardó el teléfono de contacto';
+  end if;
+  if (select f.whatsapp from public.helios_directorio_fichas() f where f.merchant_id = v_con_contacto) is distinct from '+584247000906' then
+    raise exception 'El directorio no enseña el teléfono de contacto';
+  end if;
+  if (select contact_phone from public.merchants where id = v_sin_contacto) is not null
+     or (select f.whatsapp from public.helios_directorio_fichas() f where f.merchant_id = v_sin_contacto) is distinct from '+584147000907' then
+    raise exception 'En blanco, el directorio debía enseñar el personal';
+  end if;
 
   -- --- 9. Corregir el titular ---------------------------------------------
   set local role authenticated;

@@ -286,8 +286,6 @@ export type Lead = {
   especialidad: string | null
   /** E.164. */
   telefono: string | null
-  /** E.164. El que pidió enseñar en el directorio; `null`: el personal. */
-  contacto: string | null
   direccion: string | null
   notas: string | null
   estado: EstadoDelLead
@@ -367,7 +365,6 @@ export function leerAgenda(raw: unknown): Lead[] {
       consultorio: textoONulo(r.clinic_name),
       especialidad: textoONulo(r.specialty),
       telefono: textoONulo(r.phone),
-      contacto: textoONulo(r.contact_phone),
       direccion: textoONulo(r.address),
       notas: textoONulo(r.notes),
       estado,

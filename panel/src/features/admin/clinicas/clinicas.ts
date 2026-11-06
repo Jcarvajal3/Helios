@@ -51,6 +51,8 @@ export type AltaDeClinica = {
   clinicName: string
   address: string
   phone: string
+  /** Opcional: el que sale en el directorio. En blanco, sale `phone`. */
+  contactPhone: string
   email: string
   socialNetwork: RedSocial | ''
   socialUser: string
@@ -186,6 +188,7 @@ export const ALTA_VACIA: AltaDeClinica = {
   clinicName: '',
   address: '',
   phone: '',
+  contactPhone: '',
   email: '',
   socialNetwork: '',
   socialUser: '',
@@ -252,6 +255,9 @@ export function motivoDeAlta(a: AltaDeClinica, modo: ModoDeAlta = 'equipo'): str
   if (a.clinicName.trim().length < 2) return 'Falta el nombre del consultorio o centro médico.'
   if (a.address.trim().length < 5) return 'Falta la dirección del consultorio.'
   if (!telefonoAE164(a.phone)) return 'El teléfono no parece venezolano: 0212 5551234 o 0414 1234567.'
+  if (a.contactPhone.trim() && !telefonoAE164(a.contactPhone)) {
+    return 'El teléfono de contacto no parece venezolano: 0212 5551234 o 0414 1234567.'
+  }
   if (!pareceCorreo(a.email)) return 'El correo no parece un correo.'
 
   const usuario = a.socialUser.trim()
@@ -303,9 +309,13 @@ export function datosDeAlta(a: AltaDeClinica, modo: ModoDeAlta = 'equipo'): Reco
     holder_document: documentoParaEnviar(a.holderDocument, LETRAS_TITULAR),
     bank: cuenta ? a.bank : '',
     account_number: cuenta,
-    // La portada no manda Pago Móvil (la base lo ignoraría igual).
+    // La portada no manda Pago Móvil ni teléfono de contacto: los pone el equipo.
     ...(modo === 'equipo'
-      ? { pago_movil_bank: pagoMovil ? a.pagoMovilBank : '', pago_movil_phone: a.pagoMovilPhone.trim() }
+      ? {
+          contact_phone: a.contactPhone.trim(),
+          pago_movil_bank: pagoMovil ? a.pagoMovilBank : '',
+          pago_movil_phone: a.pagoMovilPhone.trim(),
+        }
       : {}),
   }
 }
@@ -375,6 +385,8 @@ export function leerSolicitud(raw: unknown): SolicitudDeAfiliacion {
       address: t(r.address),
       // La base los guarda en E.164; el formulario los enseña como se escriben.
       phone: telefonoLocal(textoONulo(r.phone)),
+      // La solicitud no lo trae: lo añade el equipo al revisarla.
+      contactPhone: '',
       email: t(r.email),
       socialNetwork: comoRedSocial(t(r.social_network)),
       socialUser: t(r.social_user),

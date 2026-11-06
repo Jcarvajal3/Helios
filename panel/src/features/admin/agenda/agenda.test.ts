@@ -258,8 +258,6 @@ console.log('\n── Los que llegaron por la web ──────────
   const cerrado = lead('cerrado', { status: 'descartado', web_at: '2026-10-21T13:00:00Z' })
   igual('el tablero trae cuándo llegó por la web', web.webEl, '2026-10-21T13:00:00Z')
   igual('uno de la web no cuenta como del QR', web.qrEl, null)
-  igual('el tablero trae el teléfono de contacto', lead('c', { contact_phone: '+584247000906' }).contacto, '+584247000906')
-  igual('sin teléfono de contacto queda vacío', web.contacto, null)
   igual(
     '«Llegaron por la web» deja solo esos',
     filtrarAgenda([conQr, web, atrasado], { soloWeb: true }).map((l) => l.id),

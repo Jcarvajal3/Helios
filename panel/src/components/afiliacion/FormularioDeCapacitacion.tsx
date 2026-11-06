@@ -24,8 +24,6 @@ export type CapacitacionAgendada = {
 type Datos = {
   nombre: string
   telefono: string
-  /** Opcional: el que sale en el directorio. En blanco, sale `telefono`. */
-  contacto: string
   especialidad: string
   direccion: string
   dia: string
@@ -37,7 +35,6 @@ type Campo = keyof Datos
 const VACIO: Datos = {
   nombre: '',
   telefono: '',
-  contacto: '',
   especialidad: '',
   direccion: '',
   dia: '',
@@ -47,7 +44,6 @@ const VACIO: Datos = {
 const ORDEN: readonly Campo[] = [
   'nombre',
   'telefono',
-  'contacto',
   'especialidad',
   'direccion',
   'dia',
@@ -65,8 +61,6 @@ function erroresDe(d: Datos, hoy: string): Partial<Record<Campo, string>> {
   if (!d.telefono.trim()) e.telefono = 'Escribe tu teléfono.'
   else if (!telefonoAE164(d.telefono))
     e.telefono = 'No parece venezolano: 0414 1234567 o 0212 5551234.'
-  if (d.contacto.trim() && !telefonoAE164(d.contacto))
-    e.contacto = 'No parece venezolano: 0414 1234567 o 0212 5551234.'
   if (!d.especialidad.trim()) e.especialidad = 'Escribe tu especialidad.'
   else if (d.especialidad.trim().length > 80)
     e.especialidad = 'La especialidad es demasiado larga.'
@@ -84,8 +78,7 @@ function erroresDe(d: Datos, hoy: string): Partial<Record<Campo, string>> {
 }
 
 /**
- * EL FORMULARIO DE LA CAPACITACIÓN — un solo paso: nombre, teléfono personal,
- * teléfono de contacto (opcional, el que sale en el directorio),
+ * EL FORMULARIO DE LA CAPACITACIÓN — un solo paso: nombre, teléfono,
  * especialidad, dirección del consultorio y el día y la hora de la
  * capacitación presencial. Va a `helios_agendar_capacitacion`, que lo deja en
  * Superadmin › Agenda como la visita del médico. Lo usan `/agenda` (el QR) y
@@ -151,7 +144,6 @@ export function FormularioDeCapacitacion({
       {
         name: datos.nombre.trim(),
         phone: telefonoAE164(datos.telefono),
-        contact_phone: datos.contacto.trim() ? telefonoAE164(datos.contacto) : null,
         specialty: datos.especialidad.trim(),
         address: datos.direccion.trim(),
         training_at: instante,
@@ -182,7 +174,7 @@ export function FormularioDeCapacitacion({
         />
         <CampoDeTexto
           id={idDe('telefono')}
-          etiqueta="Teléfono personal"
+          etiqueta="Teléfono"
           type="tel"
           value={datos.telefono}
           onChange={campo('telefono')}
@@ -192,21 +184,6 @@ export function FormularioDeCapacitacion({
           autoComplete="tel"
           enterKeyHint="next"
           placeholder="0414 1234567"
-        />
-        <CampoDeTexto
-          id={idDe('contacto')}
-          etiqueta="Teléfono de contacto"
-          opcional
-          ayuda="El que verán tus pacientes en el directorio de Helios. Si lo dejas en blanco, usamos tu teléfono personal."
-          type="tel"
-          value={datos.contacto}
-          onChange={campo('contacto')}
-          alSalir={tocar('contacto')}
-          error={error('contacto')}
-          inputMode="tel"
-          autoComplete="off"
-          enterKeyHint="next"
-          placeholder="0424 7654321"
         />
         {/* El mismo desplegable con buscador e iconos que el alta (/afiliacion):
             la lista cerrada del directorio, con «Otras especialidades» para

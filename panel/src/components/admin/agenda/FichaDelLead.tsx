@@ -451,12 +451,6 @@ function Contacto({ lead }: { lead: Lead }) {
         </div>
       )}
       {lead.direccion && <p className="type-panel-caption text-on-surface-variant">{lead.direccion}</p>}
-      {lead.contacto && (
-        <p className="type-panel-caption text-on-surface-variant">
-          Teléfono de contacto para el directorio:{' '}
-          <span className="tabular-nums text-on-surface">{formatPhone(lead.contacto)}</span>
-        </p>
-      )}
       {lead.notas && (
         <p className="whitespace-pre-line rounded-panel-control bg-panel-raised px-3 py-2 type-panel-body text-on-surface">
           {lead.notas}
