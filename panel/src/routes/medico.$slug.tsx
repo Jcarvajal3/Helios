@@ -1,5 +1,5 @@
 import { createFileRoute, Link, notFound } from '@tanstack/react-router'
-import { ArrowUpRight, AtSign, MapPin } from 'lucide-react'
+import { ArrowUpRight, AtSign, MapPin, Tag } from 'lucide-react'
 
 import { IconoDeEspecialidad } from '@/components/directorio/IconoDeEspecialidad'
 import { NoEncontrada, PAGINA_NO_ENCONTRADA } from '@/components/directorio/NoEncontrada'
@@ -20,6 +20,7 @@ import {
   especialidadDeTarjeta,
   lugarDeTarjeta,
   medicoEnSchema,
+  precioDeTarjeta,
 } from '@/features/directorio/directorio'
 import type { MedicoDelDirectorio } from '@/features/directorio/directorio'
 import { nombreDeEspecialidad } from '@/features/directorio/especialidades'
@@ -38,12 +39,13 @@ import {
  *
  * Una página por médico publicado en el directorio, armada sola desde la
  * base: su nombre, su especialidad, dónde atiende (con un enlace que busca
- * esa dirección en Google Maps, tal cual la escribió él), su red social y el
- * botón para agendar por WhatsApp, que es el mismo de su tarjeta (pasa por
- * el WhatsApp de Helios con su código y apunta el clic con su origen).
+ * esa dirección en Google Maps, tal cual la escribió él), su red social, el
+ * precio de su consulta (si lo tiene) y el botón para agendar por WhatsApp,
+ * que es el mismo de su tarjeta (pasa por el WhatsApp de Helios con su código
+ * y apunta el clic con su origen).
  *
- * Solo dice lo que el directorio sabe: nada de horarios, precios, estudios
- * ni opiniones que no tengamos. Un médico que deja de salir es 404.
+ * Solo dice lo que el directorio sabe: nada de horarios, estudios ni opiniones
+ * que no tengamos. Un médico que deja de salir es 404.
  *
  * Abajo, cómo se paga y otros médicos de la misma especialidad (enlazado
  * interno: así Google llega de una ficha a otra).
@@ -100,6 +102,7 @@ function Cabecera({ medico: m, whatsappHelios }: { medico: MedicoDelDirectorio; 
   const lugar = lugarDeTarjeta(m)
   const mapa = enlaceDeMapa(m)
   const red = enlaceDeRed(m)
+  const precio = precioDeTarjeta(m)
   const chat = enlaceDeWhatsApp(m, whatsappHelios)
 
   return (
@@ -128,7 +131,7 @@ function Cabecera({ medico: m, whatsappHelios }: { medico: MedicoDelDirectorio; 
             </h1>
             <p className="mt-3 text-[1.1rem] leading-snug text-portada-azul">{especialidad}</p>
 
-            {(lugar || red) && (
+            {(lugar || red || precio) && (
               <div className="mt-6 flex flex-col gap-2.5 text-[0.98rem] leading-snug text-portada-tinta-2">
                 {lugar && (
                   <p className="flex gap-2.5">
@@ -163,6 +166,14 @@ function Cabecera({ medico: m, whatsappHelios }: { medico: MedicoDelDirectorio; 
                       <span className="font-medium text-portada-tinta">{red.texto}</span>
                       <span className="text-portada-tinta-3"> · {red.red}</span>
                     </a>
+                  </p>
+                )}
+                {precio && (
+                  <p className="flex gap-2.5">
+                    <Tag aria-hidden className="mt-[0.2em] size-4 shrink-0 text-portada-tinta-3" />
+                    <span>
+                      Consulta <span className="font-medium tabular-nums text-portada-tinta">{precio}</span>
+                    </span>
                   </p>
                 )}
               </div>

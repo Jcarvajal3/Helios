@@ -1384,15 +1384,14 @@ Suite: `supabase/tests/rol_del_equipo_smoke.sql`.
   diferencia de los demás datos de la tarjeta (§2.11) no tiene valor en la
   ficha de la clínica: null = la tarjeta no enseña precio.
 - `helios_directorio()` y `helios_directorio_medico(p_slug)` añaden la columna
-  `consultation_price_usd`. La ficha pública `/medico/<slug>` la recibe, pero
-  por ahora no la enseña.
+  `consultation_price_usd`.
 - `admin_directorio()` la trae en `listing`; `base` no la lleva.
 - `admin_directorio_guardar` acepta `consultation_price_usd` (texto o número,
   con hasta dos decimales y punto decimal). Vacío la borra. `22023` si no es un
   monto de 1 a 10.000.
 
-La tarjeta lo enseña como «Consulta $40», al estilo de aquí y sin céntimos si
-no los tiene (`precioDeTarjeta`). Suite: `supabase/tests/directorio_smoke.sql`,
+La tarjeta y la ficha pública `/medico/<slug>` lo enseñan como «Consulta $40»,
+al estilo de aquí y sin céntimos si no los tiene (`precioDeTarjeta`). Suite: `supabase/tests/directorio_smoke.sql`,
 paso 9.
 
 ---
