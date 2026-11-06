@@ -23,7 +23,9 @@ import {
   lugarDeTarjeta,
   mensajeAHelios,
   precioDeTarjeta,
+  tramosConMedicos,
 } from './directorio'
+import type { ClaveDeTramo } from './directorio'
 import { CLAVES_DE_ESPECIALIDAD, ESPECIALIDADES, leerEspecialidad } from './especialidades'
 import {
   borradorDe,
@@ -382,6 +384,23 @@ comprueba(
   datosDelBorrador({ ...b, red: 'tiktok', usuarioDeRed: 'draperez' }, m1.ficha).red === 'tiktok',
   'la vista previa enseña la red del borrador',
 )
+
+console.log('── El filtro de precio ───────────────────────────────────────')
+{
+  const base = comoTarjetaPublica('m1', m1.tarjeta)
+  const con = (id: string, precio: number | null) => ({ ...base, id, precio })
+  const lista = [con('a', 30), con('b', 50), con('c', 50.5), con('d', 100), con('e', 130), con('f', null)]
+  const delTramo = (precio: ClaveDeTramo) => filtrarDirectorio(lista, { precio }).map((m) => m.id).join('')
+  comprueba(delTramo('hasta-50') === 'ab', 'hasta $50 incluye el límite', delTramo('hasta-50'))
+  comprueba(delTramo('50-a-100') === 'cd', 'de $50 a $100, sin el $50 y con el $100', delTramo('50-a-100'))
+  comprueba(delTramo('mas-de-100') === 'e', 'más de $100', delTramo('mas-de-100'))
+  comprueba(filtrarDirectorio(lista, {}).length === 6, 'sin tramo salen todos, también el que no publica precio')
+  comprueba(
+    tramosConMedicos([con('a', 30), con('f', null)]).join() === 'hasta-50',
+    'solo se ofrecen los tramos con médicos',
+  )
+  comprueba(tramosConMedicos([con('f', null)]).length === 0, 'sin precios no hay filtro')
+}
 
 console.log('── El precio de la consulta ──────────────────────────────────')
 comprueba(b.precio === '', 'sin precio, el campo arranca vacío', b)

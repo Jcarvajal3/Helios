@@ -1,0 +1,597 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>Iconos 3D</title>
+<style>
+  body { margin: 0; padding: 16px; background: #f4f7fb; font: 13px system-ui; color: #102746; }
+  #hoja { display: grid; grid-template-columns: repeat(6, 150px); gap: 12px; }
+  figure { margin: 0; text-align: center; }
+  figure img { width: 150px; height: 150px; display: block; background: linear-gradient(150deg, #fff, #e8f1fd); border-radius: 28px; }
+  #estado { margin: 0 0 12px; }
+</style>
+<script type="importmap">
+  { "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+  } }
+</script>
+</head>
+<body>
+<p id="estado">Modelando…</p>
+<button id="guardar" type="button" disabled>Guardar</button>
+<div id="hoja"></div>
+<script type="module">
+import * as THREE from 'three'
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
+import { toCreasedNormals } from 'three/addons/utils/BufferGeometryUtils.js'
+
+// ── La escena: la misma luz y la misma cámara para todos ─────────────────────
+const TAM_RENDER = 768
+const TAM_FINAL = 192
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true })
+renderer.setSize(TAM_RENDER, TAM_RENDER, false)
+renderer.setClearColor(0x000000, 0)
+renderer.toneMapping = THREE.NeutralToneMapping
+renderer.toneMappingExposure = 1.05
+renderer.shadowMap.enabled = true
+renderer.shadowMap.type = THREE.PCFSoftShadowMap
+
+const escena = new THREE.Scene()
+escena.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture
+escena.environmentIntensity = 0.75
+
+const camara = new THREE.PerspectiveCamera(22, 1, 0.1, 50)
+camara.position.set(0, 0, 8.6)
+
+const sol = new THREE.DirectionalLight(0xffffff, 1.7)
+sol.position.set(-2.6, 4, 5)
+sol.castShadow = true
+sol.shadow.mapSize.set(2048, 2048)
+sol.shadow.radius = 9
+sol.shadow.bias = -0.0006
+sol.shadow.normalBias = 0.02
+Object.assign(sol.shadow.camera, { left: -2.2, right: 2.2, top: 2.2, bottom: -2.2, near: 0.5, far: 14 })
+escena.add(sol)
+const contra = new THREE.DirectionalLight(0xbcd8ff, 0.8)
+contra.position.set(4, -1.5, 2)
+escena.add(contra)
+
+// ── Las piezas ───────────────────────────────────────────────────────────────
+const arcilla = (color, extra = {}) =>
+  new THREE.MeshPhysicalMaterial({ color, roughness: 0.42, metalness: 0, clearcoat: 0.55, clearcoatRoughness: 0.38, ...extra })
+const metal = (color = 0xd7dfea) => new THREE.MeshStandardMaterial({ color, roughness: 0.28, metalness: 0.85 })
+
+function malla(g, m) {
+  const o = new THREE.Mesh(g, m)
+  o.castShadow = true
+  o.receiveShadow = true
+  return o
+}
+
+/** Una silueta inflada: los bordes redondos, como una almohada. */
+function inflado(dibujo, color, { prof = 0.18, bisel = 0.2, material } = {}) {
+  const forma = new THREE.Shape()
+  dibujo(forma)
+  let g = new THREE.ExtrudeGeometry(forma, {
+    depth: prof,
+    bevelEnabled: true,
+    bevelThickness: bisel,
+    bevelSize: bisel,
+    bevelOffset: -bisel,
+    bevelSegments: 20,
+    curveSegments: 56,
+  })
+  g.translate(0, 0, -prof / 2)
+  g = toCreasedNormals(g, 0.75)
+  return malla(g, material ?? arcilla(color))
+}
+
+function tubo(puntos, radio, material) {
+  const curva = new THREE.CatmullRomCurve3(puntos.map(([x, y, z = 0]) => new THREE.Vector3(x, y, z)))
+  const g = new THREE.Group()
+  g.add(malla(new THREE.TubeGeometry(curva, 96, radio, 24), material))
+  for (const p of [curva.getPoint(0), curva.getPoint(1)]) {
+    const tapa = malla(new THREE.SphereGeometry(radio, 24, 18), material)
+    tapa.position.copy(p)
+    g.add(tapa)
+  }
+  return g
+}
+
+function capsula(radio, largo, material, [x, y, z = 0] = [0, 0, 0], giro = 0) {
+  const o = malla(new THREE.CapsuleGeometry(radio, largo, 16, 32), material)
+  o.position.set(x, y, z)
+  o.rotation.z = giro
+  return o
+}
+
+function bola(radio, material, [x, y, z = 0], escala = [1, 1, 1]) {
+  const o = malla(new THREE.SphereGeometry(radio, 48, 36), material)
+  o.position.set(x, y, z)
+  o.scale.set(...escala)
+  return o
+}
+
+function torno(puntos, material, [x, y, z = 0] = [0, 0, 0]) {
+  const curva = new THREE.SplineCurve(puntos.map(([a, b]) => new THREE.Vector2(a, b)))
+  const o = malla(new THREE.LatheGeometry(curva.getPoints(80), 72), material)
+  o.position.set(x, y, z)
+  return o
+}
+
+function aro(radio, grueso, material, [x, y, z = 0] = [0, 0, 0]) {
+  const o = malla(new THREE.TorusGeometry(radio, grueso, 28, 80), material)
+  o.position.set(x, y, z)
+  return o
+}
+
+const dibujoCorazon = (s) => {
+  s.moveTo(0, -1)
+  s.bezierCurveTo(-0.35, -0.68, -1.05, -0.2, -1.05, 0.38)
+  s.bezierCurveTo(-1.05, 0.82, -0.72, 1.02, -0.44, 1.02)
+  s.bezierCurveTo(-0.22, 1.02, -0.07, 0.9, 0, 0.72)
+  s.bezierCurveTo(0.07, 0.9, 0.22, 1.02, 0.44, 1.02)
+  s.bezierCurveTo(0.72, 1.02, 1.05, 0.82, 1.05, 0.38)
+  s.bezierCurveTo(1.05, -0.2, 0.35, -0.68, 0, -1)
+}
+
+const estrella = (r, n = 0.12) => (s) => {
+  s.moveTo(0, r)
+  s.quadraticCurveTo(r * n, r * n, r, 0)
+  s.quadraticCurveTo(r * n, -r * n, 0, -r)
+  s.quadraticCurveTo(-r * n, -r * n, -r, 0)
+  s.quadraticCurveTo(-r * n, r * n, 0, r)
+}
+
+function chispa(r, color, [x, y, z]) {
+  const o = inflado(estrella(r), color, { prof: 0.01, bisel: r * 0.09 })
+  o.position.set(x, y, z)
+  return o
+}
+
+const rectRedondo = (x, y, an, al, r) => (s) => {
+  s.moveTo(x + r, y)
+  s.lineTo(x + an - r, y)
+  s.quadraticCurveTo(x + an, y, x + an, y + r)
+  s.lineTo(x + an, y + al - r)
+  s.quadraticCurveTo(x + an, y + al, x + an - r, y + al)
+  s.lineTo(x + r, y + al)
+  s.quadraticCurveTo(x, y + al, x, y + al - r)
+  s.lineTo(x, y + r)
+  s.quadraticCurveTo(x, y, x + r, y)
+}
+
+const dibujoCruz = (a, b) => (s) => {
+  // a: medio largo de un brazo; b: medio ancho.
+  const r = b * 0.45
+  const puntos = [[-b, a], [b, a], [b, b], [a, b], [a, -b], [b, -b], [b, -a], [-b, -a], [-b, -b], [-a, -b], [-a, b], [-b, b]]
+  const salientes = new Set([0, 1, 3, 4, 6, 7, 9, 10])
+  const n = puntos.length
+  puntos.forEach(([px, py], i) => {
+    const [ax, ay] = puntos[(i + n - 1) % n]
+    const [sx, sy] = puntos[(i + 1) % n]
+    const hacia = (qx, qy, d) => {
+      const l = Math.hypot(qx - px, qy - py)
+      return [px + ((qx - px) / l) * d, py + ((qy - py) / l) * d]
+    }
+    const d = salientes.has(i) ? r : r * 0.6
+    const [ex, ey] = hacia(ax, ay, d)
+    const [fx, fy] = hacia(sx, sy, d)
+    if (i === 0) s.moveTo(ex, ey)
+    else s.lineTo(ex, ey)
+    s.quadraticCurveTo(px, py, fx, fy)
+  })
+  s.closePath()
+}
+
+// ── Los iconos ───────────────────────────────────────────────────────────────
+const ICONOS = {
+  // Un diente de almohada y su destello.
+  odontologia() {
+    const g = new THREE.Group()
+    g.add(
+      inflado(
+        (s) => {
+          s.moveTo(0, 0.66)
+          s.bezierCurveTo(-0.26, 0.92, -0.98, 1.08, -1, 0.34)
+          s.bezierCurveTo(-1.01, -0.12, -0.72, -0.32, -0.66, -0.74)
+          s.bezierCurveTo(-0.6, -1.12, -0.32, -1.16, -0.24, -0.84)
+          s.bezierCurveTo(-0.18, -0.55, -0.12, -0.3, 0, -0.3)
+          s.bezierCurveTo(0.12, -0.3, 0.18, -0.55, 0.24, -0.84)
+          s.bezierCurveTo(0.32, -1.16, 0.6, -1.12, 0.66, -0.74)
+          s.bezierCurveTo(0.72, -0.32, 1.01, -0.12, 1, 0.34)
+          s.bezierCurveTo(0.98, 1.08, 0.26, 0.92, 0, 0.66)
+        },
+        0xf3eddc,
+        { prof: 0.3, bisel: 0.3 },
+      ),
+    )
+    g.add(chispa(0.34, 0x2b9bf4, [1.02, 1.04, 0.3]))
+    return g
+  },
+
+  // El símbolo, en fucsia con el aro más grueso.
+  ginecologia() {
+    const m = arcilla(0xd6479b)
+    const g = new THREE.Group()
+    g.add(aro(0.56, 0.2, m, [0, 0.44]))
+    g.add(capsula(0.2, 0.86, m, [0, -0.62]))
+    g.add(capsula(0.18, 0.62, m, [0, -0.66], Math.PI / 2))
+    return g
+  },
+
+  // Un hueso con su vendaje.
+  traumatologia() {
+    const m = arcilla(0xf6efdf)
+    const g = new THREE.Group()
+    const hueso = new THREE.Group()
+    hueso.add(capsula(0.36, 1.1, m))
+    for (const [x, y] of [[-0.32, 0.78], [0.32, 0.78], [-0.32, -0.78], [0.32, -0.78]]) hueso.add(bola(0.44, m, [x, y]))
+    const venda = arcilla(0x2f7ff0)
+    for (const y of [-0.17, 0.17]) {
+      const v = malla(new THREE.CylinderGeometry(0.42, 0.42, 0.28, 48), venda)
+      v.position.y = y
+      hueso.add(v)
+    }
+    hueso.rotation.z = -Math.PI / 4
+    g.add(hueso)
+    return g
+  },
+
+  // Una lupa sobre la piel.
+  dermatologia() {
+    const g = new THREE.Group()
+    const borde = arcilla(0x2467d8)
+    g.add(aro(0.72, 0.16, borde, [-0.2, 0.26]))
+    const piel = malla(new THREE.CylinderGeometry(0.72, 0.72, 0.16, 72), arcilla(0xf7c7a8))
+    piel.rotation.x = Math.PI / 2
+    piel.position.set(-0.2, 0.26, -0.02)
+    g.add(piel)
+    g.add(bola(0.13, arcilla(0xa8623f), [-0.42, 0.5, 0.08], [1, 1, 0.5]))
+    g.add(bola(0.09, arcilla(0xa8623f), [0.08, 0.12, 0.08], [1, 1, 0.5]))
+    g.add(bola(0.07, arcilla(0xa8623f), [-0.32, 0.0, 0.08], [1, 1, 0.5]))
+    g.add(capsula(0.17, 0.72, arcilla(0x123a86), [0.72, -0.72], Math.PI / 4))
+    return g
+  },
+
+  // Una historia clínica con su cruz.
+  medicina_interna() {
+    const g = new THREE.Group()
+    g.add(inflado(rectRedondo(-0.8, -1.05, 1.6, 2.0, 0.26), 0x3f8df5, { prof: 0.08, bisel: 0.1 }))
+    const hoja = inflado(rectRedondo(-0.62, -0.88, 1.24, 1.62, 0.14), 0xffffff, { prof: 0.02, bisel: 0.05 })
+    hoja.position.z = 0.1
+    g.add(hoja)
+    const clip = inflado(rectRedondo(-0.36, 0.76, 0.72, 0.36, 0.14), 0x173f8f, { prof: 0.08, bisel: 0.07 })
+    clip.position.z = 0.17
+    g.add(clip)
+    const cruz = inflado(dibujoCruz(0.28, 0.1), 0xf0475d, { prof: 0.03, bisel: 0.05 })
+    cruz.position.set(0, 0.24, 0.18)
+    g.add(cruz)
+    const linea = arcilla(0xb9cbe6)
+    g.add(capsula(0.045, 0.66, linea, [0, -0.3, 0.18], Math.PI / 2))
+    g.add(capsula(0.045, 0.66, linea, [0, -0.54, 0.18], Math.PI / 2))
+    return g
+  },
+
+  // Un corazón liso, con el pulso encima.
+  cardiologia() {
+    const g = new THREE.Group()
+    g.add(inflado(dibujoCorazon, 0xee3f56, { prof: 0.3, bisel: 0.32 }))
+    g.add(
+      tubo(
+        [[-0.78, 0.18, 0.46], [-0.34, 0.18, 0.5], [-0.16, 0.56, 0.52], [0.08, -0.26, 0.52], [0.26, 0.18, 0.5], [0.78, 0.18, 0.46]],
+        0.055,
+        arcilla(0xffffff),
+      ),
+    )
+    return g
+  },
+
+  // La jeringa en diagonal, con el líquido turquesa.
+  vacunacion() {
+    const g = new THREE.Group()
+    const j = new THREE.Group()
+    const blanco = arcilla(0xf4f8fd)
+    const azul = arcilla(0x1fb6c9)
+    j.add(torno([[0, -0.72], [0.3, -0.72], [0.36, -0.66], [0.36, 0.72], [0.3, 0.76], [0, 0.76]], blanco))
+    const liquido = malla(new THREE.CylinderGeometry(0.375, 0.375, 0.74, 56), azul)
+    liquido.position.y = -0.28
+    j.add(liquido)
+    const cuello = malla(new THREE.CylinderGeometry(0.18, 0.3, 0.2, 40), blanco)
+    cuello.position.y = -0.82
+    j.add(cuello)
+    const aguja = malla(new THREE.CylinderGeometry(0.03, 0.03, 0.62, 16), metal())
+    aguja.position.y = -1.2
+    j.add(aguja)
+    const ala = malla(new THREE.CylinderGeometry(0.56, 0.56, 0.09, 56), arcilla(0x1f5fd0))
+    ala.position.y = 0.78
+    j.add(ala)
+    const vastago = malla(new THREE.CylinderGeometry(0.1, 0.1, 0.56, 24), blanco)
+    vastago.position.y = 1.08
+    j.add(vastago)
+    const tope = malla(new THREE.CylinderGeometry(0.34, 0.34, 0.1, 48), arcilla(0x1f5fd0))
+    tope.position.y = 1.38
+    j.add(tope)
+    j.rotation.z = -Math.PI / 4
+    j.position.set(0.02, -0.02, 0)
+    g.add(j)
+    return g
+  },
+
+  // Dos que conversan, con un corazón en medio.
+  psicologia() {
+    const g = new THREE.Group()
+    const atras = inflado(
+      (s) => {
+        rectRedondo(-0.25, -0.16, 1.3, 1.1, 0.42)(s)
+      },
+      0xa28bf0,
+      { prof: 0.1, bisel: 0.14 },
+    )
+    atras.position.set(-0.02, 0.1, -0.22)
+    g.add(atras)
+    const delante = inflado(
+      (s) => {
+        const [x, y, an, al, r] = [-1.05, -0.62, 1.5, 1.14, 0.42]
+        s.moveTo(x + r, y)
+        s.quadraticCurveTo(x + 0.34, y - 0.2, x + 0.14, y - 0.38)
+        s.quadraticCurveTo(x + 0.56, y - 0.34, x + 0.8, y)
+        s.lineTo(x + an - r, y)
+        s.quadraticCurveTo(x + an, y, x + an, y + r)
+        s.lineTo(x + an, y + al - r)
+        s.quadraticCurveTo(x + an, y + al, x + an - r, y + al)
+        s.lineTo(x + r, y + al)
+        s.quadraticCurveTo(x, y + al, x, y + al - r)
+        s.lineTo(x, y + r)
+        s.quadraticCurveTo(x, y, x + r, y)
+      },
+      0x2f7ff0,
+      { prof: 0.12, bisel: 0.14 },
+    )
+    g.add(delante)
+    const corazon = inflado(dibujoCorazon, 0xffffff, { prof: 0.03, bisel: 0.09 })
+    corazon.scale.setScalar(0.3)
+    corazon.position.set(-0.3, -0.05, 0.22)
+    g.add(corazon)
+    return g
+  },
+
+  // El ojo: párpado azul, blanco e iris.
+  oftalmologia() {
+    const g = new THREE.Group()
+    const almendra = (a, b) => (s) => {
+      s.moveTo(-a, 0)
+      s.bezierCurveTo(-a * 0.5, b * 1.3, a * 0.5, b * 1.3, a, 0)
+      s.bezierCurveTo(a * 0.5, -b * 1.3, -a * 0.5, -b * 1.3, -a, 0)
+    }
+    g.add(inflado(almendra(1.16, 0.76), 0x2f7ff0, { prof: 0.1, bisel: 0.16 }))
+    const blanco = inflado(almendra(0.94, 0.56), 0xffffff, { prof: 0.04, bisel: 0.1 })
+    blanco.position.z = 0.12
+    g.add(blanco)
+    g.add(bola(0.42, arcilla(0x16a3b8), [0, 0, 0.24], [1, 1, 0.42]))
+    g.add(bola(0.21, arcilla(0x0b1a3a), [0, 0, 0.4], [1, 1, 0.35]))
+    g.add(bola(0.075, arcilla(0xffffff), [-0.12, 0.13, 0.48], [1, 1, 0.5]))
+    return g
+  },
+
+  // Una manzana verde.
+  nutricion() {
+    const g = new THREE.Group()
+    const puntos = []
+    for (let i = 0; i <= 40; i++) {
+      const t = (i / 40) * Math.PI
+      const r = Math.sin(t) * (0.98 + 0.12 * Math.cos(t))
+      const y = Math.cos(t) * 0.92 - 0.26 * Math.exp(-((t * 2.1) ** 2)) + 0.2 * Math.exp(-(((Math.PI - t) * 2.2) ** 2))
+      puntos.push([Math.max(r, 0.0001), y])
+    }
+    const fruta = torno(puntos, arcilla(0x6cc644), [0, -0.14])
+    g.add(fruta)
+    g.add(tubo([[0, 0.5], [0.02, 0.8], [0.12, 1.02]], 0.05, arcilla(0x7a4a26)))
+    const hoja = inflado(
+      (s) => {
+        s.moveTo(0, 0)
+        s.bezierCurveTo(0.1, 0.34, 0.5, 0.42, 0.72, 0.28)
+        s.bezierCurveTo(0.6, 0.02, 0.26, -0.1, 0, 0)
+      },
+      0x2f9e44,
+      { prof: 0.01, bisel: 0.04 },
+    )
+    hoja.position.set(0.1, 0.78, 0.04)
+    hoja.rotation.z = 0.12
+    g.add(hoja)
+    return g
+  },
+
+  // El estómago, liso.
+  gastroenterologia() {
+    const g = new THREE.Group()
+    g.add(
+      inflado(
+        (s) => {
+          s.moveTo(-0.3, 1.1)
+          s.bezierCurveTo(-0.32, 0.78, -0.82, 0.62, -0.92, 0.1)
+          s.bezierCurveTo(-1.04, -0.56, -0.42, -1.06, 0.2, -1.0)
+          s.bezierCurveTo(0.62, -0.97, 0.76, -0.8, 0.92, -0.74)
+          s.bezierCurveTo(1.08, -0.68, 1.12, -0.42, 0.98, -0.34)
+          s.bezierCurveTo(0.78, -0.24, 0.68, -0.28, 0.5, -0.3)
+          s.bezierCurveTo(0.8, 0.06, 0.74, 0.62, 0.3, 0.62)
+          s.bezierCurveTo(0.14, 0.62, 0.1, 0.8, 0.1, 1.1)
+          s.lineTo(-0.3, 1.1)
+        },
+        0xf28b82,
+        { prof: 0.22, bisel: 0.26 },
+      ),
+    )
+    g.add(tubo([[-0.54, 0.12, 0.38], [-0.34, -0.34, 0.42], [0.1, -0.52, 0.4]], 0.04, arcilla(0xd95f58)))
+    return g
+  },
+
+  // La oreja y dentro su pliegue.
+  otorrinolaringologia() {
+    const g = new THREE.Group()
+    g.add(
+      inflado(
+        (s) => {
+          s.moveTo(-0.04, 1.12)
+          s.bezierCurveTo(0.62, 1.16, 0.96, 0.62, 0.84, 0.12)
+          s.bezierCurveTo(0.76, -0.24, 0.42, -0.36, 0.28, -0.72)
+          s.bezierCurveTo(0.14, -1.14, -0.36, -1.18, -0.46, -0.76)
+          s.bezierCurveTo(-0.52, -0.5, -0.66, -0.2, -0.72, 0.2)
+          s.bezierCurveTo(-0.8, 0.72, -0.52, 1.1, -0.04, 1.12)
+        },
+        0xf4b48f,
+        { prof: 0.2, bisel: 0.26 },
+      ),
+    )
+    g.add(
+      tubo(
+        [[-0.36, 0.36, 0.38], [-0.14, 0.72, 0.4], [0.3, 0.66, 0.4], [0.46, 0.22, 0.4], [0.2, -0.1, 0.4], [0.0, -0.42, 0.38]],
+        0.085,
+        arcilla(0xd98360),
+      ),
+    )
+    g.add(chispa(0.2, 0x2f7ff0, [0.92, 0.9, 0.2]))
+    return g
+  },
+
+  // El riñón con su uréter y una gota.
+  urologia() {
+    const g = new THREE.Group()
+    const rinon = inflado(
+      (s) => {
+        s.moveTo(-0.1, 1.04)
+        s.bezierCurveTo(0.56, 1.14, 0.94, 0.5, 0.82, -0.08)
+        s.bezierCurveTo(0.72, -0.72, 0.12, -1.1, -0.4, -0.88)
+        s.bezierCurveTo(-0.72, -0.74, -0.72, -0.36, -0.42, -0.2)
+        s.bezierCurveTo(-0.2, -0.08, -0.2, 0.14, -0.42, 0.24)
+        s.bezierCurveTo(-0.76, 0.42, -0.62, 0.96, -0.1, 1.04)
+      },
+      0xc94f5d,
+      { prof: 0.24, bisel: 0.28 },
+    )
+    rinon.position.set(0.14, 0.12, 0)
+    g.add(rinon)
+    g.add(tubo([[-0.14, 0.12, 0.24], [-0.56, 0.06, 0.32], [-0.62, -0.42, 0.34], [-0.48, -1.0, 0.3]], 0.085, arcilla(0x2f8df0)))
+    return g
+  },
+
+  // El estetoscopio, en turquesa.
+  medicina_general() {
+    const g = new THREE.Group()
+    const goma = arcilla(0x0f9aa8)
+    g.add(
+      tubo(
+        [[-0.62, 1.1], [-0.72, 0.62], [-0.56, 0.14], [-0.04, -0.14], [0.46, 0.12], [0.62, 0.62], [0.52, 1.1]],
+        0.085,
+        goma,
+      ),
+    )
+    g.add(bola(0.11, arcilla(0x173f8f), [-0.62, 1.14]))
+    g.add(bola(0.11, arcilla(0x173f8f), [0.52, 1.14]))
+    g.add(tubo([[-0.04, -0.14], [-0.1, -0.5], [-0.42, -0.74], [-0.1, -0.98], [0.34, -0.92]], 0.085, goma))
+    const campana = malla(new THREE.CylinderGeometry(0.34, 0.34, 0.18, 56), metal())
+    campana.rotation.x = Math.PI / 2
+    campana.position.set(0.56, -0.86, 0)
+    g.add(campana)
+    const centro = malla(new THREE.CylinderGeometry(0.2, 0.2, 0.2, 40), arcilla(0x173f8f))
+    centro.rotation.x = Math.PI / 2
+    centro.position.set(0.56, -0.86, 0.02)
+    g.add(centro)
+    return g
+  },
+
+  // El biberón.
+  pediatria() {
+    const g = new THREE.Group()
+    const b = new THREE.Group()
+    b.add(torno([[0, -1.02], [0.44, -1.02], [0.58, -0.88], [0.58, 0.1], [0.5, 0.3], [0.48, 0.34], [0, 0.34]], arcilla(0xfdf6e6)))
+    const leche = torno([[0, -0.93], [0.42, -0.93], [0.595, -0.76], [0.595, -0.1], [0, -0.1]], arcilla(0xffc0cb))
+    b.add(leche)
+    b.add(torno([[0, 0.3], [0.54, 0.3], [0.58, 0.36], [0.58, 0.54], [0.5, 0.6], [0, 0.6]], arcilla(0xf4687f)))
+    b.add(torno([[0, 1.14], [0.1, 1.12], [0.14, 1.0], [0.16, 0.86], [0.34, 0.68], [0.38, 0.58], [0, 0.58]], arcilla(0xf7c86a)))
+    b.rotation.z = -0.32
+    b.scale.setScalar(0.96)
+    g.add(b)
+    return g
+  },
+
+  // Un tarro de crema con su destello.
+  cosmetologia() {
+    const g = new THREE.Group()
+    g.add(torno([[0, -0.74], [0.8, -0.74], [0.94, -0.62], [0.94, 0.06], [0.84, 0.14], [0, 0.14]], arcilla(0xf7b8c8), [0, -0.1]))
+    g.add(torno([[0, 0.04], [0.92, 0.04], [1.0, 0.1], [1.0, 0.38], [0.9, 0.46], [0, 0.46]], metal(0xe7c07c), [0, -0.1]))
+    g.add(chispa(0.42, 0xd6479b, [0.56, 0.88, 0.1]))
+    g.add(chispa(0.22, 0xf0a93b, [-0.36, 0.72, 0.1]))
+    return g
+  },
+
+  // Para las que aún no tienen el suyo: la cruz médica.
+  general() {
+    const g = new THREE.Group()
+    const disco = inflado(
+      (s) => {
+        s.absarc(0, 0, 1.08, 0, Math.PI * 2, false)
+      },
+      0xeaf3ff,
+      { prof: 0.1, bisel: 0.18 },
+    )
+    g.add(disco)
+    const cruz = inflado(dibujoCruz(0.68, 0.24), 0x2f7ff0, { prof: 0.08, bisel: 0.11 })
+    cruz.position.z = 0.2
+    g.add(cruz)
+    return g
+  },
+}
+
+// ── Pintarlos ────────────────────────────────────────────────────────────────
+function pintar(nombre) {
+  const modelo = ICONOS[nombre]()
+  const pivote = new THREE.Group()
+  pivote.add(modelo)
+  // Cabe en el mismo círculo: todos pesan lo mismo a la vista.
+  const esfera = new THREE.Box3().setFromObject(modelo).getBoundingSphere(new THREE.Sphere())
+  modelo.position.sub(esfera.center)
+  pivote.scale.setScalar(1.5 / esfera.radius)
+  pivote.rotation.set(0.14, -0.42, 0.0)
+  escena.add(pivote)
+  renderer.render(escena, camara)
+  escena.remove(pivote)
+
+  const salida = document.createElement('canvas')
+  salida.width = salida.height = TAM_FINAL
+  const c = salida.getContext('2d')
+  c.imageSmoothingQuality = 'high'
+  c.drawImage(renderer.domElement, 0, 0, TAM_FINAL, TAM_FINAL)
+  return salida
+}
+
+const hoja = document.getElementById('hoja')
+const lienzos = {}
+for (const nombre of Object.keys(ICONOS)) {
+  const lienzo = pintar(nombre)
+  lienzos[nombre] = lienzo
+  const fig = document.createElement('figure')
+  const img = new Image()
+  img.src = lienzo.toDataURL('image/webp', 0.9)
+  fig.append(img, Object.assign(document.createElement('figcaption'), { textContent: nombre }))
+  hoja.append(fig)
+}
+
+const boton = document.getElementById('guardar')
+const estado = document.getElementById('estado')
+estado.textContent = `${Object.keys(ICONOS).length} iconos listos`
+boton.disabled = false
+boton.onclick = async () => {
+  let peso = 0
+  for (const [nombre, lienzo] of Object.entries(lienzos)) {
+    const blob = await new Promise((r) => lienzo.toBlob(r, 'image/webp', 0.9))
+    peso += blob.size
+    await fetch(`/guardar/${nombre}`, { method: 'POST', body: blob })
+  }
+  estado.textContent = `Guardados: ${Math.round(peso / 1024)} KB en total`
+}
+</script>
+</body>
+</html>

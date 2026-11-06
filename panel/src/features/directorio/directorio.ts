@@ -229,19 +229,47 @@ function textoDeBusqueda(m: MedicoDelDirectorio): string {
 }
 
 /**
+ * Los tramos del filtro de precio. El límite va con el tramo de abajo: $50
+ * está en «Hasta $50» y $100, en «$50 a $100».
+ *
+ * Se compara la cifra de la tarjeta, sin convertir: un precio en euros cuenta
+ * por su número (€45 está en «Hasta $50»), porque la página no tiene la tasa.
+ */
+export const TRAMOS_DE_PRECIO = [
+  { clave: 'hasta-50', rotulo: 'Hasta $50', desde: 0, hasta: 50 },
+  { clave: '50-a-100', rotulo: '$50 a $100', desde: 50, hasta: 100 },
+  { clave: 'mas-de-100', rotulo: 'Más de $100', desde: 100, hasta: Infinity },
+] as const
+
+export type ClaveDeTramo = (typeof TRAMOS_DE_PRECIO)[number]['clave']
+
+export const CLAVES_DE_TRAMO: readonly ClaveDeTramo[] = TRAMOS_DE_PRECIO.map((t) => t.clave)
+
+function estaEnElTramo(m: Pick<MedicoDelDirectorio, 'precio'>, clave: ClaveDeTramo): boolean {
+  const tramo = TRAMOS_DE_PRECIO.find((t) => t.clave === clave)
+  return m.precio !== null && tramo !== undefined && m.precio > tramo.desde && m.precio <= tramo.hasta
+}
+
+/** Los tramos que tienen algún médico: un filtro que no devuelve a nadie no se ofrece. */
+export function tramosConMedicos(medicos: readonly MedicoDelDirectorio[]): ClaveDeTramo[] {
+  return CLAVES_DE_TRAMO.filter((c) => medicos.some((m) => estaEnElTramo(m, c)))
+}
+
+/**
  * Cada palabra de la búsqueda tiene que estar en algún sitio de la tarjeta
  * (nombre, especialidad, dirección o ciudad), en cualquier orden: «odonto
  * barquisimeto» encuentra a la odontóloga de Barquisimeto.
  */
 export function filtrarDirectorio(
   medicos: readonly MedicoDelDirectorio[],
-  { q, especialidad }: { q?: string; especialidad?: ClaveDeEspecialidad },
+  { q, especialidad, precio }: { q?: string; especialidad?: ClaveDeEspecialidad; precio?: ClaveDeTramo },
 ): MedicoDelDirectorio[] {
   const palabras = normalizar(q ?? '')
     .split(' ')
     .filter(Boolean)
   return medicos.filter((m) => {
     if (especialidad && m.clave !== especialidad) return false
+    if (precio && !estaEnElTramo(m, precio)) return false
     if (palabras.length === 0) return true
     const t = textoDeBusqueda(m)
     return palabras.every((p) => t.includes(p))

@@ -4,7 +4,9 @@ import { PaginaDelDirectorio } from '@/components/directorio/PaginaDelDirectorio
 import { NoEncontrada, PAGINA_NO_ENCONTRADA } from '@/components/directorio/NoEncontrada'
 import { cabeceraPublica, urlAbsoluta } from '@/config/sitio'
 import { cargarDirectorio } from '@/features/directorio/api'
-import { directorioEnSchema } from '@/features/directorio/directorio'
+import { CLAVES_DE_TRAMO, directorioEnSchema } from '@/features/directorio/directorio'
+import type { ClaveDeTramo } from '@/features/directorio/directorio'
+import { unoDe } from '@/lib/busqueda'
 import {
   ciudadDeLaMayoria,
   claveDeSegmento,
@@ -27,6 +29,10 @@ import {
  * la elija en los filtros) pero no sale en Google: no es algo que se busque.
  */
 export const Route = createFileRoute('/directorio_/$especialidad')({
+  validateSearch: (search: Record<string, unknown>): { precio?: ClaveDeTramo } => ({
+    precio: unoDe(CLAVES_DE_TRAMO, search.precio),
+  }),
+  loaderDeps: () => ({}),
   staleTime: 60_000,
   loader: async ({ params }) => {
     const clave = claveDeSegmento(params.especialidad)

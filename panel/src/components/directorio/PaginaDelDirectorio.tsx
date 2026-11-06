@@ -1,17 +1,25 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { Link, useRouter } from '@tanstack/react-router'
-import { ChevronRight, ChevronUp, RotateCw, Search, X } from 'lucide-react'
+import { Link, useNavigate, useRouter, useSearch } from '@tanstack/react-router'
+import { ChevronRight, ChevronUp, RotateCw, Search, Tag, X } from 'lucide-react'
 
-import { IconoDeEspecialidad } from '@/components/directorio/IconoDeEspecialidad'
+import { imagenDeEspecialidad } from '@/components/directorio/IlustracionDeEspecialidad'
 import { TarjetaDeMedico } from '@/components/directorio/TarjetaDeMedico'
 import { Pie } from '@/components/portada'
 import { Menu } from '@/components/portada/Menu'
 import { Desglose } from '@/components/portada/Pacientes'
 import { BotonAfiliarme, Boton, Lienzo, Revelar, Rotulo } from '@/components/portada/piezas'
 import { apuntarContacto } from '@/features/directorio/api'
-import { especialidadesPresentes, fichasQueCaben, filtrarDirectorio } from '@/features/directorio/directorio'
-import type { EspecialidadPresente, MedicoDelDirectorio } from '@/features/directorio/directorio'
+import {
+  CLAVES_DE_TRAMO,
+  TRAMOS_DE_PRECIO,
+  especialidadesPresentes,
+  fichasQueCaben,
+  filtrarDirectorio,
+  tramosConMedicos,
+} from '@/features/directorio/directorio'
+import type { ClaveDeTramo, EspecialidadPresente, MedicoDelDirectorio } from '@/features/directorio/directorio'
+import { unoDe } from '@/lib/busqueda'
 import { nombreDeEspecialidad } from '@/features/directorio/especialidades'
 import type { ClaveDeEspecialidad } from '@/features/directorio/especialidades'
 import { rutaDeEspecialidad } from '@/features/directorio/paginas'
@@ -33,10 +41,20 @@ import { rutaDeEspecialidad } from '@/features/directorio/paginas'
  * sigue y cada una puede salir sola en los resultados («ginecólogos con
  * pago en cuotas»). Cambiar de especialidad no sube la página.
  *
+ * El filtro de precio va en la dirección (`?precio=`), para que siga ahí al
+ * cambiar de especialidad o al volver de una ficha. Son botones, no enlaces, y
+ * el canonical no lleva el parámetro: no crea páginas nuevas para Google, que
+ * sigue viendo a todos los médicos.
+ *
  * Tiene el aspecto de la portada (`styles/portada.css`), siempre en claro.
  */
 
 const NOCHE = '#020B24'
+
+/** El tramo de precio elegido, de la dirección. */
+function useTramoElegido(): ClaveDeTramo | undefined {
+  return useSearch({ strict: false, select: (s) => unoDe(CLAVES_DE_TRAMO, (s as { precio?: unknown }).precio) })
+}
 
 export function PaginaDelDirectorio({
   medicos,
@@ -58,7 +76,7 @@ export function PaginaDelDirectorio({
   guia: { ruta: string; texto: string }
 }) {
   const especialidades = useMemo(() => especialidadesPresentes(medicos), [medicos])
-  const encontrados = useMemo(() => filtrarDirectorio(medicos, { especialidad }), [medicos, especialidad])
+  const deLaEspecialidad = useMemo(() => filtrarDirectorio(medicos, { especialidad }), [medicos, especialidad])
 
   return (
     <div className="portada-raiz min-h-screen">
@@ -73,7 +91,7 @@ export function PaginaDelDirectorio({
         />
         <Resultados
           medicos={medicos}
-          encontrados={encontrados}
+          deLaEspecialidad={deLaEspecialidad}
           fallo={fallo}
           whatsappHelios={whatsappHelios}
           especialidad={especialidad}
@@ -237,7 +255,8 @@ function Especialidades({
       activa={elegida === e.clave}
       to={elegida === e.clave ? '/directorio' : rutaDeEspecialidad(e.clave)}
     >
-      <IconoDeEspecialidad clave={e.clave} className="size-4" strokeWidth={1.9} />
+      {/* Con ancho y alto fijos: la medición de las fichas no depende de que cargue. */}
+      <img src={imagenDeEspecialidad(e.clave)} alt="" width={26} height={26} decoding="async" className="-ml-1 size-[26px]" />
       {e.nombre}
       <Cuenta activa={elegida === e.clave}>{e.cuantos}</Cuenta>
     </ChipDeEspecialidad>
@@ -325,6 +344,8 @@ function ChipDeEspecialidad({
   'aria-expanded'?: boolean
   'aria-controls'?: string
 }) {
+  // El filtro de precio sigue puesto al cambiar de especialidad.
+  const precio = useTramoElegido()
   const clases = `directorio-chip inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-full border pl-3.5 pr-1.5 text-[0.88rem] tracking-[-0.01em] sm:pl-4 sm:text-[0.9rem] ${
     activa
       ? 'border-portada-tinta bg-portada-tinta text-white'
@@ -334,7 +355,13 @@ function ChipDeEspecialidad({
   }`
   if (to) {
     return (
-      <Link to={to} resetScroll={false} aria-current={activa ? 'page' : undefined} className={clases}>
+      <Link
+        to={to}
+        search={(precio ? { precio } : {}) as never}
+        resetScroll={false}
+        aria-current={activa ? 'page' : undefined}
+        className={clases}
+      >
         {children}
       </Link>
     )
@@ -362,19 +389,30 @@ function Cuenta({ activa, children }: { activa: boolean; children: ReactNode }) 
 
 function Resultados({
   medicos,
-  encontrados,
+  deLaEspecialidad,
   fallo,
   whatsappHelios,
   especialidad,
 }: {
   medicos: MedicoDelDirectorio[]
-  encontrados: MedicoDelDirectorio[]
+  deLaEspecialidad: MedicoDelDirectorio[]
   fallo: boolean
   whatsappHelios: string | null
   especialidad: ClaveDeEspecialidad | undefined
 }) {
   const router = useRouter()
+  const navigate = useNavigate()
   const [reintentando, setReintentando] = useState(false)
+  const precio = useTramoElegido()
+  const encontrados = useMemo(
+    () => filtrarDirectorio(deLaEspecialidad, { precio }),
+    [deLaEspecialidad, precio],
+  )
+  const sinPrecio = deLaEspecialidad.filter((m) => m.precio === null).length
+
+  function elegirTramo(tramo: ClaveDeTramo | undefined) {
+    void navigate({ to: '.', search: (tramo ? { precio: tramo } : {}) as never, resetScroll: false, replace: true })
+  }
 
   return (
     <section id="medicos" className="relative bg-portada-niebla">
@@ -415,6 +453,7 @@ function Resultados({
               {especialidad && (
                 <Link
                   to="/directorio"
+                  search={(precio ? { precio } : {}) as never}
                   resetScroll={false}
                   className="inline-flex items-center gap-1.5 text-[0.9rem] font-medium text-portada-azul underline-offset-4 hover:underline"
                 >
@@ -423,7 +462,30 @@ function Resultados({
               )}
             </div>
 
-            {encontrados.length === 0 ? (
+            <FiltroDePrecio medicos={deLaEspecialidad} elegido={precio} onElegir={elegirTramo} />
+            {precio && sinPrecio > 0 && (
+              <p className="mt-2.5 text-[0.85rem] text-portada-tinta-3">
+                No incluye {sinPrecio === 1 ? 'al médico que no publica' : `a los ${sinPrecio} médicos que no publican`} su
+                precio.
+              </p>
+            )}
+
+            {encontrados.length === 0 && precio && deLaEspecialidad.length > 0 ? (
+              <div className="mt-5">
+                <Aviso
+                  titulo="No hay médicos en este rango de precio"
+                  texto="Prueba con otro rango o mira a todos los médicos de esta lista."
+                >
+                  <button
+                    type="button"
+                    onClick={() => elegirTramo(undefined)}
+                    className="inline-flex h-12 items-center rounded-full border border-portada-linea bg-white px-6 text-[0.95rem] font-medium tracking-[-0.01em] text-portada-tinta transition-colors hover:border-portada-tinta/25"
+                  >
+                    Ver todos los precios
+                  </button>
+                </Aviso>
+              </div>
+            ) : encontrados.length === 0 ? (
               <div className="mt-5">
                 <Aviso
                   titulo="No hay médicos en esta especialidad todavía"
@@ -455,6 +517,51 @@ function Resultados({
         )}
       </Lienzo>
     </section>
+  )
+}
+
+/**
+ * El precio de la consulta, en botones. Solo los tramos que tienen algún
+ * médico de esta lista (y el elegido, aunque se haya quedado sin ninguno);
+ * si nadie publica su precio, no hay filtro.
+ */
+function FiltroDePrecio({
+  medicos,
+  elegido,
+  onElegir,
+}: {
+  medicos: MedicoDelDirectorio[]
+  elegido: ClaveDeTramo | undefined
+  onElegir: (tramo: ClaveDeTramo | undefined) => void
+}) {
+  const conMedicos = tramosConMedicos(medicos)
+  const tramos = TRAMOS_DE_PRECIO.filter((t) => conMedicos.includes(t.clave) || t.clave === elegido)
+  if (tramos.length === 0) return null
+
+  return (
+    <div className="mt-3.5 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+      <span id="filtro-de-precio" className="inline-flex items-center gap-1.5 text-[0.85rem] text-portada-tinta-2">
+        <Tag aria-hidden className="size-3.5 text-portada-tinta-3" />
+        Precio de la consulta
+      </span>
+      <div role="group" aria-labelledby="filtro-de-precio" className="directorio-precios">
+        <button type="button" aria-pressed={!elegido} onClick={() => onElegir(undefined)} className="directorio-precio">
+          Todos
+        </button>
+        {tramos.map((t) => (
+          <button
+            key={t.clave}
+            type="button"
+            aria-pressed={t.clave === elegido}
+            // Tocar el que ya está elegido lo quita.
+            onClick={() => onElegir(t.clave === elegido ? undefined : t.clave)}
+            className="directorio-precio"
+          >
+            {t.rotulo}
+          </button>
+        ))}
+      </div>
+    </div>
   )
 }
 

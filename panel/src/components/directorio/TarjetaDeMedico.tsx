@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { AtSign, MapPin, Tag } from 'lucide-react'
 
-import { IconoDeEspecialidad } from './IconoDeEspecialidad'
+import { IlustracionDeEspecialidad } from './IlustracionDeEspecialidad'
 import { rutaDeFicha } from '@/features/directorio/paginas'
 import {
   enlaceDeRed,
@@ -24,7 +24,8 @@ export function LogoWhatsApp({ className = 'size-4' }: { className?: string }) {
 /**
  * La tarjeta de un médico del directorio: el icono de su especialidad, su
  * nombre, su especialidad, dónde atiende, su red social y el precio de su
- * consulta (si los tiene), el «0% inicial» y el botón para escribirle.
+ * consulta (si los tiene), el «0% inicial», las «2 cuotas» y el botón para
+ * escribirle.
  *
  * Compacta, para que en el teléfono se vean varias de un vistazo, y entera
  * clicable: tocar cualquier parte abre el mismo chat que el botón. Solo el
@@ -53,7 +54,7 @@ export function TarjetaDeMedico({
   const enlace = enlaceDeWhatsApp(medico, whatsappHelios)
 
   return (
-    <article className="directorio-tarjeta group relative flex h-full flex-col gap-3 rounded-[22px] border border-portada-linea bg-white p-4 sm:p-5">
+    <article className="directorio-tarjeta group relative flex h-full flex-col gap-3.5 rounded-[24px] border p-4 sm:gap-4 sm:p-5">
       {/* Toda la tarjeta lleva al chat. Para el teclado y el lector de
           pantalla, el enlace es el botón de abajo. */}
       <a
@@ -66,12 +67,10 @@ export function TarjetaDeMedico({
         className="absolute inset-0 rounded-[inherit]"
       />
 
-      <div className="flex items-start gap-3.5">
-        <span className="directorio-icono grid size-11 shrink-0 place-items-center rounded-[14px] text-portada-azul">
-          <IconoDeEspecialidad clave={medico.clave} className="size-5" />
-        </span>
+      <div className="flex items-center gap-3.5">
+        <IlustracionDeEspecialidad clave={medico.clave} />
         <div className="min-w-0">
-          <h3 className="text-[1.02rem] font-medium leading-snug tracking-[-0.02em] text-portada-tinta [overflow-wrap:anywhere]">
+          <h3 className="text-[1.08rem] font-semibold leading-tight tracking-[-0.025em] text-portada-tinta [overflow-wrap:anywhere]">
             {/* El nombre lleva a su ficha (2026-10-30), por encima del enlace
                 al chat: es el enlace que Google sigue hasta cada médico. La
                 vista previa del superadmin no tiene ficha. */}
@@ -87,22 +86,26 @@ export function TarjetaDeMedico({
             )}
           </h3>
           {especialidad && (
-            <p className="mt-0.5 line-clamp-2 text-[0.88rem] leading-snug text-portada-azul">{especialidad}</p>
+            <p className="mt-1 line-clamp-2 text-[0.88rem] leading-snug text-portada-tinta-2">{especialidad}</p>
           )}
         </div>
       </div>
 
       {(lugar || red || precio) && (
-        <div className="flex flex-col gap-1 text-[0.86rem] leading-snug text-portada-tinta-2">
+        <div className="flex flex-col gap-2 text-[0.86rem] leading-snug text-portada-tinta-2">
           {lugar && (
-            <p className="flex gap-2" title={lugar}>
-              <MapPin aria-hidden className="mt-[0.15em] size-3.5 shrink-0 text-portada-tinta-3" />
-              <span className="line-clamp-1 [overflow-wrap:anywhere]">{lugar}</span>
+            <p className="flex items-center gap-2.5" title={lugar}>
+              <span aria-hidden className="directorio-dato">
+                <MapPin className="size-3.5" />
+              </span>
+              <span className="line-clamp-2 [overflow-wrap:anywhere]">{lugar}</span>
             </p>
           )}
           {red && (
-            <p className="flex gap-2">
-              <AtSign aria-hidden className="mt-[0.15em] size-3.5 shrink-0 text-portada-tinta-3" />
+            <p className="flex items-center gap-2.5">
+              <span aria-hidden className="directorio-dato">
+                <AtSign className="size-3.5" />
+              </span>
               <a
                 href={red.url}
                 target="_blank"
@@ -116,37 +119,40 @@ export function TarjetaDeMedico({
             </p>
           )}
           {precio && (
-            <p className="flex gap-2">
-              <Tag aria-hidden className="mt-[0.15em] size-3.5 shrink-0 text-portada-tinta-3" />
+            <p className="flex items-center gap-2.5">
+              <span aria-hidden className="directorio-dato">
+                <Tag className="size-3.5" />
+              </span>
               <span>
-                Consulta <span className="font-medium tabular-nums text-portada-tinta">{precio}</span>
+                Consulta <span className="font-semibold tabular-nums text-portada-tinta">{precio}</span>
               </span>
             </p>
           )}
         </div>
       )}
 
-      {/* El «0% inicial» junto al botón, como el precio junto a «Comprar». */}
-      <div className="mt-auto flex items-center justify-between gap-2 pt-1">
-        <span className="directorio-sello inline-flex h-7 shrink-0 items-center gap-1 rounded-full px-2.5 text-[0.78rem] font-medium tracking-[-0.01em] text-portada-azul">
-          <span className="font-[family-name:var(--font-portada-mono)] tabular-nums">0%</span>
-          inicial
-        </span>
+      {/* Las condiciones junto al botón, como el precio junto a «Comprar». */}
+      <div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-portada-linea pt-3.5 sm:pt-4">
+        <div className="flex gap-1.5">
+          <span className="directorio-sello inline-flex h-8 shrink-0 items-center gap-1 rounded-[10px] px-2 text-[0.78rem] font-medium tracking-[-0.01em] text-portada-azul">
+            <span className="font-[family-name:var(--font-portada-mono)] tabular-nums">0%</span>
+            inicial
+          </span>
+          <span className="directorio-sello inline-flex h-8 shrink-0 items-center gap-1 rounded-[10px] px-2 text-[0.78rem] font-medium tracking-[-0.01em] text-portada-azul">
+            <span className="font-[family-name:var(--font-portada-mono)] tabular-nums">2</span>
+            cuotas
+          </span>
+        </div>
         <a
           href={enlace}
           target="_blank"
           rel="noopener noreferrer"
           onClick={onContacto}
           aria-label={`Agendar cita por WhatsApp con ${medico.nombre}`}
-          className="portada-boton group/boton relative z-10 inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-full bg-portada-tinta pl-4 pr-1.5 text-[0.88rem] font-medium tracking-[-0.01em] text-white shadow-[0_10px_30px_-12px_rgba(0,39,112,0.55)] transition-[background-color,transform] duration-300 hover:bg-portada-marino active:scale-[0.98] group-hover:bg-portada-marino"
+          className="directorio-agendar relative z-10 inline-flex h-11 items-center gap-2 whitespace-nowrap rounded-full px-4 text-[0.88rem] font-medium tracking-[-0.01em] text-white"
         >
           Agendar cita
-          <span
-            aria-hidden
-            className="grid size-7 place-items-center rounded-full bg-[#25D366] text-white transition-transform duration-300 group-hover:scale-105"
-          >
-            <LogoWhatsApp className="size-3.5" />
-          </span>
+          <LogoWhatsApp className="size-[17px]" />
         </a>
       </div>
     </article>

@@ -3,7 +3,8 @@ import { createFileRoute, redirect } from '@tanstack/react-router'
 import { PaginaDelDirectorio } from '@/components/directorio/PaginaDelDirectorio'
 import { cabeceraPublica, urlAbsoluta } from '@/config/sitio'
 import { cargarDirectorio } from '@/features/directorio/api'
-import { directorioEnSchema } from '@/features/directorio/directorio'
+import { CLAVES_DE_TRAMO, directorioEnSchema } from '@/features/directorio/directorio'
+import type { ClaveDeTramo } from '@/features/directorio/directorio'
 import { CLAVES_DE_ESPECIALIDAD } from '@/features/directorio/especialidades'
 import type { ClaveDeEspecialidad } from '@/features/directorio/especialidades'
 import { rutaDeFicha, segmentoDeEspecialidad } from '@/features/directorio/paginas'
@@ -29,8 +30,9 @@ const DESCRIPCION =
   'Encuentra médicos, odontólogos y especialistas que aceptan Helios, escríbeles por WhatsApp y paga tu consulta en dos cuotas, a los 7 y 14 días, sin inicial.'
 
 export const Route = createFileRoute('/directorio')({
-  validateSearch: (search: Record<string, unknown>): { especialidad?: ClaveDeEspecialidad } => ({
+  validateSearch: (search: Record<string, unknown>): { especialidad?: ClaveDeEspecialidad; precio?: ClaveDeTramo } => ({
     especialidad: unoDe(CLAVES_DE_ESPECIALIDAD, search.especialidad),
+    precio: unoDe(CLAVES_DE_TRAMO, search.precio),
   }),
   beforeLoad: ({ search }) => {
     if (search.especialidad) {
