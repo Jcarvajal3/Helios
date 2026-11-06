@@ -1,4 +1,5 @@
-import { whatsappNumber } from '@/components/ui'
+import { SIMBOLO_DE_MONEDA, leerMoneda, whatsappNumber } from '@/components/ui'
+import type { Moneda } from '@/components/ui'
 import { REDES_SOCIALES } from '@/features/admin/clinicas/clinicas'
 import type { RedSocial } from '@/features/admin/clinicas/clinicas'
 import { comoFila, comoLista, numeroONulo, texto, textoONulo } from '@/lib/json'
@@ -30,8 +31,9 @@ export type MedicoDelDirectorio = {
   /** Su red social, si la tiene: la red y el usuario o enlace, tal cual. */
   red: RedSocial | null
   usuarioDeRed: string | null
-  /** El precio de su consulta, en dólares. `null`: la tarjeta no enseña precio. */
+  /** El precio de su consulta, en `moneda`. `null`: la tarjeta no enseña precio. */
   precio: number | null
+  moneda: Moneda
   /**
    * El código de su tarjeta («DIR-7K2P»): va en el mensaje al WhatsApp de
    * Helios para que el bot sepa de qué médico se trata. `null` en datos viejos.
@@ -61,7 +63,8 @@ export function leerDirectorio(raw: unknown): MedicoDelDirectorio[] {
         whatsapp: texto(r.whatsapp),
         red: leerRed(r.social_network),
         usuarioDeRed: textoONulo(r.social_user),
-        precio: numeroONulo(r.consultation_price_usd),
+        precio: numeroONulo(r.consultation_price_cur),
+        moneda: leerMoneda(r.consultation_currency),
         codigo: textoONulo(r.lead_code),
         slug: textoONulo(r.slug),
         actualizado: textoONulo(r.updated_at),
@@ -90,15 +93,15 @@ export function lugarDeTarjeta(m: Pick<MedicoDelDirectorio, 'direccion' | 'ciuda
 
 /**
  * El precio de la consulta como se lee en la tarjeta, al estilo de aquí y sin
- * céntimos si no los tiene: «$40», «$42,50», «$1.250». Sin precio, `null`.
+ * céntimos si no los tiene: «$40», «€42,50», «$1.250». Sin precio, `null`.
  */
-export function precioDeTarjeta(m: Pick<MedicoDelDirectorio, 'precio'>): string | null {
+export function precioDeTarjeta(m: Pick<MedicoDelDirectorio, 'precio' | 'moneda'>): string | null {
   if (m.precio === null) return null
   const cifra = m.precio.toLocaleString('es-VE', {
     minimumFractionDigits: Number.isInteger(m.precio) ? 0 : 2,
     maximumFractionDigits: 2,
   })
-  return `$${cifra}`
+  return `${SIMBOLO_DE_MONEDA[m.moneda]}${cifra}`
 }
 
 // ── La red social ──────────────────────────────────────────────────────────

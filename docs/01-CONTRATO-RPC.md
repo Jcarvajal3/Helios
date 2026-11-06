@@ -1377,22 +1377,23 @@ superadmin › Agenda y a superadmin › Clínicas, ve el perfil de cada médico
 
 Suite: `supabase/tests/rol_del_equipo_smoke.sql`.
 
-### 2.16 El precio de la consulta en el directorio (2026-11-06, 20261106130000)
+### 2.16 El precio de la consulta en el directorio (2026-11-06, 20261106130000 y 20261106200000)
 
-- `directory_listings.consultation_price_usd numeric(18,4)`, entre 1 y 10.000:
-  el precio que enseña la tarjeta, en dólares y sin la Comisión Helios. A
-  diferencia de los demás datos de la tarjeta (§2.11) no tiene valor en la
-  ficha de la clínica: null = la tarjeta no enseña precio.
-- `helios_directorio()` y `helios_directorio_medico(p_slug)` añaden la columna
-  `consultation_price_usd`.
-- `admin_directorio()` la trae en `listing`; `base` no la lleva.
-- `admin_directorio_guardar` acepta `consultation_price_usd` (texto o número,
-  con hasta dos decimales y punto decimal). Vacío la borra. `22023` si no es un
-  monto de 1 a 10.000.
+- `directory_listings.consultation_price_cur numeric(18,4)`, entre 1 y 10.000, y
+  `consultation_currency` (`USD` o `EUR`): el precio que enseña la tarjeta, en
+  esa moneda, sin convertir y sin la Comisión Helios. No entra en el libro. A
+  diferencia de los demás datos de la tarjeta (§2.11) no tiene valor en la ficha
+  de la clínica: null = la tarjeta no enseña precio, y la moneda vuelve a `USD`.
+- `helios_directorio()` y `helios_directorio_medico(p_slug)` añaden las columnas
+  `consultation_price_cur` y `consultation_currency`.
+- `admin_directorio()` las trae en `listing`; `base` no las lleva.
+- `admin_directorio_guardar` acepta `consultation_price_cur` (texto o número, con
+  hasta dos decimales y punto decimal; vacío lo borra) y `consultation_currency`.
+  `22023` si no es un monto de 1 a 10.000 o una de esas dos monedas.
 
-La tarjeta y la ficha pública `/medico/<slug>` lo enseñan como «Consulta $40»,
-al estilo de aquí y sin céntimos si no los tiene (`precioDeTarjeta`). Suite: `supabase/tests/directorio_smoke.sql`,
-paso 9.
+La tarjeta y la ficha pública `/medico/<slug>` lo enseñan como «Consulta $40» o
+«Consulta €40», al estilo de aquí y sin céntimos si no los tiene
+(`precioDeTarjeta`). Suite: `supabase/tests/directorio_smoke.sql`, paso 9.
 
 ---
 

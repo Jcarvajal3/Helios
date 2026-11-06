@@ -386,11 +386,11 @@ comprueba(
 console.log('── El precio de la consulta ──────────────────────────────────')
 comprueba(b.precio === '', 'sin precio, el campo arranca vacío', b)
 comprueba(
-  JSON.stringify(cambiosDelBorrador({ ...b, precio: ' 42,50 ' }, m1.tarjeta)) === JSON.stringify({ consultation_price_usd: '42.5' }),
+  JSON.stringify(cambiosDelBorrador({ ...b, precio: ' 42,50 ' }, m1.tarjeta)) === JSON.stringify({ consultation_price_cur: '42.5' }),
   'el precio va con punto decimal',
 )
 comprueba(
-  JSON.stringify(cambiosDelBorrador({ ...b, precio: '1.250' }, m1.tarjeta)) === JSON.stringify({ consultation_price_usd: '1250' }),
+  JSON.stringify(cambiosDelBorrador({ ...b, precio: '1.250' }, m1.tarjeta)) === JSON.stringify({ consultation_price_cur: '1250' }),
   'el punto de miles se entiende',
 )
 const conPrecio = { ...m1.tarjeta, precio: 42.5 }
@@ -398,7 +398,7 @@ comprueba(borradorDe(conPrecio).precio === '42,5', 'en el campo, con coma', borr
 comprueba(cambiosDelBorrador(borradorDe(conPrecio), conPrecio) === null, 'el mismo precio no es un cambio')
 comprueba(cambiosDelBorrador({ ...borradorDe(conPrecio), precio: '42,50' }, conPrecio) === null, 'el mismo precio escrito distinto tampoco')
 comprueba(
-  JSON.stringify(cambiosDelBorrador({ ...borradorDe(conPrecio), precio: '' }, conPrecio)) === JSON.stringify({ consultation_price_usd: '' }),
+  JSON.stringify(cambiosDelBorrador({ ...borradorDe(conPrecio), precio: '' }, conPrecio)) === JSON.stringify({ consultation_price_cur: '' }),
   'vaciarlo lo manda vacío (la tarjeta deja de enseñarlo)',
 )
 for (const malo of ['gratis', '0', '0,50', '-5', '10001', '12,345']) {
@@ -409,13 +409,43 @@ comprueba(datosDelBorrador({ ...b, precio: '40' }, m1.ficha).precio === 40, 'la 
 comprueba(comoTarjetaPublica('m1', conPrecio).precio === 42.5, 'la tarjeta pública lleva el precio')
 comprueba(medicos[0].precio === null, 'sin precio en la base, ninguno')
 comprueba(
-  leerDirectorio([{ merchant_id: 'm', name: 'Dra. Ana', whatsapp: '+584141234567', consultation_price_usd: 40 }])[0].precio === 40,
+  leerDirectorio([{ merchant_id: 'm', name: 'Dra. Ana', whatsapp: '+584141234567', consultation_price_cur: 40 }])[0].precio === 40,
   'se lee el precio que manda la base',
 )
-comprueba(precioDeTarjeta({ precio: null }) === null, 'sin precio, nada que leer')
-comprueba(precioDeTarjeta({ precio: 40 }) === '$40', 'entero, sin céntimos', precioDeTarjeta({ precio: 40 }))
-comprueba(precioDeTarjeta({ precio: 42.5 }) === '$42,50', 'con céntimos, con coma', precioDeTarjeta({ precio: 42.5 }))
-comprueba(precioDeTarjeta({ precio: 1250 }) === '$1.250', 'con punto de miles', precioDeTarjeta({ precio: 1250 }))
+comprueba(precioDeTarjeta({ precio: null, moneda: 'USD' }) === null, 'sin precio, nada que leer')
+comprueba(precioDeTarjeta({ precio: 40, moneda: 'USD' }) === '$40', 'entero, sin céntimos')
+comprueba(precioDeTarjeta({ precio: 42.5, moneda: 'USD' }) === '$42,50', 'con céntimos, con coma')
+comprueba(precioDeTarjeta({ precio: 1250, moneda: 'USD' }) === '$1.250', 'con punto de miles')
+
+console.log('── La moneda del precio ──────────────────────────────────────')
+comprueba(b.moneda === 'USD', 'sin precio, arranca en dólares', b)
+comprueba(precioDeTarjeta({ precio: 40, moneda: 'EUR' }) === '€40', 'en euros, con su símbolo')
+comprueba(precioDeTarjeta({ precio: 42.5, moneda: 'EUR' }) === '€42,50', 'en euros, con céntimos')
+comprueba(
+  leerDirectorio([{ merchant_id: 'm', name: 'Dra. Ana', whatsapp: '+584141234567', consultation_price_cur: 40, consultation_currency: 'EUR' }])[0].moneda === 'EUR',
+  'se lee la moneda que manda la base',
+)
+comprueba(medicos[0].moneda === 'USD', 'sin moneda en la base, dólares')
+const enEuros = { ...m1.tarjeta, precio: 40, moneda: 'EUR' as const }
+comprueba(borradorDe(enEuros).moneda === 'EUR', 'la ficha arranca con su moneda')
+comprueba(cambiosDelBorrador(borradorDe(enEuros), enEuros) === null, 'la misma moneda no es un cambio')
+comprueba(
+  JSON.stringify(cambiosDelBorrador({ ...b, precio: '40', moneda: 'EUR' }, m1.tarjeta)) ===
+    JSON.stringify({ consultation_price_cur: '40', consultation_currency: 'EUR' }),
+  'un precio nuevo en euros manda el precio y la moneda',
+)
+comprueba(
+  JSON.stringify(cambiosDelBorrador({ ...borradorDe(enEuros), moneda: 'USD' }, enEuros)) === JSON.stringify({ consultation_currency: 'USD' }),
+  'cambiar solo la moneda manda solo la moneda',
+)
+comprueba(cambiosDelBorrador({ ...b, moneda: 'EUR' }, m1.tarjeta) === null, 'la moneda sin precio no es un cambio')
+comprueba(
+  JSON.stringify(cambiosDelBorrador({ ...borradorDe(enEuros), precio: '' }, enEuros)) === JSON.stringify({ consultation_price_cur: '' }),
+  'vaciar un precio en euros manda solo el precio',
+)
+comprueba(datosDelBorrador({ ...b, precio: '40', moneda: 'EUR' }, m1.ficha).moneda === 'EUR', 'la vista previa enseña la moneda del borrador')
+comprueba(datosDelBorrador({ ...b, moneda: 'EUR' }, m1.ficha).moneda === 'USD', 'sin precio no se recuerda la moneda')
+comprueba(comoTarjetaPublica('m1', enEuros).moneda === 'EUR', 'la tarjeta pública lleva la moneda')
 
 console.log(fallos === 0 ? '\nTodo bien.' : `\n${fallos} fallo(s).`)
 if (fallos > 0) process.exit(1)

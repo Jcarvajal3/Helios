@@ -20,6 +20,7 @@ import {
   formatDayShort,
   formatPhone,
 } from '@/components/ui'
+import type { Moneda } from '@/components/ui'
 import { REDES_SOCIALES } from '@/features/admin/clinicas/clinicas'
 import type { RedSocial } from '@/features/admin/clinicas/clinicas'
 import { consultaInteresados, guardarTarjeta, refrescarDirectorio } from '@/features/admin/directorioDeMedicos/api'
@@ -38,6 +39,11 @@ import { describeError } from '@/lib/supabase'
 const cuenta = (n: number) => String(Math.round(n))
 
 const OPCIONES_RED = REDES_SOCIALES.map((r) => ({ value: r.value, label: r.label }))
+
+const OPCIONES_MONEDA: Array<{ value: Moneda; label: string }> = [
+  { value: 'USD', label: 'Dólares ($)' },
+  { value: 'EUR', label: 'Euros (€)' },
+]
 
 function nombreDeRed(red: RedSocial | null): string {
   return REDES_SOCIALES.find((r) => r.value === red)?.label ?? 'sin red'
@@ -208,17 +214,26 @@ export function FichaDelDirectorio({
                 }
               />
             </div>
-            <Input
-              id="ficha-directorio-precio"
-              label="Precio de consulta (en dólares)"
-              inputMode="decimal"
-              autoComplete="off"
-              value={borrador.precio}
-              onChange={(precio) => cambiar({ precio })}
-              placeholder="40"
-              error={!!borrador.precio.trim() && vistaPrevia.precio === null}
-              hint="Vacío: la tarjeta no enseña precio."
-            />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Input
+                id="ficha-directorio-precio"
+                label="Precio de consulta"
+                inputMode="decimal"
+                autoComplete="off"
+                value={borrador.precio}
+                onChange={(precio) => cambiar({ precio })}
+                placeholder="40"
+                error={!!borrador.precio.trim() && vistaPrevia.precio === null}
+                hint="Vacío: la tarjeta no enseña precio."
+              />
+              <Select
+                id="ficha-directorio-moneda"
+                label="Moneda"
+                value={borrador.moneda}
+                options={OPCIONES_MONEDA}
+                onChange={(moneda) => cambiar({ moneda })}
+              />
+            </div>
 
             <div className="mt-1 flex flex-wrap items-center justify-end gap-3">
               {motivo && <p className="type-panel-caption text-error">{motivo}</p>}

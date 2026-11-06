@@ -404,15 +404,16 @@ begin
   -- Luis sigue publicado desde el paso 3.
   set local role anon;
   perform set_config('request.jwt.claims', '{"role": "anon"}', true);
-  if (select d.consultation_price_usd from public.helios_directorio() d where d.merchant_id = v_otra) is not null then
-    raise exception '9. sin ponerle precio no debía tener ninguno';
+  select * into v_fila from public.helios_directorio() d where d.merchant_id = v_otra;
+  if v_fila.consultation_price_cur is not null or v_fila.consultation_currency <> 'USD' then
+    raise exception '9. sin ponerle precio no debía tener ninguno: %', row_to_json(v_fila);
   end if;
   reset role;
 
   set local role authenticated;
   perform set_config('request.jwt.claims',
     json_build_object('sub', v_admin::text, 'role', 'authenticated', 'aal', 'aal2')::text, true);
-  for v_c in select jsonb_build_object('consultation_price_usd', x)
+  for v_c in select jsonb_build_object('consultation_price_cur', x)
                from unnest(array['gratis', '0', '0.50', '-5', '10001', '12.345']) x loop
     v_fallo := false;
     begin
@@ -422,37 +423,64 @@ begin
     if not v_fallo then raise exception '9. aceptó el precio %', v_c; end if;
   end loop;
 
-  perform public.admin_directorio_guardar(v_otra, '{"consultation_price_usd": "42.5"}');
+  -- La moneda (20261106200000): dólares o euros, nada más.
+  for v_c in select jsonb_build_object('consultation_currency', x)
+               from unnest(array['', 'VES', 'dolares']) x loop
+    v_fallo := false;
+    begin
+      perform public.admin_directorio_guardar(v_otra, v_c);
+    exception when sqlstate '22023' then v_fallo := true;
+    end;
+    if not v_fallo then raise exception '9. aceptó la moneda %', v_c; end if;
+  end loop;
+
+  perform public.admin_directorio_guardar(v_otra, '{"consultation_price_cur": "42.5", "consultation_currency": "EUR"}');
   v_j := public.admin_directorio();
   reset role;
 
   select e into v_c from jsonb_array_elements(v_j -> 'medicos') e where e ->> 'merchant_id' = v_otra::text;
-  if (v_c -> 'listing' ->> 'consultation_price_usd')::numeric <> 42.5 then
-    raise exception '9. la pestaña no trae el precio: %', v_c -> 'listing';
+  if (v_c -> 'listing' ->> 'consultation_price_cur')::numeric <> 42.5
+     or v_c -> 'listing' ->> 'consultation_currency' <> 'EUR' then
+    raise exception '9. la pestaña no trae el precio con su moneda: %', v_c -> 'listing';
   end if;
-  if v_c -> 'base' ? 'consultation_price_usd' then
+  if v_c -> 'base' ? 'consultation_price_cur' then
     raise exception '9. la ficha de la clínica no tiene precio: %', v_c -> 'base';
   end if;
 
   set local role anon;
   perform set_config('request.jwt.claims', '{"role": "anon"}', true);
   select * into v_fila from public.helios_directorio() d where d.merchant_id = v_otra;
-  if v_fila.consultation_price_usd <> 42.5 then
-    raise exception '9. la tarjeta no enseña el precio: %', row_to_json(v_fila);
+  if v_fila.consultation_price_cur <> 42.5 or v_fila.consultation_currency <> 'EUR' then
+    raise exception '9. la tarjeta no enseña el precio en euros: %', row_to_json(v_fila);
   end if;
-  if (select m.consultation_price_usd from public.helios_directorio_medico(v_fila.slug) m) <> 42.5 then
-    raise exception '9. la ficha pública no trae el precio';
+  if (select m.consultation_currency from public.helios_directorio_medico(v_fila.slug) m) <> 'EUR' then
+    raise exception '9. la ficha pública no trae la moneda';
   end if;
   reset role;
 
-  -- Vacío, la tarjeta deja de enseñarlo.
+  -- Cambiar solo la moneda deja el monto; vacío el precio, la tarjeta deja de
+  -- enseñarlo y la moneda vuelve a dólares.
   set local role authenticated;
   perform set_config('request.jwt.claims',
     json_build_object('sub', v_admin::text, 'role', 'authenticated', 'aal', 'aal2')::text, true);
-  perform public.admin_directorio_guardar(v_otra, '{"consultation_price_usd": ""}');
+  perform public.admin_directorio_guardar(v_otra, '{"consultation_currency": "USD"}');
   reset role;
-  if (select consultation_price_usd from public.directory_listings where merchant_id = v_otra) is not null then
+  if (select consultation_price_cur from public.directory_listings where merchant_id = v_otra) <> 42.5
+     or (select consultation_currency from public.directory_listings where merchant_id = v_otra) <> 'USD' then
+    raise exception '9. cambiar la moneda tocó el monto';
+  end if;
+
+  set local role authenticated;
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', v_admin::text, 'role', 'authenticated', 'aal', 'aal2')::text, true);
+  perform public.admin_directorio_guardar(v_otra, '{"consultation_currency": "EUR"}');
+  perform public.admin_directorio_guardar(v_otra, '{"consultation_price_cur": ""}');
+  reset role;
+  if (select consultation_price_cur from public.directory_listings where merchant_id = v_otra) is not null then
     raise exception '9. el precio vacío no se borró';
+  end if;
+  if (select consultation_currency from public.directory_listings where merchant_id = v_otra) <> 'USD' then
+    raise exception '9. sin precio la moneda debía volver a dólares';
   end if;
 end;
 $$;

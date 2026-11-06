@@ -1,4 +1,5 @@
-import { formatPhone } from '@/components/ui'
+import { formatPhone, leerMoneda } from '@/components/ui'
+import type { Moneda } from '@/components/ui'
 import type { RedSocial } from '@/features/admin/clinicas/clinicas'
 import type { MedicoDelDirectorio } from '@/features/directorio/directorio'
 import { leerRed, normalizar } from '@/features/directorio/directorio'
@@ -30,8 +31,9 @@ export type DatosDeTarjeta = {
   whatsapp: string | null
   red: RedSocial | null
   usuarioDeRed: string | null
-  /** En dólares. Solo existe en el directorio: en la ficha siempre es `null`. */
+  /** En `moneda`. Solo existe en el directorio: en la ficha siempre es `null`. */
   precio: number | null
+  moneda: Moneda
 }
 
 /** Por qué una clínica no se puede publicar. */
@@ -126,7 +128,8 @@ function leerDatos(raw: unknown): DatosDeTarjeta {
     whatsapp: textoONulo(r.whatsapp),
     red: leerRed(r.social_network),
     usuarioDeRed: textoONulo(r.social_user),
-    precio: numeroONulo(r.consultation_price_usd),
+    precio: numeroONulo(r.consultation_price_cur),
+    moneda: leerMoneda(r.consultation_currency),
   }
 }
 
@@ -205,6 +208,7 @@ export function comoTarjetaPublica(id: string, d: DatosDeTarjeta): MedicoDelDire
     red: d.red,
     usuarioDeRed: d.usuarioDeRed?.trim() || null,
     precio: d.precio,
+    moneda: d.moneda,
     codigo: null,
     // La vista previa no lleva enlace a la ficha: no se sale del superadmin.
     slug: null,
@@ -345,6 +349,7 @@ export type BorradorDeTarjeta = {
   usuarioDeRed: string
   /** Como lo escribe la gente («40», «42,50»). Vacío: la tarjeta no enseña precio. */
   precio: string
+  moneda: Moneda
 }
 
 export function borradorDe(d: DatosDeTarjeta): BorradorDeTarjeta {
@@ -358,10 +363,11 @@ export function borradorDe(d: DatosDeTarjeta): BorradorDeTarjeta {
     red: d.red ?? '',
     usuarioDeRed: d.usuarioDeRed ?? '',
     precio: formatoMontoEditable(d.precio),
+    moneda: d.moneda,
   }
 }
 
-/** El precio tecleado, o `null` si está vacío o no vale: de $1 a $10.000, con hasta dos decimales. */
+/** El precio tecleado, o `null` si está vacío o no vale: de 1 a 10.000, con hasta dos decimales. */
 function precioTecleado(tecleado: string): number | null {
   const n = leerMonto(tecleado)
   if (n === null || n < 1 || n > 10000 || Math.round(n * 100) / 100 !== n) return null
@@ -382,6 +388,7 @@ export function whatsappE164(tecleado: string): string | null {
 /** Lo que verá el paciente con el borrador puesto. */
 export function datosDelBorrador(b: BorradorDeTarjeta, ficha: DatosDeTarjeta): DatosDeTarjeta {
   const limpio = (t: string) => t.trim().replace(/\s+/g, ' ')
+  const precio = precioTecleado(b.precio)
   return {
     nombre: limpio(b.nombre) || ficha.nombre,
     especialidad: limpio(b.especialidad) || ficha.especialidad,
@@ -391,7 +398,9 @@ export function datosDelBorrador(b: BorradorDeTarjeta, ficha: DatosDeTarjeta): D
     whatsapp: b.whatsapp.trim() ? whatsappE164(b.whatsapp) : ficha.whatsapp,
     red: b.red || ficha.red,
     usuarioDeRed: limpio(b.usuarioDeRed) || ficha.usuarioDeRed,
-    precio: precioTecleado(b.precio),
+    precio,
+    // Como la base: sin precio no hay moneda que recordar.
+    moneda: precio === null ? 'USD' : b.moneda,
   }
 }
 
@@ -405,7 +414,7 @@ export function motivoParaNoGuardar(b: BorradorDeTarjeta): string | null {
   if (b.whatsapp.trim() && !whatsappE164(b.whatsapp)) return 'El WhatsApp debe ser un número venezolano, como 0414-1234567.'
   if (b.usuarioDeRed.trim().length > 150) return 'El usuario de la red social no puede pasar de 150 caracteres.'
   if (b.usuarioDeRed.trim() && !b.red) return 'Elige qué red social es.'
-  if (b.precio.trim() && precioTecleado(b.precio) === null) return 'El precio de la consulta debe ser un monto en dólares, entre $1 y $10.000.'
+  if (b.precio.trim() && precioTecleado(b.precio) === null) return 'El precio de la consulta debe ser un monto entre 1 y 10.000.'
   return null
 }
 
@@ -430,7 +439,8 @@ export function cambiosDelBorrador(
   if (b.red !== (actual.red ?? '')) cambios.social_network = b.red
   if (limpio(b.usuarioDeRed) !== (actual.usuarioDeRed ?? '')) cambios.social_user = limpio(b.usuarioDeRed)
   const precio = b.precio.trim() ? String(precioTecleado(b.precio) ?? b.precio.trim()) : ''
-  if (precio !== (actual.precio === null ? '' : String(actual.precio))) cambios.consultation_price_usd = precio
+  if (precio !== (actual.precio === null ? '' : String(actual.precio))) cambios.consultation_price_cur = precio
+  if (precio && b.moneda !== actual.moneda) cambios.consultation_currency = b.moneda
   return Object.keys(cambios).length > 0 ? cambios : null
 }
 
