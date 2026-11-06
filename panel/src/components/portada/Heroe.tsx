@@ -45,8 +45,8 @@ function Entra({
 
 const FILAS = [
   { cuando: 'Hoy, en la consulta', dia: 'Día 0', monto: dinero(0) },
-  { cuando: 'Cuota 1 · a los 7 días', dia: 'Día 7', monto: dinero(cuota) },
-  { cuando: 'Cuota 2 · a los 14 días', dia: 'Día 14', monto: dinero(cuota) },
+  { cuando: 'Cuota 1 · a los 14 días', dia: 'Día 14', monto: dinero(cuota) },
+  { cuando: 'Cuota 2 · a los 28 días', dia: 'Día 28', monto: dinero(cuota) },
 ]
 
 function Recibo() {
@@ -162,8 +162,8 @@ export function Heroe() {
               <p className="portada-entrada mt-7 max-w-[50ch] text-portada-tinta-2">
                 Helios es una forma de pagar consultas y tratamientos de salud
                 privada en cuotas en Venezuela: con el médico, el odontólogo o
-                el cosmetólogo. Hoy no pagas nada: pagas en dos cuotas, a los 7
-                y a los 14 días.
+                el cosmetólogo. Hoy no pagas nada: pagas en dos cuotas, a los 14
+                y a los 28 días.
               </p>
             </Entra>
 

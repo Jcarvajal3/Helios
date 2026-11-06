@@ -144,7 +144,7 @@ export function Desglose() {
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-3">
-        {[7, 14].map((d, i) => (
+        {[14, 28].map((d, i) => (
           <div
             key={d}
             className="portada-desglose-cuota rounded-2xl bg-portada-niebla p-4"
@@ -165,11 +165,11 @@ export function Desglose() {
         <strong className="font-medium text-portada-tinta">
           {dinero(cuota, moneda)}
         </strong>{' '}
-        a los 7 días y{' '}
+        a los 14 días y{' '}
         <strong className="font-medium text-portada-tinta">
           {dinero(cuota, moneda)}
         </strong>{' '}
-        a los 14. Hoy, nada.{' '}
+        a los 28. Hoy, nada.{' '}
         <span className="text-portada-tinta-3">
           Cada cuota se paga en bolívares, a la tasa oficial del{' '}
           {moneda === 'EUR' ? 'euro' : 'dólar'} del BCV del día en que pagas.

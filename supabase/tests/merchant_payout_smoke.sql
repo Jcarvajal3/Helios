@@ -98,10 +98,11 @@ begin
   raise notice 'TEST PAYOUT 2 OK — el comercio queda acreedor por su neto ($%)',
     (select merchant_net_usd from public.charges where id = v_charge);
 
-  -- --- 3. Vender no encola NADA: el comercio cobra por fecha de cuota -----
+  -- --- 3. Vender no encola NADA: el comercio cobra por su propia fecha ----
   -- Desde 20260902120000 el reparto es 0 / 50 / 50: al vender no se devenga
-  -- nada en la cola de pago, y cada mitad nace el día que vence su cuota. El
-  -- porcentaje sale de las condiciones del comercio, no de un número a mano.
+  -- nada en la cola de pago, y cada mitad nace en su `settlement_due_date`
+  -- (20261106220000), no el día que vence la cuota del paciente. El porcentaje
+  -- sale de las condiciones del comercio, no de un número a mano.
   select merchant_net_usd into v_net from public.charges where id = v_charge;
   select round(v_net * per_installment_pct / 100, 4) into v_tranche
   from public.merchant_settlement_terms where merchant_id = v_merchant;
@@ -115,10 +116,10 @@ begin
   if coalesce(v_pending, 0) <> 0 then
     raise exception 'Al vender no debía encolarse nada, hay % pendiente', v_pending;
   end if;
-  raise notice 'TEST PAYOUT 3 OK — vender no encola nada (se cobra por fecha de cuota)';
+  raise notice 'TEST PAYOUT 3 OK — vender no encola nada (se cobra por la fecha de la clínica)';
 
-  -- --- 3-bis. Al vencer la cuota 1 se devenga la mitad -------------------
-  select due_date into v_due1 from public.installments
+  -- --- 3-bis. En la fecha de la primera mitad se devenga -----------------
+  select settlement_due_date into v_due1 from public.installments
   where charge_id = v_charge and sequence = 1;
 
   perform public.run_scheduled_settlements(v_due1);
@@ -127,9 +128,9 @@ begin
   from public.merchant_payables where merchant_id = v_merchant;
 
   if coalesce(v_pending, 0) <> v_tranche then
-    raise exception 'Al vencer la cuota 1 debían devengarse %, hay %', v_tranche, v_pending;
+    raise exception 'En la fecha de la primera mitad debían devengarse %, hay %', v_tranche, v_pending;
   end if;
-  raise notice 'TEST PAYOUT 3-BIS OK — la cuota 1 devengó $% al comercio', v_pending;
+  raise notice 'TEST PAYOUT 3-BIS OK — la primera mitad devengó $% al comercio', v_pending;
 
   -- Correrlo dos veces el mismo día no duplica: la idempotencia es por
   -- consumo Y FECHA (20260827080000).

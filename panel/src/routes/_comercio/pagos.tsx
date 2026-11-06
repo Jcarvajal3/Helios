@@ -77,13 +77,13 @@ function PagosRoute() {
  * en UNA transferencia, dos cosas distintas que aquí se enseñan siempre
  * partidas:
  *
- *   · Consultas: la mitad de cada pago en cuotas el día siguiente al
- *     vencimiento de cada cuota del paciente (a los 8 y a los 15 días de la
- *     consulta), haya pagado o no.
- *   · Comisiones del personal: la de quien registró cada pago en cuotas, el
- *     día siguiente a que el paciente confirma. La clínica se las entrega.
+ *   · Consultas: la mitad de cada pago en cuotas a los 8 días de la consulta
+ *     y la otra a los 15, haya pagado o no el paciente. No depende del
+ *     vencimiento de sus cuotas, que puede caer después.
+ *   · Comisiones del personal: la de quien registró cada pago en cuotas, junto
+ *     con la primera mitad (día 8). La clínica se las entrega.
  *
- * La fecha del próximo pago la calcula la base (`helios_settlement_run_for`).
+ * La fecha del próximo pago la calcula la base.
  */
 function Pagos({ staff }: { staff: StaffContext }) {
   const prevision = useQuery({
@@ -129,8 +129,8 @@ function Pagos({ staff }: { staff: StaffContext }) {
           info={EQUIVALENTE_EN_DOLARES}
           hint={
             p && p.upcomingUsd > 0
-              ? `${formatUsd(p.upcomingUsd)} en cuotas que aún no vencen`
-              : 'Todo vencido y a la espera del próximo pago'
+              ? `${formatUsd(p.upcomingUsd)} en mitades que aún no toca pagarte`
+              : 'Todo a la espera del próximo pago'
           }
           estado={estadoDeConsulta(prevision)}
           onReintentar={() => void prevision.refetch()}
@@ -182,10 +182,9 @@ function Pagos({ staff }: { staff: StaffContext }) {
       <p className="mt-6 max-w-3xl type-panel-body leading-6 text-on-surface-variant">
         Helios te paga <strong>todos los días</strong>. Cada pago en cuotas te llega en dos
         mitades: la primera <strong>a los 8 días</strong> de la consulta y la segunda{' '}
-        <strong>a los 15 días</strong> (el día siguiente al vencimiento de cada cuota del
-        paciente), <strong>haya pagado o no tu paciente</strong>: cobrarle es cosa de Helios.
-        En la misma transferencia van las <strong>comisiones de tu personal</strong>, cada una
-        el día siguiente a que el paciente confirma, para que se las entregues. Las cifras de
+        <strong>a los 15 días</strong>, <strong>haya pagado o no tu paciente</strong>: cobrarle
+        es cosa de Helios. Con la primera mitad van las{' '}
+        <strong>comisiones de tu personal</strong>, para que se las entregues. Las cifras de
         esta pantalla van en dólares: las consultas que cobraste en euros se suman pasadas a
         dólares.
       </p>

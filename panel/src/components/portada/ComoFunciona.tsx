@@ -240,11 +240,11 @@ function Conversacion({ activo }: { activo: boolean }) {
             <dd className="tabular-nums">{dinero(comision + iva)}</dd>
           </div>
           <div className="flex justify-between gap-3 border-t border-portada-linea pt-1 text-portada-tinta">
-            <dt>Cuota 1 · 7 días</dt>
+            <dt>Cuota 1 · 14 días</dt>
             <dd className="tabular-nums">{dinero(cuota)}</dd>
           </div>
           <div className="flex justify-between gap-3 text-portada-tinta">
-            <dt>Cuota 2 · 14 días</dt>
+            <dt>Cuota 2 · 28 días</dt>
             <dd className="tabular-nums">{dinero(cuota)}</dd>
           </div>
         </dl>
@@ -281,22 +281,32 @@ function Conversacion({ activo }: { activo: boolean }) {
 
 // ── 03 · Paga en dos cuotas ────────────────────────────────────────────────
 
-const DIAS = Array.from({ length: 17 }, (_, i) => i)
+const DIAS = Array.from({ length: 30 }, (_, i) => i)
 const ANCHO_DIA = 38
 
 function Calendario({ activo }: { activo: boolean }) {
-  // Del día 0 al 15, y una pausa al final.
+  // Del día 0 al 28, y una pausa al final. El aviso del día anterior a cada
+  // cuota dura lo suficiente para leerse.
   const paso = useCiclo(
-    17,
-    (p) => (p === 0 ? 900 : p === 16 ? 2600 : p === 7 || p === 14 ? 1300 : 420),
+    30,
+    (p) =>
+      p === 0
+        ? 900
+        : p === 29
+          ? 2600
+          : p === 14 || p === 28
+            ? 1300
+            : p === 13 || p === 27
+              ? 420
+              : 200,
     activo,
   )
-  const dia = activo ? Math.min(paso, 15) : 15
-  const aviso = dia === 6 || dia === 13
+  const dia = activo ? Math.min(paso, 28) : 28
+  const aviso = dia === 13 || dia === 27
 
   const cuotas = [
-    { n: 1, vence: 7 },
-    { n: 2, vence: 14 },
+    { n: 1, vence: 14 },
+    { n: 2, vence: 28 },
   ]
 
   return (
@@ -309,7 +319,7 @@ function Calendario({ activo }: { activo: boolean }) {
         <span className="grid size-5 place-items-center rounded-full bg-portada-azul text-white">
           <Bell className="size-3" />
         </span>
-        Tu cuota {dia < 10 ? 1 : 2} vence mañana
+        Tu cuota {dia < 20 ? 1 : 2} vence mañana
       </div>
 
       <div className="relative mx-auto h-11 overflow-hidden rounded-full bg-white/10 ring-1 ring-white/15 backdrop-blur">
@@ -323,7 +333,7 @@ function Calendario({ activo }: { activo: boolean }) {
               className={`grid h-8 shrink-0 place-items-center text-[0.8rem] tabular-nums transition-all duration-300 ${
                 d === dia
                   ? 'scale-110 font-semibold text-portada-tinta'
-                  : d === 7 || d === 14
+                  : d === 14 || d === 28
                     ? 'text-white'
                     : 'text-white/45'
               }`}
@@ -347,7 +357,7 @@ function Calendario({ activo }: { activo: boolean }) {
         />
       </div>
       <p className="mt-2 text-center text-[0.65rem] uppercase tracking-[0.14em] text-white/50">
-        Día de la consulta → día 15
+        Día de la consulta → día 28
       </p>
 
       <div className="mt-4 rounded-[20px] bg-white p-2 shadow-[0_30px_60px_-20px_rgba(0,8,40,0.55)]">

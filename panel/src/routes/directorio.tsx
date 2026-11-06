@@ -27,7 +27,7 @@ import { unoDe } from '@/lib/busqueda'
 
 const TITULO = 'Médicos con pago en cuotas en Venezuela | Directorio Helios'
 const DESCRIPCION =
-  'Encuentra médicos, odontólogos y especialistas que aceptan Helios, escríbeles por WhatsApp y paga tu consulta en dos cuotas, a los 7 y 14 días, sin inicial.'
+  'Encuentra médicos, odontólogos y especialistas que aceptan Helios, escríbeles por WhatsApp y paga tu consulta en 2 cuotas, a los 14 y 28 días, sin inicial.'
 
 export const Route = createFileRoute('/directorio')({
   validateSearch: (search: Record<string, unknown>): { especialidad?: ClaveDeEspecialidad; precio?: ClaveDeTramo } => ({
@@ -70,7 +70,7 @@ function Directorio() {
       fallo={fallo}
       whatsappHelios={whatsappHelios}
       h1={{ antes: 'Encuentra a tu médico', enfasis: 'con 0% de inicial.' }}
-      entrada="Escríbele por WhatsApp y paga tu consulta en 2 cuotas, a los 7 y 14 días."
+      entrada="Escríbele por WhatsApp y paga tu consulta en 2 cuotas, a los 14 y 28 días."
       guia={{ ruta: '/pacientes', texto: 'Cómo funciona el pago en cuotas' }}
     />
   )

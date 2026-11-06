@@ -25,7 +25,7 @@ const CABECERAS = [
   { label: 'Financiado (sin comisión)', info: 'Sin la Comisión Helios: el financiado de esa semana en la clínica.' },
   { label: 'Pacientes', info: 'Pacientes distintos con una cuota en los financiamientos de esa semana en la clínica.' },
   { label: 'Cuota 1', info: 'Las cuotas 1 de lo financiado esa semana: el porcentaje es el de las pagadas a tiempo entre las que ya cerraron su plazo; la barra, el estado de hoy de todas (al pasar el ratón, cuántas hay en cada estado).' },
-  { label: 'Cuota 2', info: 'Lo mismo para las cuotas 2, que vencen una semana después.' },
+  { label: 'Cuota 2', info: 'Lo mismo para las cuotas 2, que vencen un intervalo de cuotas después de la 1.' },
   { label: 'Vencido hoy (financiamiento + comisión)', info: 'Financiamiento + comisión: lo que sigue vencido y sin pagar hoy de las cuotas 1 y 2 de esa semana. Debajo, cada parte por separado: su financiamiento y la Comisión Helios (IVA incluido).' },
 ]
 

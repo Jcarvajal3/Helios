@@ -36,11 +36,12 @@ export function consultaDeLaFoto(local: string | null) {
 }
 
 /**
- * Los días que se proyectan. A la clínica se le paga el día siguiente al
- * vencimiento de cada cuota (días 8 y 15 de cada orden), así que lo que hoy
- * está en la calle entra y sale entero en los próximos 15 días.
+ * Los días que se proyectan, sin contar hoy. A la clínica se le paga a los días
+ * 8 y 15 de cada orden, pero en las órdenes desde el 2026-11-06 las cuotas
+ * vencen a los días 14 y 28: con menos de 28 días la tabla enseñaría las salidas
+ * enteras y solo parte de las entradas, y la caja saldría peor de lo que es.
  */
-export const DIAS_DE_PROYECCION = 15
+export const DIAS_DE_PROYECCION = 28
 
 /** La proyección día a día desde hoy (`admin_cash_forecast_days`), con el desglose de lo que vence. */
 export function consultaDeLaProyeccion(local: string | null) {
@@ -49,7 +50,8 @@ export function consultaDeLaProyeccion(local: string | null) {
     queryFn: ({ signal }) =>
       llamarRpc(
         'admin_cash_forecast_days',
-        { p_days: DIAS_DE_PROYECCION, p_merchant_id: local },
+        // `p_days` cuenta hoy como el primero (y la base admite hasta 31).
+        { p_days: DIAS_DE_PROYECCION + 1, p_merchant_id: local },
         { signal, leer: leerProyeccion },
       ),
     ...OPCIONES_METRICAS,

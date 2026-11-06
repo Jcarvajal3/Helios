@@ -23,10 +23,9 @@ import {
 /**
  * PARA MÉDICOS Y CENTROS — el bloque oscuro.
  *
- * Lo central es la línea de tiempo: el paciente paga a los 7 y a los 14
- * días, y la clínica cobra cada mitad al día siguiente, a los 8 y a los 15,
- * pague o no el paciente. Aquí, como en todo lo que ve una clínica, los
- * montos van sin la Comisión Helios.
+ * Lo central es la línea de tiempo: la clínica cobra cada mitad a los 8 y a
+ * los 15 días, pague o no el paciente, que paga a los 14 y a los 28. Aquí,
+ * como en todo lo que ve una clínica, los montos van sin la Comisión Helios.
  */
 
 const NOCHE = '#020B24'
@@ -34,22 +33,25 @@ const ICONOS = [CalendarCheck2, Wallet, MessageCircle, DoorOpen]
 
 const MITAD = CONSULTA / 2
 
+/** Hasta donde llega la línea: la segunda cuota del paciente. */
+const ULTIMO_DIA = 28
+
 const HITOS = [
   { dia: 0, carril: 'abajo', texto: 'Atiendes', corto: 'Atiendes' },
-  { dia: 7, carril: 'arriba', texto: 'Cuota 1', corto: 'Cuota 1' },
   {
     dia: 8,
     carril: 'abajo',
     texto: `Recibes ${dineroCorto(MITAD)}`,
     corto: `+${dineroCorto(MITAD)}`,
   },
-  { dia: 14, carril: 'arriba', texto: 'Cuota 2', corto: 'Cuota 2' },
+  { dia: 14, carril: 'arriba', texto: 'Cuota 1', corto: 'Cuota 1' },
   {
     dia: 15,
     carril: 'abajo',
     texto: `Recibes ${dineroCorto(MITAD)}`,
     corto: `+${dineroCorto(MITAD)}`,
   },
+  { dia: ULTIMO_DIA, carril: 'arriba', texto: 'Cuota 2', corto: 'Cuota 2' },
 ] as const
 
 export function LineaDeCobro() {
@@ -60,12 +62,18 @@ export function LineaDeCobro() {
   const quieto = useQuieto()
   const activo = visto && !quieto
   const paso = useCiclo(
-    17,
+    ULTIMO_DIA + 2,
     (p) =>
-      p === 0 ? 1000 : p === 16 ? 3200 : p === 8 || p === 15 ? 1100 : 320,
+      p === 0
+        ? 1000
+        : p === ULTIMO_DIA + 1
+          ? 3200
+          : p === 8 || p === 15
+            ? 1100
+            : 200,
     activo,
   )
-  const dia = activo ? Math.min(paso, 15) : 15
+  const dia = activo ? Math.min(paso, ULTIMO_DIA) : ULTIMO_DIA
   const recibido = (dia >= 8 ? MITAD : 0) + (dia >= 15 ? MITAD : 0)
 
   return (
@@ -76,7 +84,7 @@ export function LineaDeCobro() {
             Una consulta de {dineroCorto(CONSULTA)}
           </p>
           <p className="mt-3 text-[0.95rem] text-white/70">
-            Día <span className="tabular-nums text-white">{dia}</span> de 15
+            Día <span className="tabular-nums text-white">{dia}</span> de {ULTIMO_DIA}
           </p>
         </div>
         <div className="sm:text-right">
@@ -107,12 +115,12 @@ export function LineaDeCobro() {
           <div className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-white/15" />
           <div
             className="absolute left-0 top-1/2 h-[2px] -translate-y-1/2 bg-gradient-to-r from-portada-azul via-portada-cielo to-portada-cielo-2 shadow-[0_0_18px_rgba(69,168,253,0.8)] transition-[width] duration-300 ease-linear"
-            style={{ width: `${(dia / 15) * 100}%` }}
+            style={{ width: `${(dia / ULTIMO_DIA) * 100}%` }}
           />
 
           {HITOS.map((h) => {
             const llego = dia >= h.dia
-            const x = `${(h.dia / 15) * 100}%`
+            const x = `${(h.dia / ULTIMO_DIA) * 100}%`
             return (
               <div key={h.dia} className="absolute top-1/2" style={{ left: x }}>
                 <span
@@ -131,7 +139,7 @@ export function LineaDeCobro() {
                 <span
                   className={`absolute whitespace-nowrap text-[0.72rem] font-medium transition-all duration-500 sm:text-[0.8rem] ${
                     h.carril === 'arriba' ? 'bottom-9' : 'top-9'
-                  } ${h.dia === 0 ? '-translate-x-1.5' : h.dia === 15 ? '-translate-x-[calc(100%-6px)] text-right' : '-translate-x-1/2 text-center'} ${
+                  } ${h.dia === 0 ? '-translate-x-1.5' : h.dia === ULTIMO_DIA ? '-translate-x-[calc(100%-6px)] text-right' : '-translate-x-1/2 text-center'} ${
                     llego
                       ? h.carril === 'abajo'
                         ? 'text-portada-cielo-2'

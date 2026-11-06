@@ -472,15 +472,17 @@ begin
   -- =========================================================================
   -- 8. A la clínica: cada mitad en euros
   -- =========================================================================
-  perform public.run_scheduled_settlements_batch((select due_date from public.installments where id = v_i1),
+  perform public.run_scheduled_settlements_batch((select settlement_due_date from public.installments where id = v_i1),
                                                  '00000000-0000-0000-0000-000000000000'::uuid, 100);
-  perform public.run_scheduled_settlements_batch(v_today, '00000000-0000-0000-0000-000000000000'::uuid, 100);
+  perform public.run_scheduled_settlements_batch((select settlement_due_date from public.installments where id = v_i2),
+                                                 '00000000-0000-0000-0000-000000000000'::uuid, 100);
 
   select id into v_s1 from public.settlements
   where charge_id = v_charge and reason = 'scheduled_installment'
-    and business_date = (select due_date from public.installments where id = v_i1);
+    and business_date = (select settlement_due_date from public.installments where id = v_i1);
   select id into v_s2 from public.settlements
-  where charge_id = v_charge and reason = 'scheduled_installment' and business_date = v_today;
+  where charge_id = v_charge and reason = 'scheduled_installment'
+    and business_date = (select settlement_due_date from public.installments where id = v_i2);
   if v_s1 is null or v_s2 is null then
     raise exception 'Faltaban las dos mitades de la clínica';
   end if;

@@ -46,7 +46,8 @@ function futuroDe(m: MerchantPayable): number {
  * distinguir: lo que toca pagar hoy, lo atrasado de días anteriores y lo
  * comprometido a futuro. Mezclarlas era lo que hacía pagar de más.
  *
- * Se paga a diario: cada liquidación, el día siguiente a su vencimiento.
+ * Se paga a diario: cada liquidación, en su día de pago (la consulta, a los 8
+ * y a los 15 días de la orden).
  *
  * Las cifras de arriba son puertas: pulsar «atrasado» deja solo los locales
  * con atraso. Los locales de prueba salen, con su etiqueta, y no suman.
@@ -124,7 +125,7 @@ export function LoQueSeDebeHoy({
       {prueba > 0 && ` · ${formatUsd(prueba)} en clínicas de prueba, aparte`}{' '}
       <InfoDot
         title="Lo que se debe hoy"
-        what="Lo que se le transfiere a cada clínica: sus consultas enteras (sin la Comisión Helios, que paga el paciente) más las comisiones de su personal. Se paga a diario: cada liquidación, el día siguiente a su vencimiento (la consulta, a los 8 y a los 15 días; la comisión de la secretaria, junto con la primera mitad). El panel no mueve dinero: la transferencia se hace en el banco y aquí se registra."
+        what="Lo que se le transfiere a cada clínica: sus consultas enteras (sin la Comisión Helios, que paga el paciente) más las comisiones de su personal. Se paga a diario: cada liquidación, en su día de pago (la consulta, a los 8 y a los 15 días de la orden; la comisión de la secretaria, junto con la primera mitad), sin depender de cuándo venza la cuota del paciente. El panel no mueve dinero: la transferencia se hace en el banco y aquí se registra."
       />
     </>
   )
@@ -297,7 +298,7 @@ const COLUMNAS: Array<Column<MerchantPayable>> = [
     key: 'proximo',
     header: 'Próximo pago',
     type: 'number',
-    info: 'El siguiente día, después de hoy, con algo que transferirle: las mitades de la consulta que vencen (aunque todavía no sean liquidaciones) y las comisiones de su personal de ese día, sumadas. Para tenerlo listo antes de que toque.',
+    info: 'El siguiente día, después de hoy, con algo que transferirle: las mitades de la consulta que tocan ese día (aunque todavía no sean liquidaciones) y las comisiones de su personal de ese día, sumadas. Para tenerlo listo antes de que toque.',
     sort: (m) => m.proximoPago?.fecha ?? null,
     cell: (m) =>
       m.proximoPago ? (
@@ -360,7 +361,7 @@ const COLUMNAS: Array<Column<MerchantPayable>> = [
     key: 'futuro',
     header: 'Por pagar en los próximos días',
     type: 'number',
-    info: 'Lo que se le deberá después del pago de hoy: lo que vence hoy (sale mañana) y, sobre todo, cuotas de sus pacientes que todavía no vencen y aún no son liquidaciones. Hoy no toca pagarlo.',
+    info: 'Lo que se le deberá después del pago de hoy: lo que sale mañana y, sobre todo, mitades de consultas cuya fecha de pago todavía no llega y aún no son liquidaciones. Hoy no toca pagarlo.',
     sort: futuroDe,
     sortDir: 'desc',
     cell: (m) => <span className="text-on-surface-variant">{formatUsd(futuroDe(m))}</span>,

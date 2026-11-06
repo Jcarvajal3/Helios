@@ -93,7 +93,7 @@ const PASOS_PACIENTE: Bloque[] = [
       'Te llega un mensaje con el monto, la Comisión Helios y tus dos cuotas con su fecha. Lo confirmas por WhatsApp y el comprobante te llega por correo.',
   },
   {
-    titulo: 'Paga a los 7 y a los 14 días',
+    titulo: 'Paga a los 14 y a los 28 días',
     texto:
       'En bolívares, por Pago Móvil o transferencia, a la tasa oficial del BCV del día en que pagas. Te recordamos cada fecha por WhatsApp.',
   },
@@ -101,7 +101,7 @@ const PASOS_PACIENTE: Bloque[] = [
 
 /** El resumen de las páginas del paciente. */
 const RESUMEN_PACIENTE: Dato[] = [
-  { termino: 'Cuotas', valor: '2, a los 7 y a los 14 días' },
+  { termino: 'Cuotas', valor: '2, a los 14 y a los 28 días' },
   { termino: 'Inicial', valor: '$0: hoy no pagas nada' },
   {
     termino: 'Comisión Helios',
@@ -143,15 +143,15 @@ export const TABLA_DE_CUOTAS = [50, CONSULTA, LIMITE].map((monto) => ({
 
 /**
  * El calendario de la página del médico: qué pasa cada día desde la
- * consulta. A los 8 y 15 días, el día siguiente a cada cuota
- * (`helios_settlement_run_for`).
+ * consulta. El médico cobra a los 8 y 15 días, pague o no el paciente; las
+ * cuotas del paciente vencen a los 14 y 28.
  */
 export const CALENDARIO_DE_COBRO: Dato[] = [
   { termino: 'Día 0', valor: 'Registras la consulta y el paciente confirma por WhatsApp. Ese día no paga nada.' },
-  { termino: 'Día 7', valor: 'Vence la primera cuota del paciente.' },
   { termino: 'Día 8', valor: 'Recibes la mitad del precio de la consulta.' },
-  { termino: 'Día 14', valor: 'Vence la segunda cuota del paciente.' },
+  { termino: 'Día 14', valor: 'Vence la primera cuota del paciente.' },
   { termino: 'Día 15', valor: 'Recibes la otra mitad: ya cobraste el 100%, pague o no el paciente.' },
+  { termino: 'Día 28', valor: 'Vence la segunda cuota del paciente.' },
 ]
 
 const PREGUNTA_LIMITE: Pregunta = {
@@ -180,13 +180,13 @@ const PACIENTES: Guia = {
   ruta: '/pacientes',
   titulo: 'Paga tu consulta médica en cuotas, sin inicial | Helios',
   descripcion:
-    'Paga tu consulta médica, dental o de cosmetología en 2 cuotas, a los 7 y 14 días, sin inicial. En bolívares, por Pago Móvil o transferencia.',
+    'Paga tu consulta médica, dental o de cosmetología en 2 cuotas, a los 14 y 28 días, sin inicial. En bolívares, por Pago Móvil o transferencia.',
   nombre: 'Pacientes',
   publico: 'paciente',
   rotulo: 'Para pacientes',
   h1: { antes: 'Paga tu consulta médica', enfasis: 'en dos cuotas.' },
   entrada:
-    'Con Helios, la consulta o el tratamiento en un consultorio afiliado se paga en dos cuotas, a los 7 y a los 14 días, sin inicial y sin descargar nada. Atiéndete hoy y paga después.',
+    'Con Helios, la consulta o el tratamiento en un consultorio afiliado se paga en dos cuotas, a los 14 y a los 28 días, sin inicial y sin descargar nada. Atiéndete hoy y paga después.',
   resumen: RESUMEN_PACIENTE,
   pasos: {
     titulo: { antes: 'Pagar en cuotas,', enfasis: 'en tres pasos.' },
@@ -201,7 +201,7 @@ const PACIENTES: Guia = {
       {
         titulo: 'Hoy no pagas nada',
         texto:
-          'Sin inicial. Pagas la mitad a los 7 días y la otra mitad a los 14, en fechas que ves antes de confirmar y que no se mueven.',
+          'Sin inicial. Pagas la mitad a los 14 días y la otra mitad a los 28, en fechas que ves antes de confirmar y que no se mueven.',
       },
       {
         titulo: 'Una sola comisión, dicha desde el principio',
@@ -234,7 +234,7 @@ const PACIENTES: Guia = {
     {
       pregunta: '¿Tengo que pagar una inicial?',
       respuesta:
-        'No. El día de la consulta no pagas nada: pagas una cuota a los 7 días y la otra a los 14.',
+        'No. El día de la consulta no pagas nada: pagas una cuota a los 14 días y la otra a los 28.',
     },
     {
       pregunta: '¿Tengo que descargar una app o crear una cuenta?',
@@ -407,13 +407,13 @@ const MEDICINA: Guia = {
   ruta: '/consulta-medica-en-cuotas',
   titulo: 'Consulta médica en cuotas, sin inicial | Helios Venezuela',
   descripcion:
-    'Paga tu consulta con el médico general o el especialista en 2 cuotas, a los 7 y 14 días, sin inicial. En bolívares, por Pago Móvil o transferencia.',
+    'Paga tu consulta con el médico general o el especialista en 2 cuotas, a los 14 y 28 días, sin inicial. En bolívares, por Pago Móvil o transferencia.',
   nombre: 'Consulta médica en cuotas',
   publico: 'paciente',
   rotulo: 'Medicina · Pago en cuotas',
   h1: { antes: 'Tu consulta médica,', enfasis: 'en dos cuotas.' },
   entrada:
-    'Con tu médico de cabecera o con el especialista: si el consultorio está afiliado a Helios, pagas la consulta en dos cuotas, a los 7 y a los 14 días, sin inicial.',
+    'Con tu médico de cabecera o con el especialista: si el consultorio está afiliado a Helios, pagas la consulta en dos cuotas, a los 14 y a los 28 días, sin inicial.',
   resumen: RESUMEN_PACIENTE,
   pasos: {
     titulo: { antes: 'Cómo pagar tu consulta', enfasis: 'en cuotas.' },
@@ -425,7 +425,7 @@ const MEDICINA: Guia = {
       {
         titulo: 'No pospongas el chequeo',
         texto:
-          'Atiéndete cuando lo necesitas y reparte el pago en dos fechas, a los 7 y a los 14 días.',
+          'Atiéndete cuando lo necesitas y reparte el pago en dos fechas, a los 14 y a los 28 días.',
       },
       {
         titulo: 'Médico general o especialista',
@@ -480,13 +480,13 @@ const ODONTOLOGIA: Guia = {
   ruta: '/odontologia-en-cuotas',
   titulo: 'Odontología en cuotas: paga al dentista sin inicial | Helios',
   descripcion:
-    'Paga al odontólogo tu consulta o tratamiento en 2 cuotas, a los 7 y 14 días, sin inicial. En bolívares, por Pago Móvil o transferencia.',
+    'Paga al odontólogo tu consulta o tratamiento en 2 cuotas, a los 14 y 28 días, sin inicial. En bolívares, por Pago Móvil o transferencia.',
   nombre: 'Odontología en cuotas',
   publico: 'paciente',
   rotulo: 'Odontología · Pago en cuotas',
   h1: { antes: 'Tu consulta con el odontólogo,', enfasis: 'en dos cuotas.' },
   entrada:
-    'Una limpieza, un control o ese dolor de muela que no puede esperar. En los consultorios odontológicos afiliados a Helios pagas tu atención en dos cuotas, a los 7 y a los 14 días, sin inicial.',
+    'Una limpieza, un control o ese dolor de muela que no puede esperar. En los consultorios odontológicos afiliados a Helios pagas tu atención en dos cuotas, a los 14 y a los 28 días, sin inicial.',
   resumen: RESUMEN_PACIENTE,
   pasos: {
     titulo: { antes: 'Cómo pagar al dentista', enfasis: 'en cuotas.' },
@@ -551,13 +551,13 @@ const COSMETOLOGIA: Guia = {
   ruta: '/cosmetologia-en-cuotas',
   titulo: 'Tratamientos estéticos en cuotas, sin inicial | Helios',
   descripcion:
-    'Paga tu tratamiento de cosmetología o estética en 2 cuotas, a los 7 y 14 días, sin inicial. En bolívares, por Pago Móvil o transferencia.',
+    'Paga tu tratamiento de cosmetología o estética en 2 cuotas, a los 14 y 28 días, sin inicial. En bolívares, por Pago Móvil o transferencia.',
   nombre: 'Cosmetología en cuotas',
   publico: 'paciente',
   rotulo: 'Cosmetología · Pago en cuotas',
   h1: { antes: 'Tu tratamiento de cosmetología,', enfasis: 'en dos cuotas.' },
   entrada:
-    'Limpiezas faciales, tratamientos para la piel y otros servicios de cosmetología: en los centros afiliados a Helios los pagas en dos cuotas, a los 7 y a los 14 días, sin inicial.',
+    'Limpiezas faciales, tratamientos para la piel y otros servicios de cosmetología: en los centros afiliados a Helios los pagas en dos cuotas, a los 14 y a los 28 días, sin inicial.',
   resumen: RESUMEN_PACIENTE,
   pasos: {
     titulo: { antes: 'Cómo pagar tu tratamiento', enfasis: 'en cuotas.' },
@@ -569,7 +569,7 @@ const COSMETOLOGIA: Guia = {
       {
         titulo: 'Hoy no pagas nada',
         texto:
-          'Sin inicial: una cuota a los 7 días y otra a los 14, con fechas fijas.',
+          'Sin inicial: una cuota a los 14 días y otra a los 28, con fechas fijas.',
       },
       {
         titulo: 'Sin sorpresas',

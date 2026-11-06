@@ -1,6 +1,15 @@
 # Estado del trabajo
 
-Actualizado el 2026-10-07.
+Actualizado el 2026-11-06.
+
+## 2026-11-06 · Las cuotas del paciente, a los 14 y 28 días
+
+Plan §15.12 y contrato («El plazo de las cuotas y la fecha de la clínica»). Decisión de Javier. Las órdenes nuevas vencen a los 14 y 28 días; las ya confirmadas conservan sus fechas, así que conviven los dos plazos unas semanas. Se decide por orden, no por paciente.
+
+- **Médico:** sigue cobrando a los días 8 y 15, pague o no el paciente, ahora con su propia fecha (`installments.settlement_due_date`). La comisión del personal sale con la primera mitad, día 8.
+- **Paciente:** la comisión no cambia. Condiciones v3: plazos nuevos, sin cargo de $2 por atraso y con los montos en la moneda de la consulta.
+- **Helios adelanta capital:** por consulta de $100, con el paciente al día, −$50 del día 8 al 13, +$6,96 el 14, −$43,04 del 15 al 27 y +$13,92 desde el 28. Antes nunca era negativo si se pagaba a tiempo.
+- **Base:** `20261106220000_la_clinica_cobra_en_su_propia_fecha.sql` y `20261106220100_las_cuotas_del_paciente_son_cada_dos_semanas.sql`. Suite: `supabase/tests/plazo_de_cuotas_smoke.sql`.
 
 ## 2026-10-07 · La consulta se cobra en dólares o en euros
 

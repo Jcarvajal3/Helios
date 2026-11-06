@@ -43,9 +43,10 @@ type Grupo = {
  * Lo que se le debe a un local, AGRUPADO POR DÍA DE PAGO, y desde aquí se le
  * paga.
  *
- * Desde el 2026-10-06 se paga a diario: cada liquidación, el día siguiente a
- * su vencimiento (la consulta a los días 8 y 15, la comisión de la secretaria
- * junto con la primera mitad). La unidad de trabajo es el día de pago
+ * Desde el 2026-10-06 se paga a diario: cada liquidación en su día de pago
+ * (la consulta a los días 8 y 15 de la orden, sin depender del vencimiento de
+ * la cuota; la comisión de la secretaria junto con la primera mitad). La
+ * unidad de trabajo es el día de pago
  * (el «cierre» de la base): nadie paga «la cuota de la orden 1187», se paga un
  * día. Cada uno lleva su estado, su total y una casilla que marca el bloque
  * entero; vienen marcados los atrasados y el de hoy, que es lo que hay que
@@ -188,7 +189,7 @@ export function LiquidacionesDelLocal({
   return (
     <Seccion
       titulo="Por día de pago"
-      info="Cada liquidación se paga el día siguiente a su vencimiento (la consulta, a los 8 y a los 15 días; la comisión de la secretaria, junto con la primera mitad). Se paga un día, no una cuota suelta: cada día de pago lleva su estado, su total y una casilla que lo marca entero. Vienen marcados los atrasados y el de hoy."
+      info="Cada liquidación se paga en su día de pago (la consulta, a los 8 y a los 15 días de la orden; la comisión de la secretaria, junto con la primera mitad), sin depender de cuándo venza la cuota del paciente. Se paga un día, no una cuota suelta: cada día de pago lleva su estado, su total y una casilla que lo marca entero. Vienen marcados los atrasados y el de hoy."
       controles={
         <span className="type-panel-caption text-panel-muted">
           {grupos.length} {grupos.length === 1 ? 'día de pago' : 'días de pago'} · {lineas.length}{' '}
@@ -443,7 +444,7 @@ function LineaLiquidacion({
         type="checkbox"
         checked={!bloqueada && checked}
         disabled={bloqueada}
-        title={porVencer ? 'Se podrá pagar cuando venza la cuota del paciente' : undefined}
+        title={porVencer ? 'Se podrá pagar cuando llegue su día de pago' : undefined}
         onChange={onToggle}
         className="size-4 shrink-0 accent-on-surface disabled:opacity-30"
       />
@@ -453,7 +454,7 @@ function LineaLiquidacion({
           <span className="text-on-surface-variant"> · orden #{settlement.orderNumber}</span>
         )}
         <span className="ml-2 type-panel-caption text-on-surface-variant">
-          vence el {formatDay(settlement.dueDate)}
+          se devenga el {formatDay(settlement.dueDate)}
         </span>
         <TasasDeLaLinea settlement={settlement} pagada={pagada} />
       </span>
@@ -463,7 +464,7 @@ function LineaLiquidacion({
         </Badge>
       )}
       {aMedias && <Badge>A medias</Badge>}
-      {porVencer && <Badge>Por vencer</Badge>}
+      {porVencer && <Badge>Aún no toca</Badge>}
       <span className="shrink-0 text-right">
         <span className="font-semibold tabular-nums text-on-surface">
           {formatUsd(pagada ? settlement.amountUsd : settlement.pendingUsd)}

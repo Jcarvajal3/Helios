@@ -121,7 +121,7 @@ export const DEFINICIONES: Record<MetricKey, { label: string; what: string }> = 
     // locales −€642,00». «Capital libre» obligaba a saber de antemano qué
     // capital y libre de qué.
     label: 'Caja tras pagar a todas las clínicas',
-    what: 'Dinero en caja menos lo que se les debe a las clínicas, que sale negativo casi siempre porque a cada clínica se le paga cada consulta en dos partes, el día siguiente a cada cuota del paciente, y la deuda entera nunca vence el mismo día.',
+    what: 'Dinero en caja menos lo que se les debe a las clínicas, que sale negativo casi siempre porque a cada clínica se le paga cada consulta en dos partes, a los 8 y a los 15 días de la orden, y la deuda entera nunca vence el mismo día.',
   },
   comisionDevengada: {
     label: 'Comisión Helios sin IVA',
@@ -158,7 +158,7 @@ export type PayablesTotals = {
   saleEsteCierre: number
   /** Pagos de días anteriores que siguen sin transferirse. */
   atrasado: number
-  /** Lo pendiente después del pago de hoy: lo que vence hoy (sale mañana) y, sobre todo, la previsión de cuotas por vencer, que todavía no son liquidaciones. */
+  /** Lo pendiente después del pago de hoy: lo que sale mañana y, sobre todo, la previsión de mitades que aún no llegan a su fecha y todavía no son liquidaciones. */
   comprometidoFuturo: number
   totalPendiente: number
   /** El día del próximo pago: hoy. Igual para todos los locales. */

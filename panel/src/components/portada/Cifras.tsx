@@ -20,7 +20,7 @@ const CIFRAS = [
   {
     valor: 2,
     formato: (n: number) => String(Math.max(1, Math.round(n))),
-    pie: 'cuotas, a los 7 y a los 14 días',
+    pie: 'cuotas, a los 14 y a los 28 días',
   },
   {
     valor: 100,

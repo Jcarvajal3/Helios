@@ -205,7 +205,7 @@ console.log('── El impago de cada cuota ────────────
     'si es la elegida, sin más',
   )
 
-  // La cuota 2 vence una semana después: su semana juzgada es más vieja.
+  // La cuota 2 vence después que la 1: su semana juzgada es más vieja.
   const pc2 = leerPrimeraCuota(
     {
       cuota: 2,

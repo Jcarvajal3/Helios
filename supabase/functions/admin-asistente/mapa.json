@@ -712,12 +712,12 @@
     {
       "id": "agenda",
       "titulo": "Agenda",
-      "descripcion": "Los médicos por afiliar: su teléfono y su dirección, en qué quedó cada uno (mensaje enviado, interesado, visita agendada…) y el calendario de las visitas. Pasan solos a afiliado cuando llenan el formulario.",
+      "descripcion": "Los médicos por afiliar en tres fases: Mensaje, Llamada y Visita (con su calendario). Cada persona ve los suyos, toma más con «Asignarme 20 médicos» y ve sus cifras y las de cada uno.",
       "ruta": "/admin/agenda",
       "espacio": "seguimiento",
       "search": {
-        "vista": [
-          "calendario"
+        "fase": [
+          "visita"
         ]
       }
     },
@@ -1083,7 +1083,7 @@
     {
       "id": "semaforo-del-cierre",
       "titulo": "Semáforo del pago a clínicas",
-      "que": "Lo que sale hoy hacia las clínicas (atrasados incluidos) frente al dinero en caja: «Cubre» o «No cubre». Se les paga a diario: cada liquidación, el día siguiente a su vencimiento.",
+      "que": "Lo que sale hoy hacia las clínicas (atrasados incluidos) frente al dinero en caja: «Cubre» o «No cubre». Se les paga a diario: cada liquidación, en su día de pago (la consulta, en dos fechas fijas contadas desde la orden).",
       "rpc": "admin_merchant_payables",
       "pantalla": "inicio"
     },
@@ -1188,7 +1188,7 @@
     {
       "id": "impago-segunda-cuota",
       "titulo": "Impago de la segunda cuota",
-      "que": "De la cuota 2 de cada paciente en cada financiamiento, qué parte seguía sin pagar el último día de la gracia; vence una semana después de la 1 y cuenta también a quien tampoco pagó la 1. Se parte por semana, mes, clínica, nivel o primer financiamiento, con la cuota 1 al lado. Los montos son financiamiento, sin la Comisión Helios.",
+      "que": "De la cuota 2 de cada paciente en cada financiamiento, qué parte seguía sin pagar el último día de la gracia; vence un intervalo de cuotas después de la 1 y cuenta también a quien tampoco pagó la 1. Se parte por semana, mes, clínica, nivel o primer financiamiento, con la cuota 1 al lado. Los montos son financiamiento, sin la Comisión Helios.",
       "rpc": "admin_first_payment_default",
       "pantalla": "metricas"
     },
@@ -1272,7 +1272,7 @@
     {
       "id": "se-le-transfiere-el-lunes",
       "titulo": "Liquidación de la semana, por clínica (neto)",
-      "que": "Por clínica, las liquidaciones de las cuotas que vencen de lunes a domingo, que se le transfieren se paguen o no, cada una el día siguiente a su vencimiento (de martes a lunes): lo ya generado más lo que el cron generará hasta el domingo con las condiciones del día de cada financiamiento. Es su neto, que no lleva la Comisión Helios, y la misma cuenta que Pagos a clínicas. Lo atrasado de semanas anteriores va aparte.",
+      "que": "Por clínica, las liquidaciones de las mitades de consulta que tocan esa semana, que se le transfieren paguen o no los pacientes, cada una en su día de pago (de martes a lunes): lo ya generado más lo que el cron generará hasta el domingo con las condiciones del día de cada financiamiento. Es su neto, que no lleva la Comisión Helios, y la misma cuenta que Pagos a clínicas. Lo atrasado de semanas anteriores va aparte.",
       "rpc": "admin_metricas_locales",
       "pantalla": "metricas"
     },
@@ -1524,7 +1524,7 @@
     {
       "id": "caja-tras-pagar-locales",
       "titulo": "Caja tras pagar a todas las clínicas",
-      "que": "Dinero en caja menos todo lo que se les debe a las clínicas, que sale negativo casi siempre porque a cada clínica se le paga cada consulta en dos partes, el día siguiente a cada cuota del paciente, y la deuda entera nunca vence el mismo día.",
+      "que": "Dinero en caja menos todo lo que se les debe a las clínicas, que sale negativo casi siempre porque a cada clínica se le paga cada consulta en dos partes, en dos fechas fijas contadas desde la orden, y la deuda entera nunca vence el mismo día.",
       "rpc": "admin_cash_position",
       "pantalla": "metricas"
     },
@@ -1552,7 +1552,7 @@
     {
       "id": "proyeccion-de-caja",
       "titulo": "Proyección de caja",
-      "que": "Por día, desde hoy hasta que vence la última cuota de lo que está en la calle: las cuotas que vencen (consulta + Comisión Helios, con su desglose), lo que se espera cobrar de ellas según el cobrado a tiempo histórico, lo que se le paga a las clínicas el día siguiente a cada vencimiento (ya devengado y las mitades que se devengarán, pague o no el paciente) y la caja que resulta a partir de la de hoy.",
+      "que": "Por día, desde hoy hasta que vence la última cuota de lo que está en la calle: las cuotas que vencen (consulta + Comisión Helios, con su desglose), lo que se espera cobrar de ellas según el cobrado a tiempo histórico, lo que se le paga a las clínicas en sus dos fechas fijas contadas desde cada orden (ya devengado y las mitades que se devengarán, pague o no el paciente y sin depender de cuándo venza su cuota) y la caja que resulta a partir de la de hoy.",
       "rpc": "admin_cash_forecast_days",
       "pantalla": "metricas"
     },

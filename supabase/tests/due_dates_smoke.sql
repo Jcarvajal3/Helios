@@ -4,7 +4,7 @@
 --   docker exec -i supabase_db_Ronda-app psql -U postgres -d postgres \
 --     -v ON_ERROR_STOP=1 -f supabase/tests/due_dates_smoke.sql
 --
--- 🔁 REESCRITA DOS VECES, y la segunda por un cambio de una sola línea.
+-- 🔁 REESCRITA TRES VECES.
 --
 -- Hasta el 2026-08-27 las cuotas vencían en cortes fijos del mes con un colchón
 -- mínimo de 7 días. `20260827050000` las pasó a 14 y 28 días desde el consumo, y
@@ -15,7 +15,13 @@
 --
 -- Los dos cambios cupieron en `helios_installment_interval_days()`, que es
 -- exactamente el motivo por el que ese número vive en una función y no repartido
--- por los seis caminos de cobro. Aquí solo hubo que mover las cifras esperadas.
+-- por los seis caminos de cobro.
+--
+-- Desde el 2026-11-06 (20261106220100) las órdenes vencen a los 14 y 28 días, y
+-- `helios_installment_due_dates(d)` lee el intervalo VIGENTE EN d
+-- (20261106220000): una orden de antes del corte conserva sus 7 y 14. Este
+-- fichero solo mira la fecha del paciente; la de la clínica, en
+-- plazo_de_cuotas_smoke.
 -- ============================================================================
 
 begin;
@@ -26,18 +32,24 @@ declare
   v_d1   date;
   v_d2   date;
   v_n    integer := 0;
+  v_dias integer;
 begin
   -- --- 1. Casos concretos, incluidos los bordes de calendario -------------
   -- Fin de mes, febrero corto, febrero bisiesto y cruce de año: con una regla
-  -- de "+7 y +14 días" ninguno necesita una rama especial, y eso es
-  -- precisamente lo que hay que demostrar.
+  -- de "+14 y +28 días" ninguno necesita una rama especial, y eso es
+  -- precisamente lo que hay que demostrar. Los de antes del corte conservan
+  -- "+7 y +14"; el 05/11 y el 06/11 son los dos lados del corte.
   for v_bd, v_d1, v_d2 in
     select * from (values
       ('2026-08-22'::date, '2026-08-29'::date, '2026-09-05'::date),
       ('2026-08-30'::date, '2026-09-06'::date, '2026-09-13'::date),
       ('2026-02-20'::date, '2026-02-27'::date, '2026-03-06'::date),
-      ('2028-02-20'::date, '2028-02-27'::date, '2028-03-05'::date),
-      ('2026-12-28'::date, '2027-01-04'::date, '2027-01-11'::date)
+      ('2026-11-05'::date, '2026-11-12'::date, '2026-11-19'::date),
+      ('2026-11-06'::date, '2026-11-20'::date, '2026-12-04'::date),
+      ('2027-01-30'::date, '2027-02-13'::date, '2027-02-27'::date),
+      ('2027-02-20'::date, '2027-03-06'::date, '2027-03-20'::date),
+      ('2028-02-20'::date, '2028-03-05'::date, '2028-03-19'::date),
+      ('2026-12-28'::date, '2027-01-11'::date, '2027-01-25'::date)
     ) as c(bd, d1, d2)
   loop
     if (select due_1 from public.helios_installment_due_dates(v_bd)) <> v_d1
@@ -48,7 +60,7 @@ begin
         (select due_2 from public.helios_installment_due_dates(v_bd));
     end if;
   end loop;
-  raise notice 'TEST CUOTAS 1 OK — 5 casos concretos, con fin de mes, bisiesto y cambio de año';
+  raise notice 'TEST CUOTAS 1 OK — 9 casos concretos, con fin de mes, bisiesto, cambio de año y el corte';
 
   -- --- 2. La invariante, sobre dos años completos -------------------------
   -- Un barrido en vez de más casos sueltos: lo que hay que garantizar no es
@@ -61,21 +73,23 @@ begin
     if v_d1 is null or v_d2 is null then
       raise exception 'Consumo del %: la función no devolvió dos vencimientos (%, %)', v_bd, v_d1, v_d2;
     end if;
-    if v_d1 - v_bd <> 7 then
-      raise exception 'Consumo del %: la cuota 1 vence a % días, debían ser 7', v_bd, v_d1 - v_bd;
+    v_dias := case when v_bd < '2026-11-06'::date then 7 else 14 end;
+    if v_d1 - v_bd <> v_dias then
+      raise exception 'Consumo del %: la cuota 1 vence a % días, debían ser %', v_bd, v_d1 - v_bd, v_dias;
     end if;
-    if v_d2 - v_bd <> 14 then
-      raise exception 'Consumo del %: la cuota 2 vence a % días, debían ser 14', v_bd, v_d2 - v_bd;
+    if v_d2 - v_bd <> v_dias * 2 then
+      raise exception 'Consumo del %: la cuota 2 vence a % días, debían ser %', v_bd, v_d2 - v_bd, v_dias * 2;
     end if;
   end loop;
 
-  raise notice 'TEST CUOTAS 2 OK — % días seguidos: siempre 7 y 14 días exactos', v_n;
+  raise notice 'TEST CUOTAS 2 OK — % días seguidos: 7 y 14 días exactos antes del corte, 14 y 28 desde el corte', v_n;
 
   -- --- 3. Las dos cuotas caen en el MISMO día de la semana que la compra ---
-  -- Es la propiedad que regala el plazo semanal, y la que hace que la regla se
-  -- pueda explicar sin fechas: "pagas los sábados". Con 14 y 28 también se
-  -- cumplía; con cualquier plazo que no sea múltiplo de 7, no.
-  for v_bd in select generate_series('2026-01-01'::date, '2026-03-31'::date, '1 day')::date loop
+  -- Es la propiedad que regala un plazo en semanas, y la que hace que la regla
+  -- se pueda explicar sin fechas: "pagas los sábados". Se cumple con 7 y 14 y
+  -- con 14 y 28; con cualquier plazo que no sea múltiplo de 7, no. El barrido
+  -- cruza el corte.
+  for v_bd in select generate_series('2026-10-01'::date, '2027-03-31'::date, '1 day')::date loop
     select due_1, due_2 into v_d1, v_d2 from public.helios_installment_due_dates(v_bd);
     if extract(dow from v_d1) <> extract(dow from v_bd)
        or extract(dow from v_d2) <> extract(dow from v_bd) then

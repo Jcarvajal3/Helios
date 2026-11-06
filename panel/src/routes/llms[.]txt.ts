@@ -79,11 +79,11 @@ function texto(medicos: MedicoDelDirectorio[]) {
 
   return `# ${NOMBRE}
 
-> ${NOMBRE} permite pagar consultas y tratamientos de salud privada en Venezuela (medicina, odontología y cosmetología) en dos cuotas, a los 7 y 14 días, sin inicial. El médico o centro de salud afiliado recibe el 100% de la consulta, pague o no el paciente.
+> ${NOMBRE} permite pagar consultas y tratamientos de salud privada en Venezuela (medicina, odontología y cosmetología) en dos cuotas, a los 14 y 28 días, sin inicial. El médico o centro de salud afiliado recibe el 100% de la consulta, pague o no el paciente.
 
 ## En resumen
 
-- Cuotas: 2, a los 7 y a los 14 días. Sin inicial.
+- Cuotas: 2, a los 14 y a los 28 días. Sin inicial.
 - Comisión Helios: ${COMISION_PCT}% del monto de la consulta más ${IVA_PCT}% de IVA sobre la comisión, incluida en las cuotas. Una consulta de $100 se paga en dos cuotas de ${dinero(cuota)}.
 - Pago: en bolívares, por Pago Móvil o transferencia, a la tasa oficial del BCV del día del pago.
 - Límite inicial: $${LIMITE} en cuotas a la vez.
@@ -91,7 +91,7 @@ function texto(medicos: MedicoDelDirectorio[]) {
 
 ## Para pacientes
 
-- Dos cuotas, a los 7 y a los 14 días. Sin inicial.
+- Dos cuotas, a los 14 y a los 28 días. Sin inicial.
 - Comisión Helios: ${COMISION_PCT}% del monto de la consulta más ${IVA_PCT}% de IVA sobre la comisión, incluida en las cuotas.
 - Límite inicial de $${LIMITE}: lo máximo que se puede tener en cuotas a la vez.
 - Se paga en bolívares, por Pago Móvil o transferencia, a la tasa oficial del BCV del día del pago. La consulta puede ir en dólares o en euros.
@@ -100,7 +100,7 @@ function texto(medicos: MedicoDelDirectorio[]) {
 
 ### Cuánto se paga según el monto de la consulta
 
-| Consulta | Comisión Helios + IVA | Total | Cada cuota (días 7 y 14) |
+| Consulta | Comisión Helios + IVA | Total | Cada cuota (días 14 y 28) |
 | --- | --- | --- | --- |
 ${cuotas}
 

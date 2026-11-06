@@ -42,7 +42,7 @@ function Terminos() {
             Términos y condiciones
           </h1>
           <p className="mt-2 type-body-small text-on-surface-faint">
-            Vigentes desde el 6 de octubre de 2026.
+            Vigentes desde el 6 de noviembre de 2026.
           </p>
         </header>
 
@@ -72,8 +72,10 @@ function Terminos() {
               equipo de Helios: ningún médico ni centro tiene acceso a ella.
             </li>
             <li>
-              Pagas en dos cuotas iguales, a los 7 y a los 14 días de la
-              consulta, sin inicial.
+              Pagas en dos cuotas iguales, a los 14 y a los 28 días de la
+              consulta, sin inicial. Los pagos en cuotas que ya estaban
+              confirmados cuando entraron en vigor estas condiciones conservan
+              las fechas de su comprobante.
             </li>
             <li>
               La Comisión Helios es del 12% del monto de la consulta, más el
@@ -82,8 +84,9 @@ function Terminos() {
               $113,92 en dos cuotas de $56,96.
             </li>
             <li>
-              Los montos están en dólares. Se pagan en bolívares a la tasa oficial
-              del BCV del día del pago, por Pago Móvil o transferencia a las
+              Los montos están en la moneda de la consulta, dólares o euros. Se
+              pagan en bolívares a la tasa oficial del BCV para esa moneda del día
+              del pago, por Pago Móvil o transferencia a las
               cuentas que indica Helios. El comprobante del pago se envía por
               WhatsApp a Helios.
             </li>

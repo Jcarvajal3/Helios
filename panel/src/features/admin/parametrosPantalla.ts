@@ -96,7 +96,7 @@ export const GRUPOS_DE_PARAMETROS: ReadonlyArray<GrupoEnPantalla> = [
  * devuelve la del cargo por atraso (migración 20260927650000), y esa se
  * cambia en su fila, «Días de gracia». `min_float_days`: solo lo lee
  * `helios_min_float_days()`, y a esa función no la llama nadie (las cuotas
- * vencen a los 7 y 14 días, `installment_interval_days`).
+ * vencen según `installment_interval_days`).
  */
 export const CLAVES_SIN_USO: ReadonlySet<string> = new Set(['on_time_grace_days', 'min_float_days'])
 
@@ -165,7 +165,7 @@ export const QUE_DECIDE: Record<string, string | undefined> = {
   late_fee_grace_days:
     'Días de atraso que se perdonan. Al pasarlos cae el cargo por atraso; una cuota pagada dentro de ellos cuenta como pagada a tiempo, y el impago de una cuota se juzga al acabarlos. Es una sola gracia para las tres cosas.',
   installment_interval_days:
-    'De la orden a la cuota 1, y de la cuota 1 a la cuota 2. También decide cuándo se le paga a la clínica (el día siguiente a cada vencimiento) y los plazos que se publican en la portada y los términos.',
+    'De la orden a la cuota 1, y de la cuota 1 a la cuota 2, en las órdenes nuevas desde su vigencia: las ya registradas conservan sus fechas. NO mueve las fechas de pago a la clínica, que están pactadas aparte y son las mismas en todas las órdenes. También mueve los tramos de atraso. Los plazos de la portada y los términos están escritos en sus textos: si cambia, hay que cambiarlos allí.',
   mora_demotion_days:
     'Días de atraso que pasan la cuenta de congelada a suspendida (y le bajan un nivel, si tiene más de uno).',
   mora_expulsion_days: 'Días de atraso que cuestan la cuenta y dan la deuda por perdida.',

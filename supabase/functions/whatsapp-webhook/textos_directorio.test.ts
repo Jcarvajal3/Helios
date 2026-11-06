@@ -58,7 +58,7 @@ console.log('\nEl contacto, con todos los datos')
   comprueba(t.includes('🩺 Odontología'), 'su especialidad')
   comprueba(t.includes('📍 Av. Francisco de Miranda, Torre Delta, piso 3, Caracas'), 'su dirección y su ciudad')
   comprueba(t.includes(String(enlace)), 'el enlace a su WhatsApp')
-  comprueba(t.includes('dos cuotas, a los 7 y 14 días, sin inicial'), 'que puede pagar en dos cuotas')
+  comprueba(t.includes('dos cuotas, a los 14 y 28 días, sin inicial'), 'que puede pagar en dos cuotas')
   comprueba(!PROHIBIDO.test(t), 'sin vocabulario prohibido')
   comprueba(!t.includes('$') && !t.includes('Bs'), 'sin montos')
 }

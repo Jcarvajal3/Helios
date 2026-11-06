@@ -1,10 +1,10 @@
 # Helios — Plan de implementación
 
 > Pagos en cuotas para consultas y tratamientos de salud privada en Venezuela (medicina, odontología y cosmetología). Solo web, sin app móvil. Operado por **Quarto Latam, C.A.**
-> 0% inicial · 2 cuotas (7 y 14 días) · comisión de servicio **12% + IVA** · límite inicial **$150** · a la clínica, **a los 8 y 15 días** · anclado al **dólar BCV**.
+> 0% inicial · 2 cuotas (14 y 28 días) · comisión de servicio **12% + IVA** · límite inicial **$150** · a la clínica, **a los 8 y 15 días** · anclado al **dólar BCV**.
 > Hermano de Ronda: mismo núcleo (libro contable, mora, liquidaciones, conciliación, paneles), sin nada de la app.
 
-Fecha: 2026-09-30 (actualizado el 2026-10-05: WhatsApp por la API, el "Sí" del paciente y el bot del médico, §5.1 y §15; y el 2026-10-06: las reglas del negocio publicadas, §0.1) · Fuente: Ronda-panel @ `f3b5c6a` (2026-09-29) y Ronda-app/supabase @ `20260929140000` (354 migraciones).
+Fecha: 2026-09-30 (actualizado el 2026-10-05: WhatsApp por la API, el "Sí" del paciente y el bot del médico, §5.1 y §15; el 2026-10-06: las reglas del negocio publicadas, §0.1; y el 2026-11-06: las cuotas a 14 y 28 días, §15.12) · Fuente: Ronda-panel @ `f3b5c6a` (2026-09-29) y Ronda-app/supabase @ `20260929140000` (354 migraciones).
 
 ---
 
@@ -17,7 +17,7 @@ Helios es **Ronda sin la app**. Se reutiliza tal cual el 70-80% del backend y de
 | 1 | El cliente se registra en la app (OTP, PIN, KYC Didit) y "reclama" el cobro escaneando un QR | **La clínica registra al paciente y la consulta en un solo paso**, desde el panel o **desde WhatsApp** (el bot del médico, §15). No hay QR, ni KYC, ni login del paciente. El paciente **acepta respondiendo "Sí" a un WhatsApp de Helios** (§5.1); solo entonces existe la deuda y le llega **por correo el comprobante** con sus cuotas, fechas e instrucciones de pago |
 | 2 | El cliente reporta sus pagos desde la app | **El paciente paga y manda el comprobante por WhatsApp al equipo Helios**, que lo **registra en el superadmin**. Desde ahí sigue la misma cola de conciliación de Ronda |
 | 3 | Avisos por push (Expo) | **WhatsApp por la API (360dialog)** para la confirmación del paciente, la bienvenida y el bot del médico (§15). Los recordatorios de cuotas siguen en la **cola diaria operada por el equipo** (enlace `wa.me` de un clic) hasta que Meta apruebe sus plantillas |
-| 4 | — | **Comisión a la secretaria** ($0,50, modificable) por cada financiamiento confirmado. Se devenga al confirmar y **se paga a la clínica el día siguiente**, con su pago diario |
+| 4 | — | **Comisión a la secretaria** ($0,50, modificable) por cada financiamiento confirmado. Se devenga al confirmar y **se paga a la clínica el día 8, con la primera mitad de la consulta** (§6) |
 
 Además cambian estas cosas:
 - La moneda pasa del euro BCV al **dólar BCV**.
@@ -54,6 +54,8 @@ Javier fijó la información pública del negocio el 2026-10-06. Manda sobre cua
 
 El resto del documento conserva "financiamiento" como término interno del diseño (y la base, sus nombres: `charges`, `comprobante_financiamiento`…); hacia fuera se dice "pago en cuotas".
 
+**Desde el 2026-11-06** (§15.12), las órdenes nuevas vencen a los 14 y 28 días. El médico sigue cobrando a los 8 y 15, pero cada mitad ya no sale del vencimiento de su cuota: tiene su propia fecha.
+
 **Qué cambió en el sistema por estas reglas:**
 - Las cuotas de una consulta de $100 bajan de $61,60 a $56,96. Los pagos en cuotas ya confirmados conservan su desglose.
 - La plantilla de Meta aprobada (`helios_confirmar_financiamiento`, §15.5) dice "20 %" y "financiamiento": deja de usarse hasta que Meta apruebe la v3 (§15.5.2). Mientras tanto, fuera de la ventana de 24 h la pregunta al paciente cae a la cola manual de "Avisos de hoy". **La v3 está aprobada y conectada desde el 2026-10-08.**
@@ -87,14 +89,14 @@ El resto del documento conserva "financiamiento" como término interno del dise�
 | Privacidad entre clínicas | Una clínica que busca una cédula ve ~~el nombre enmascarado~~ el nombre, el teléfono y el correo completos (2026-10-21) y "disponible $X" o "no disponible", nunca la deuda ni el motivo | Javier, 2026-09-30 / 2026-10-21 |
 | Avisos | **5 momentos** por vencimiento (§7.2), no los 12 de Ronda | Javier, 2026-09-30 |
 | Comisión de servicio | ~~20% + IVA~~ (2026-09-30). **12% + IVA** al paciente, 0% a la clínica | Javier, 2026-10-06 |
-| Liquidación a la clínica | ~~Igual que Ronda: 50% al vencer cada cuota, pagado los lunes~~ (2026-09-30). **50% a los 8 días y 50% a los 15** (el día siguiente a cada vencimiento), a diario, cobre Helios o no | Javier, 2026-10-06 |
+| Liquidación a la clínica | ~~Igual que Ronda: 50% al vencer cada cuota, pagado los lunes~~ (2026-09-30). **50% a los 8 días y 50% a los 15**, a diario, cobre Helios o no. Desde el 2026-11-06, con fecha propia y no la de la cuota del paciente (§15.12) | Javier, 2026-10-06 y 2026-11-06 |
 | Especialidades | Medicina, odontología y **cosmetología** | Javier, 2026-10-06 |
 | Permanencia | Ninguna: el médico o centro cancela con aviso previo | Javier, 2026-10-06 |
 | Operador | **Quarto Latam, C.A.** | Javier, 2026-10-06 |
 | Vocabulario externo | "Pago en cuotas" y "comisión de servicio"; nunca "préstamo" ni "financiamiento" | Javier, 2026-10-06 |
 | Cuentas de cobro de Helios | **Configurables** desde Ajustes, como en Ronda; se llenan después | Javier, 2026-09-30 |
 | WhatsApp de Helios | **Configurable** desde Ajustes | Javier, 2026-09-30 |
-| Cuotas | 0% inicial, 2 cuotas a +7 y +14 días desde la fecha del financiamiento | Brief |
+| Cuotas | 0% inicial, 2 cuotas a ~~+7 y +14 días~~ **+14 y +28 días** desde la fecha de la orden. Solo las órdenes nuevas: las ya confirmadas conservan sus fechas (§15.12) | Brief; Javier, 2026-11-06 |
 | Niveles | Motor de niveles igual que Ronda. Solo el **nivel 1** activo: ~~$350~~ **$150 desde el 2026-10-06** ("límite inicial"); los niveles 2-5 existen con `is_active = false` | Brief; Javier, 2026-10-06 |
 | Stack | El mismo de Ronda, sin la app: TanStack Start + Supabase + Vercel + Sentry | Brief |
 
@@ -107,7 +109,7 @@ El resto del documento conserva "financiamiento" como término interno del dise�
 | Ejemplo con una consulta de $100 | Paciente debe **$113,92** = 2 × $56,96. Clínica recibe **$100**. Ingreso Helios $12. IVA $1,92 | — |
 | Liberación de cupo | Por financiamiento: se libera al pagar **ambas** cuotas. Cualquier cuota vencida deja el disponible en $0 | — |
 | Mora | Día 1: congelado. **Cargo de $2 por cuota tras 3 días de gracia.** Día 30: suspendido (y baja de nivel, que en nivel 1 no cambia nada). Día 60: expulsado, lista negra de la cédula y castigo contable | `late_fee_usd`, `late_fee_grace_days`, `mora_demotion_days`, `mora_expulsion_days` |
-| Liquidación a la clínica | **100% del precio en dos mitades**: el 50% se devenga al vencer cada cuota (días 7 y 14) y se paga **el día siguiente** (días 8 y 15), cobre Helios o no. Hasta el 2026-10-05, en el cierre de los lunes | `merchant_terms` (0/50/0, `scheduled`), `helios_settlement_run_for` |
+| Liquidación a la clínica | **100% del precio en dos mitades**: el 50% se devenga los días 7 y 14 de la orden (`installments.settlement_due_date`, no el vencimiento de la cuota; §15.12) y se paga **el día siguiente** (días 8 y 15), cobre Helios o no. Hasta el 2026-10-05, en el cierre de los lunes | `merchant_terms` (0/50/0, `scheduled`), `helios_settlement_interval_days`, `helios_settlement_run_for` |
 | Monto mínimo | $10 propuesto (en Ronda eran €5; ver D-H7) | nuevo `min_charge_usd` |
 | Tasa | BCV del día; fines de semana y feriados usan la última publicada; ingesta a las 10:00 con reintentos | `sync_fx_rate()` |
 | Frenos de emergencia | Mantenimiento global y bloqueo manual por paciente | — |
@@ -151,7 +153,7 @@ sequenceDiagram
   P->>H: Paga (Pago Móvil o transferencia) y manda el comprobante por WhatsApp
   H->>DB: Registra el pago (admin_register_payment)
   H->>DB: Concilia contra el extracto (admin_reconcile_payment)
-  DB->>DB: 10:10 diario: devenga el 50% de la clínica por cuota vencida
+  DB->>DB: 10:10 diario: devenga el 50% de la clínica los días 7 y 14 de la orden
   H->>C: Días 8 y 15: transferencia (consultas + comisiones)
   H->>DB: admin_report_merchant_payout
 ```
@@ -449,7 +451,7 @@ Orden, todo en una sola transacción:
    - Si **existe**: `SELECT … FOR UPDATE`. Se rechaza si está `expelled`, en lista negra, con bloqueo manual, o si `can_take_debt` es falso (cualquier cuota vencida). Los datos de contacto **no se sobrescriben**: si difieren, se guarda una propuesta de cambio para que la revise Helios (`profile_change_requests`). El comprobante va al correo **ya registrado**, no al que se tecleó.
 5. **Cupo**: `helios_credit_used_usd(paciente) + base > levels.monthly_limit_usd`, con la fila bloqueada. Es la misma defensa contra el doble gasto de Ronda (dos sedes a la vez).
 6. **Asiento** de cuatro patas (§4.5).
-7. **Deuda**: `helios_assign_debt(...)`, que crea las 2 cuotas a +7 y +14 días y mueve el bloque de crédito.
+7. **Deuda**: `helios_assign_debt(...)`, que crea las 2 cuotas a +14 y +28 días (el intervalo vigente en el `business_date` de la orden; antes del 2026-11-06, +7 y +14) y mueve el bloque de crédito.
 8. **Devengo de la clínica**: `ledger.record_advance_settlement` (que no hace nada con `upfront_pct = 0`).
 9. **Comisión** de la secretaria (§6).
 10. `INSERT charges` directamente en `status = 'confirmed'`, con `requested_by`, `terms_version_id` y `business_date`.
@@ -494,7 +496,7 @@ Con `patient_confirmation_required = 1`, `create_patient_charge` se parte en dos
 
 ## 6. Comisión de la secretaria (nuevo)
 
-**Regla:** por cada financiamiento **confirmado**, quien lo registró (`charges.requested_by`) gana **$0,50**. Se devenga en el momento y **se paga a la clínica el día siguiente** (hasta el 2026-10-05, en el cierre del lunes siguiente), en la misma transferencia que las consultas de ese día. La clínica se la entrega a su personal.
+**Regla:** por cada financiamiento **confirmado**, quien lo registró (`charges.requested_by`) gana **$0,50**. Se devenga en el momento y **se paga a la clínica el día 8, con la primera mitad de la consulta** (hasta el 2026-10-05, en el cierre del lunes siguiente; después, el día siguiente al alta hasta el cambio del 2026-10-21), en la misma transferencia que las consultas de ese día. La clínica se la entrega a su personal.
 
 **Modelo:**
 - Parámetro global `staff_commission_usd = 0.50` en `business_parameters`, con vigencia (el histórico queda).
@@ -503,7 +505,7 @@ Con `patient_confirmation_required = 1`, `create_patient_charge` se parte en dos
 - Tabla `staff_commissions`: `charge_id` (única), `merchant_id`, `staff_user_id`, `amount_usd`, `settlement_id`, `status` (`devengada` | `pagada` | `revertida`).
 - Al confirmar:
   - asiento Dr `commission_expense` / Cr `merchant_payable`;
-  - fila en `settlements` con `reason = 'staff_commission'` y `due_date` = el vencimiento de la primera cuota, de modo que se paga **con la primera mitad de la consulta** (día 8), sumada en la misma transferencia (Javier, 2026-10-21; hasta entonces salía sola el día siguiente al alta);
+  - fila en `settlements` con `reason = 'staff_commission'` y `due_date` = el día en que se devenga la primera mitad (`installments.settlement_due_date`, día 7 de la orden; hasta el 2026-11-06, el vencimiento de la primera cuota, que caía el mismo día), de modo que se paga **con la primera mitad de la consulta** (día 8), sumada en la misma transferencia (Javier, 2026-10-21; hasta entonces salía sola el día siguiente al alta);
   - `run_scheduled_settlements_loop` y `admin_merchant_payables` la recogen sin cambios de lógica, solo reconociendo la nueva `reason`.
 - **Reversa** antes de pagarse: el asiento espejo y el settlement se cancelan. Después de pagada, la reversa sigue bloqueada (regla de Ronda) y el ajuste es manual.
 - El **impago del paciente no quita la comisión** (se gana al confirmar). Por ahora, la defensa contra altas falsas son las alertas de H10; las medidas que bloquean se evaluarán después (§14).
@@ -588,7 +590,7 @@ Es el único documento que recibe el paciente, así que tiene que estar completo
 - **Plan de pagos**: cuota 1 y cuota 2 con fecha y monto en dólares, y el desglose: consulta, **comisión de servicio (12%)**, IVA de la comisión y total (al paciente sí se le enseña el total, 2026-10-06).
 - Cómo pagar: las cuentas de cobro configuradas (H11), y "se paga en bolívares a la tasa BCV del día del pago".
 - Cómo avisar el pago: el WhatsApp de Helios con un enlace `wa.me` que ya trae el número de financiamiento.
-- Condiciones (`terms_versions` vigente): cargo de $2 por cuota tras 3 días de gracia, congelamiento desde el día 1, y qué pasa a los 30 y 60 días.
+- Condiciones (`terms_versions` vigente, v3 desde el 2026-11-06, §15.12): los plazos de 14 y 28 días, los montos en la moneda de la consulta, congelamiento desde el día 1, y qué pasa a los 30 y 60 días. Sin cargo por atraso.
 - Pie: "Si no reconoces este financiamiento, escríbenos al …". **Este pie es una alerta temprana gratuita** contra altas falsas: el paciente real que no pidió nada avisa.
 
 **Formalidades:**
@@ -647,7 +649,7 @@ Es el único documento que recibe el paciente, así que tiene que estar completo
 | **Pagos registrados** | Igual + botón **"Registrar pago"** (§7.1) + importar extracto + abonos sin dueño |
 | **Avisos de hoy** | **Nuevo** (§7.2); sustituye a "Notificaciones" (push) y conserva el editor de plantillas (WhatsApp y email). Incluye el historial de correos enviados, con su estado |
 | **Alertas** | Igual + las nuevas de H10 |
-| **Pagos a clínicas** | Igual (histórico, registrar transferencia con comprobante) + **desglose de comisiones** + **cuenta destino de la clínica**. Desde el 2026-10-06 el "cierre" es **diario**: cada día sale lo que venció el día anterior |
+| **Pagos a clínicas** | Igual (histórico, registrar transferencia con comprobante) + **desglose de comisiones** + **cuenta destino de la clínica**. Desde el 2026-10-06 el "cierre" es **diario**: cada día sale lo que se devengó el día anterior |
 | **Contabilidad** | Igual (libro, cierre de mes, exportación) + cuenta `commission_expense` |
 | **Pacientes** | Ficha con pestañas resumen, **datos y referencia** (en lugar de identidad), financiamientos, pagos, cobranza e historial. Acciones: registrar pago, bloquear, congelar, lista negra, condonar cargo, WhatsApp, **editar datos de contacto** (auditado) y aprobar cambios propuestos por la clínica |
 | **Clínicas** | Alta (categoría médica, especialidad, RIF, MPPS), perfil, condiciones (incluida la comisión propia), **cuenta de pago**, personal, estado (activa/pausada/terminada), sus alertas. En el personal: **WhatsApp del bot** (registrar o revocar el número de cada persona, ver si tiene PIN y **resetearlo**), con bitácora (§15) |
@@ -1314,3 +1316,30 @@ Pedido por Javier el 2026-11-02, para la cobranza: «cada vez que se registre un
 Piezas: columnas `profiles.id_photo_path`, `id_photo_at`, `id_photo_wa_message_id` y `charges.id_photo_requested_at`; tabla `patient_id_photos` (cada foto, su revisión y su cola; sin acceso desde fuera); bucket privado `patient-ids` (solo lo lee el equipo); `helios_patient_needs_id_photo`, `helios_patient_id_photo` (el webhook), `lector_cedula_tomar` / `_guardada` / `_leida` / `_fallo` (el lector), `admin_patient_id_photo` y `admin_open_patient_id_photo` (el superadmin). Suite: `supabase/tests/id_photo_smoke.sql`.
 
 **En la capacitación** (2026-11-04, `20261104120000`): con un número de capacitación se pide la foto igual, y en cada ronda, porque el reinicio borra al paciente; sirve cualquier imagen y lo que no cuadre no sale en Alertas (son pacientes de prueba). El reinicio, el manual y el de medianoche, borra las filas de sus fotos, y el lector borra los archivos con la API de Storage (cola `patient_id_photo_removals`, `lector_cedula_por_borrar`, `lector_cedula_borrada`), como mucho al minuto siguiente. La misma cédula y la misma imagen sirven en la ronda siguiente: solo es único el wamid. Antes de esta migración, una foto de capacitación hacía fallar el reinicio (23503), también el de medianoche con todos los números. Un paciente de capacitación con un pago real no se borra (`sin_reiniciar`): tampoco su foto.
+
+### 15.12 Las cuotas del paciente, a los 14 y 28 días (2026-11-06)
+
+Decisión de Javier, 2026-11-06 (`20261106220000_la_clinica_cobra_en_su_propia_fecha` y `20261106220100_las_cuotas_del_paciente_son_cada_dos_semanas`). Se alarga el plazo del paciente y al médico no le cambia la fecha en que cobra. Para eso, la fecha del médico deja de salir de la cuota.
+
+- **Paciente:** las órdenes nuevas vencen a los 14 y 28 días de `charges.business_date` (antes, 7 y 14). La comisión no cambia: consulta de $100 → $113,92 → 2 × $56,96.
+- **Se decide por orden, no por paciente.** Las órdenes ya confirmadas conservan las fechas guardadas, también las del mismo 2026-11-06, y los dos plazos conviven unas semanas. Un paciente con deuda vieja que abre una orden nueva va a 14 y 28 en esa orden. Una orden vencida que se reenvía recalcula su `business_date`, y con él las fechas.
+- **Médico:** sigue cobrando a los días 8 y 15, pague o no el paciente. Su fecha es `installments.settlement_due_date` = fecha de la orden + `helios_settlement_interval_days()` × secuencia (constante 7, lo pactado, no un parámetro), y la pone el trigger `installments_settlement_due_date`. `helios_settlement_run_for(d) = d + 1` sigue igual, pero recibe esa fecha y no el vencimiento. `installments.due_date` queda como la fecha del paciente y nada más.
+- **El parámetro:** `helios_installment_due_dates(d)` usa el intervalo vigente en `d` (`helios_installment_interval_days_at`), y `installment_interval_days` = 14 tiene vigencia desde el 2026-11-06. Este parámetro ya no mueve el pago a la clínica.
+- **Lo que sigue a la fecha del paciente:** la mora, los avisos y el cupo, por `due_date`, como siempre.
+- **Tramos y temporadas** leen el parámetro con el valor de hoy (`helios_installment_interval_days()`), también para las órdenes viejas: el primer tramo de atraso pasa a ir del día 1 al 14, y la temporada de las cosechas, a 2 × 14 + los días de expulsión.
+- **Comisión del personal:** sale con la primera mitad, día 8, y no con la cuota del paciente (§6).
+- **Condiciones v3** (`terms_versions`): los plazos nuevos, sin el cargo de $2 por atraso y con los montos en la moneda de la consulta. Las órdenes viejas guardan su `terms_version_id` y siguen con las suyas.
+- **`20261106220100` no se aplica** si hay órdenes `pending`, porque su paciente ya vio las fechas viejas y `helios_finalize_charge` calcula las cuotas al confirmar, ni si las condiciones vigentes no son v2.
+
+**Helios adelanta capital.** Antes, si el paciente pagaba a tiempo, el saldo de una orden nunca era negativo. Ahora lo es en dos periodos. Por consulta de $100, con el paciente al día y sin contar la comisión del personal:
+
+| Días desde la orden | Qué pasa ese día | Saldo de Helios |
+|---|---|---|
+| 8 a 13 | Sale la primera mitad, $50 (día 8) | −$50 |
+| 14 | Entra la primera cuota, $56,96 | +$6,96 |
+| 15 a 27 | Sale la segunda mitad, $50 (día 15) | −$43,04 |
+| 28 en adelante | Entra la segunda cuota, $56,96 | +$13,92 |
+
+Con 7 y 14 días, el saldo era +$56,96 el día 7, +$6,96 el 8, +$63,92 el 14 y +$13,92 desde el 15. Además, la primera señal de impago (la cuenta se congela el día 15, al día siguiente de la primera cuota) llega el mismo día en que sale la segunda mitad, la última a la clínica.
+
+Lo que ve cada quien, en docs/01 («El plazo de las cuotas y la fecha de la clínica»). Suite: `supabase/tests/plazo_de_cuotas_smoke.sql`.

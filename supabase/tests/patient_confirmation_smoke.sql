@@ -136,8 +136,8 @@ begin
      or v_exp is null or v_exp < now() + interval '119 minutes' or v_exp > now() + interval '121 minutes'
      or jsonb_array_length(v_j->'installments') <> 2
      or (v_j->'installments'->0->>'amount_usd')::numeric <> 56.96
-     or (v_j->'installments'->0->>'due_date')::date <> v_bdate + 7
-     or (v_j->'installments'->1->>'due_date')::date <> v_bdate + 14
+     or (v_j->'installments'->0->>'due_date')::date <> v_bdate + 14
+     or (v_j->'installments'->1->>'due_date')::date <> v_bdate + 28
      or v_j->'receipt'->>'status' <> 'sin_enviar'
      or v_j->'confirmation'->>'status' <> 'por_enviar'
      or v_j->'confirmation'->>'telefono_enmascarado' is null
@@ -174,8 +174,8 @@ begin
      or v_text not like '%IVA de la comisión (16\%): $1,92%'
      or v_text not like '%¿Confirmas tu pago en cuotas? Responde Sí o No. Tienes 2 horas para responder.%'
      or v_text not like '%*Total: $113,92*%'
-     or v_text not like '%📅 $56,96 · ' || public.helios_weekday_es(v_bdate + 7) || ' ' || to_char(v_bdate + 7, 'DD/MM') || E'\n'
-                       || '📅 $56,96 · ' || public.helios_weekday_es(v_bdate + 14) || ' ' || to_char(v_bdate + 14, 'DD/MM') || '%'
+     or v_text not like '%📅 $56,96 · ' || public.helios_weekday_es(v_bdate + 14) || ' ' || to_char(v_bdate + 14, 'DD/MM') || E'\n'
+                       || '📅 $56,96 · ' || public.helios_weekday_es(v_bdate + 28) || ' ' || to_char(v_bdate + 28, 'DD/MM') || '%'
      or v_text like '%Bs %'
      or v_text like '%{%' then
     raise exception 'El texto de la pregunta no es el esperado: %', v_text;
@@ -241,7 +241,7 @@ begin
   end if;
 
   if (select array_agg(due_date order by sequence) from public.installments where charge_id = v_charge)
-       <> array[v_bdate + 7, v_bdate + 14]
+       <> array[v_bdate + 14, v_bdate + 28]
      or (select sum(amount_usd) from public.installments where charge_id = v_charge) <> 113.92 then
     raise exception 'Las cuotas debían salir del business_date de la orden';
   end if;
@@ -424,7 +424,7 @@ begin
   if (select count(*) from public.merchant_transactions(v_bdate, v_bdate)) <> 4
      or (select count(*) from public.merchant_transactions(v_bdate, v_bdate) t
           where t.status = 'pending' and t.expires_at is not null and t.receipt_status = 'sin_enviar'
-            and t.cuota_1_due = v_bdate + 7) <> 1
+            and t.cuota_1_due = v_bdate + 14) <> 1
      or (select count(*) from public.merchant_transactions(v_bdate, v_bdate) t where t.status = 'declined') <> 2
      or (select count(*) from public.merchant_transactions(v_bdate, v_bdate) t where t.status = 'confirmed') <> 1 then
     raise exception 'La lista de la clínica debía mostrar las 4 órdenes con su estado';

@@ -31,7 +31,7 @@ import { cabeceraPublica, preguntasFrecuentes, servicio } from '@/config/sitio'
 const TITULO = 'Consultas médicas en cuotas, sin inicial | Helios Venezuela'
 
 const DESCRIPCION =
-  'Paga tu consulta de medicina, odontología o cosmetología en 2 cuotas, a los 7 y 14 días, sin inicial. El médico cobra el 100%, pague o no el paciente.'
+  'Paga tu consulta de medicina, odontología o cosmetología en 2 cuotas, a los 14 y 28 días, sin inicial. El médico cobra el 100%, pague o no el paciente.'
 
 /**
  * Lo que el buscador entiende de la página sin leerla, además de quién es
@@ -43,7 +43,7 @@ const DATOS_ESTRUCTURADOS = [
     ruta: '/pacientes',
     nombre: 'Pago de consultas de salud en dos cuotas',
     descripcion:
-      'Consultas y tratamientos de medicina, odontología y cosmetología en dos cuotas, a los 7 y 14 días, sin inicial, pagadas en bolívares por Pago Móvil o transferencia.',
+      'Consultas y tratamientos de medicina, odontología y cosmetología en dos cuotas, a los 14 y 28 días, sin inicial, pagadas en bolívares por Pago Móvil o transferencia.',
     publico: 'Patient',
   }),
   servicio({

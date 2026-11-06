@@ -41,8 +41,8 @@ function Linea({ children }: { children: ReactNode }) {
 /**
  * La cabecera de lo que se le paga por la semana: «Liquidación prevista de la
  * semana (neto)» o, si ya pasó, «Liquidación de la semana (neto)». Es lo que
- * se le paga a la clínica (a diario, el día siguiente a cada vencimiento) por
- * las cuotas que vencían en la semana; el último pago cae el lunes siguiente.
+ * se le paga a la clínica (a diario, cada una en su día de pago) por las
+ * liquidaciones de la semana; el último pago cae el lunes siguiente.
  */
 export function rotuloDelCierre(cierre: LocalesDeLaSemana['cierre']): string {
   return cierre.pasado
@@ -267,8 +267,8 @@ export function columnasDeLocales({
       key: 'cierre',
       header: rotuloDelCierre(d.cierre),
       info: d.cierre.pasado
-        ? `Lo que se le generó por las cuotas que vencieron esta semana (cada mitad se paga el día siguiente a su vencimiento, el último el ${diaConNumero(d.cierre.lunes)}), y lo que falte por transferirle. Es lo mismo que dice Pagos a clínicas.`
-        : `Lo que se le transferirá por las cuotas que vencen esta semana, se paguen o no, cada mitad el día siguiente a su vencimiento (el último pago, el ${diaConNumero(d.cierre.lunes)}): lo ya generado más lo que se generará hasta el domingo con sus condiciones. Es su neto: no lleva la Comisión Helios. Si tiene algo atrasado de semanas anteriores, va debajo.`,
+        ? `Lo que se le generó por las mitades de consulta que tocaban esta semana (cada una se paga en su día de pago, el último el ${diaConNumero(d.cierre.lunes)}), y lo que falte por transferirle. Es lo mismo que dice Pagos a clínicas.`
+        : `Lo que se le transferirá por las mitades de consulta que tocan esta semana, paguen o no los pacientes, cada una en su día de pago (el último, el ${diaConNumero(d.cierre.lunes)}): lo ya generado más lo que se generará hasta el domingo con sus condiciones. Es su neto: no lleva la Comisión Helios. Si tiene algo atrasado de semanas anteriores, va debajo.`,
       type: 'number',
       sortDir: 'desc',
       sort: orden((l) => l.transferencia.generadoUsd + l.transferencia.previstoUsd),

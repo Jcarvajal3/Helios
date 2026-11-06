@@ -181,7 +181,7 @@ function Cabecera({ medico: m, whatsappHelios }: { medico: MedicoDelDirectorio; 
             )}
 
             <p className="portada-entrada mt-8 max-w-[56ch] text-portada-tinta-2">
-              {m.nombre} acepta Helios: pagas tu consulta en 2 cuotas, a los 7 y 14 días, sin inicial.
+              {m.nombre} acepta Helios: pagas tu consulta en 2 cuotas, a los 14 y 28 días, sin inicial.
               Escríbele por WhatsApp para agendar tu cita.
             </p>
 

@@ -367,7 +367,8 @@ export function tramoJuzgado(c: CobroATiempo, lunes: string, domingo: string): s
  * La semana de consumo cuya cuota (la 1 o la 2) ya se puede juzgar entera:
  * la más reciente que no pasa de la elegida, con alguna cuota madura y
  * ninguna todavía en la gracia. `null` si no hay ninguna. La de la cuota 2
- * suele ser una semana más vieja que la de la 1: vence una semana después.
+ * suele ser más vieja que la de la 1: vence un intervalo de cuotas después
+ * (una semana en las órdenes viejas, dos en las nuevas).
  */
 export function semanaJuzgadaDelImpago(pc: PrimeraCuota, lunes: string): FilaPrimeraCuota | null {
   const candidatas = pc.filas

@@ -98,9 +98,9 @@ begin
   v_ch_b := (pg_temp.prueba_cobro(v_pac_b, v_m_b, v_br_b, v_cajero_b, 80.00, 'masivo-b', 'Consulta')->>'charge_id')::uuid;
   reset role;
 
-  select due_date into v_due from public.installments where charge_id = v_ch_a and sequence = 1;
+  select settlement_due_date into v_due from public.installments where charge_id = v_ch_a and sequence = 1;
   perform public.run_scheduled_settlements(v_due);
-  select due_date into v_due from public.installments where charge_id = v_ch_b and sequence = 1;
+  select settlement_due_date into v_due from public.installments where charge_id = v_ch_b and sequence = 1;
   perform public.run_scheduled_settlements(v_due);
 
   update public.settlements set due_date = v_hoy - 1

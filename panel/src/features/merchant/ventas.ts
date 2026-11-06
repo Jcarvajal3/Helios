@@ -160,10 +160,11 @@ export const COLUMNAS_VENTAS: Array<CsvColumn<FilaDeVentas>> = [
   { header: 'Neto para la clinica Bs', value: (r) => csvDinero(r.netToMerchantVes) },
 
   // ── Cuándo cobra la clínica ─────────────────────────────────────────────
-  { header: 'Cuota 1 vence', value: (r) => r.cuota1Due },
-  { header: 'Cuota 1 te la pagamos el', value: (r) => r.cuota1Run },
-  { header: 'Cuota 2 vence', value: (r) => r.cuota2Due },
-  { header: 'Cuota 2 te la pagamos el', value: (r) => r.cuota2Run },
+  // El pago primero: no depende de la cuota y puede caer antes de que venza.
+  { header: 'Mitad 1 te la pagamos el', value: (r) => r.cuota1Run },
+  { header: 'Cuota 1 del paciente vence', value: (r) => r.cuota1Due },
+  { header: 'Mitad 2 te la pagamos el', value: (r) => r.cuota2Run },
+  { header: 'Cuota 2 del paciente vence', value: (r) => r.cuota2Due },
   { header: 'Liquidado programado USD', value: (r) => csvDinero(r.settledUsd) },
   { header: 'Ya transferido USD', value: (r) => csvDinero(r.paidUsd) },
 

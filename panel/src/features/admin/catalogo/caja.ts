@@ -169,7 +169,7 @@ export const caja = [
     espacio: 'caja',
     sinonimos: ['capital libre', 'caja libre', 'si hoy se le pagara a todas las clínicas'],
     destino: { to: '/admin/metricas', search: { vista: 'caja' } },
-    que: 'Dinero en caja menos todo lo que se les debe a las clínicas, que sale negativo casi siempre porque a cada clínica se le paga cada consulta en dos partes, el día siguiente a cada cuota del paciente, y la deuda entera nunca vence el mismo día.',
+    que: 'Dinero en caja menos todo lo que se les debe a las clínicas, que sale negativo casi siempre porque a cada clínica se le paga cada consulta en dos partes, en dos fechas fijas contadas desde la orden, y la deuda entera nunca vence el mismo día.',
     rpc: 'admin_cash_position',
   },
   {
@@ -231,7 +231,7 @@ export const caja = [
     espacio: 'caja',
     sinonimos: ['previsión', 'flujo de caja', 'forecast'],
     destino: { to: '/admin/metricas', search: { vista: 'caja', sub: 'proyeccion' } },
-    que: 'Por día, desde hoy hasta que vence la última cuota de lo que está en la calle: las cuotas que vencen (consulta + Comisión Helios, con su desglose), lo que se espera cobrar de ellas según el cobrado a tiempo histórico, lo que se le paga a las clínicas el día siguiente a cada vencimiento (ya devengado y las mitades que se devengarán, pague o no el paciente) y la caja que resulta a partir de la de hoy.',
+    que: 'Por día, desde hoy hasta que vence la última cuota de lo que está en la calle: las cuotas que vencen (consulta + Comisión Helios, con su desglose), lo que se espera cobrar de ellas según el cobrado a tiempo histórico, lo que se le paga a las clínicas en sus dos fechas fijas contadas desde cada orden (ya devengado y las mitades que se devengarán, pague o no el paciente y sin depender de cuándo venza su cuota) y la caja que resulta a partir de la de hoy.',
     rpc: 'admin_cash_forecast_days',
   },
   {

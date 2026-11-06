@@ -75,9 +75,9 @@ function ComisionesRoute() {
  * COMISIONES DEL PERSONAL (plan §6).
  *
  * Por cada pago en cuotas confirmado, quien lo registró gana una comisión
- * que Helios paga a la clínica el día siguiente a que el paciente confirma,
- * dentro de la misma transferencia que las consultas de ese día. La clínica
- * se la entrega a su personal.
+ * que Helios paga a la clínica junto con la primera mitad de la consulta (día
+ * 8), dentro de la misma transferencia que las consultas de ese día. La
+ * clínica se la entrega a su personal.
  *
  * El administrador ve las de todo el personal —por persona, para repartir,
  * y por semana, para leerlas por periodos— y entra al detalle de cada una. La
@@ -155,7 +155,7 @@ function Comisiones({ staff }: { staff: StaffContext }) {
         <Stat
           label="Por pagar"
           value={formatUsd(t?.pendingUsd ?? 0)}
-          hint="Se paga el día siguiente a cada confirmación"
+          hint="Se paga con la primera mitad de cada consulta"
           estado={estado}
           onReintentar={reintentar}
         />
@@ -169,7 +169,7 @@ function Comisiones({ staff }: { staff: StaffContext }) {
 
       <p className="mb-6 type-panel-caption leading-5 text-panel-muted">
         {deTodos
-          ? 'Helios paga cada comisión a la clínica el día siguiente a que el paciente confirma, junto con las consultas de ese día. La clínica se las entrega a su personal.'
+          ? 'Helios paga cada comisión a la clínica junto con la primera mitad de la consulta (8 días después de que el paciente confirma). La clínica se las entrega a su personal.'
           : 'Ves solo tus comisiones. Helios le paga cada una a la clínica junto con la primera mitad de la consulta (8 días después de que el paciente confirma), y la clínica te las entrega.'}
         {canSee(staff, 'pagos') && (
           <>
@@ -288,8 +288,8 @@ function TablaPorPersona({
 
 /**
  * La vista por semana: cada semana de lunes a domingo, con lo de cada
- * persona. Agrupar por semana es solo para leer: cada comisión se paga el
- * día siguiente a su confirmación. Es una consulta por semana, así que se
+ * persona. Agrupar por semana es solo para leer: cada comisión se paga con
+ * la primera mitad de su consulta. Es una consulta por semana, así que se
  * acota a las últimas {@link MAXIMO_DE_SEMANAS}.
  */
 function PorSemana({
@@ -433,7 +433,7 @@ function DetalleDePersona({
               'Estado',
               {
                 label: 'Día de pago',
-                info: 'El día siguiente a que el paciente confirma. Si ya se pagó, el día de la transferencia.',
+                info: 'El de la primera mitad de la consulta, 8 días después de que el paciente confirma. Si ya se pagó, el día de la transferencia.',
               },
             ]}
           >

@@ -68,9 +68,12 @@ export function hayOtraMoneda(totales: TotalEnMoneda[]): boolean {
 /**
  * Cuándo cobra la clínica una de las dos mitades de un pago en cuotas.
  *
- * `paidToMerchantOn` es el día en que Helios paga esa mitad —el siguiente al
- * vencimiento de la cuota— y lo calcula la base (`helios_settlement_run_for`):
- * el calendario de pagos vive en un solo sitio.
+ * `paidToMerchantOn` es el día en que Helios paga esa mitad —a los 8 o a los
+ * 15 días de la consulta— y lo dice la base: el calendario de pagos vive en un
+ * solo sitio. `dueDate` es el vencimiento de la cuota del paciente, y no hay
+ * relación entre las dos: en las órdenes desde el 2026-11-06 el pago va ANTES
+ * del vencimiento (día 8 frente a 14, día 15 frente a 28). Nada aquí debe
+ * asumir su orden ni deducir una de la otra.
  */
 export type CuotaDeLaClinica = { dueDate: string; paidToMerchantOn: string } | null
 
@@ -225,8 +228,9 @@ export type EstadoDelFinanciamiento =
 
 /**
  * Una de las dos mitades en que Helios le paga el pago en cuotas a la
- * clínica, con la fecha de vencimiento de la cuota del paciente que la
- * origina. Sin el estado de esa cuota: eso es del paciente con Helios.
+ * clínica, con la fecha de vencimiento de la cuota del paciente del mismo
+ * número, que puede caer después del pago. Sin el estado de esa cuota: eso es
+ * del paciente con Helios.
  *
  * `amount*`, `paid*` y `status` son de la TRANSFERENCIA a la clínica, no
  * del pago del paciente, y solo los ve el administrador (la base los manda

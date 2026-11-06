@@ -46,7 +46,7 @@ const sinReparto = leerPrevision({
   total_pending_usd: 300,
 })
 igual(sinReparto.nextRunUsd, 150.5, 'lo del próximo pago')
-igual(sinReparto.nextRunDate, '2026-10-01', 'la fecha del próximo pago es la de la base (el día siguiente)')
+igual(sinReparto.nextRunDate, '2026-10-01', 'la fecha del próximo pago es la de la base')
 igual(sinReparto.nextRun, null, 'sin reparto de la base, no se inventa')
 igual(
   leerPrevision({ next_run_consultas_usd: 150, next_run_comisiones_usd: '0.50' }).nextRun,

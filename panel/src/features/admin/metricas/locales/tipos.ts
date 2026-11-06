@@ -133,7 +133,7 @@ export type LocalesDeLaSemana = {
   dias: number
   /** Contra qué se compara: la semana anterior, o sus mismos días si la elegida va a medias. */
   anterior: { desde: string; hasta: string; mismaAltura: boolean }
-  /** El último día de pago de lo que vence en la semana: el lunes siguiente. */
+  /** El último día de pago de lo que toca en la semana: el lunes siguiente. */
   cierre: { lunes: string; pasado: boolean }
   graciaDias: number
   local: string | null

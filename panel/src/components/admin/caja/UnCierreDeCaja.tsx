@@ -26,7 +26,7 @@ const SALDADO = 0.005
  * Cómo se llama un día de pago en el desplegable, sin tener que abrirlo.
  *
  * El «cierre» de la base (`run_date`) es, desde el 2026-10-06, el pago de un
- * día: cada liquidación se paga el día siguiente a su vencimiento.
+ * día: cada liquidación pertenece a un solo día de pago.
  */
 export function estadoDelCierre(run: SettlementRun): string {
   if (run.isNext) return 'hoy'
@@ -50,7 +50,7 @@ export function UnCierreDeCaja({ run }: { run: SettlementRun }) {
   })
 
   const saldado = run.pendienteUsd <= SALDADO
-  // Con el pago diario, todo lo de un día vence la víspera: un solo día.
+  // Con el pago diario, lo de un día suele compartir vencimiento: un solo día.
   const unSoloDia = run.primerVencimiento === run.ultimoVencimiento
 
   return (
@@ -59,7 +59,7 @@ export function UnCierreDeCaja({ run }: { run: SettlementRun }) {
         <SectionTitle>Pago del {formatDay(run.runDate)}</SectionTitle>
         <InfoDot
           title={`Pago del ${formatDay(run.runDate)}`}
-          what="Lo que tocaba transferirles a las clínicas ese día: cada liquidación se paga el día siguiente a su vencimiento (la consulta, a los 8 y a los 15 días; la comisión de la secretaria, junto con la primera mitad). Lo que quede sin transferir sigue contando como atrasado en «Lo que se debe hoy»."
+          what="Lo que tocaba transferirles a las clínicas ese día: cada liquidación se paga en su día de pago (la consulta, a los 8 y a los 15 días de la orden; la comisión de la secretaria, junto con la primera mitad). Lo que quede sin transferir sigue contando como atrasado en «Lo que se debe hoy»."
         />
         {run.isNext ? (
           <Badge tone="neutral">Hoy</Badge>

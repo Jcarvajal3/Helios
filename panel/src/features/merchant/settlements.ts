@@ -12,9 +12,10 @@ import type { Liquidacion, Prevision, Transferencia } from './pagos'
 /**
  * Lo que Helios le debe a la clínica y lo que ya le transfirió.
  *
- * Son dos cosas distintas y el modelo las separa a propósito: al vencer una
- * cuota (o al confirmar, para la comisión) **se devenga** una obligación, y
- * solo cuando el equipo de Helios transfiere de verdad **sale el dinero**.
+ * Son dos cosas distintas y el modelo las separa a propósito: al llegar la
+ * fecha de una mitad (o al confirmar, para la comisión) **se devenga** una
+ * obligación, y solo cuando el equipo de Helios transfiere de verdad **sale el
+ * dinero**.
  *
  * Todo lo de aquí lo lee solo el administrador (`gerente`): es la RLS de
  * `settlements` y `merchant_payouts`, no una decisión del panel.
@@ -22,8 +23,8 @@ import type { Liquidacion, Prevision, Transferencia } from './pagos'
 
 /**
  * La previsión: lo del próximo pago y lo que falta en total. Por RPC y no
- * contra la vista `merchant_payables`, porque la cuota que aún no ha vencido
- * no existe en ninguna tabla que la clínica pueda leer.
+ * contra la vista `merchant_payables`, porque la mitad que aún no se ha
+ * devengado no existe en ninguna tabla que la clínica pueda leer.
  */
 export async function fetchPrevision(): Promise<Prevision> {
   // Sin `merchantId`: la RPC lo saca de la sesión, así que no se puede pedir

@@ -291,7 +291,7 @@ const COLUMNAS_CUBRIO: Array<Column<PayoutItem>> = [
   },
   {
     key: 'vencia',
-    header: 'Vencía',
+    header: 'Se devengó',
     sort: (i) => i.dueDate,
     csv: (i) => i.dueDate,
     cell: (i) => <span className="whitespace-nowrap">{formatDay(i.dueDate)}</span>,
@@ -299,7 +299,7 @@ const COLUMNAS_CUBRIO: Array<Column<PayoutItem>> = [
   {
     key: 'cierre',
     header: 'Día de pago',
-    info: 'El día en que tocaba transferirla: el siguiente a su vencimiento.',
+    info: 'El día en que tocaba transferirla: en la consulta, a los 8 o a los 15 días de la orden.',
     sort: (i) => i.runDate,
     csv: (i) => i.runDate,
     cell: (i) => <span className="whitespace-nowrap text-on-surface-variant">{formatDay(i.runDate)}</span>,

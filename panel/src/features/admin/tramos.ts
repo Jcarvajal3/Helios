@@ -20,7 +20,10 @@ import type { Parametros } from '@/features/admin/parametros'
 //
 // Los días salen de los parámetros vigentes, igual que en la base
 // (`helios_tramo_de_atraso`): si cambia el intervalo, los tramos se mueven
-// con él. Por eso aquí no hay ningún número escrito.
+// con él. Por eso aquí no hay ningún número escrito. Las órdenes viejas no se
+// mueven: con el intervalo nuevo (14) y una orden a 7 y 14 días, desde el día 8
+// las dos cuotas ya están vencidas y sigue en t1. Es temporal y se deja así: el
+// corte es uno solo por persona, no por orden.
 // ═══════════════════════════════════════════════════════════════════════════
 
 export type Tramo = 'al_dia' | 't1' | 't2' | 't3' | 't4'

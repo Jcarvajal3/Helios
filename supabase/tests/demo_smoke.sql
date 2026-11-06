@@ -9,7 +9,7 @@
 --   2. En una clínica REAL, un paciente NUEVO con el número de capacitación
 --      nace de prueba y demo, con el límite real ($150); se pueden crear
 --      varios con el mismo número. Sus órdenes no devengan comisión ni
---      liquidaciones, tampoco al vencer las cuotas. Un paciente real en la
+--      liquidaciones, tampoco en las fechas de la clínica. Un paciente real en la
 --      misma clínica sigue liquidando.
 --   3. El reinicio BORRA a los pacientes y sus órdenes (20261014100300): no
 --      entran al libro; esa cédula vuelve a ser «nuevo». Lo que sí tiene
@@ -159,12 +159,13 @@ begin
     raise exception 'La orden real debía seguir devengando la comisión del personal';
   end if;
 
+  -- Las fechas de la clínica (`settlement_due_date`), no las de las cuotas.
   perform public.run_scheduled_settlements(v_bdate + 7);
   perform public.run_scheduled_settlements(v_bdate + 14);
   if exists (select 1 from public.settlements s
              left join public.installments i on i.id = s.installment_id
              where s.charge_id in (v_ch_a, v_ch_b) or i.charge_id in (v_ch_a, v_ch_b)) then
-    raise exception 'Al vencer las cuotas, las órdenes demo no debían liquidar nada';
+    raise exception 'En las fechas de la clínica, las órdenes demo no debían liquidar nada';
   end if;
   if (select count(*) from public.settlements
       where charge_id = v_ch_r and reason = 'scheduled_installment') <> 2 then

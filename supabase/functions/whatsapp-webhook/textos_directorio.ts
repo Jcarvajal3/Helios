@@ -68,7 +68,7 @@ export function mensajeContactoDelMedico(t: TarjetaDelMedico): string {
   } else {
     lineas.push(`Encuentra cómo escribirle en ${URL_DEL_DIRECTORIO}`)
   }
-  lineas.push('', 'Puedes pagar tu consulta con Helios en dos cuotas, a los 7 y 14 días, sin inicial.')
+  lineas.push('', 'Puedes pagar tu consulta con Helios en dos cuotas, a los 14 y 28 días, sin inicial.')
   return lineas.join('\n')
 }
 

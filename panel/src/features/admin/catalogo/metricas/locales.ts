@@ -63,7 +63,7 @@ export const metricasLocales = [
     tipo: 'cifra',
     id: 'se-le-transfiere-el-lunes',
     titulo: 'Liquidación de la semana, por clínica (neto)',
-    descripcion: 'Lo que se le paga a cada clínica por las cuotas que vencen en la semana, cada mitad el día siguiente a su vencimiento.',
+    descripcion: 'Lo que se le paga a cada clínica por las mitades de consulta que tocan en la semana, cada una en su día de pago.',
     espacio: 'metricas',
     sinonimos: [
       'lo que se le transfiere a cada clínica el lunes',
@@ -75,7 +75,7 @@ export const metricasLocales = [
       'cuánto le pagamos',
     ],
     destino: { to: '/admin/metricas', search: { vista: 'locales' } },
-    que: 'Por clínica, las liquidaciones de las cuotas que vencen de lunes a domingo, que se le transfieren se paguen o no, cada una el día siguiente a su vencimiento (de martes a lunes): lo ya generado más lo que el cron generará hasta el domingo con las condiciones del día de cada financiamiento. Es su neto, que no lleva la Comisión Helios, y la misma cuenta que Pagos a clínicas. Lo atrasado de semanas anteriores va aparte.',
+    que: 'Por clínica, las liquidaciones de las mitades de consulta que tocan esa semana, que se le transfieren paguen o no los pacientes, cada una en su día de pago (de martes a lunes): lo ya generado más lo que el cron generará hasta el domingo con las condiciones del día de cada financiamiento. Es su neto, que no lleva la Comisión Helios, y la misma cuenta que Pagos a clínicas. Lo atrasado de semanas anteriores va aparte.',
     rpc: 'admin_metricas_locales',
   },
   {

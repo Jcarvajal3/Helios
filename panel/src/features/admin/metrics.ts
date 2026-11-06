@@ -415,7 +415,7 @@ export async function fetchDailySeries(days = 30): Promise<DayPoint[]> {
 /**
  * De lo que tocaba cobrar cada día, cuánto entró.
  *
- * Reemplaza a financiado-vs-cobrado: con cuotas a 7 y 14 días, esas dos series
+ * Reemplaza a financiado-vs-cobrado: con cuotas a plazo, esas dos series
  * no hablan del mismo dinero y la distancia entre ellas es aritmética del
  * plazo, no un problema de cobro.
  */

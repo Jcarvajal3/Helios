@@ -117,6 +117,10 @@ y, si el paciente existe, que quepa en su disponible.
 }
 ```
 
+**(2026-11-06)** Cada `installments[].due_date` = `business_date` + el intervalo
+vigente ese día × secuencia: +14 y +28 en una orden desde el 2026-11-06. El
+ejemplo, del 2026-10-01, es de antes del corte.
+
 Regla de presentación: la clínica muestra `base_usd` y las dos cuotas. La
 comisión de servicio va solo como línea del desglose ("Comisión de servicio
 12% + IVA", leyendo `consumer_fee_pct`).
@@ -305,13 +309,21 @@ Implementado en 20261003000500 y 000600.
   **(2026-10-05)** Añade `status` y `expires_at`: el historial muestra también
   las órdenes pendientes, rechazadas y vencidas. Los totales del día, las
   métricas, las comisiones y la exportación cuentan **solo** las confirmadas.
+  **(2026-11-06)** `cuota_N_due` es la fecha del paciente y `cuota_N_run`, el
+  día en que se le paga a la clínica. En una orden nueva, el pago va antes que
+  el vencimiento: `cuota_1_run` el día 8 y `cuota_1_due` el 14; `cuota_2_run` el
+  15 y `cuota_2_due` el 28.
 - `merchant_charge_detail(p_charge_id uuid)`: añade `concept`,
   `beneficiary_name`, `receipt` (`{status, sent_at, last_event, email_enmascarado}`),
   `staff_commission_usd`, `commission_staff_name` e `installments`
-  (`[{sequence, due_date, run_date, paid_to_merchant_on}]`; **(2026-10-06)**
-  `run_date` = `due_date` + 1, los días 8 y 15 de la consulta: **no** incluye el
+  (`[{sequence, due_date, run_date, paid_to_merchant_on}]`; **(2026-11-06)**
+  `due_date` es la fecha del paciente y `run_date` =
+  `helios_settlement_run_for(settlement_due_date)`, los días 8 y 15 de la
+  consulta (antes, `due_date` + 1): **no** incluye el
   estado de pago ni el monto de las cuotas del paciente). `payouts` añade
   `kind` = `staff_commission` (su monto lo ve también la secretaria).
+  **(2026-11-06)** En `payouts`, `due_date` es la fecha de la clínica
+  (`settlement_due_date`, días 7 y 14) y `run_date`, el día siguiente.
 - `merchant_settlement_outlook()` añade `next_run_consultas_usd`,
   `next_run_comisiones_usd`, `consultas_usd` y `comisiones_usd` (lo devengado
   y sin transferir, partido), `last_payout_on`, `last_payout_usd`.
@@ -327,7 +339,8 @@ Implementado en 20261003000500 y 000600.
   `merchant_fee_usd`, `merchant_fee_vat_usd`, `net_to_merchant_usd`,
   `settled_usd`, `paid_usd`; `unit_price_usd`, `line_total_usd`), y el export
   añade al final `concept`, `beneficiary_name`, `staff_commission_usd`.
-  `settled_usd`/`paid_usd` no cuentan la comisión.
+  `settled_usd`/`paid_usd` no cuentan la comisión. `cuota_N_due` y
+  `cuota_N_run`, como en `merchant_transactions` (2026-11-06).
 
 ### 1.6 Comisiones (nuevas)
 
@@ -352,8 +365,9 @@ financiamiento. `merchant_commissions` no cuenta las revertidas; `paid_usd`
 cuenta también lo pagado en transferencias parciales. Una comisión pasa a
 `pagada` cuando su liquidación queda pagada entera. `paid_on` solo viene si
 está `pagada`. `pay_date` (20261021190000) es el día del pago que la lleva:
-la comisión vence con la primera cuota y sale sumada a la primera mitad de la
-consulta (día 8 de la orden); `null` si está revertida.
+la comisión vence con la primera mitad de la consulta (no con la cuota del
+paciente, 2026-11-06) y sale sumada a ella (día 8 de la orden); `null` si está
+revertida.
 
 ---
 
@@ -1785,7 +1799,10 @@ van en columnas `_cur`.
   comisión del personal) y, solo la primera, `pagado_el` / `pagado_tasa` (la
   transferencia a la clínica). `admin_merchant_payables` añade `monedas`
   (`text[]`, dólares primero) y `next_run_eur`. Interna:
-  `helios_cuota_pagada(charge, due_date)`.
+  `helios_cuota_pagada(charge, due_date)`. **(2026-11-06)** Ese `due_date` es
+  el día de devengo de la mitad (`settlement_due_date`), no el vencimiento de
+  la cuota; en `admin_merchant_upcoming_settlements`, `due_date` y `run_date`
+  son los de la mitad.
 - 20261027000000: `helios_admin_payment_item` (lo que devuelven
   `admin_payment_queue` y `admin_payment_report`) añade `monedas` (dólares
   primero; los cargos por atraso cuentan como dólares), `fx_rate_eur`,
@@ -1976,3 +1993,35 @@ la pregunta le llega a quien capacita.
   `helios_payment_accounts_text()` ya no dicen el titular de la cuenta.
   `pago_movil_titular` sigue en `helios_message_builtins` solo para las
   plantillas `_v2` de Meta conectadas (docs/00 §15.9).
+
+## El plazo de las cuotas y la fecha de la clínica (2026-11-06, 20261106220000 y 20261106220100)
+
+Las órdenes nuevas vencen a los 14 y 28 días y la clínica sigue cobrando a los
+días 8 y 15 (docs/00 §15.12). No cambia la firma de ninguna función existente.
+
+- `installments.settlement_due_date date not null`: el día en que se devenga a
+  la clínica la mitad de esa cuota; el pago sale el día siguiente. La pone el
+  trigger `installments_settlement_due_date` al insertar: fecha de la orden +
+  `helios_settlement_interval_days()` × secuencia. `due_date` es solo la fecha
+  del paciente. En las cuotas de antes, las dos fechas son iguales.
+- `helios_settlement_interval_days() → integer`: constante 7, lo pactado con la
+  clínica. No es un parámetro.
+- `helios_settlement_run_for(d) = d + 1` no cambia: ahora recibe
+  `settlement_due_date`.
+- `helios_installment_interval_days_at(p_day date) → integer`: el intervalo del
+  paciente vigente en esa fecha (7 si no hay fila).
+- `helios_installment_due_dates(d)` lo usa: la fecha de la orden manda, no la
+  de hoy. `installment_interval_days` = 14 tiene vigencia desde el 2026-11-06 y
+  no mueve el pago a la clínica. `helios_installment_interval_days()` (tramos de
+  atraso, temporada de las cosechas) sigue leyendo el valor de hoy.
+- `helios_charge_planned_installments(charge)`: cada cuota añade
+  `settlement_due_date`, también en las órdenes pendientes.
+- Pasan a `settlement_due_date`, con las mismas columnas:
+  `run_scheduled_settlements_batch`, `helios_settlement_outlook`,
+  `metricas.mitades_por_devengar` y `metricas.locales_cierre`.
+- `helios_accrue_staff_commission`: `settlements.due_date` de la comisión =
+  `settlement_due_date` de la primera cuota.
+- `asistente.liquidaciones.se_paga_el` = `helios_settlement_run_for(s.due_date)`:
+  el día real de pago (antes, el día de devengo, uno antes).
+- `terms_versions`: v3 es la vigente. Las órdenes viejas conservan su
+  `terms_version_id`.

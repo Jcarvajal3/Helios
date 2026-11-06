@@ -39,8 +39,8 @@ const REPARTO_DE_HELIOS: Pick<MerchantTerms, 'upfrontPct' | 'perInstallmentPct' 
 
 /**
  * Las condiciones de una clínica. Lo que se le paga no se pacta: recibe el
- * 100 % de cada consulta, la mitad el día siguiente al vencimiento de cada
- * cuota del paciente (días 8 y 15), pague o no el paciente. Lo único que se
+ * 100 % de cada consulta, la mitad a los 8 días de la orden y la otra a los
+ * 15, pague o no el paciente. Lo único que se
  * pacta es la comisión de su personal por orden confirmada.
  *
  * Tienen fecha: cada orden se liquida con las vigentes su día. Cambiarlas lo
@@ -119,9 +119,8 @@ export function Condiciones({
         <div className="flex flex-col gap-1">
           <span className="type-panel-label text-on-surface-variant">Lo que se le paga</span>
           <p className="type-panel-body text-on-surface">
-            El 100 % de cada consulta: la mitad el día siguiente al vencimiento de cada cuota del paciente
-            (a los 8 y a los 15 días), pague o no el paciente. Es igual para todas las clínicas y no se
-            pacta.
+            El 100 % de cada consulta: la mitad a los 8 días y la otra a los 15, pague o no el paciente
+            y sin depender de cuándo venzan sus cuotas. Es igual para todas las clínicas y no se pacta.
           </p>
         </div>
 

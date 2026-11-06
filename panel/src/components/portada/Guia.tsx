@@ -260,7 +260,7 @@ function CuantoPagas() {
             <th scope="col" className={`${CELDA} ${CABECERA_DE_TABLA}`}>Consulta</th>
             <th scope="col" className={`${CELDA} ${CABECERA_DE_TABLA}`}>Comisión Helios + IVA</th>
             <th scope="col" className={`${CELDA} ${CABECERA_DE_TABLA}`}>Total</th>
-            <th scope="col" className={`${CELDA} ${CABECERA_DE_TABLA}`}>Cada cuota (días 7 y 14)</th>
+            <th scope="col" className={`${CELDA} ${CABECERA_DE_TABLA}`}>Cada cuota (días 14 y 28)</th>
           </tr>
         </thead>
         <tbody className="tabular-nums text-portada-tinta-2">
@@ -532,8 +532,8 @@ function MedicosDeLaGuia({ guia: g, medicos }: { guia: DatosDeGuia; medicos: Med
             <em className="portada-serif text-portada-azul">ya aceptan Helios.</em>
           </h2>
           <p className="mt-5 max-w-[56ch] text-[1rem] leading-relaxed text-portada-tinta-2">
-            Escríbeles por WhatsApp para agendar tu cita y paga tu consulta en 2 cuotas, a los 7 y
-            14 días, sin inicial.
+            Escríbeles por WhatsApp para agendar tu cita y paga tu consulta en 2 cuotas, a los 14 y
+            28 días, sin inicial.
           </p>
         </Revelar>
         <ul className="mt-12 grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">

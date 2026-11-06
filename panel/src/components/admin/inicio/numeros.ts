@@ -10,8 +10,8 @@ import type { FilaPrimeraCuota } from '@/features/admin/riesgo/credito'
 
 // ── El pago a las clínicas ─────────────────────────────────────────────────
 //
-// A las clínicas se les paga a diario: cada liquidación, el día siguiente a
-// su vencimiento. El pago que viene es siempre hoy, así que la pregunta es
+// A las clínicas se les paga a diario: cada liquidación, en su día de pago.
+// El pago que viene es siempre hoy, así que la pregunta es
 // una sola: ¿la caja de hoy cubre lo que sale hoy? (Ronda pagaba los lunes y
 // aquí se contaban los días al cierre y lo que vencía antes; ya no aplica.)
 

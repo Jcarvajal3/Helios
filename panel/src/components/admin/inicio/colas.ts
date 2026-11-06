@@ -124,8 +124,8 @@ export function resumirAbonos(
 
 /**
  * Las clínicas a las que toca pagarles hoy (sin lo atrasado, que es su propia
- * cola). Es la tarea de cada día: a la clínica se le paga el día siguiente a
- * cada vencimiento, así que casi todos los días hay algo.
+ * cola). Es la tarea de cada día: a la clínica se le paga a los 8 y a los 15
+ * días de cada orden, así que casi todos los días hay algo.
  */
 export function resumirPagoDeHoy(liquidaciones: ReadonlyArray<MerchantPayable>): Resumen {
   const deHoy = liquidaciones.filter((m) => !m.isTest && m.nextRunUsd - m.overdueUsd > 0.005)

@@ -89,8 +89,8 @@ export type CierreDeHoy = {
 
 /**
  * El pago de hoy a las clínicas: lo que sale, la caja y si alcanza. Se les
- * paga a diario (cada liquidación, el día siguiente a su vencimiento): se
- * compara la caja de hoy con lo que sale hoy.
+ * paga a diario (cada liquidación, en su día de pago): se compara la caja de
+ * hoy con lo que sale hoy.
  */
 export function useCierreDeHoy(): LecturaDeCifra<CierreDeHoy> {
   const locales = useQuery(consultaDeudaConLocales())

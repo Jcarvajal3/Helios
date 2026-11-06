@@ -593,7 +593,7 @@ const PASOS_DEL_PACIENTE = [
   },
   {
     titulo: 'Paga en dos cuotas',
-    texto: 'A los 7 y 14 días, en bolívares, por Pago Móvil o transferencia.',
+    texto: 'A los 14 y 28 días, en bolívares, por Pago Móvil o transferencia.',
   },
 ]
 

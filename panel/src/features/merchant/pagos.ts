@@ -4,14 +4,14 @@ import { comoFila, filaONula, filas, numero, numeroONulo, texto, textoONulo } fr
 // Lo que Helios le paga a la clínica, partido en sus dos conceptos
 // (contrato §1.5, plan §6):
 //
-//   Consultas                la mitad de cada pago en cuotas, el día
-//                            siguiente al vencimiento de cada cuota del
-//                            paciente (`scheduled_installment`)
+//   Consultas                la mitad de cada pago en cuotas, a los 8 y a
+//                            los 15 días de la consulta, sin depender del
+//                            vencimiento de las cuotas del paciente
+//                            (`scheduled_installment`)
 //   Comisiones del personal  la comisión de quien registró cada uno
-//                            (`staff_commission`), el día siguiente a la
-//                            confirmación
+//                            (`staff_commission`), con la primera mitad
 //
-// No hay cierre semanal: Helios paga cada día lo que vence ese día, y las dos
+// No hay cierre semanal: Helios paga cada día lo que le toca ese día, y las dos
 // viajan en la MISMA transferencia del día; la clínica le
 // entrega las comisiones a su personal. Por eso cada transferencia y cada
 // una de sus líneas se enseñan partidas: si no, la secretaria que pregunta
@@ -84,8 +84,8 @@ export function repartir(
  * Lo que se le debe a la clínica, en lo que ya nació y lo que nacerá
  * (`merchant_settlement_outlook`). El reparto del próximo pago llega solo
  * si la base lo manda; no se calcula aquí, porque qué entra en cada pago lo
- * decide el calendario de la base (`helios_settlement_run_for(d) = d + 1`),
- * no esta pantalla.
+ * decide el calendario de la base (días 8 y 15 de cada orden), no esta
+ * pantalla.
  */
 export type Prevision = {
   todayDate: string

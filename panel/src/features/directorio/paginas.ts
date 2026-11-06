@@ -134,9 +134,9 @@ export function textosDeEspecialidad(clave: ClaveDeEspecialidad, ciudad: string 
     titulo: ciudad
       ? `${quienes} en ${ciudad} con pago en cuotas | Helios`
       : `${quienes} con pago en cuotas, sin inicial | Helios`,
-    descripcion: `${quienes} que aceptan Helios en Venezuela. Escríbeles por WhatsApp y paga tu consulta en 2 cuotas, a los 7 y 14 días, sin inicial.`,
+    descripcion: `${quienes} que aceptan Helios en Venezuela. Escríbeles por WhatsApp y paga tu consulta en 2 cuotas, a los 14 y 28 días, sin inicial.`,
     h1: { antes: quienes, enfasis: 'con 0% de inicial.' },
-    entrada: `${nombreDeEspecialidad(clave)}: escríbele por WhatsApp a tu especialista y paga tu consulta en 2 cuotas, a los 7 y 14 días.`,
+    entrada: `${nombreDeEspecialidad(clave)}: escríbele por WhatsApp a tu especialista y paga tu consulta en 2 cuotas, a los 14 y 28 días.`,
     miga: nombreDeEspecialidad(clave),
   }
 }
@@ -163,7 +163,7 @@ export function textosDeFicha(m: MedicoDelDirectorio) {
   const donde = m.ciudad ? ` en ${m.ciudad}` : ''
   return {
     titulo: `${m.nombre}, ${especialidad} | Pago en cuotas con Helios`,
-    descripcion: `${m.nombre}, ${especialidad.toLowerCase()}${donde}. Agenda tu cita por WhatsApp y paga tu consulta en 2 cuotas, a los 7 y 14 días, sin inicial.`,
+    descripcion: `${m.nombre}, ${especialidad.toLowerCase()}${donde}. Agenda tu cita por WhatsApp y paga tu consulta en 2 cuotas, a los 14 y 28 días, sin inicial.`,
     especialidad,
   }
 }

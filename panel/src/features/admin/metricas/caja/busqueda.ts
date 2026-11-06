@@ -10,9 +10,9 @@ import { comoDia } from '@/lib/busqueda'
 // enlaza con la fecha del saldo del banco ya puesta, y un enlace guardado la
 // conserva.
 //
-// La proyección es siempre de 15 días, día a día: a la clínica se le paga el
-// día siguiente al vencimiento de cada cuota, no los lunes. Ya no se elige el
-// horizonte (un `?horizonte=` viejo se ignora).
+// La proyección es siempre del mismo horizonte, día a día
+// (`DIAS_DE_PROYECCION`): lo que tarda en cerrarse una orden. Ya no se elige
+// (un `?horizonte=` viejo se ignora).
 // ═══════════════════════════════════════════════════════════════════════════
 
 export type BusquedaCaja = {

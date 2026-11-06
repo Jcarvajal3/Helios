@@ -51,18 +51,18 @@ export const IMAGEN_COMPARTIR = {
  * cierto, así que se toca a mano cuando cambia el texto de la página.
  */
 export const PAGINAS_PUBLICAS = {
-  '/': { actualizada: '2026-10-30' },
-  '/pacientes': { actualizada: '2026-10-30' },
-  '/medicos': { actualizada: '2026-11-05' },
-  '/consulta-medica-en-cuotas': { actualizada: '2026-10-30' },
-  '/odontologia-en-cuotas': { actualizada: '2026-10-30' },
-  '/cosmetologia-en-cuotas': { actualizada: '2026-10-30' },
+  '/': { actualizada: '2026-11-06' },
+  '/pacientes': { actualizada: '2026-11-06' },
+  '/medicos': { actualizada: '2026-11-06' },
+  '/consulta-medica-en-cuotas': { actualizada: '2026-11-06' },
+  '/odontologia-en-cuotas': { actualizada: '2026-11-06' },
+  '/cosmetologia-en-cuotas': { actualizada: '2026-11-06' },
   // La lista de médicos cambia sola (superadmin › Directorio); la fecha es
   // la del texto y la estructura de la página.
-  '/directorio': { actualizada: '2026-10-30' },
+  '/directorio': { actualizada: '2026-11-06' },
   '/afiliacion': { actualizada: '2026-11-05' },
   '/soporte': { actualizada: '2026-11-05' },
-  '/legal/terminos': { actualizada: '2026-10-07' },
+  '/legal/terminos': { actualizada: '2026-11-06' },
   '/legal/privacidad': { actualizada: '2026-10-07' },
 } as const satisfies Record<string, { actualizada: string }>
 

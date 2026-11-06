@@ -40,7 +40,7 @@ export const metricasCobranza = [
       'spd',
     ],
     destino: { to: '/admin/metricas', search: { vista: 'cobros', sub: 'impago-por-cuota', cuota: '2' } },
-    que: 'De la cuota 2 de cada paciente en cada financiamiento, qué parte seguía sin pagar el último día de la gracia; vence una semana después de la 1 y cuenta también a quien tampoco pagó la 1. Se parte por semana, mes, clínica, nivel o primer financiamiento, con la cuota 1 al lado. Los montos son financiamiento, sin la Comisión Helios.',
+    que: 'De la cuota 2 de cada paciente en cada financiamiento, qué parte seguía sin pagar el último día de la gracia; vence un intervalo de cuotas después de la 1 y cuenta también a quien tampoco pagó la 1. Se parte por semana, mes, clínica, nivel o primer financiamiento, con la cuota 1 al lado. Los montos son financiamiento, sin la Comisión Helios.',
     rpc: 'admin_first_payment_default',
   },
   {

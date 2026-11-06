@@ -251,7 +251,11 @@ export function progresoDeMeta(
 
 // ── Semáforo de capital ────────────────────────────────────────────────────
 
-/** Las semanas de un ciclo de cobro: las dos cuotas. `null` sin el intervalo. */
+/**
+ * Las semanas de un ciclo de cobro: las dos cuotas. `null` sin el intervalo.
+ * Con el intervalo vigente: el de las órdenes que se registran hoy, que son las
+ * que comprometen el capital que queda.
+ */
 export function semanasDeUnCiclo(intervaloDias: number | null): number | null {
   if (intervaloDias === null || intervaloDias <= 0) return null
   return (intervaloDias * CUOTAS_POR_CONSUMO) / 7

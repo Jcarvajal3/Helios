@@ -53,6 +53,7 @@ SUITES=(
   eligibility_smoke
   staff_commission_smoke
   proximos_pagos_smoke
+  plazo_de_cuotas_smoke
   metricas_cimientos
   metricas_general
   metricas_semana

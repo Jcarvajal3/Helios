@@ -151,7 +151,7 @@ export function CifrasDeLaSemana({
 /**
  * La cuota 1 o la 2 sin pagar tras la gracia, de la última semana de consumo
  * cuyas cuotas de ese número ya pasaron todas la gracia (hasta la elegida).
- * La de la cuota 2 suele ser una semana más vieja: vence una semana después.
+ * La de la cuota 2 suele ser más vieja: vence un intervalo de cuotas después.
  * La tarjeta lleva a «Impago por cuota» con esa cuota puesta.
  */
 function ImpagoDeLaCuota({

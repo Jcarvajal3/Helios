@@ -52,8 +52,8 @@ export const Route = createFileRoute('/admin/pagos-clinicas')({
  * Dos preguntas, dos pestañas, y cada fila abre una página propia.
  *
  *   POR PAGAR      ¿a quién le debo y cuánto? Es la tarea de cada día: desde
- *                  el 2026-10-06 cada liquidación se paga el día siguiente a
- *                  su vencimiento. Trae el selector de días de pago, para
+ *                  el 2026-10-06 cada liquidación se paga en su día de
+ *                  pago. Trae el selector de días de pago, para
  *                  mirar cualquier día que ya pasó.
  *   TRANSFERENCIAS ¿qué se les ha pagado a los locales? El histórico
  *                  completo, filtrable por local, fechas y medio.

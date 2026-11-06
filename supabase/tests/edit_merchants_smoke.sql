@@ -138,7 +138,7 @@ begin
     raise exception 'El detalle debía traer 1 persona de personal: %', v_detail;
   end if;
   -- Helios: sin adelanto, una orden recién registrada todavía no ha
-  -- devengado nada (cada mitad se devenga al vencer su cuota): lo pendiente
+  -- devengado nada (cada mitad se devenga en su `settlement_due_date`): lo pendiente
   -- viene, aunque sea 0.
   if (v_detail->>'pending_usd') is null then
     raise exception 'El detalle debía traer lo pendiente de pagar: %', v_detail;

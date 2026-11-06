@@ -21,12 +21,15 @@ import { textoDeDesglose } from '@/features/admin/metricas/formato'
 import type { Desglose } from '@/features/admin/metricas/lectura'
 
 /**
- * Lo que va a entrar y lo que va a salir los próximos 15 días, día a día.
+ * Lo que va a entrar y lo que va a salir los próximos días, día a día
+ * (`DIAS_DE_PROYECCION`).
  *
- * A la clínica se le paga el día siguiente al vencimiento de cada cuota del
- * paciente (días 8 y 15 de cada orden), pague o no el paciente; no los lunes.
- * Con eso, todo lo que hoy está en la calle entra y sale en esos 15 días. Lo
- * que sale incluye las mitades que todavía no se han devengado.
+ * A la clínica se le paga a los días 8 y 15 de cada orden, pague o no el
+ * paciente y sin depender del vencimiento de su cuota, que en las órdenes
+ * nuevas cae después (días 14 y 28): por eso una orden nueva saca dinero antes
+ * de que entre. Con ese horizonte, todo lo que hoy está en la calle entra y
+ * sale dentro de la tabla. Lo que sale incluye las mitades que todavía no se
+ * han devengado.
  *
  * La caja de partida es «Dinero en caja», la misma lectura que el Balance
  * (`admin_cash_position`): el saldo proyectado se acumula aquí, día a día,
@@ -109,7 +112,7 @@ function TablaDeProyeccion({ d, caja, local }: { d: Proyeccion; caja: number | n
     },
     {
       label: local ? 'A transferir a la clínica' : 'A transferir a clínicas',
-      info: 'Lo que toca pagarles ese día: la mitad de cada consulta el día siguiente al vencimiento de su cuota (pague o no el paciente) y las comisiones del personal. Debajo, cuánto ya está devengado y cuánto se devengará al vencer la cuota. Sin la Comisión Helios. Lo atrasado cae hoy. No incluye órdenes que todavía no se han registrado.',
+      info: 'Lo que toca pagarles ese día: cada mitad de la consulta, a los 8 y a los 15 días de la orden (pague o no el paciente y sin depender de cuándo venza su cuota), y las comisiones del personal. Debajo, cuánto ya está devengado y cuánto se devengará al llegar su fecha. Sin la Comisión Helios. Lo atrasado cae hoy. No incluye órdenes que todavía no se han registrado.',
     },
     { label: 'Neto', info: 'Lo que se espera cobrar menos lo que hay que transferir ese día.' },
     ...(caja === null

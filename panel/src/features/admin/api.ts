@@ -476,13 +476,14 @@ export async function fetchMerchants(): Promise<MerchantRow[]> {
 /**
  * Lo que se le debe a cada comercio, con el pago de hoy delante.
  *
- * Desde el 2026-10-06 a la clínica se le paga a diario: cada liquidación, el
- * día siguiente a su vencimiento (la consulta a los días 8 y 15, la comisión
- * de la secretaria junto con la primera mitad). El «cierre» de las RPC
- * (`next_run_date`, `run_date`) es el pago de un día.
+ * Desde el 2026-10-06 a la clínica se le paga a diario, cada liquidación en su
+ * día de pago: la consulta a los días 8 y 15 de la orden, en todas las órdenes
+ * y sin depender del vencimiento de la cuota (desde el 2026-11-06, días 14 y 28
+ * en las nuevas), y la comisión de la secretaria junto con la primera mitad. El
+ * «cierre» de las RPC (`next_run_date`, `run_date`) es el pago de un día.
  *
- * `accruedUsd` son filas reales de `settlements`; `upcomingUsd` es la cuota que
- * todavía no ha vencido y por tanto no existe en ninguna tabla. Se piden a una
+ * `accruedUsd` son filas reales de `settlements`; `upcomingUsd` es la mitad que
+ * todavía no se ha devengado y por tanto no existe en ninguna tabla. Se piden a una
  * RPC y no a la vista `merchant_payables` porque la previsión necesita leer
  * `installments` y la vista es `security_invoker`: la misma consulta desde el
  * panel del comercio volvería en cero sin dar error.
@@ -510,7 +511,7 @@ export type MerchantPayable = {
   /** Pagos de días anteriores que siguen sin transferirse. Eso sí es un atraso. */
   overdueUsd: number
   oldestDueDate: string | null
-  /** Cuotas por vencer: se le deberán, pero todavía no toca. */
+  /** Mitades que aún no se han devengado: se le deberán, pero todavía no toca. */
   upcomingUsd: number
   totalPendingUsd: number
   /** Cuándo salió la última transferencia, y de cuánto. Es la primera pregunta
@@ -617,16 +618,16 @@ export type Settlement = {
   /**
    * Entra en el pago de hoy (con lo atrasado).
    *
-   * No es lo mismo que `isDue` y por eso existe: lo que vence hoy ya está
-   * vencido, pero se paga mañana, el día siguiente a su vencimiento. Marcarlo
-   * sería adelantarle un día a la clínica.
+   * No es lo mismo que `isDue` y por eso existe: lo que ya está vencido puede
+   * tener su día de pago mañana (`runDate`). Marcarlo sería adelantarle un día
+   * a la clínica.
    */
   inNextRun: boolean
-  /** El día concreto en que se paga esta liquidación: el siguiente a su vencimiento. */
+  /** El día concreto en que se paga esta liquidación. Lo dice la base; no se calcula de `dueDate` ni de la cuota. */
   runDate: string
   /**
-   * Una mitad de la consulta que todavía no es liquidación: su cuota no ha
-   * vencido y el cron la creará ese día. Se enseña en su día de pago, pero no
+   * Una mitad de la consulta que todavía no es liquidación: no ha llegado su
+   * fecha y el cron la creará ese día. Se enseña en su día de pago, pero no
    * se puede pagar antes (`fetchMerchantUpcomingSettlements`).
    */
   porVencer?: boolean
@@ -678,7 +679,7 @@ function leerTasasDeLaLinea(
 
 /**
  * Las mitades de la consulta por vencer de una clínica: las que el cron creará
- * el día de cada cuota y que hoy solo cuentan en «Por pagar en los próximos
+ * al llegar su fecha y que hoy solo cuentan en «Por pagar en los próximos
  * días». Mismo cálculo que esa cifra (20261021220000), una línea por mitad,
  * con la forma de una liquidación para ponerla en su día de pago. No tienen
  * id en la base: el suyo es inventado y no se puede meter en una transferencia.
@@ -758,9 +759,9 @@ export async function fetchMerchantSettlements(
  * Un día de pago con filas: el día, lo que vencía la víspera, lo que salió del
  * banco y lo que quedó a deber.
  *
- * El eje es `helios_settlement_run_for(due_date)`: cada liquidación pertenece a
- * un día de pago y solo a uno, el siguiente a su vencimiento (hasta el
- * 2026-10-06 era el primer lunes posterior). La base lo calcula al leer, así
+ * Cada liquidación pertenece a un día de pago y solo a uno (la consulta, a los
+ * 8 y a los 15 días de la orden; hasta el 2026-10-06 era el primer lunes
+ * posterior). La base lo calcula al leer, así
  * que también lo pasado sale por días: hay una fila por cada día con pagos.
  */
 export type SettlementRun = {

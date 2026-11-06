@@ -5,7 +5,7 @@
 --
 -- Cubre `helios_patient_eligibility` + `preview_patient_charge` +
 -- `create_patient_charge` (20261003000400) de punta a punta:
---   1. Paciente nuevo: vista previa, alta, cuotas a +7/+14 desde el día
+--   1. Paciente nuevo: vista previa, alta, cuotas a +14/+28 desde el día
 --      operativo (medianoche), una sola línea libre, asiento de 4 patas
 --      cuadrado, comisión devengada, comprobante + bienvenida encolados,
 --      condiciones v1, bitácora y la respuesta del contrato.
@@ -117,8 +117,8 @@ begin
      or (v_j->'installments'->0->>'amount_usd')::numeric <> 56.96
      or (v_j->'installments'->1->>'amount_usd')::numeric <> 56.96
      or (v_j->'installments'->0->>'financed_usd')::numeric <> 50
-     or (v_j->'installments'->0->>'due_date')::date <> v_bdate + 7
-     or (v_j->'installments'->1->>'due_date')::date <> v_bdate + 14
+     or (v_j->'installments'->0->>'due_date')::date <> v_bdate + 14
+     or (v_j->'installments'->1->>'due_date')::date <> v_bdate + 28
      or not (v_j->>'cabe')::boolean or v_j->'disponible_usd' <> 'null'::jsonb
      or (v_j->>'late_fee_usd')::numeric <> 2 or (v_j->>'business_date')::date <> v_bdate then
     raise exception 'Vista previa inesperada: %', v_j;
@@ -174,15 +174,16 @@ begin
     raise exception 'Debía haber una sola línea libre «Consulta»';
   end if;
 
-  -- Las cuotas: +7 y +14 desde el día operativo, que empieza a medianoche.
+  -- Las cuotas: +14 y +28 desde el día operativo, que empieza a medianoche.
   if (select array_agg(due_date order by sequence) from public.installments where charge_id = v_charge)
-       <> array[v_bdate + 7, v_bdate + 14]
+       <> array[v_bdate + 14, v_bdate + 28]
      or (select sum(amount_usd) from public.installments where charge_id = v_charge) <> 113.92
      or (select sum(financed_usd) from public.installments where charge_id = v_charge) <> 100 then
     raise exception 'Cuotas inesperadas';
   end if;
   if public.helios_business_date(timestamptz '2026-10-01 00:05:00-04') <> date '2026-10-01'
      or public.helios_business_date(timestamptz '2026-09-30 23:55:00-04') <> date '2026-09-30'
+     -- De antes del corte (2026-11-06): conserva +7/+14.
      or (select due_1 from public.helios_installment_due_dates(date '2026-10-01')) <> date '2026-10-08'
      or (select due_2 from public.helios_installment_due_dates(date '2026-10-01')) <> date '2026-10-15' then
     raise exception 'Las fechas de las cuotas debían contarse desde la medianoche de Caracas';
@@ -641,7 +642,7 @@ begin
   if v_row.concept <> 'Consulta' or v_row.beneficiary_name <> 'Pedrito Pérez'
      or v_row.receipt_status not in ('pendiente', 'sin_configurar') or v_row.staff_commission_usd <> 0.50
      or v_row.registered_by_name <> 'Ana Secretaria' or v_row.merchant_sale_usd <> 100
-     or v_row.cuota_1_due <> v_bdate + 7 then
+     or v_row.cuota_1_due <> v_bdate + 14 then
     raise exception 'merchant_transactions sin lo nuevo: %', to_jsonb(v_row);
   end if;
   v_j := public.merchant_charge_detail(v_charge);

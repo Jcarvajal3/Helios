@@ -117,7 +117,7 @@ const detalle = leerDetalle({
   installment_status: 'overdue',
 })
 igual(detalle.pagos.map((p) => p.sequence), [1, 2], 'las dos mitades en orden, sin el adelanto')
-igual(detalle.pagos[0].paidToMerchantOn, '2026-10-09', 'run_date se lee como paid_to_merchant_on (el día siguiente al vencimiento)')
+igual(detalle.pagos[0].paidToMerchantOn, '2026-10-09', 'run_date se lee como paid_to_merchant_on')
 igual(detalle.concept, 'Consulta y eco', 'sin concept suelto, el nombre de la única línea')
 igual(detalle.receipt, { status: 'entregado', sentAt: '2026-10-01T14:01:00Z', lastEvent: 'delivered' }, 'el comprobante')
 igual(detalle.feePct, 12, 'el porcentaje de la Comisión Helios sale de sus cifras')
@@ -179,6 +179,45 @@ igual(
   'cada mitad con el importe de su transferencia, en euros, y sin la comisión del personal',
 )
 
+console.log('\n── una orden nueva: el pago va antes de que venza la cuota ───')
+// Desde el 2026-11-06: cuotas a los días 14 y 28, y a la clínica a los 8 y 15.
+const filaNueva = leerFilaDeFinanciamiento({
+  charge_id: 'c9',
+  order_number: 9,
+  merchant_sale_usd: 100,
+  cuota_1_due: '2026-11-20',
+  cuota_1_run: '2026-11-14',
+  cuota_2_due: '2026-12-04',
+  cuota_2_run: '2026-11-21',
+})
+igual(
+  filaNueva.cuotas,
+  [
+    { dueDate: '2026-11-20', paidToMerchantOn: '2026-11-14' },
+    { dueDate: '2026-12-04', paidToMerchantOn: '2026-11-21' },
+  ],
+  'cada fecha sale de su columna: el pago no se calcula del vencimiento',
+)
+const fichaNueva = leerDetalle({
+  charge_id: 'c9',
+  order_number: 9,
+  created_at: '2026-11-06T14:00:00Z',
+  merchant_sale_usd: 100,
+  installments: [
+    { sequence: 2, due_date: '2026-12-04', paid_to_merchant_on: '2026-11-21' },
+    { sequence: 1, due_date: '2026-11-20', paid_to_merchant_on: '2026-11-14' },
+  ],
+  payouts: [],
+})
+igual(
+  fichaNueva.pagos.map((p) => [p.sequence, p.paidToMerchantOn, p.dueDate]),
+  [
+    [1, '2026-11-14', '2026-11-20'],
+    [2, '2026-11-21', '2026-12-04'],
+  ],
+  'las dos mitades en orden, con el pago antes del vencimiento',
+)
+
 console.log('\n── el libro para contabilidad ────────────────────────────────')
 igual(usdOEur({ sale_usd: 10, sale_eur: 99 }, 'sale'), 10, 'prefiere _usd')
 igual(usdOEur({ sale_eur: '12.5' }, 'sale'), 12.5, 'acepta _eur de Ronda')
@@ -205,6 +244,10 @@ igual(venta.netToMerchantUsd, 100, 'el neto desde net_to_merchant_eur')
 igual(venta.registeredBy, 'Ana', 'quien registró desde cashier')
 comprueba(!JSON.stringify(venta).includes('113.92'), 'el total con la Comisión Helios del paciente no se lee')
 const cabeceras = COLUMNAS_VENTAS.map((c) => c.header.toLowerCase()).join('|')
+comprueba(
+  cabeceras.indexOf('mitad 1 te la pagamos el') < cabeceras.indexOf('cuota 1 del paciente vence'),
+  'en el libro, la fecha del pago va antes que el vencimiento de la cuota',
+)
 comprueba(
   !/cliente|consumer|servicio helios|comisi[oó]n de servicio|comisi[oó]n (de )?helios/.test(cabeceras),
   'ninguna columna habla de la Comisión Helios del paciente',

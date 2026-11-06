@@ -47,7 +47,7 @@ export const inicio = [
     espacio: 'inicio',
     sinonimos: ['cubre el pago de hoy', 'semáforo del cierre', 'alcanza la caja', 'faltan fondos'],
     destino: { to: '/admin' },
-    que: 'Lo que sale hoy hacia las clínicas (atrasados incluidos) frente al dinero en caja: «Cubre» o «No cubre». Se les paga a diario: cada liquidación, el día siguiente a su vencimiento.',
+    que: 'Lo que sale hoy hacia las clínicas (atrasados incluidos) frente al dinero en caja: «Cubre» o «No cubre». Se les paga a diario: cada liquidación, en su día de pago (la consulta, en dos fechas fijas contadas desde la orden).',
     rpc: 'admin_merchant_payables',
   },
 ] as const satisfies ReadonlyArray<Entrada>

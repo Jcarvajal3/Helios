@@ -49,7 +49,7 @@ export const caja: HerramientaDeDatos[] = [
       'Contesta «¿cuánto le debemos a las clínicas?»: por clínica (merchant_name, con su médico titular en ' +
       'doctor_name), lo pendiente total (total_pending_usd, la cifra que se da), lo vencido (overdue_usd), lo que ' +
       'vence (upcoming_usd), el próximo pago con su fecha y su monto (next_pay_date, next_pay_usd: se paga a ' +
-      'diario, el día siguiente a cada vencimiento de cuota) y el último pago hecho. A la clínica se le paga el ' +
+      'diario, a los 8 y a los 15 días de cada orden, sin depender del vencimiento de la cuota) y el último pago hecho. A la clínica se le paga el ' +
       '100 % de la consulta, pague o no el paciente; comisiones_usd son comisiones del personal, aparte. NO ' +
       'contesta la mora de las clínicas (admin_merchant_risk).',
     esquema: sinParametros(),

@@ -184,7 +184,7 @@ export const glosario = [
     sinonimos: ['cuota', 'cuotas', 'plazo', 'vencimiento', 'pago en cuotas', 'primera cuota', 'segunda cuota'],
     destino: { to: '/admin/cobranza' },
     definicion:
-      'Cada financiamiento se paga en dos cuotas. La cuota 1 vence un intervalo de cuotas después del financiamiento y la cuota 2, otro intervalo después de la 1; el intervalo es un parámetro del negocio. El monto de cada cuota es financiamiento + Comisión Helios (su parte de financiado más su parte de la comisión con su IVA) y se enseña con ese desglose.',
+      'Cada financiamiento se paga en dos cuotas. La cuota 1 vence un intervalo de cuotas después del financiamiento y la cuota 2, otro intervalo después de la 1; el intervalo es un parámetro del negocio y cada orden conserva el que estaba vigente cuando se registró, así que conviven órdenes con plazos distintos. El monto de cada cuota es financiamiento + Comisión Helios (su parte de financiado más su parte de la comisión con su IVA) y se enseña con ese desglose.',
   },
   {
     tipo: 'termino',
@@ -353,7 +353,7 @@ export const glosario = [
     sinonimos: ['settlement', 'deuda con la clínica', 'pago a la clínica'],
     destino: { to: '/admin/pagos-clinicas' },
     definicion:
-      'Lo que Helios le debe a una clínica por el financiamiento de sus pacientes: la consulta entera (sin la Comisión Helios, que paga el paciente) más lo que gana su personal. A la clínica se le liquida por la fecha de vencimiento, pague o no el paciente a tiempo, y cada liquidación se transfiere el día siguiente a su vencimiento: cada mitad de la consulta, el día siguiente a su cuota; lo que gana la secretaria, junto con la primera mitad. Puede quedar pagada en parte.',
+      'Lo que Helios le debe a una clínica por el financiamiento de sus pacientes: la consulta entera (sin la Comisión Helios, que paga el paciente) más lo que gana su personal. A la clínica se le liquida por fecha, pague o no el paciente a tiempo y sin depender de cuándo venza su cuota: cada mitad de la consulta se transfiere en una fecha fija contada desde la orden; lo que gana la secretaria, junto con la primera mitad. Puede quedar pagada en parte.',
   },
   {
     tipo: 'termino',
@@ -364,7 +364,7 @@ export const glosario = [
     sinonimos: ['cierre', 'cierre de caja', 'pago diario', 'pago de hoy', 'cierre del lunes'],
     destino: { to: '/admin/pagos-clinicas' },
     definicion:
-      'El día en que se les transfiere a las clínicas lo que se les debe. Se paga a diario: cada liquidación pertenece a un solo día de pago, el siguiente a su vencimiento (cada mitad de la consulta, el día siguiente a su cuota; lo que gana la secretaria, junto con la primera mitad), y lo que sale hoy incluye lo atrasado de días anteriores. Hasta el 2026-10-06 era el cierre de los lunes.',
+      'El día en que se les transfiere a las clínicas lo que se les debe. Se paga a diario: cada liquidación pertenece a un solo día de pago (cada mitad de la consulta, en una fecha fija contada desde la orden; lo que gana la secretaria, junto con la primera mitad), y lo que sale hoy incluye lo atrasado de días anteriores. Hasta el 2026-10-06 era el cierre de los lunes.',
   },
   {
     tipo: 'termino',

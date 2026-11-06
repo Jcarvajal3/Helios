@@ -26,7 +26,8 @@ docs/       plan, contrato, reglas
 
 ## El negocio, en cifras (2026-10-06)
 
-- Paciente: **2 cuotas a los 7 y 14 días**, sin inicial. **Comisión
+- Paciente: **2 cuotas a los 14 y 28 días**, sin inicial (órdenes desde el
+  2026-11-06; las ya confirmadas conservan sus fechas, a 7 y 14). **Comisión
   Helios del 12% + IVA 16%** sobre la comisión (`consumer_fee_pct`,
   `vat_pct`): consulta de $100 → $12 + $1,92 → 2 cuotas de $56,96.
   **Límite inicial de $150** (nivel 1; los demás niveles están apagados, así
@@ -40,10 +41,12 @@ docs/       plan, contrato, reglas
   confirmado por WhatsApp y por correo (2026-10-23,
   `helios_level_up_phrase()`); lo de los niveles se resuelve después.
 - Médico o centro: recibe el **100%** de la consulta en dos mitades, **a los
-  8 y 15 días** (cada mitad, el día siguiente al vencimiento de su cuota:
-  `helios_settlement_run_for(d) = d + 1`; se paga a diario, ya no los
-  lunes), **pague o no el paciente**. No le cuesta nada y no hay permanencia
-  (cancela con aviso previo).
+  8 y 15 días** desde la orden, **pague o no el paciente**. Su fecha no sale
+  de la cuota: `installments.settlement_due_date` (orden +
+  `helios_settlement_interval_days()` × secuencia) y el pago al día siguiente
+  (`helios_settlement_run_for(d) = d + 1`); se paga a diario, ya no los lunes.
+  No le cuesta nada y no hay permanencia (cancela con aviso previo).
+  `installment_interval_days` mueve solo las cuotas del paciente.
 - Especialidades: medicina, odontología y cosmetología.
 - **Moneda de la consulta** (2026-10-07): el médico elige **dólares o euros**
   en el paso del monto (panel y bot). Una orden en euros **queda en euros**:

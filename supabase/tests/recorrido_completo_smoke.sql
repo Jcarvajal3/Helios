@@ -11,7 +11,7 @@
 --      la prueba: se entra con aal2), el contacto de Helios con WhatsApp, una
 --      cuenta de cobro activa y la tasa BCV del día.
 --   2. La clínica (Ana): cédula nueva → `nuevo`; vista previa de $100 (base
---      100, fee 12, IVA 1.92, dos cuotas de 56.96 a +7/+14 desde la medianoche
+--      100, fee 12, IVA 1.92, dos cuotas de 56.96 a +14/+28 desde la medianoche
 --      de Caracas, sin total con el fee); alta → confirmado, nº de orden,
 --      comprobante, comisión 0.50; la misma clave → el mismo financiamiento;
 --      Ana no lee profiles / installments / payment_reports.
@@ -260,8 +260,8 @@ begin
      or jsonb_array_length(v_j->'installments') is distinct from 2
      or (v_j->'installments'->0->>'amount_usd')::numeric is distinct from 56.96
      or (v_j->'installments'->1->>'amount_usd')::numeric is distinct from 56.96
-     or (v_j->'installments'->0->>'due_date')::date is distinct from v_bdate + 7
-     or (v_j->'installments'->1->>'due_date')::date is distinct from v_bdate + 14
+     or (v_j->'installments'->0->>'due_date')::date is distinct from v_bdate + 14
+     or (v_j->'installments'->1->>'due_date')::date is distinct from v_bdate + 28
      or (v_j->>'business_date')::date is distinct from v_bdate
      or not (v_j->>'cabe')::boolean then
     raise exception 'PASO 2: vista previa inesperada: %', v_j;
@@ -328,7 +328,8 @@ begin
   select * into v_i1 from public.installments where charge_id = v_charge and sequence = 1;
   select * into v_i2 from public.installments where charge_id = v_charge and sequence = 2;
   if v_profile is null or v_i1.user_id is distinct from v_profile
-     or v_i1.due_date is distinct from v_bdate + 7 or v_i2.due_date is distinct from v_bdate + 14
+     or v_i1.due_date is distinct from v_bdate + 14 or v_i2.due_date is distinct from v_bdate + 28
+     or v_i1.settlement_due_date is distinct from v_bdate + 7 or v_i2.settlement_due_date is distinct from v_bdate + 14
      or v_i1.amount_usd is distinct from 56.96 or v_i2.amount_usd is distinct from 56.96
      or v_i1.status is distinct from 'pending' or v_i2.status is distinct from 'pending' then
     raise exception 'PASO 2: cuotas inesperadas: % / %', to_jsonb(v_i1), to_jsonb(v_i2);
@@ -336,7 +337,7 @@ begin
   if public.helios_credit_used_usd(v_profile) is distinct from 100 then
     raise exception 'PASO 2: el financiamiento debía ocupar 100 de cupo (sin el fee)';
   end if;
-  raise notice 'PASO 2 OK — nuevo, vista previa 100/12/1.92 y 2×56.96 a +7/+14, alta confirmada con orden y comisión 0.50, idempotente, sin lectura directa';
+  raise notice 'PASO 2 OK — nuevo, vista previa 100/12/1.92 y 2×56.96 a +14/+28, alta confirmada con orden y comisión 0.50, idempotente, sin lectura directa';
 
   -- =========================================================================
   -- PASO 3 — El libro
@@ -716,10 +717,10 @@ begin
   -- =========================================================================
   -- PASO 8 — La liquidación a la clínica
   -- =========================================================================
-  perform public.run_scheduled_settlements(v_i1.due_date);
-  perform public.run_scheduled_settlements(v_i2.due_date);
-  perform public.run_scheduled_settlements(v_i1.due_date);   -- otra vez: no duplica
-  perform public.run_scheduled_settlements(v_i2.due_date);
+  perform public.run_scheduled_settlements(v_i1.settlement_due_date);
+  perform public.run_scheduled_settlements(v_i2.settlement_due_date);
+  perform public.run_scheduled_settlements(v_i1.settlement_due_date);   -- otra vez: no duplica
+  perform public.run_scheduled_settlements(v_i2.settlement_due_date);
   if (select count(*) from public.settlements
        where merchant_id = v_m and reason = 'scheduled_installment' and amount_usd = 50 and status = 'pending') is distinct from 2
      or (select count(*) from public.settlements where merchant_id = v_m and reason = 'scheduled_installment') is distinct from 2
@@ -739,9 +740,9 @@ begin
     raise exception 'PASO 8: admin_merchant_payables debía decir consultas 100 y comisiones 0.50: %', v_j;
   end if;
   -- Cada parte se paga el día siguiente a su vencimiento (2026-10-06): cada
-  -- mitad el siguiente a su cuota (días 8 y 15; aquí las cuotas se movieron
-  -- en el tiempo para la mora) y la comisión con la primera, el día 8 de la
-  -- orden (20261021190000).
+  -- mitad en los días 8 y 15 de la orden, aunque la cuota 2 del paciente se
+  -- movió en el tiempo para la mora (la fecha de la clínica no la sigue,
+  -- 20261106220000), y la comisión con la primera, el día 8 (20261021190000).
   v_j := public.admin_merchant_settlements(v_m);
   if jsonb_array_length(v_j) is distinct from 3
      or exists (select 1 from jsonb_array_elements(v_j) x
@@ -750,7 +751,7 @@ begin
           is distinct from v_bdate + 8
      or (select array_agg((x->>'run_date')::date order by (x->>'run_date')::date) from jsonb_array_elements(v_j) x
           where x->>'reason' = 'scheduled_installment')
-          is distinct from (select array_agg(d + 1 order by d) from unnest(array[v_i1.due_date, v_i2.due_date]) d) then
+          is distinct from array[v_bdate + 8, v_bdate + 15] then
     raise exception 'PASO 8: a la clínica se le debía pagar cada parte el día siguiente a su vencimiento: %', v_j;
   end if;
 

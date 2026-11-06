@@ -5,7 +5,7 @@
  * Las cifras salen de las reglas vigentes (docs/00 §1 y §1.1, CLAUDE.md). Si
  * una cambia, esta página miente y hay que venir a arreglarla:
  *
- *   · 0 al registrar, 2 cuotas a +7 y +14 días
+ *   · 0 al registrar, 2 cuotas a +14 y +28 días
  *   · Comisión Helios 12% + IVA 16% sobre la comisión, la paga el paciente
  *   · Límite inicial $150 (no decir que «crece»: no hay reglas para subirlo)
  *   · La consulta va en dólares o en euros; el paciente paga en bolívares a la
@@ -89,7 +89,7 @@ export const PASOS = [
     n: '03',
     titulo: 'Paga en dos cuotas',
     texto:
-      'A los 7 y a los 14 días, por Pago Móvil o transferencia. Le recordamos cada fecha por WhatsApp.',
+      'A los 14 y a los 28 días, por Pago Móvil o transferencia. Le recordamos cada fecha por WhatsApp.',
   },
 ] as const
 
@@ -117,7 +117,7 @@ export const PARA_MEDICOS = [
 
 export const PARA_PACIENTES = [
   {
-    titulo: 'Dos cuotas, a los 7 y a los 14 días',
+    titulo: 'Dos cuotas, a los 14 y a los 28 días',
     texto:
       'Sin inicial. Las fechas van en el mensaje que confirmas y en tu comprobante, y no se mueven.',
   },

@@ -51,8 +51,8 @@ import { describeError } from '@/lib/supabase'
  *      La consulta, en la moneda en que se cobró (dólares o euros); la
  *      comisión del personal, siempre en dólares.
  *   2. El comprobante: si le llegó al paciente, y «Reenviar» si dice que no.
- *   3. Cuándo te pagamos: el día de pago de cada mitad (el siguiente al
- *      vencimiento de su cuota).
+ *   3. Cuándo te pagamos: el día de pago de cada mitad (a los 8 y a los 15
+ *      días de la consulta), que no depende del vencimiento de la cuota.
  *
  * Lo que NO está, y no es un olvido: **el estado de pago de las cuotas del
  * paciente**. A la clínica se le paga por fecha, haya pagado el
@@ -207,8 +207,8 @@ function Resumen({ f }: { f: DetalleDeFinanciamiento }) {
           <span className="text-on-surface-variant">
             Comisión de {f.commissionStaffName ?? f.registeredBy ?? 'quien lo registró'}
             <span className="block type-panel-caption text-panel-muted">
-              Se paga el día siguiente a que el paciente confirma, en la transferencia de ese
-              día a la clínica, aparte de la consulta.
+              Se paga junto con la primera mitad de la consulta, a los 8 días, en la
+              transferencia de ese día a la clínica, aparte de la consulta.
             </span>
           </span>
           <span className="tabular-nums text-on-surface">{formatUsd(f.staffCommissionUsd)}</span>
@@ -313,11 +313,13 @@ function Comprobante({ f }: { f: DetalleDeFinanciamiento }) {
 // ── 3. Cuándo te pagamos ──────────────────────────────────────────────────
 
 /**
- * Las dos mitades: el vencimiento de cada cuota del paciente (solo la fecha)
- * y el día en que se le paga a la clínica (el siguiente al vencimiento; lo
- * calcula la base con `helios_settlement_run_for`). El importe y el estado
- * de la transferencia son del administrador; la base los manda vacíos a una
- * secretaria.
+ * Las dos mitades: primero el día en que se le paga a la clínica (a los 8 y
+ * a los 15 días de la consulta; lo dice la base) y después el vencimiento de
+ * la cuota del paciente (solo la fecha, nunca su estado). Son fechas
+ * independientes: en las órdenes desde el 2026-11-06 el pago llega ANTES de
+ * que venza la cuota (días 14 y 28), y por eso el pago va primero. El importe
+ * y el estado de la transferencia son del administrador; la base los manda
+ * vacíos a una secretaria.
  */
 function CuandoTePagamos({ f }: { f: DetalleDeFinanciamiento }) {
   const conImportes = f.isGerente
@@ -329,8 +331,8 @@ function CuandoTePagamos({ f }: { f: DetalleDeFinanciamiento }) {
         apilada
         headers={
           conImportes
-            ? ['Mitad', 'Vence la cuota', 'Te pagamos el', 'Importe', 'Transferencia']
-            : ['Mitad', 'Vence la cuota', 'Te pagamos el']
+            ? ['Mitad', 'Te pagamos el', 'Vence la cuota del paciente', 'Importe', 'Transferencia']
+            : ['Mitad', 'Te pagamos el', 'Vence la cuota del paciente']
         }
       >
         {f.pagos.map((p, i) => {
@@ -338,15 +340,15 @@ function CuandoTePagamos({ f }: { f: DetalleDeFinanciamiento }) {
           return (
             <Tr key={`${p.sequence ?? i}-${p.dueDate}`}>
               <Td className="whitespace-nowrap">{p.sequence ?? i + 1} de 2</Td>
-              <Td className="whitespace-nowrap text-on-surface-variant">{formatDay(p.dueDate)}</Td>
               <Td className="whitespace-nowrap font-semibold">
                 {diaDeLaSemana(p.paidToMerchantOn)} {formatDay(p.paidToMerchantOn)}
               </Td>
+              <Td className="whitespace-nowrap text-on-surface-variant">{formatDay(p.dueDate)}</Td>
               {conImportes && (
                 <>
                   <Td className="whitespace-nowrap tabular-nums">
                     {p.amountCur === null ? (
-                      <span className="text-on-surface-variant">Se calcula al vencer</span>
+                      <span className="text-on-surface-variant">Se calcula antes de pagarte</span>
                     ) : (
                       <>
                         {formatMoneda(p.amountCur, p.moneda)}
@@ -372,9 +374,10 @@ function CuandoTePagamos({ f }: { f: DetalleDeFinanciamiento }) {
         })}
       </Table>
       <p className="mt-4 type-panel-caption leading-5 text-panel-muted">
-        Helios te paga cada mitad el día siguiente al vencimiento de su cuota (a los 8 y a los
-        15 días de la consulta), <strong>haya pagado o no tu paciente</strong>: cobrarle es cosa
-        de Helios. Te lo pagamos en bolívares a la tasa BCV {DE_LA_MONEDA[f.moneda]}.
+        Helios te paga cada mitad a los 8 y a los 15 días de la consulta,{' '}
+        <strong>haya pagado o no tu paciente</strong>: cobrarle es cosa de Helios. Tu pago no
+        depende de la fecha de la cuota y puede llegarte antes de que venza. Te lo pagamos en
+        bolívares a la tasa BCV {DE_LA_MONEDA[f.moneda]}.
       </p>
     </section>
   )

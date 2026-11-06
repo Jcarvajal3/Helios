@@ -31,7 +31,7 @@ export type ComisionDePersona = {
   amountUsd: number
   /** Ya incluido en una transferencia a la clínica. */
   paidUsd: number
-  /** Devengado y todavía sin transferir (se paga el día siguiente a confirmar). */
+  /** Devengado y todavía sin transferir (se paga con la primera mitad de la consulta). */
   pendingUsd: number
 }
 

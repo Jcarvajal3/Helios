@@ -486,7 +486,7 @@ export const cobranza = [
     sinonimos: ['tramo', 'bucket', 'antigüedad'],
     destino: { to: '/admin/cobranza' },
     definicion:
-      'Los días de atraso de la cuota sin pagar más antigua de un paciente se parten en cuatro tramos, con los cortes de los parámetros del negocio: hasta el intervalo de cuotas (la cuota 1 vencida, cuenta congelada), hasta el día antes de la baja (las dos cuotas vencidas), hasta la expulsión (cuenta suspendida, y baja un nivel si tiene más de uno) y después (expulsado, la deuda se da por perdida).',
+      'Los días de atraso de la cuota sin pagar más antigua de un paciente se parten en cuatro tramos, con los cortes de los parámetros del negocio: hasta el intervalo de cuotas vigente (la cuota 1 vencida, cuenta congelada; en una orden con un plazo anterior más corto, la cuota 2 ya puede estar vencida también), hasta el día antes de la baja (las dos cuotas vencidas), hasta la expulsión (cuenta suspendida, y baja un nivel si tiene más de uno) y después (expulsado, la deuda se da por perdida).',
   },
   {
     tipo: 'termino',

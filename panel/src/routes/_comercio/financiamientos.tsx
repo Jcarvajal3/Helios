@@ -307,7 +307,7 @@ function Financiamientos({ staff }: { staff: StaffContext }) {
                   ? [
                       {
                         label: 'Comisión',
-                        info: 'Lo que gana quien lo registró. Helios se la paga a la clínica el día siguiente a que el paciente confirma, en la transferencia de ese día.',
+                        info: 'Lo que gana quien lo registró. Helios se la paga a la clínica junto con la primera mitad de la consulta, a los 8 días, en la transferencia de ese día.',
                       } as const,
                     ]
                   : []),
@@ -321,7 +321,7 @@ function Financiamientos({ staff }: { staff: StaffContext }) {
                   : []),
                 {
                   label: 'Te pagamos',
-                  info: 'El día en que Helios le transfiere a la clínica cada mitad: el siguiente al vencimiento de la cuota 1 y de la cuota 2 del paciente (a los 8 y a los 15 días de la consulta), haya pagado o no el paciente.',
+                  info: 'El día en que Helios le transfiere a la clínica cada mitad: a los 8 y a los 15 días de la consulta, haya pagado o no el paciente.',
                 },
               ]}
             >
@@ -383,7 +383,7 @@ function Financiamientos({ staff }: { staff: StaffContext }) {
           {filas.length > 0 && (
             <p className="mt-4 type-panel-caption leading-5 text-panel-muted">
               Pulsa un pago en cuotas para ver el detalle y reenviar el comprobante. Helios te paga
-              cada mitad el día siguiente al vencimiento de su cuota,{' '}
+              cada mitad a los 8 y a los 15 días de la consulta,{' '}
               <strong>haya pagado o no el paciente</strong>.
             </p>
           )}
@@ -467,15 +467,16 @@ function TarjetasDeFinanciamientos({
 
 /**
  * Las dos fechas en que se le paga a la clínica, una debajo de otra. La
- * fecha es la del pago (el día siguiente al vencimiento); el de la cuota va en el
- * `title`, que es el otro día que hay en juego y no se debe confundir.
+ * fecha es la del pago (días 8 y 15 de la consulta); el vencimiento de la cuota
+ * va en el `title`, que es el otro día que hay en juego y no se debe confundir:
+ * en las órdenes desde el 2026-11-06 cae DESPUÉS del pago (días 14 y 28).
  */
 function Mitades({ cuotas }: { cuotas: FilaDeFinanciamiento['cuotas'] }) {
   return (
     <span className="flex flex-col">
       {cuotas.map((c: CuotaDeLaClinica, i) =>
         c ? (
-          <span key={i} title={`La cuota ${i + 1} del paciente vence el ${formatDay(c.dueDate)}`}>
+          <span key={i} title={`La cuota ${i + 1} del paciente vence el ${formatDay(c.dueDate)}. Tu pago no depende de esa fecha.`}>
             <span className="type-panel-caption text-panel-muted">{i + 1}ª </span>
             {formatDay(c.paidToMerchantOn)}
           </span>

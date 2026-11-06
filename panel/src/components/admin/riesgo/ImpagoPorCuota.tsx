@@ -39,7 +39,7 @@ function queEs(cuota: NumeroDeCuota): string {
   const quien =
     cuota === 1
       ? 'la cuota 1 de cada paciente en cada financiamiento, la señal más temprana de crédito mal dado'
-      : 'la cuota 2 de cada paciente en cada financiamiento (vence una semana después de la 1), también de quien no pagó la 1; «de quien pagó la 1» deja solo a quien ya la había pagado'
+      : 'la cuota 2 de cada paciente en cada financiamiento (vence un intervalo de cuotas después de la 1), también de quien no pagó la 1; «de quien pagó la 1» deja solo a quien ya la había pagado'
   return `Cuotas sin pagar (sin pago reportado) el último día de la gracia ÷ cuotas con la gracia terminada, contadas por número de cuotas, de los financiamientos de los seis meses naturales que acaban en el de la semana elegida (hasta su domingo): ${quien}. Los importes son financiado, sin la Comisión Helios.`
 }
 

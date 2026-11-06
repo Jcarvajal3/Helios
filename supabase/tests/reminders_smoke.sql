@@ -208,7 +208,7 @@ begin
   if v_n <> 10 then
     raise exception 'Una fecha tiene 10 mensajes (-3, -1, día, +1 y +4, cada uno ×2) y ninguno a los 7 días; hay %', v_n;
   end if;
-  -- (La víspera de la cuota 2 cae justo en D+6: otra fecha, su propio aviso.)
+  -- (La cuota 2 vence en D+14: otra fecha, con sus propios avisos.)
   raise notice 'TEST AVISOS 2 OK — 10 mensajes por fecha en sus días, el +4 con el cargo';
 
   -- --- 4. Dos financiamientos el mismo día: un aviso con la suma -------------

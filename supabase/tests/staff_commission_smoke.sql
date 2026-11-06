@@ -217,7 +217,7 @@ begin
   -- =========================================================================
   -- 3. El pago del día 8, junto con la primera mitad (20261021190000)
   -- =========================================================================
-  -- 0.50 + 0.75 + 0.30 vencen con la primera cuota (día 7) y se pagan el día
+  -- 0.50 + 0.75 + 0.30 vencen con la primera mitad (día 7) y se pagan el día
   -- 8. El pago que viene es el de hoy: ninguna de ellas.
   select * into v_row from public.helios_settlement_outlook(v_m);
   if v_row.next_run_date <> v_bdate
@@ -253,7 +253,7 @@ begin
   end if;
   reset role;
 
-  -- El cron de las cuotas: la mitad de A es 50, no 49.50, y se paga el día 8.
+  -- El cron de las mitades: la de A es 50, no 49.50, y se paga el día 8.
   perform public.run_scheduled_settlements(v_bdate + 7);
   select id, amount_usd into v_inst_a, v_num from public.settlements
   where charge_id = v_ch_a and reason = 'scheduled_installment' and business_date = v_bdate + 7;

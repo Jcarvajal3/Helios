@@ -103,7 +103,7 @@ export function PaginaPagosComercio({
                 {
                   // Se paga a diario: el próximo pago es siempre hoy.
                   label: 'Sale hoy (con lo atrasado)',
-                  info: 'Lo que hay que transferirle hoy: cada liquidación se paga el día siguiente a su vencimiento (la consulta, a los 8 y a los 15 días; la comisión de la secretaria, junto con la primera mitad).',
+                  info: 'Lo que hay que transferirle hoy: cada liquidación se paga en su día de pago (la consulta, a los 8 y a los 15 días de la orden; la comisión de la secretaria, junto con la primera mitad).',
                   value: formatUsd(payable?.nextRunUsd ?? 0),
                   hint: payable?.desglose
                     ? `Consultas ${formatUsd(payable.desglose.consultasUsd)} + Comisiones del personal ${formatUsd(payable.desglose.comisionesUsd)}`
@@ -122,7 +122,7 @@ export function PaginaPagosComercio({
                 },
                 {
                   label: proximo ? `Próximo pago (${formatDay(proximo.fecha)})` : 'Próximo pago',
-                  info: 'El siguiente día, después de hoy, con algo que transferirle: las mitades de la consulta que vencen (aunque todavía no sean liquidaciones) y las comisiones de su personal de ese día, sumadas. Para tenerlo listo antes de que toque.',
+                  info: 'El siguiente día, después de hoy, con algo que transferirle: las mitades de la consulta que tocan ese día (aunque todavía no sean liquidaciones) y las comisiones de su personal de ese día, sumadas. Para tenerlo listo antes de que toque.',
                   value: proximo ? formatUsd(proximo.usd) : '—',
                   hint: proximo
                     ? `Consultas ${formatUsd(proximo.consultasUsd)} + Comisiones del personal ${formatUsd(proximo.comisionesUsd)}`
@@ -132,7 +132,7 @@ export function PaginaPagosComercio({
                 },
                 {
                   label: 'Por pagar en los próximos días',
-                  info: 'Lo que se le deberá después del pago de hoy: lo que vence hoy (sale mañana) y, sobre todo, cuotas de sus pacientes que todavía no vencen y aún no son liquidaciones. Hoy no toca pagarlo.',
+                  info: 'Lo que se le deberá después del pago de hoy: lo que sale mañana y, sobre todo, mitades de consultas cuya fecha de pago todavía no llega y aún no son liquidaciones. Hoy no toca pagarlo.',
                   value: formatUsd(futuro),
                   estado,
                   onReintentar: reintentar,
