@@ -143,8 +143,11 @@ begin
       -- («euro» en singular queda en un comentario: la serie archivada BCV_EUR.)
       and (p.prosrc like '%€%' or p.prosrc ~* '\meuros\M')
       -- Las que hablan de euros porque la consulta se cobra en dólares o en
-      -- euros (20261007000100–000400): ahí el euro es a propósito.
-      and p.proname not in ('admin_payment_preview', 'admin_report_merchant_payout', 'admin_set_fx_rate',
+      -- euros (20261007000100–000400): ahí el euro es a propósito. También
+      -- lo que se le debe a la clínica, por moneda (20261026235000), y el
+      -- precio de la tarjeta del directorio (20261106200000).
+      and p.proname not in ('admin_directorio_guardar', 'admin_merchant_payables',
+                            'admin_payment_preview', 'admin_report_merchant_payout', 'admin_set_fx_rate',
                             'bot_patient_eligibility', 'helios_charge_currency', 'helios_currency_symbol',
                             'helios_enqueue_reminders', 'helios_quote_installments', 'helios_usd_per_unit')
   ) or exists (
@@ -524,7 +527,9 @@ begin
   values ('+584241234567', 'Sin Correo', 'V32345678') returning id into v_sin_mail;
   v_msg := public.helios_enqueue_message('cuota_manana', v_sin_mail, null, 'email',
              jsonb_build_object('clinica', 'Sol', 'orden', '2', 'monto_cuota', '10.00', 'fecha', '01/10/2026',
-                                'monto', '$10', 'medico', 'la Dra. Sol', 'bloque_de_pago', '💵 Bloque'));
+                                'monto', '$10', 'medico', 'la Dra. Sol', 'bloque_de_pago', '💵 Bloque',
+                                'vence', 'vence', 'tu_cuota', 'tu cuota de $10',
+                                'aviso_vencidas', '', 'aviso_vencidas_html', ''));
   select * into v_row from public.outbound_messages where id = v_msg;
   if v_row.status <> 'omitido' or v_row.last_error <> 'El paciente no tiene correo' then
     raise exception 'Sin correo debía quedar omitido: % %', v_row.status, v_row.last_error;
