@@ -4,6 +4,7 @@ import { AtSign, MapPin, Tag } from 'lucide-react'
 import { IlustracionDeEspecialidad } from './IlustracionDeEspecialidad'
 import { rutaDeFicha } from '@/features/directorio/paginas'
 import {
+  ROTULO_DE_PRECIO,
   enlaceDeRed,
   enlaceDeWhatsApp,
   especialidadDeTarjeta,
@@ -124,7 +125,7 @@ export function TarjetaDeMedico({
                 <Tag className="size-3.5" />
               </span>
               <span>
-                Consulta <span className="font-semibold tabular-nums text-portada-tinta">{precio}</span>
+                {ROTULO_DE_PRECIO} <span className="font-semibold tabular-nums text-portada-tinta">{precio}</span>
               </span>
             </p>
           )}

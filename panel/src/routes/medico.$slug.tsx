@@ -15,6 +15,7 @@ import { Lienzo, Revelar, Rotulo } from '@/components/portada/piezas'
 import { cabeceraPublica, urlAbsoluta } from '@/config/sitio'
 import { apuntarContacto, cargarDirectorio, consultarMedico } from '@/features/directorio/api'
 import {
+  ROTULO_DE_PRECIO,
   enlaceDeRed,
   enlaceDeWhatsApp,
   especialidadDeTarjeta,
@@ -172,7 +173,7 @@ function Cabecera({ medico: m, whatsappHelios }: { medico: MedicoDelDirectorio; 
                   <p className="flex gap-2.5">
                     <Tag aria-hidden className="mt-[0.2em] size-4 shrink-0 text-portada-tinta-3" />
                     <span>
-                      Consulta <span className="font-medium tabular-nums text-portada-tinta">{precio}</span>
+                      {ROTULO_DE_PRECIO} <span className="font-medium tabular-nums text-portada-tinta">{precio}</span>
                     </span>
                   </p>
                 )}

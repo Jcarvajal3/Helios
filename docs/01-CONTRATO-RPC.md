@@ -1397,9 +1397,9 @@ Suite: `supabase/tests/rol_del_equipo_smoke.sql`.
   hasta dos decimales y punto decimal; vacío lo borra) y `consultation_currency`.
   `22023` si no es un monto de 1 a 10.000 o una de esas dos monedas.
 
-La tarjeta y la ficha pública `/medico/<slug>` lo enseñan como «Consulta $40» o
-«Consulta €40», al estilo de aquí y sin céntimos si no los tiene
-(`precioDeTarjeta`). Suite: `supabase/tests/directorio_smoke.sql`, paso 9.
+La tarjeta y la ficha pública `/medico/<slug>` lo enseñan como «Consulta a partir de:
+$40» o «Consulta a partir de: €40» (`ROTULO_DE_PRECIO`): el precio es el mínimo,
+no uno fijo. Al estilo de aquí y sin céntimos si no los tiene (`precioDeTarjeta`). Suite: `supabase/tests/directorio_smoke.sql`, paso 9.
 
 ---
 

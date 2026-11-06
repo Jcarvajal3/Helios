@@ -217,14 +217,14 @@ export function FichaDelDirectorio({
             <div className="grid gap-3 sm:grid-cols-2">
               <Input
                 id="ficha-directorio-precio"
-                label="Precio de consulta"
+                label="Precio mínimo de consulta"
                 inputMode="decimal"
                 autoComplete="off"
                 value={borrador.precio}
                 onChange={(precio) => cambiar({ precio })}
                 placeholder="40"
                 error={!!borrador.precio.trim() && vistaPrevia.precio === null}
-                hint="Vacío: la tarjeta no enseña precio."
+                hint="Sale como «A partir de». Vacío: la tarjeta no enseña precio."
               />
               <Select
                 id="ficha-directorio-moneda"

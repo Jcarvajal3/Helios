@@ -542,7 +542,7 @@ function FiltroDePrecio({
     <div className="mt-3.5 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
       <span id="filtro-de-precio" className="inline-flex items-center gap-1.5 text-[0.85rem] text-portada-tinta-2">
         <Tag aria-hidden className="size-3.5 text-portada-tinta-3" />
-        Precio de la consulta
+        Precio mínimo de la consulta
       </span>
       <div role="group" aria-labelledby="filtro-de-precio" className="directorio-precios">
         <button type="button" aria-pressed={!elegido} onClick={() => onElegir(undefined)} className="directorio-precio">

@@ -92,8 +92,14 @@ export function lugarDeTarjeta(m: Pick<MedicoDelDirectorio, 'direccion' | 'ciuda
 }
 
 /**
- * El precio de la consulta como se lee en la tarjeta, al estilo de aquí y sin
- * céntimos si no los tiene: «$40», «€42,50», «$1.250». Sin precio, `null`.
+ * Lo que va delante del precio, en la tarjeta y en la página del médico. El
+ * precio no es fijo, es el mínimo (Javier, 2026-11-06): nunca sale sin esto.
+ */
+export const ROTULO_DE_PRECIO = 'Consulta a partir de:'
+
+/**
+ * La cifra del precio de la consulta, al estilo de aquí y sin céntimos si no
+ * los tiene: «$40», «€42,50», «$1.250». Sin precio, `null`.
  */
 export function precioDeTarjeta(m: Pick<MedicoDelDirectorio, 'precio' | 'moneda'>): string | null {
   if (m.precio === null) return null

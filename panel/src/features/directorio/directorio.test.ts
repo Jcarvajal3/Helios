@@ -23,6 +23,7 @@ import {
   lugarDeTarjeta,
   mensajeAHelios,
   precioDeTarjeta,
+  ROTULO_DE_PRECIO,
   tramosConMedicos,
 } from './directorio'
 import type { ClaveDeTramo } from './directorio'
@@ -431,6 +432,7 @@ comprueba(
   leerDirectorio([{ merchant_id: 'm', name: 'Dra. Ana', whatsapp: '+584141234567', consultation_price_cur: 40 }])[0].precio === 40,
   'se lee el precio que manda la base',
 )
+comprueba(ROTULO_DE_PRECIO.includes('a partir de:'), 'el precio es el mínimo: se dice', ROTULO_DE_PRECIO)
 comprueba(precioDeTarjeta({ precio: null, moneda: 'USD' }) === null, 'sin precio, nada que leer')
 comprueba(precioDeTarjeta({ precio: 40, moneda: 'USD' }) === '$40', 'entero, sin céntimos')
 comprueba(precioDeTarjeta({ precio: 42.5, moneda: 'USD' }) === '$42,50', 'con céntimos, con coma')
