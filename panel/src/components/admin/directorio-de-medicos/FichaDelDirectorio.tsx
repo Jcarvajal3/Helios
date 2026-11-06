@@ -208,6 +208,17 @@ export function FichaDelDirectorio({
                 }
               />
             </div>
+            <Input
+              id="ficha-directorio-precio"
+              label="Precio de consulta (en dólares)"
+              inputMode="decimal"
+              autoComplete="off"
+              value={borrador.precio}
+              onChange={(precio) => cambiar({ precio })}
+              placeholder="40"
+              error={!!borrador.precio.trim() && vistaPrevia.precio === null}
+              hint="Vacío: la tarjeta no enseña precio."
+            />
 
             <div className="mt-1 flex flex-wrap items-center justify-end gap-3">
               {motivo && <p className="type-panel-caption text-error">{motivo}</p>}

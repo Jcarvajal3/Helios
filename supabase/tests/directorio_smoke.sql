@@ -17,6 +17,8 @@
 --   7. El orden reparte los clics.
 --   8. La lista ampliada: cada nombre del desplegable da su clave y el texto
 --      libre de antes deduce lo mismo (20261030100000).
+--   9. El precio de la consulta se valida, sale en la pestaña, en la tarjeta y
+--      en la ficha pública, y vacío deja de salir (20261106130000).
 --
 -- No manda nada: no llama a `helios_dispatch_*`.
 -- ============================================================================
@@ -394,6 +396,63 @@ begin
      or public.helios_directorio_especialidad_sugerida('Cardiologo/Neumonologo adultos') <> 'cardiologia'
      or public.helios_directorio_especialidad_sugerida('') <> 'medicina_general' then
     raise exception '8. el texto libre de siempre cambió de clave';
+  end if;
+
+  -- =========================================================================
+  -- 9. El precio de la consulta (20261106130000)
+  -- =========================================================================
+  -- Luis sigue publicado desde el paso 3.
+  set local role anon;
+  perform set_config('request.jwt.claims', '{"role": "anon"}', true);
+  if (select d.consultation_price_usd from public.helios_directorio() d where d.merchant_id = v_otra) is not null then
+    raise exception '9. sin ponerle precio no debía tener ninguno';
+  end if;
+  reset role;
+
+  set local role authenticated;
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', v_admin::text, 'role', 'authenticated', 'aal', 'aal2')::text, true);
+  for v_c in select jsonb_build_object('consultation_price_usd', x)
+               from unnest(array['gratis', '0', '0.50', '-5', '10001', '12.345']) x loop
+    v_fallo := false;
+    begin
+      perform public.admin_directorio_guardar(v_otra, v_c);
+    exception when sqlstate '22023' then v_fallo := true;
+    end;
+    if not v_fallo then raise exception '9. aceptó el precio %', v_c; end if;
+  end loop;
+
+  perform public.admin_directorio_guardar(v_otra, '{"consultation_price_usd": "42.5"}');
+  v_j := public.admin_directorio();
+  reset role;
+
+  select e into v_c from jsonb_array_elements(v_j -> 'medicos') e where e ->> 'merchant_id' = v_otra::text;
+  if (v_c -> 'listing' ->> 'consultation_price_usd')::numeric <> 42.5 then
+    raise exception '9. la pestaña no trae el precio: %', v_c -> 'listing';
+  end if;
+  if v_c -> 'base' ? 'consultation_price_usd' then
+    raise exception '9. la ficha de la clínica no tiene precio: %', v_c -> 'base';
+  end if;
+
+  set local role anon;
+  perform set_config('request.jwt.claims', '{"role": "anon"}', true);
+  select * into v_fila from public.helios_directorio() d where d.merchant_id = v_otra;
+  if v_fila.consultation_price_usd <> 42.5 then
+    raise exception '9. la tarjeta no enseña el precio: %', row_to_json(v_fila);
+  end if;
+  if (select m.consultation_price_usd from public.helios_directorio_medico(v_fila.slug) m) <> 42.5 then
+    raise exception '9. la ficha pública no trae el precio';
+  end if;
+  reset role;
+
+  -- Vacío, la tarjeta deja de enseñarlo.
+  set local role authenticated;
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', v_admin::text, 'role', 'authenticated', 'aal', 'aal2')::text, true);
+  perform public.admin_directorio_guardar(v_otra, '{"consultation_price_usd": ""}');
+  reset role;
+  if (select consultation_price_usd from public.directory_listings where merchant_id = v_otra) is not null then
+    raise exception '9. el precio vacío no se borró';
   end if;
 end;
 $$;

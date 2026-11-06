@@ -1,7 +1,7 @@
 import { whatsappNumber } from '@/components/ui'
 import { REDES_SOCIALES } from '@/features/admin/clinicas/clinicas'
 import type { RedSocial } from '@/features/admin/clinicas/clinicas'
-import { comoFila, comoLista, texto, textoONulo } from '@/lib/json'
+import { comoFila, comoLista, numeroONulo, texto, textoONulo } from '@/lib/json'
 import { ESPECIALIDADES, leerEspecialidad, nombreDeEspecialidad } from './especialidades'
 import type { ClaveDeEspecialidad } from './especialidades'
 
@@ -30,6 +30,8 @@ export type MedicoDelDirectorio = {
   /** Su red social, si la tiene: la red y el usuario o enlace, tal cual. */
   red: RedSocial | null
   usuarioDeRed: string | null
+  /** El precio de su consulta, en dólares. `null`: la tarjeta no enseña precio. */
+  precio: number | null
   /**
    * El código de su tarjeta («DIR-7K2P»): va en el mensaje al WhatsApp de
    * Helios para que el bot sepa de qué médico se trata. `null` en datos viejos.
@@ -59,6 +61,7 @@ export function leerDirectorio(raw: unknown): MedicoDelDirectorio[] {
         whatsapp: texto(r.whatsapp),
         red: leerRed(r.social_network),
         usuarioDeRed: textoONulo(r.social_user),
+        precio: numeroONulo(r.consultation_price_usd),
         codigo: textoONulo(r.lead_code),
         slug: textoONulo(r.slug),
         actualizado: textoONulo(r.updated_at),
@@ -83,6 +86,19 @@ export function lugarDeTarjeta(m: Pick<MedicoDelDirectorio, 'direccion' | 'ciuda
   const { direccion, ciudad } = m
   if (direccion && ciudad && normalizar(direccion).includes(normalizar(ciudad))) return direccion
   return [direccion, ciudad].filter(Boolean).join(' · ') || null
+}
+
+/**
+ * El precio de la consulta como se lee en la tarjeta, al estilo de aquí y sin
+ * céntimos si no los tiene: «$40», «$42,50», «$1.250». Sin precio, `null`.
+ */
+export function precioDeTarjeta(m: Pick<MedicoDelDirectorio, 'precio'>): string | null {
+  if (m.precio === null) return null
+  const cifra = m.precio.toLocaleString('es-VE', {
+    minimumFractionDigits: Number.isInteger(m.precio) ? 0 : 2,
+    maximumFractionDigits: 2,
+  })
+  return `$${cifra}`
 }
 
 // ── La red social ──────────────────────────────────────────────────────────

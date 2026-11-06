@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { AtSign, MapPin } from 'lucide-react'
+import { AtSign, MapPin, Tag } from 'lucide-react'
 
 import { IconoDeEspecialidad } from './IconoDeEspecialidad'
 import { rutaDeFicha } from '@/features/directorio/paginas'
@@ -8,6 +8,7 @@ import {
   enlaceDeWhatsApp,
   especialidadDeTarjeta,
   lugarDeTarjeta,
+  precioDeTarjeta,
 } from '@/features/directorio/directorio'
 import type { MedicoDelDirectorio } from '@/features/directorio/directorio'
 
@@ -22,8 +23,8 @@ export function LogoWhatsApp({ className = 'size-4' }: { className?: string }) {
 
 /**
  * La tarjeta de un médico del directorio: el icono de su especialidad, su
- * nombre, su especialidad, dónde atiende, su red social (si la tiene), el
- * «0% inicial» y el botón para escribirle.
+ * nombre, su especialidad, dónde atiende, su red social y el precio de su
+ * consulta (si los tiene), el «0% inicial» y el botón para escribirle.
  *
  * Compacta, para que en el teléfono se vean varias de un vistazo, y entera
  * clicable: tocar cualquier parte abre el mismo chat que el botón. Solo el
@@ -48,6 +49,7 @@ export function TarjetaDeMedico({
   const especialidad = especialidadDeTarjeta(medico)
   const lugar = lugarDeTarjeta(medico)
   const red = enlaceDeRed(medico)
+  const precio = precioDeTarjeta(medico)
   const enlace = enlaceDeWhatsApp(medico, whatsappHelios)
 
   return (
@@ -90,7 +92,7 @@ export function TarjetaDeMedico({
         </div>
       </div>
 
-      {(lugar || red) && (
+      {(lugar || red || precio) && (
         <div className="flex flex-col gap-1 text-[0.86rem] leading-snug text-portada-tinta-2">
           {lugar && (
             <p className="flex gap-2" title={lugar}>
@@ -111,6 +113,14 @@ export function TarjetaDeMedico({
                 <span className="font-medium text-portada-tinta">{red.texto}</span>
                 <span className="text-portada-tinta-3"> · {red.red}</span>
               </a>
+            </p>
+          )}
+          {precio && (
+            <p className="flex gap-2">
+              <Tag aria-hidden className="mt-[0.15em] size-3.5 shrink-0 text-portada-tinta-3" />
+              <span>
+                Consulta <span className="font-medium tabular-nums text-portada-tinta">{precio}</span>
+              </span>
             </p>
           )}
         </div>
