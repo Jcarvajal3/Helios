@@ -70,7 +70,7 @@ export const PLANTILLAS: ReadonlyArray<{
  */
 export const VARIABLES_DE_PLANTILLA: ReadonlyArray<{ variable: string; que: string }> = [
   { variable: '{nombre}', que: 'El nombre del paciente' },
-  { variable: '{clinica}', que: 'La clínica del financiamiento' },
+  { variable: '{medico}', que: 'Su médico, para una frase: «la Dra. Ana Lara» (al paciente no se le nombra la clínica)' },
   { variable: '{orden}', que: 'El número del financiamiento' },
   { variable: '{moneda}', que: 'La moneda de la orden: «dólar» o «euro» (para «la tasa BCV del {moneda}»)' },
   { variable: '{monto_consulta}', que: 'La consulta, con su símbolo: «€100»' },

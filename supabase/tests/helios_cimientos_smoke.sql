@@ -461,7 +461,7 @@ begin
      or v_row.next_attempt_at is null or v_row.charge_id <> v_charge then
     raise exception 'El comprobante debía encolarse por correo al correo registrado: %', to_jsonb(v_row) - 'html';
   end if;
-  if v_row.subject not like 'Tu pago en cuotas en Consultorio <Sol> & Luna — 2 cuotas de $56,96' then
+  if v_row.subject not like 'Tu pago en cuotas con Consultorio <Sol> & Luna — 2 cuotas de $56,96' then
     raise exception 'Asunto inesperado: %', v_row.subject;
   end if;
   if position('Monto de la consulta: $100' in v_row.rendered_text) = 0

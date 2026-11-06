@@ -99,7 +99,8 @@ begin
   insert into public.platform_admins (user_id, role, full_name, is_active)
   values (v_admin, 'operador', 'Operador de prueba', true);
 
-  insert into public.merchants (name, tax_id) values ('Clínica Correo', 'J-123456789') returning id into v_merchant;
+  insert into public.merchants (name, tax_id, owner_name, doctor_title)
+  values ('Clínica Correo', 'J-123456789', 'Ana Lara', 'Dra.') returning id into v_merchant;
   select id into v_branch from public.merchant_branches where merchant_id = v_merchant and is_default;
   insert into public.merchant_users (user_id, merchant_id, branch_id, role)
   values (v_staff, v_merchant, v_branch, 'cajero');
@@ -127,8 +128,17 @@ begin
   if v_row.status <> 'pendiente' or v_row.recipient <> 'jose.correo@prueba.helios.test' then
     raise exception 'El comprobante debía quedar pendiente al correo registrado: %', to_jsonb(v_row);
   end if;
-  if v_row.subject not like 'Tu pago en cuotas en Clínica Correo — 2 cuotas de $56,96' then
+  if v_row.subject not like 'Tu pago en cuotas con la Dra. Ana Lara — 2 cuotas de $56,96' then
     raise exception 'Asunto inesperado: %', v_row.subject;
+  end if;
+  -- Al paciente se le nombra a su médico, con el RIF (20261106233000).
+  if v_row.rendered_text not like '%Médico: Dra. Ana Lara (RIF J-123456789)%'
+     or v_row.rendered_text like '%Clínica:%'
+     or v_row.html not like '%M&eacute;dico</td>%'
+     or v_row.html not like '%Dra. Ana Lara (RIF J-123456789)%'
+     or v_row.html not like '%con la Dra. Ana Lara:%'
+     or v_row.html like '%Cl&iacute;nica</td>%' or v_row.html like '%Clínica Correo%' then
+    raise exception 'El comprobante debía nombrar al médico: %', v_row.rendered_text;
   end if;
   if v_row.rendered_text not like '%Monto de la consulta: $100%'
      or v_row.rendered_text not like '%Comisión de servicio (12\%): $12%'

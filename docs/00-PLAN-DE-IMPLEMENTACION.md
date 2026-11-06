@@ -584,7 +584,7 @@ Es el único documento que recibe el paciente, así que tiene que estar completo
 
 **Contenido:**
 - Encabezado: Helios, número de financiamiento y fecha y hora (Caracas).
-- Clínica: nombre, RIF, sede y quién registró (solo el nombre de pila).
+- Médico: su nombre con el título y el RIF (desde el 2026-11-06, antes «Clínica»; §15.8), sede y quién registró (solo el nombre de pila).
 - Paciente: nombre y cédula enmascarada.
 - Servicios financiados, con el total de la consulta.
 - **Plan de pagos**: cuota 1 y cuota 2 con fecha y monto en dólares, y el desglose: consulta, **comisión de servicio (12%)**, IVA de la comisión y total (al paciente sí se le enseña el total, 2026-10-06).
@@ -594,7 +594,7 @@ Es el único documento que recibe el paciente, así que tiene que estar completo
 - Pie: "Si no reconoces este financiamiento, escríbenos al …". **Este pie es una alerta temprana gratuita** contra altas falsas: el paciente real que no pidió nada avisa.
 
 **Formalidades:**
-- Asunto: "Tu pago en cuotas en {clínica} — 2 cuotas de ${monto}" (hasta el 2026-10-05, "Tu financiamiento en…").
+- Asunto: "Tu pago en cuotas con {médico} — 2 cuotas de ${monto}" (hasta el 2026-11-06, "…en {clínica}"; hasta el 2026-10-05, "Tu financiamiento en…").
 - Remitente: `sender_name <sender_email>` de `platform_contact`, desde un dominio propio con SPF, DKIM y DMARC; si no, cae en spam.
 - **No es una factura fiscal.** La facturación por cuenta de terceros sigue pendiente, como en Ronda. El texto dice "comprobante", nunca "factura".
 - HTML simple con tablas (compatible con Gmail y Outlook) y versión de texto plano.

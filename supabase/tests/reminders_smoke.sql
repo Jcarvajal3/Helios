@@ -74,7 +74,8 @@ begin
   values (v_admin, 'operador', 'Operadora Avisos', true),
          (v_super, 'super_admin', 'Super Avisos', true);
 
-  insert into public.merchants (name) values ('Clínica Avisos') returning id into v_merchant;
+  insert into public.merchants (name, owner_name, doctor_title)
+  values ('Clínica Avisos', 'Ana Lara', 'Dra.') returning id into v_merchant;
   select id into v_branch from public.merchant_branches where merchant_id = v_merchant and is_default;
   insert into public.merchant_users (user_id, merchant_id, branch_id, role)
   values (v_staff, v_merchant, v_branch, 'cajero');
@@ -135,7 +136,10 @@ begin
      or v_row.subject not like 'Tu cuota de $56,96%vence el%'
      or v_row.rendered_text not like '%envíanos la foto del comprobante por WhatsApp al 0414-%'
      or v_row.html not like '%Vence el%' or v_row.html not like '%Hola, María%'
-     or v_row.html ~ '{[a-z_]+}' or v_row.html like '%[[%' then
+     or v_row.html ~ '{[a-z_]+}' or v_row.html like '%[[%'
+     -- Al paciente se le nombra a su médico, no a la clínica (20261106233000).
+     or v_row.html not like '%Te recordamos que tu cuota de $56,96 de la consulta con la Dra. Ana Lara vence el %'
+     or v_row.html not like '%&middot; Consulta con la Dra. Ana Lara<%' then
     raise exception 'El correo de tres días antes no salió bien: %', to_jsonb(v_row);
   end if;
   raise notice 'TEST AVISOS 2a OK — tres días antes, por WhatsApp y por correo';
@@ -183,6 +187,26 @@ begin
          and html !~ '{[a-z_]+}') <> 2 then
     raise exception 'cuota_hoy y cuota_vencida_d1 también salen por correo';
   end if;
+
+  -- Ningún correo nombra a la clínica: ni su consultorio ni «en Dra. …».
+  if not exists (select 1 from public.outbound_messages
+                 where profile_id = v_pac and template_key = 'cuota_manana' and channel = 'email'
+                   and html like '%Te recordamos que ma&ntilde;ana vence tu cuota de $56,96 de la consulta con la Dra. Ana Lara.%')
+     or not exists (select 1 from public.outbound_messages
+                    where profile_id = v_pac and template_key = 'cuota_hoy' and channel = 'email'
+                      and html like '%Hoy vence tu cuota de $56,96 de la consulta con la Dra. Ana Lara.%')
+     or not exists (select 1 from public.outbound_messages
+                    where profile_id = v_pac and template_key = 'cuota_vencida_d1' and channel = 'email'
+                      and html like '%&middot; Consulta con la Dra. Ana Lara<%') then
+    raise exception 'Los correos de la cuota debían nombrar al médico';
+  end if;
+  if exists (select 1 from public.outbound_messages
+             where profile_id = v_pac and channel = 'email'
+               and template_key in ('cuota_en_3_dias', 'cuota_manana', 'cuota_hoy', 'cuota_vencida_d1')
+               and (html like '%Clínica Avisos%' or html like '%en Dra.%' or html like '%pago en cuotas en %')) then
+    raise exception 'Un correo de la cuota todavía nombra a la clínica';
+  end if;
+  raise notice 'TEST AVISOS 3b OK — los correos nombran al médico';
 
   -- D+4 sin cargo cobrado: no sale.
   perform public.helios_enqueue_reminders('cargo_por_atraso_d4', v_d + 4);
