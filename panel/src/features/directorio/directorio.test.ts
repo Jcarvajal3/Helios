@@ -200,6 +200,8 @@ comprueba(red('otra', 'https://linktr.ee/draperez')?.url === 'https://linktr.ee/
 comprueba(red('otra', 'draperez') === null, '«Otra» sin enlace no se sabe adónde va')
 comprueba(red('instagram', 'javascript:alert(1)') === null, 'nada que no sea https llega al enlace')
 comprueba(red('instagram', 'Dra Ana Pérez') === null, 'un nombre con espacios no es un usuario')
+comprueba(red('instagram', '@ ginecoproblema')?.url === 'https://www.instagram.com/ginecoproblema', 'el espacio tras la @ no lo esconde')
+comprueba(red('instagram', ' @gineco problema​')?.texto === '@ginecoproblema', 'ni los de en medio, ni los invisibles')
 comprueba(red('mastodon', 'draperez') === null, 'una red que el panel no conoce, nada')
 
 console.log('── Buscar y filtrar ──────────────────────────────────────────')

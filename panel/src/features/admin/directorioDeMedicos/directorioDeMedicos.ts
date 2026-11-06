@@ -1,5 +1,6 @@
 import { formatPhone, leerMoneda } from '@/components/ui'
 import type { Moneda } from '@/components/ui'
+import { limpiarUsuarioDeRed, motivoDelUsuarioDeRed } from '@/features/admin/clinicas/clinicas'
 import type { RedSocial } from '@/features/admin/clinicas/clinicas'
 import type { MedicoDelDirectorio } from '@/features/directorio/directorio'
 import { leerRed, normalizar } from '@/features/directorio/directorio'
@@ -397,7 +398,7 @@ export function datosDelBorrador(b: BorradorDeTarjeta, ficha: DatosDeTarjeta): D
     ciudad: limpio(b.ciudad) || ficha.ciudad,
     whatsapp: b.whatsapp.trim() ? whatsappE164(b.whatsapp) : ficha.whatsapp,
     red: b.red || ficha.red,
-    usuarioDeRed: limpio(b.usuarioDeRed) || ficha.usuarioDeRed,
+    usuarioDeRed: limpiarUsuarioDeRed(b.usuarioDeRed) || ficha.usuarioDeRed,
     precio,
     // Como la base: sin precio no hay moneda que recordar.
     moneda: precio === null ? 'USD' : b.moneda,
@@ -412,8 +413,11 @@ export function motivoParaNoGuardar(b: BorradorDeTarjeta): string | null {
   if (b.direccion.trim().length > 300) return 'La dirección no puede pasar de 300 caracteres.'
   if (b.ciudad.trim().length > 80) return 'La ciudad no puede pasar de 80 caracteres.'
   if (b.whatsapp.trim() && !whatsappE164(b.whatsapp)) return 'El WhatsApp debe ser un número venezolano, como 0414-1234567.'
-  if (b.usuarioDeRed.trim().length > 150) return 'El usuario de la red social no puede pasar de 150 caracteres.'
-  if (b.usuarioDeRed.trim() && !b.red) return 'Elige qué red social es.'
+  const usuarioDeRed = limpiarUsuarioDeRed(b.usuarioDeRed)
+  if (usuarioDeRed.length > 150) return 'El usuario de la red social no puede pasar de 150 caracteres.'
+  if (usuarioDeRed && !b.red) return 'Elige qué red social es.'
+  const redMala = motivoDelUsuarioDeRed(b.red, usuarioDeRed)
+  if (redMala) return redMala
   if (b.precio.trim() && precioTecleado(b.precio) === null) return 'El precio de la consulta debe ser un monto entre 1 y 10.000.'
   return null
 }
@@ -437,7 +441,8 @@ export function cambiosDelBorrador(
   const wa = b.whatsapp.trim() ? (whatsappE164(b.whatsapp) ?? b.whatsapp.trim()) : ''
   if (wa !== (actual.whatsapp ?? '')) cambios.whatsapp = wa
   if (b.red !== (actual.red ?? '')) cambios.social_network = b.red
-  if (limpio(b.usuarioDeRed) !== (actual.usuarioDeRed ?? '')) cambios.social_user = limpio(b.usuarioDeRed)
+  const usuarioDeRed = limpiarUsuarioDeRed(b.usuarioDeRed)
+  if (usuarioDeRed !== (actual.usuarioDeRed ?? '')) cambios.social_user = usuarioDeRed
   const precio = b.precio.trim() ? String(precioTecleado(b.precio) ?? b.precio.trim()) : ''
   if (precio !== (actual.precio === null ? '' : String(actual.precio))) cambios.consultation_price_cur = precio
   if (precio && b.moneda !== actual.moneda) cambios.consultation_currency = b.moneda

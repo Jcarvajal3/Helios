@@ -1,6 +1,6 @@
 import { SIMBOLO_DE_MONEDA, leerMoneda, whatsappNumber } from '@/components/ui'
 import type { Moneda } from '@/components/ui'
-import { REDES_SOCIALES } from '@/features/admin/clinicas/clinicas'
+import { REDES_SOCIALES, formaDelUsuarioDeRed } from '@/features/admin/clinicas/clinicas'
 import type { RedSocial } from '@/features/admin/clinicas/clinicas'
 import { comoFila, comoLista, numeroONulo, texto, textoONulo } from '@/lib/json'
 import { ESPECIALIDADES, leerEspecialidad, nombreDeEspecialidad } from './especialidades'
@@ -143,29 +143,22 @@ export type EnlaceDeRed = {
  */
 export function enlaceDeRed(m: Pick<MedicoDelDirectorio, 'red' | 'usuarioDeRed'>): EnlaceDeRed | null {
   const { red } = m
-  const escrito = m.usuarioDeRed?.trim() ?? ''
-  if (!red || !escrito) return null
+  const forma = red ? formaDelUsuarioDeRed(red, m.usuarioDeRed ?? '') : null
+  if (!red || !forma) return null
   const nombreDeRed = red === 'otra' ? 'Red social' : (REDES_SOCIALES.find((r) => r.value === red)?.label ?? red)
   const corto = nombreDeRed.replace(/\s*\(.*\)$/, '')
 
   // Un enlace: se usa tal cual, con https delante si no lo trae.
-  const comoEnlace = escrito.replace(/^https?:\/\//i, '')
-  if (/^[\w-]+(\.[\w-]+)+\/\S*$/.test(comoEnlace) && !/\s/.test(comoEnlace)) {
-    let url: URL
-    try {
-      url = new URL(`https://${comoEnlace}`)
-    } catch {
-      return null
-    }
+  if (forma.tipo === 'enlace') {
+    const { url } = forma
     const ruta = url.pathname.replace(/\/+$/, '').split('/').filter(Boolean).at(-1)
     const leido = ruta ? `@${ruta.replace(/^@/, '')}` : url.hostname.replace(/^www\./, '')
     return { url: url.toString(), texto: leido, red: corto }
   }
 
-  // Un usuario: letras, números, puntos, guiones y guiones bajos.
-  const usuario = escrito.replace(/^@/, '')
-  if (red === 'otra' || !/^[\w.-]{1,100}$/.test(usuario)) return null
-  return { url: PERFIL[red](usuario), texto: `@${usuario}`, red: corto }
+  // Un usuario: «Otra» nunca llega aquí (`formaDelUsuarioDeRed`).
+  if (red === 'otra') return null
+  return { url: PERFIL[red](forma.usuario), texto: `@${forma.usuario}`, red: corto }
 }
 
 // ── El botón de WhatsApp ───────────────────────────────────────────────────

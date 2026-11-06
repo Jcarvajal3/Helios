@@ -3,6 +3,8 @@ import { BANKS } from '@/features/admin/banks'
 import {
   CAPACITACION_HASTA_DIAS,
   digitosDeCuenta,
+  limpiarUsuarioDeRed,
+  motivoDelUsuarioDeRed,
   pareceCorreo,
   telefonoAE164,
 } from '@/features/admin/clinicas/clinicas'
@@ -181,11 +183,13 @@ export function erroresDelPaso(paso: Paso, b: Borrador, hoy: string): Errores {
         ? 'Revisa el correo: algo como nombre@correo.com.'
         : 'Escribe tu correo electrónico.'
     }
-    const usuario = a.socialUser.trim()
+    const usuario = limpiarUsuarioDeRed(a.socialUser)
     if (usuario && !a.socialNetwork) e.socialNetwork = 'Elige qué red es.'
     if (a.socialNetwork && !usuario) {
       e.socialUser = 'Escribe tu usuario o el enlace.'
     }
+    const redMala = motivoDelUsuarioDeRed(a.socialNetwork, usuario)
+    if (redMala) e.socialUser = redMala
     if (usuario.length > 150) e.socialUser = 'Es demasiado largo.'
   }
 

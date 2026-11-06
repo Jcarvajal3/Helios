@@ -482,6 +482,39 @@ begin
   if (select consultation_currency from public.directory_listings where merchant_id = v_otra) <> 'USD' then
     raise exception '9. sin precio la moneda debía volver a dólares';
   end if;
+
+  -- =========================================================================
+  -- 10. La red social se guarda limpia (20261106230000)
+  -- =========================================================================
+  update public.merchants set social_network = 'instagram', social_user = '@ gineco problema' where id = v_otra;
+  if (select social_user from public.merchants where id = v_otra) <> '@ginecoproblema' then
+    raise exception '10. merchants guardó el usuario con espacios';
+  end if;
+  update public.merchants set social_user = U&'@dra\00A0ana\200B' where id = v_otra;
+  if (select social_user from public.merchants where id = v_otra) <> '@draana' then
+    raise exception '10. merchants guardó espacios invisibles';
+  end if;
+  update public.directory_listings set social_network = 'tiktok', social_user = ' @ la dra ' where merchant_id = v_otra;
+  if (select social_user from public.directory_listings where merchant_id = v_otra) <> '@ladra' then
+    raise exception '10. directory_listings guardó el usuario con espacios';
+  end if;
+  if not public.helios_red_social_tiene_enlace('instagram', '@ ginecoproblema')
+     or not public.helios_red_social_tiene_enlace('otra', 'https://linktr.ee/x')
+     or not public.helios_red_social_tiene_enlace('instagram', 'instagram.com/x?igsh=1')
+     or public.helios_red_social_tiene_enlace('otra', 'draperez')
+     or public.helios_red_social_tiene_enlace('instagram', 'Dra Ana Pérez')
+     or public.helios_red_social_tiene_enlace('instagram', 'javascript:alert(1)')
+     or public.helios_red_social_tiene_enlace('instagram', '   ') then
+    raise exception '10. la regla del enlace no es la esperada';
+  end if;
+  -- Nadie publicado tiene una red anotada que no salga en su tarjeta.
+  if exists (
+    select 1 from public.helios_directorio() d
+     where d.social_user is not null
+       and not public.helios_red_social_tiene_enlace(d.social_network, d.social_user)
+  ) then
+    raise exception '10. hay una red anotada que no saldría en la tarjeta';
+  end if;
 end;
 $$;
 

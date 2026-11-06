@@ -173,6 +173,50 @@ export const REDES_SOCIALES = [
 
 export type RedSocial = (typeof REDES_SOCIALES)[number]['value']
 
+/**
+ * El usuario o enlace sin ningún espacio, también los invisibles que deja el
+ * copiar y pegar: «@ draperez» → «@draperez». Ninguno de los dos lleva. Es lo
+ * mismo que `helios_usuario_de_red` en la base (20261106230000), que lo aplica
+ * a todo lo que se guarda.
+ */
+export function limpiarUsuarioDeRed(escrito: string): string {
+  return escrito.replace(/[\s\u200B-\u200D\u2060\uFEFF]+/g, '')
+}
+
+export type FormaDelUsuarioDeRed = { tipo: 'enlace'; url: URL } | { tipo: 'usuario'; usuario: string }
+
+/**
+ * Qué escribió el médico: un enlace («instagram.com/draperez», siempre se
+ * tratará como https) o un usuario («@draperez»), o `null` si con eso no se
+ * puede llegar a su perfil. Un usuario suelto en «Otra» no se sabe adónde
+ * lleva. Es la regla de `helios_red_social_tiene_enlace` en la base.
+ */
+export function formaDelUsuarioDeRed(red: RedSocial | '' | null, escrito: string): FormaDelUsuarioDeRed | null {
+  const usuario = limpiarUsuarioDeRed(escrito).replace(/^@/, '')
+  if (!usuario) return null
+  const comoEnlace = usuario.replace(/^https?:\/\//i, '')
+  if (/^[\w-]+(\.[\w-]+)+\/\S*$/.test(comoEnlace)) {
+    try {
+      return { tipo: 'enlace', url: new URL(`https://${comoEnlace}`) }
+    } catch {
+      return null
+    }
+  }
+  if (red === 'otra') return null
+  return /^[\w.-]{1,100}$/.test(usuario) ? { tipo: 'usuario', usuario } : null
+}
+
+/**
+ * Por qué ese usuario no se puede guardar, o `null`. Lo que se anota tiene
+ * que salir en la tarjeta: sin enlace no saldría nunca.
+ */
+export function motivoDelUsuarioDeRed(red: RedSocial | '' | null, escrito: string): string | null {
+  if (!limpiarUsuarioDeRed(escrito) || formaDelUsuarioDeRed(red, escrito)) return null
+  return red === 'otra'
+    ? 'Pega el enlace a tu perfil en esa red.'
+    : 'Revisa la red social: escribe tu usuario, como @draperez, o el enlace a tu perfil.'
+}
+
 function comoRedSocial(v: string): RedSocial | '' {
   return REDES_SOCIALES.find((r) => r.value === v)?.value ?? ''
 }
@@ -260,10 +304,12 @@ export function motivoDeAlta(a: AltaDeClinica, modo: ModoDeAlta = 'equipo'): str
   }
   if (!pareceCorreo(a.email)) return 'El correo no parece un correo.'
 
-  const usuario = a.socialUser.trim()
+  const usuario = limpiarUsuarioDeRed(a.socialUser)
   if (usuario && !a.socialNetwork) return 'Elige qué red social es.'
   if (a.socialNetwork && !usuario) return 'Escribe el usuario o el enlace de la red social.'
   if (usuario.length > 150) return 'El usuario o el enlace de la red social es demasiado largo.'
+  const redMala = motivoDelUsuarioDeRed(a.socialNetwork, usuario)
+  if (redMala) return redMala
 
   if (a.accountHolder.trim().length < 3) return 'Falta el titular de la cuenta.'
   if (!documentoValido(a.holderDocument, LETRAS_TITULAR)) return 'Falta la cédula o el RIF del titular.'
@@ -304,7 +350,7 @@ export function datosDeAlta(a: AltaDeClinica, modo: ModoDeAlta = 'equipo'): Reco
     phone: a.phone.trim(),
     email: a.email.trim().toLowerCase(),
     social_network: a.socialNetwork,
-    social_user: a.socialUser.trim(),
+    social_user: limpiarUsuarioDeRed(a.socialUser),
     account_holder: a.accountHolder.trim(),
     holder_document: documentoParaEnviar(a.holderDocument, LETRAS_TITULAR),
     bank: cuenta ? a.bank : '',

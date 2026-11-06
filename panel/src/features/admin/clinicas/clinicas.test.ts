@@ -100,6 +100,26 @@ igual(
 )
 igual('un usuario sin la red no', motivoDeAlta({ ...alta, socialUser: '@consultorio.demo' }), 'Elige qué red social es.')
 igual(
+  'el espacio del usuario no estorba (el caso del Dr. Wacher)',
+  motivoDeAlta({ ...alta, socialNetwork: 'instagram', socialUser: '@ ginecoproblema' }),
+  null,
+)
+igual(
+  'y se manda sin él',
+  datosDeAlta({ ...alta, socialNetwork: 'instagram', socialUser: '@ gineco problema​ ' }, 'portada').social_user,
+  '@ginecoproblema',
+)
+igual(
+  'lo que nunca saldría en la tarjeta no pasa',
+  motivoDeAlta({ ...alta, socialNetwork: 'instagram', socialUser: 'Dra Ana Pérez' }),
+  'Revisa la red social: escribe tu usuario, como @draperez, o el enlace a tu perfil.',
+)
+igual(
+  'en «Otra» solo vale un enlace',
+  motivoDeAlta({ ...alta, socialNetwork: 'otra', socialUser: 'draperez' }),
+  'Pega el enlace a tu perfil en esa red.',
+)
+igual(
   'la red sin usuario no',
   motivoDeAlta({ ...alta, socialNetwork: 'tiktok', socialUser: '  ' }),
   'Escribe el usuario o el enlace de la red social.',

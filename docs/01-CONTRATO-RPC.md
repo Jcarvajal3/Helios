@@ -1130,7 +1130,11 @@ Tablas (sin RLS de lectura: solo por estas RPC):
   `address`, `city`, `whatsapp` (`helios_normalize_ve_phone(m.phone)`, E.164)
   y, desde 20261026210000, `social_network` (de `helios_redes_sociales()`) y
   `social_user` (`merchants.social_network` y `social_user`; en la ficha van
-  juntos o ninguno).
+  juntos o ninguno). El usuario se guarda sin ningún espacio, también los
+  invisibles, en las tres tablas (trigger y `helios_usuario_de_red`,
+  20261106230000), y `helios_datos_de_alta` rechaza con `22023` lo que no se
+  puede enlazar (`helios_red_social_tiene_enlace`, la misma regla que
+  `formaDelUsuarioDeRed` en el panel): lo que se anota tiene que salir.
 - `directory_contact_clicks`: cada toque al botón de WhatsApp. `visitor_id`
   (aleatorio del navegador, `^[A-Za-z0-9-]{8,64}$` o null), `origin`
   (`publico | equipo | clinica`: quien llama está en `platform_admins` o es
