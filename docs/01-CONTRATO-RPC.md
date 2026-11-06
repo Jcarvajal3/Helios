@@ -1010,6 +1010,15 @@ superadmin › Agenda.
   pone los primeros de la lista entre los abiertos, por encima de la urgencia y
   del QR. `helios_solicitar_afiliacion` sigue en la base, pero ya no la llama
   ninguna página pública.
+- **Teléfono de contacto** (2026-11-06, 20261106190000):
+  `helios_agendar_capacitacion` acepta `contact_phone` (opcional, venezolano;
+  `22023` si no vale), que queda en `doctor_leads.contact_phone` y
+  `contact_phone_at`. `admin_doctor_leads()` lo devuelve. El WhatsApp del
+  directorio (`helios_directorio_fichas`) es, en este orden: el de su ficha del
+  directorio, el de contacto del lead de esa clínica **si lo dejó antes de
+  crearse la clínica**, y `merchants.phone`. El límite es a propósito: el
+  formulario es público y reconoce al médico por su nombre, así que no puede
+  cambiar el número de una clínica que ya existe; ese cambio lo hace el equipo.
 
 **La agenda por fases** (2026-10-28, 20261028150000). La Agenda se trabaja en
 tres fases, que son sus pestañas, y cada persona ve al entrar los médicos que

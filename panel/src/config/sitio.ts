@@ -60,7 +60,7 @@ export const PAGINAS_PUBLICAS = {
   // La lista de médicos cambia sola (superadmin › Directorio); la fecha es
   // la del texto y la estructura de la página.
   '/directorio': { actualizada: '2026-10-30' },
-  '/afiliacion': { actualizada: '2026-11-05' },
+  '/afiliacion': { actualizada: '2026-11-06' },
   '/soporte': { actualizada: '2026-11-05' },
   '/legal/terminos': { actualizada: '2026-10-07' },
   '/legal/privacidad': { actualizada: '2026-10-07' },

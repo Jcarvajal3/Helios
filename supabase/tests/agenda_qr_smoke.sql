@@ -17,6 +17,9 @@
 --   6. Lo que llega de /afiliacion (`origin = 'web'`) nace con origen `web`, y
 --      el tablero lo devuelve en `web_at` y no en `qr_at`; un médico que ya
 --      estaba conserva su origen y queda marcado igual (20261105120000).
+--   7. El teléfono de contacto opcional se valida y sale en el directorio; en
+--      blanco sale el personal, y uno que llega cuando la clínica ya existía
+--      no cambia el número publicado (20261106190000).
 --
 -- No manda nada: no llama a `helios_dispatch_*`.
 -- ============================================================================
@@ -35,6 +38,10 @@ declare
   v_viejo  uuid;
   v_web_nuevo uuid;
   v_web_viejo uuid;
+  v_con    uuid;
+  v_sin    uuid;
+  v_tarde  uuid;
+  v_txt    text;
   v_lead   public.doctor_leads%rowtype;
   v_n      integer;
   v_fallo  boolean;
@@ -182,6 +189,58 @@ begin
         where e->>'web_at' is null or e->>'qr_at' is not null) then
     raise exception '6. el tablero no los marca como web: %', v_j;
   end if;
+
+  -- =========================================================================
+  -- 7. El teléfono de contacto y el directorio
+  -- =========================================================================
+  set local role anon;
+  perform set_config('request.jwt.claims', '{"role":"anon"}', true);
+  v_fallo := false;
+  begin
+    perform public.helios_agendar_capacitacion(v_datos || '{"contact_phone": "123"}');
+  exception when sqlstate '22023' then
+    v_fallo := true;
+  end;
+  if not v_fallo then raise exception '7. aceptó un teléfono de contacto que no vale'; end if;
+  -- Con contacto, en blanco y uno que llega cuando la clínica ya existe.
+  perform public.helios_agendar_capacitacion(v_datos || jsonb_build_object(
+    'name', 'Dra. Con Contacto Prueba', 'phone', '0414 700 0905', 'contact_phone', '0424-700.0906'));
+  perform public.helios_agendar_capacitacion(v_datos || jsonb_build_object(
+    'name', 'Dra. Sin Contacto Prueba', 'phone', '0414 700 0907', 'contact_phone', '  '));
+  perform public.helios_agendar_capacitacion(v_datos || jsonb_build_object(
+    'name', 'Dra. Tarde Contacto Prueba', 'phone', '0414 700 0908', 'contact_phone', '0424 700 0909'));
+  reset role;
+
+  select contact_phone into v_txt from public.doctor_leads where phone = '+584147000905';
+  if v_txt is distinct from '+584247000906' then raise exception '7. no guardó el contacto: %', v_txt; end if;
+  select contact_phone into v_txt from public.doctor_leads where phone = '+584147000907';
+  if v_txt is not null then raise exception '7. en blanco guardó: %', v_txt; end if;
+
+  set local role authenticated;
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', v_admin::text, 'role', 'authenticated', 'aal', 'aal2')::text, true);
+  select e->>'contact_phone' into v_txt from jsonb_array_elements(public.admin_doctor_leads()) e
+   where e->>'phone' = '+584147000905';
+  if v_txt is distinct from '+584247000906' then raise exception '7. el tablero no trae el contacto: %', v_txt; end if;
+  v_con := (public.admin_create_merchant('Consultorio Contacto', null, 'J-620000091', 'consultorio')).id;
+  v_sin := (public.admin_create_merchant('Consultorio Sin Contacto', null, 'J-620000092', 'consultorio')).id;
+  v_tarde := (public.admin_create_merchant('Consultorio Tarde', null, 'J-620000093', 'consultorio')).id;
+  reset role;
+
+  update public.merchants set phone = '+584147000905' where id = v_con;
+  update public.merchants set phone = '+584147000907' where id = v_sin;
+  -- Esta clínica ya existía cuando alguien llenó el formulario con su nombre.
+  update public.merchants set phone = '+584147000908', created_at = now() - interval '1 day' where id = v_tarde;
+  update public.doctor_leads set merchant_id = v_con where phone = '+584147000905';
+  update public.doctor_leads set merchant_id = v_sin where phone = '+584147000907';
+  update public.doctor_leads set merchant_id = v_tarde where phone = '+584147000908';
+
+  select f.whatsapp into v_txt from public.helios_directorio_fichas() f where f.merchant_id = v_con;
+  if v_txt is distinct from '+584247000906' then raise exception '7. el directorio no enseña el de contacto: %', v_txt; end if;
+  select f.whatsapp into v_txt from public.helios_directorio_fichas() f where f.merchant_id = v_sin;
+  if v_txt is distinct from '+584147000907' then raise exception '7. en blanco no enseña el personal: %', v_txt; end if;
+  select f.whatsapp into v_txt from public.helios_directorio_fichas() f where f.merchant_id = v_tarde;
+  if v_txt is distinct from '+584147000908' then raise exception '7. el formulario público cambió el número de una clínica que ya existía: %', v_txt; end if;
 end;
 $$;
 
