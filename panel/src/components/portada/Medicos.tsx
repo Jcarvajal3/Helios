@@ -37,7 +37,7 @@ const MITAD = CONSULTA / 2
 const ULTIMO_DIA = 28
 
 const HITOS = [
-  { dia: 0, carril: 'abajo', texto: 'Atiendes', corto: 'Atiendes' },
+  { dia: 0, carril: 'abajo', texto: 'Atiendes', corto: 'Hoy' },
   {
     dia: 8,
     carril: 'abajo',
