@@ -18,6 +18,7 @@ import {
 } from '../recipe/util.ts'
 import type { UrlsDeImagenes } from '../recipe/util.ts'
 import { AreaDeTexto, Aviso, Boton, Campo, Tarjeta, mensajeDe } from '../ui.tsx'
+import { BuscadorMedicamento } from './BuscadorMedicamento.tsx'
 import { EnviarCorreo } from './EnviarCorreo.tsx'
 import { SubirImagen } from './SubirImagen.tsx'
 
@@ -329,28 +330,17 @@ export function Nuevo({
         </Tarjeta>
 
         <Tarjeta titulo="Medicamentos">
-          <datalist id="rx-medicamentos">
-            {medicamentosConocidos.map((m) => (
-              <option key={m.medicamento} value={m.medicamento} />
-            ))}
-          </datalist>
           <div className="flex flex-col gap-5">
             {medicamentos.map((m, i) => (
               <fieldset key={i} className="relative border-t border-outline-variant/70 pt-4 first:border-t-0 first:pt-0">
                 <legend className="sr-only">Medicamento {i + 1}</legend>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="flex items-end gap-2 sm:col-span-2">
-                    <Campo
+                    <BuscadorMedicamento
                       etiqueta={medicamentos.length > 1 ? `Medicamento ${i + 1}` : 'Medicamento'}
-                      obligatorio
-                      className="min-w-0 flex-1"
-                      autoComplete="off"
-                      list="rx-medicamentos"
-                      placeholder="Amoxicilina 500 mg"
-                      maxLength={160}
-                      data-medicamento={i}
-                      value={m.medicamento}
-                      onChange={(e) => cambiarMedicamento(i, 'medicamento', e.target.value)}
+                      indice={i}
+                      valor={m.medicamento}
+                      alCambiar={(texto) => cambiarMedicamento(i, 'medicamento', texto)}
                     />
                     {medicamentos.length > 1 && (
                       <button

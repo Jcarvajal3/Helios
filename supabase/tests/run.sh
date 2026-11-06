@@ -97,6 +97,7 @@ SUITES=(
   directorio_interesados_smoke
   rx_smoke
   rx_precios_smoke
+  rx_catalogo_smoke
 )
 if [ "$#" -gt 0 ]; then SUITES=("$@"); fi
 

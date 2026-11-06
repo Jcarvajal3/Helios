@@ -8,6 +8,17 @@ import type { Datos, Perfil, Recipe } from '../modelo.ts'
 
 const espera = (ms = 250) => new Promise((r) => setTimeout(r, ms))
 
+const CATALOGO = [
+  'Acetaminofén 500 mg tabletas',
+  'Amoxicilina 500 mg cápsulas',
+  'Amoxicilina 875 mg tabletas',
+  'Amoxicilina 500 mg + Ácido clavulánico 125 mg',
+  'Ibuprofeno 400 mg tabletas',
+  'Ibuprofeno 100 mg/5 ml jarabe',
+  'Losartán 50 mg tabletas',
+  'Metformina 500 mg tabletas',
+]
+
 let dentro = true
 const archivos = new Map<string, Uint8Array>()
 const recipes: Recipe[] = []
@@ -113,6 +124,16 @@ export const datosDemo: Datos = {
         r.paciente.documento.toLowerCase().includes(q) ||
         String(r.numero).includes(q),
     )
+  },
+  async buscarMedicamentos(texto) {
+    await espera(120)
+    const limpiar = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+    const palabras = limpiar(texto).split(/s+/).filter(Boolean)
+    const escritos = recipes.flatMap((r) => r.medicamentos.map((m) => m.medicamento))
+    return [...new Set([...CATALOGO, ...escritos])]
+      .filter((nombre) => palabras.every((p) => limpiar(nombre).includes(p)))
+      .sort((a, b) => a.localeCompare(b))
+      .slice(0, 20)
   },
   async preciosPublicos(token) {
     await espera()

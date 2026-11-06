@@ -130,6 +130,8 @@ export interface Datos {
   adjuntarPdf(id: string, pdf: Uint8Array): Promise<void>
   descargarPdf(pdfPath: string): Promise<Uint8Array>
   listar(busqueda?: string): Promise<Recipe[]>
+  /** Solo nombres: ni farmacias, ni precios, ni si tienen precio. */
+  buscarMedicamentos(texto: string): Promise<string[]>
   enviar(id: string, correo: string): Promise<void>
   /** No pide sesión: la llave es el enlace del paciente. */
   preciosPublicos(token: string): Promise<PreciosPublicos>

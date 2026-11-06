@@ -9,7 +9,8 @@
 // RX no puede frenar una publicación del panel. /rx se queda sin página y ya.
 //
 // Vercel solo publica si el último commit del push toca `panel/`: un cambio que
-// solo toque `rx/` no sale hasta entonces.
+// solo toque `rx/` no sale hasta entonces. Para publicarlo, añade una línea a
+// `rx-version.txt`, en esta carpeta, en el mismo commit.
 // ============================================================================
 
 import { execSync } from 'node:child_process'

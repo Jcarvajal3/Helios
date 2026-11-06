@@ -137,6 +137,8 @@ export const datosSupabase: Datos = {
   listar: async (busqueda) =>
     (await rpc<Recipe[]>('rx_listar', { p_busqueda: busqueda || null, p_limite: 100 })).map(normalizar),
 
+  buscarMedicamentos: (texto) => rpc<string[]>('rx_buscar_medicamentos', { p_busqueda: texto }),
+
   preciosPublicos: (token) => rpc<PreciosPublicos>('rx_precios_publicos', { p_token: token }),
 
   async enviar(id, correo) {

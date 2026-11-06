@@ -51,6 +51,7 @@ activa recibe el error `42501`. Los errores llevan el mensaje en español, listo
 | `rx_emitir(p_id uuid, p_paciente jsonb, p_medicamentos jsonb, p_indicaciones text)` | récipe | Da el número y la fecha (hoy en Caracas). Idempotente por `p_id` |
 | `rx_adjuntar_pdf(p_id uuid, p_path text)` | récipe | Guarda la ruta del PDF subido |
 | `rx_listar(p_busqueda text default null, p_limite int default 50)` | lista de récipes | Los de su clínica, del más nuevo al más viejo; busca por nombre, cédula o número |
+| `rx_buscar_medicamentos(p_busqueda text, p_limite int default 20)` | lista de nombres | El buscador del médico |
 | `rx_preparar_envio(p_id uuid, p_correo text)` | datos del envío | Valida, aplica el tope diario y anota el envío. La llama `rx-enviar` |
 | `rx_resultado_envio(p_envio_id uuid, p_estado text, p_provider_id text, p_error text)` | | Solo `service_role`. La llama `rx-enviar` |
 
@@ -81,6 +82,12 @@ un dato de salud, y el enlace no se puede revocar.
 - **Un dato dudoso no entra.** Solo farmacias de `rx_farmacias`, fecha ISO con zona, precios
   sin ambigüedad y dentro de rango (de $0,05 a $1.000, a la tasa BCV).
 - **Un precio viejo no se enseña.** Lo que no se vio en 14 días deja de salir.
+
+**El campo de medicamento** busca con `rx_buscar_medicamentos` entre los productos cargados y
+lo que su clínica ya recetó. Solo devuelve nombres, por orden alfabético: ni farmacia, ni precio,
+ni si tiene precio. Lo que el médico escriba y no coincida se anota en `rx_medicamentos` al emitir,
+visible solo para su clínica porque es texto libre. `rx_medicamentos_sin_precio` es la lista de
+trabajo para buscarles precio: lo más recetado primero, solo de uso interno.
 
 Para cargar precios, con el CLI de Supabase con sesión y desde la raíz del repo:
 

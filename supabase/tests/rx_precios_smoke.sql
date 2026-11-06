@@ -472,7 +472,7 @@ begin
     order by 1
   );
   if v_lista <> array(select unnest(array[
-    'rx_adjuntar_pdf(uuid,text)', 'rx_clinica_activa()', 'rx_emitir(uuid,jsonb,jsonb,text)', 'rx_guardar_imagen(text,text)',
+    'rx_adjuntar_pdf(uuid,text)', 'rx_buscar_medicamentos(text,integer)', 'rx_clinica_activa()', 'rx_emitir(uuid,jsonb,jsonb,text)', 'rx_guardar_imagen(text,text)',
     'rx_guardar_perfil(jsonb)', 'rx_listar(text,integer)', 'rx_mi_perfil()', 'rx_pdf_adjunto(text)',
     'rx_precios_publicos(text)', 'rx_preparar_envio(uuid,text)'
   ]) order by 1) then
