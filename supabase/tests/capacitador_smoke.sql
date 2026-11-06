@@ -15,7 +15,8 @@
 --   5. Ve el perfil de una clínica sin su dinero (condiciones, lo que se le
 --      debe, su cuenta de cobro); el super admin sí lo ve.
 --   6. Aprueba y rechaza solicitudes.
---   7. No corrige el perfil ni el titular (eso sigue siendo del super admin).
+--   7. Corrige el perfil y el titular (20261102230000), y sube el logo; no
+--      cambia la contraseña del titular. El operador no edita el perfil.
 --   8. El rol de la agenda no lee clínicas ni afilia.
 --
 -- No manda nada: `_ayudas.sql` apaga las cuentas de envío y la bienvenida
@@ -31,6 +32,7 @@ declare
   v_admin    uuid;
   v_cap      uuid := gen_random_uuid();
   v_agenda   uuid := gen_random_uuid();
+  v_op       uuid := gen_random_uuid();
   v_merchant uuid;
   v_titular  uuid;
   v_app      uuid;
@@ -57,8 +59,11 @@ begin
     (v_cap, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
      'capacitador-' || v_cap || '@prueba.helios.test', now(), now()),
     (v_agenda, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-     'agenda-' || v_agenda || '@prueba.helios.test', now(), now());
+     'agenda-' || v_agenda || '@prueba.helios.test', now(), now()),
+    (v_op, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
+     'operador-' || v_op || '@prueba.helios.test', now(), now());
   insert into public.platform_admins (user_id, role, full_name, is_active) values
+    (v_op, 'operador', 'Operador de Prueba', true),
     (v_cap, 'capacitador', 'Capacitador de Prueba', true),
     (v_agenda, 'agenda', 'Agenda de Prueba', true);
 
@@ -183,13 +188,27 @@ begin
   end if;
   set local role authenticated;
 
-  -- --- 7. No corrige el perfil ni el titular ------------------------------
-  v_fallo := false;
-  begin
-    perform public.admin_set_merchant_owner(v_merchant, '{"owner_name":"Otra Persona"}');
-  exception when sqlstate '42501' then v_fallo := true;
-  end;
-  if not v_fallo then raise exception '7. el capacitador corrigió el titular'; end if;
+  -- --- 7. Corrige el perfil y el titular, y sube el logo -----------------
+  perform public.admin_set_merchant_owner(v_merchant, '{"owner_name":"Carla Corregida","doctor_title":"Lcda."}');
+  perform public.admin_set_merchant_profile(
+    p_merchant_id => v_merchant, p_category => null, p_city => 'Valencia', p_handle => null,
+    p_logo_url => null, p_specialty => 'Dermatología estética', p_phone => '0241 555 7001',
+    p_consultorio => 'Consultorio Corregido');
+  insert into storage.objects (bucket_id, name, owner_id)
+  values ('merchant-logos', v_merchant || '/logo-prueba.png', v_cap::text);
+  reset role;
+  if not exists (select 1 from public.merchants
+                 where id = v_merchant and owner_name = 'Carla Corregida' and doctor_title = 'Lcda.'
+                   and city = 'Valencia' and specialty = 'Dermatología estética'
+                   and consultorio = 'Consultorio Corregido') then
+    raise exception '7. el perfil corregido por el capacitador no quedó guardado';
+  end if;
+  if (select count(*) from audit.admin_actions
+       where actor = v_cap and target_id = v_merchant
+         and action in ('merchant.set_owner', 'merchant.set_profile')) <> 2 then
+    raise exception '7. las correcciones del capacitador no quedaron en la bitácora';
+  end if;
+  set local role authenticated;
 
   v_fallo := false;
   begin
@@ -197,6 +216,23 @@ begin
   exception when sqlstate '42501' then v_fallo := true;
   end;
   if not v_fallo then raise exception '7. el capacitador cambió la contraseña del titular'; end if;
+
+  -- El operador ve la clínica, pero no edita su perfil ni sube su logo.
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', v_op::text, 'role', 'authenticated', 'aal', 'aal2')::text, true);
+  v_fallo := false;
+  begin
+    perform public.admin_set_merchant_owner(v_merchant, '{"owner_name":"Otra Persona"}');
+  exception when sqlstate '42501' then v_fallo := true;
+  end;
+  if not v_fallo then raise exception '7. el operador corrigió el titular'; end if;
+  v_fallo := false;
+  begin
+    insert into storage.objects (bucket_id, name, owner_id)
+    values ('merchant-logos', v_merchant || '/logo-operador.png', v_op::text);
+  exception when sqlstate '42501' then v_fallo := true;
+  end;
+  if not v_fallo then raise exception '7. el operador subió un logo'; end if;
 
   -- --- 8. El rol de la agenda, no ---------------------------------------
   perform set_config('request.jwt.claims',

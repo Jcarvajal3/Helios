@@ -7,8 +7,7 @@ import { AccionesDeFicha } from '@/components/admin/ficha/CarrilDeFicha'
 import { LogoLocal } from '@/components/admin/directorio/LogoLocal'
 import { OpcionesDelAlta, YaDadaDeAlta, darAccesoAlTitular } from '@/components/admin/directorio/AccesoDelTitular'
 import type { DespuesDelAlta, OpcionesDeAcceso } from '@/components/admin/directorio/AccesoDelTitular'
-import { Seccion } from '@/components/kit/Seccion'
-import { Badge, Button, Card, DataLabel, ErrorBox, Modal, formatDateTime } from '@/components/ui'
+import { Badge, Button, ErrorBox, Modal, formatDateTime } from '@/components/ui'
 import { MERCHANT_CATEGORY_LABEL } from '@/features/admin/api'
 import type { MerchantDetail, MerchantRow } from '@/features/admin/api'
 import { ALTA_VACIA, fichaParaCompartir, pareceCorreo } from '@/features/admin/clinicas/clinicas'
@@ -17,11 +16,12 @@ import { ESTADOS_LOCAL } from '@/features/admin/estados'
 import { ROLE_LABEL } from '@/features/auth/permissions'
 import { describeError } from '@/lib/supabase'
 import { CopiarDatos } from './Cabecera'
+import { Perfil } from './Perfil'
 
 /**
  * La ficha de una clínica para el capacitador (20261102130100): quién es el
- * médico, su consultorio y quién entra a su panel, para leer. Nada de dinero
- * —la base no se lo manda— ni de editar. Lo único que hace aquí es darle al
+ * médico, su consultorio y quién entra a su panel. Nada de dinero —la base no
+ * se lo manda—. Corrige el perfil del médico (20261102230000) y le da al
  * titular su primer acceso, si la clínica aún no tiene a nadie.
  */
 export function FichaDeSoloLectura({
@@ -100,33 +100,15 @@ export function FichaDeSoloLectura({
           </AccionesDeFicha>
         }
       >
-        <Seccion titulo="El médico">
-          <Card>
-            <Datos
-              filas={[
-                ['Nombre', titular.doctorName ?? titular.ownerName],
-                ['Cédula o RIF', titular.ownerDocument],
-                ['Especialidad', datos.specialty],
-                ['Colegio', titular.collegeNumber],
-                ['MPPS', datos.mppsNumber],
-              ]}
-            />
-          </Card>
-        </Seccion>
-
-        <Seccion titulo="El consultorio">
-          <Card>
-            <Datos
-              filas={[
-                ['Nombre', datos.consultorio],
-                ['RIF', detalle.profile.taxId],
-                ['Dirección', datos.address],
-                ['Teléfono', datos.phone],
-                ['Correo', datos.email],
-              ]}
-            />
-          </Card>
-        </Seccion>
+        {/* El perfil sí lo corrige (20261102230000): el mismo de la ficha
+            completa, el titular y los datos del consultorio. */}
+        <Perfil
+          merchantId={merchant.id}
+          initial={detalle.profile}
+          datos={datos}
+          titular={titular}
+          onDone={onDone}
+        />
       </MarcoDeFicha>
 
       {dandoAcceso && (
@@ -146,22 +128,6 @@ export function FichaDeSoloLectura({
         />
       )}
     </>
-  )
-}
-
-/** Los datos en dos columnas: el rótulo y su valor, o una raya si no hay. */
-function Datos({ filas }: { filas: ReadonlyArray<[string, string | null]> }) {
-  return (
-    <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-[10rem_minmax(0,1fr)]">
-      {filas.map(([rotulo, valor]) => (
-        <div key={rotulo} className="contents">
-          <dt>
-            <DataLabel>{rotulo}</DataLabel>
-          </dt>
-          <dd className="type-panel-body break-words text-on-surface">{valor?.trim() || '—'}</dd>
-        </div>
-      ))}
-    </dl>
   )
 }
 
@@ -200,7 +166,7 @@ function DarleSuAcceso({
         {sinCorreo && (
           <ErrorBox
             title="Su ficha no tiene un correo válido"
-            detail="Su usuario entra con su correo. Pídele a un super admin que lo corrija en su perfil."
+            detail="Su usuario entra con su correo. Corrígelo en «Datos de la clínica» y vuelve a intentarlo."
           />
         )}
         {dar.isError && <ErrorBox title="No se pudo darle su acceso" detail={describeError(dar.error)} />}

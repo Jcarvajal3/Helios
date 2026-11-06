@@ -29,13 +29,13 @@ import {
   rifValido,
   tieneNumero,
 } from '@/lib/documento'
-import { SOLO_SUPER_ADMIN, useIsSuperAdmin } from '@/features/admin/role'
+import { SOLO_QUIEN_EDITA_EL_PERFIL, usePuedeEditarElPerfil } from '@/features/admin/role'
 import { describeError } from '@/lib/supabase'
 
 /**
  * Quién es la clínica: su categoría médica, dónde está, su RIF y, si se
  * quiere, su logo (sale en su panel y en el comprobante). Guardarlo lo exige
- * el servidor a un super admin.
+ * el servidor a un super admin o a un capacitador (20261102230000).
  *
  * Helios no tiene app: la clínica no tiene perfil público, ni usuario en
  * redes. Lo que se guarde en esas columnas heredadas de Ronda se conserva tal
@@ -55,7 +55,7 @@ export function Perfil({
   onDone: () => void
 }) {
   const avisar = useToast()
-  const isSuperAdmin = useIsSuperAdmin()
+  const puedeEditar = usePuedeEditarElPerfil()
 
   const [category, setCategory] = useState<MerchantCategory | null>(initial.category)
   const [city, setCity] = useState(initial.city ?? '')
@@ -106,8 +106,8 @@ export function Perfil({
     },
   })
 
-  const bloqueo = !isSuperAdmin
-    ? SOLO_SUPER_ADMIN
+  const bloqueo = !puedeEditar
+    ? SOLO_QUIEN_EDITA_EL_PERFIL
     : !dirty
       ? 'No has cambiado nada.'
       : taxIdError || (correoInvalido ? 'El correo de la clínica no es válido.' : undefined)
@@ -200,7 +200,7 @@ function Titular({
   onDone: () => void
 }) {
   const avisar = useToast()
-  const isSuperAdmin = useIsSuperAdmin()
+  const puedeEditar = usePuedeEditarElPerfil()
 
   const [nombre, setNombre] = useState(titular.ownerName ?? '')
   const [documento, setDocumento] = useState(titular.ownerDocument ?? '')
@@ -226,8 +226,8 @@ function Titular({
     },
   })
 
-  const bloqueo = !isSuperAdmin
-    ? SOLO_SUPER_ADMIN
+  const bloqueo = !puedeEditar
+    ? SOLO_QUIEN_EDITA_EL_PERFIL
     : !dirty
       ? 'No has cambiado nada.'
       : nombre.trim().length < 3

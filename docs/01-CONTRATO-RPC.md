@@ -1379,6 +1379,15 @@ superadmin › Agenda y a superadmin › Clínicas, ve el perfil de cada médico
   Clínicas no ve lo financiado, lo que se debe ni los datos de alta; su
   ficha de una clínica es de solo lectura, con «Darle su acceso» si aún no
   tiene personal.
+- **(2026-11-02, 20261102230000)** El capacitador también corrige el perfil
+  del médico: `admin_set_merchant_profile` (categoría, ciudad, RIF, logo y
+  datos del consultorio) y `admin_set_merchant_owner` (el titular) pasan a
+  `helios_assert_puede_afiliar`, y las políticas de escritura del bucket
+  `merchant-logos` (`merchant_logos_{write,update,delete}_quien_edita`) a
+  super admin o capacitador con el segundo factor. El operador sigue sin
+  editar; el dinero (condiciones, cuenta de cobro, estado) y el personal,
+  igual que antes. En el panel, su ficha enseña el mismo editor de perfil
+  que la ficha completa.
 
 ### 2.15 El super admin cambia el rol del equipo (2026-11-02, 20261102210000)
 

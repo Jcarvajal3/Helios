@@ -62,6 +62,17 @@ export function usePuedeAfiliar(): boolean {
   return rol === 'super_admin' || rol === 'capacitador'
 }
 
+/**
+ * Si quien mira puede corregir el perfil de un médico: el titular, los datos
+ * del consultorio y el logo. Los mismos que afilian (20261102230000).
+ */
+export function usePuedeEditarElPerfil(): boolean {
+  return usePuedeAfiliar()
+}
+
+/** El globo de un botón de guardar el perfil apagado. */
+export const SOLO_QUIEN_EDITA_EL_PERFIL = 'Solo un super admin o un capacitador puede editar el perfil del médico'
+
 /** El globo de un botón de afiliar apagado (alta, aprobar, rechazar). */
 export const SOLO_QUIEN_AFILIA = 'Solo un super admin o un capacitador puede afiliar médicos'
 
