@@ -7,7 +7,8 @@
     "demo": "vite --port 3003 --mode demo",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --port 3002",
-    "test": "node --test \"src/**/*.test.ts\""
+    "test": "node --test \"src/**/*.test.ts\" \"scripts/**/*.test.mjs\"",
+    "precios": "node scripts/cargar-precios.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.3",
@@ -23,6 +24,7 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^6.0.1",
+    "read-excel-file": "^9.3.14",
     "typescript": "^6.0.2",
     "vite": "^8.0.0"
   }

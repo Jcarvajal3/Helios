@@ -7,6 +7,9 @@
 // En local no hace nada, para que `npm run build` siga siendo el de siempre
 // (con `--forzar` lo hace igual). Si RX no compila, avisa y sigue: un error en
 // RX no puede frenar una publicación del panel. /rx se queda sin página y ya.
+//
+// Vercel solo publica si el último commit del push toca `panel/`: un cambio que
+// solo toque `rx/` no sale hasta entonces.
 // ============================================================================
 
 import { execSync } from 'node:child_process'

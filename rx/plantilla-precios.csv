@@ -1,0 +1,2 @@
+farmacia,nombre,precio,moneda,laboratorio,presentacion,sku,url,disponible,visto_en,fuente,controlado
+Farmacia Ejemplo,AMOXICILINA 500MG CAPSULAS X 21,1117.90,VES,Laboratorio Ejemplo,Caja x 21,12345,https://farmacia.example/amoxicilina,si,2026-11-06T10:00:00-04:00,excel,no

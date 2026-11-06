@@ -85,6 +85,8 @@ export type DatosCorreo = {
   numero: number
   /** El PDF en base64. */
   pdfBase64: string
+  /** El enlace a las farmacias y precios, o null si no hay nada que enseñar. */
+  enlacePrecios: string | null
 }
 
 export type CorreoResend = {
@@ -96,6 +98,19 @@ export type CorreoResend = {
   html: string
   attachments: { filename: string; content: string }[]
 }
+
+/**
+ * El enlace que abre el paciente, sin cuenta. Va en el hash, así que no queda en
+ * los registros de visitas de la página. Sí viaja dentro del correo: Resend lo ve.
+ */
+export function enlaceDePrecios(token: unknown, hayPrecios: unknown): string | null {
+  if (hayPrecios !== true || typeof token !== 'string' || !/^[0-9a-f]{32}$/.test(token)) return null
+  return `https://conhelios.com/rx/#/medicinas/${token}`
+}
+
+// Es de Helios, no del médico: la Ley de Ejercicio de la Medicina le impide
+// sugerir farmacias. Por eso se dice así, y por eso no va en el PDF que él firma.
+const AVISO_PRECIOS = 'Helios te muestra lo que publican las farmacias, de menor a mayor precio. Tu médico no elige estas farmacias ni estos precios.'
 
 /** Lo que se le manda a Resend. Lanza si el remitente no trae su dirección. */
 export function armarCorreo(d: DatosCorreo): CorreoResend {
@@ -116,8 +131,19 @@ export function armarCorreo(d: DatosCorreo): CorreoResend {
     '',
     `Si tienes dudas sobre tu tratamiento, consúltalas con ${doctor}.`,
     '',
+    ...(d.enlacePrecios
+      ? ['¿Dónde conseguir tus medicamentos?', AVISO_PRECIOS, d.enlacePrecios, '']
+      : []),
     'Enviado con Helios',
   ].join('\n')
+
+  const bloquePrecios = d.enlacePrecios
+    ? '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #E3E8F1;margin:20px 0 0"><tr><td style="padding:18px 0 0">' +
+      '<p style="margin:0 0 4px;font-weight:700;color:#002770">¿Dónde conseguir tus medicamentos?</p>' +
+      `<p style="margin:0 0 14px;color:#44506A;font-size:14px">${escaparHtml(AVISO_PRECIOS)}</p>` +
+      `<a href="${escaparHtml(d.enlacePrecios)}" style="display:inline-block;background:#0040B8;color:#ffffff;text-decoration:none;font-weight:700;padding:11px 20px;border-radius:999px">Ver farmacias y precios</a>` +
+      '</td></tr></table>'
+    : ''
 
   const html =
     '<!doctype html><html lang="es"><body style="margin:0;padding:0;background:#F4F6FA">' +
@@ -132,6 +158,7 @@ export function armarCorreo(d: DatosCorreo): CorreoResend {
     '<p style="margin:0"><b>Hoja Indicaciones:</b> para ti.</p>' +
     '</td></tr></table>' +
     `<p style="margin:0;color:#6B7690;font-size:13px">Si tienes dudas sobre tu tratamiento, consúltalas con ${eDoctor}.</p>` +
+    bloquePrecios +
     '</td></tr></table>' +
     '<p style="margin:16px 0 0;color:#6B7690;font-size:12px;font-family:Arial,sans-serif">Enviado con Helios</p>' +
     '</td></tr></table></body></html>'

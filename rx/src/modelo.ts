@@ -86,6 +86,28 @@ export interface ImagenesRecipe {
   logo: Uint8Array | null
 }
 
+/** Lo que una farmacia publica de un medicamento. */
+export interface Oferta {
+  farmacia: string
+  /** Tal como lo publica la farmacia. */
+  producto: string
+  laboratorio: string
+  presentacion: string
+  moneda: 'VES' | 'USD'
+  precio: number
+  url: string
+  disponible: boolean | null
+  visto_en: string
+}
+
+/** Lo que abre el paciente con su enlace (`rx_precios_publicos`). */
+export interface PreciosPublicos {
+  /** Solo los que coincidieron con un producto. */
+  medicamentos: Array<{ nombre: string; ofertas: Oferta[] }>
+  /** Cuántos medicamentos del récipe quedaron sin precio. */
+  sin_precio: number
+}
+
 /** La capa de datos. La implementan `datos/supabase.ts` y `datos/demo.ts`. */
 export interface Datos {
   sesion(): Promise<boolean>
@@ -109,4 +131,6 @@ export interface Datos {
   descargarPdf(pdfPath: string): Promise<Uint8Array>
   listar(busqueda?: string): Promise<Recipe[]>
   enviar(id: string, correo: string): Promise<void>
+  /** No pide sesión: la llave es el enlace del paciente. */
+  preciosPublicos(token: string): Promise<PreciosPublicos>
 }

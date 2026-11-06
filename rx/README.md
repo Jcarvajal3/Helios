@@ -59,6 +59,44 @@ Las formas del perfil y del récipe están en `src/modelo.ts` (`Perfil`, `Recipe
 `POST /functions/v1/rx-enviar` con `{ "recipe_id": "…", "correo": "…" }` y el JWT
 del médico responde `{ "ok": true }` o `{ "error": "codigo", "mensaje": "texto en español" }`.
 
+## Farmacias y precios para el paciente
+
+El correo lleva, si hay precios recientes, un enlace a `conhelios.com/rx/#/medicinas/<token>`.
+Se abre sin cuenta y enseña, por cada medicamento que coincidió con un producto, lo que
+publican las farmacias, de menor a mayor precio. De los demás solo dice cuántos son. No
+dice de quién es el récipe y vence a los 30 días. La lista de medicamentos sigue siendo
+un dato de salud, y el enlace no se puede revocar.
+
+- **El médico no elige farmacias ni precios.** Ninguna RPC suya los recibe, las tablas no
+  tienen permisos para la API y no recibe el enlace del paciente: lo pide `rx-enviar` con
+  la service_role. Tampoco va en el PDF que firma: la Ley de Ejercicio de la Medicina le
+  impide sugerir farmacias. Lo único que puede hacer es lo normal, recetar una marca, y eso
+  acota el resultado.
+- **Mejor no enseñar nada que enseñar otro medicamento.** `rx_ofertas` exige coincidencia en
+  los dos sentidos, salvo `rx_palabras_neutras()` y las palabras del laboratorio, y no busca
+  sin dosis. «Metformina 500 mg» no encuentra «Metformina XR 500 mg». El costo es que muchos
+  productos no coincidirán: hay que medirlo con datos reales antes de ampliar la lista neutra.
+- **Controlados fuera.** `rx_controlados` es una lista de principios activos y marcas que ni
+  se cargan ni se enseñan. No es exhaustiva y debe revisarla un farmacéutico.
+- **Un dato dudoso no entra.** Solo farmacias de `rx_farmacias`, fecha ISO con zona, precios
+  sin ambigüedad y dentro de rango (de $0,05 a $1.000, a la tasa BCV).
+- **Un precio viejo no se enseña.** Lo que no se vio en 14 días deja de salir.
+
+Para cargar precios, con el CLI de Supabase con sesión y desde la raíz del repo:
+
+```bash
+npm --prefix rx run precios -- ruta/precios.csv --fuente excel --seco
+npm --prefix rx run precios -- ruta/precios.csv --fuente excel
+```
+
+Acepta `.csv` y `.xlsx`, con las columnas de `rx/plantilla-precios.csv`. El primer comando
+solo lee el archivo. Una farmacia nueva se admite con `--farmacia-nueva "Nombre"`, y la fecha
+de un archivo sin ella se indica con `--visto-en`. Cada carga queda en `rx_cargas`. Si cambian
+las reglas de `rx_tokens`, `rx_recalcular_tokens()` recalcula lo cargado.
+
+**Las fuentes (2026-11-06):** ninguna permite hoy extraer precios sin licencia o permiso; el
+detalle está en `herramientas/precios-farmacias/FUENTES.md`. Solo se cargan datos con permiso.
+
 ## El PDF
 
 Media carta vertical, como el récipe venezolano de siempre: una hoja **Récipe**

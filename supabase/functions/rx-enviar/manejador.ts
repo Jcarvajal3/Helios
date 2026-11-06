@@ -11,7 +11,7 @@
 // el mensaje de Resend (puede traer la dirección). Ese mensaje queda en el envío.
 // ═══════════════════════════════════════════════════════════════════════════
 
-import { armarCorreo, cabecerasCors, errorDeLaBase, esPdf, leerPeticion } from './logica.ts'
+import { armarCorreo, cabecerasCors, enlaceDePrecios, errorDeLaBase, esPdf, leerPeticion } from './logica.ts'
 
 const MAX_BYTES = 5 * 1024 * 1024
 const NO_SE_PUDO = 'No pudimos enviar el correo. Intenta de nuevo.'
@@ -28,6 +28,8 @@ export type DatosEnvio = {
   correo: string
 }
 
+export type DatosPrecios = { token_precios?: unknown; hay_precios?: unknown }
+
 export type RespuestaResend = { ok: boolean; estado: number; id: string | null; mensaje: string | null }
 
 export type Dependencias = {
@@ -42,6 +44,8 @@ export type Dependencias = {
   anotarResultado(envioId: string, estado: 'enviado' | 'fallido', providerId: string | null, error: string | null): Promise<void>
   mandarResend(clave: string, idempotencia: string, cuerpo: unknown): Promise<RespuestaResend>
   aBase64(bytes: Uint8Array): string
+  /** Con la service_role: el médico no recibe el enlace de su paciente. */
+  datosPrecios(recipeId: string): Promise<DatosPrecios | null>
 }
 
 /** Un fallo después de preparar el envío: lo que se anota y lo que se responde. */
@@ -111,6 +115,12 @@ export function crearManejador(deps: Dependencias): (req: Request) => Promise<Re
         throw new FalloDeEnvio(502, 'pdf', 'El archivo de este récipe no es un PDF. Vuelve a generarlo.', 'El archivo no es un PDF')
       }
 
+      // Es un añadido: si falla, el récipe sale igual, sin el enlace.
+      const precios = await deps.datosPrecios(peticion.recipe_id).catch(() => {
+        console.error('rx-enviar: no se pudieron leer los datos de precios')
+        return null
+      })
+
       const correo = armarCorreo({
         remitente,
         doctor: envio.doctor_nombre,
@@ -119,6 +129,7 @@ export function crearManejador(deps: Dependencias): (req: Request) => Promise<Re
         correo: envio.correo,
         numero: envio.numero,
         pdfBase64: deps.aBase64(pdf),
+        enlacePrecios: enlaceDePrecios(precios?.token_precios, precios?.hay_precios),
       })
 
       const resend = await deps.mandarResend(clave, envio.envio_id, correo)

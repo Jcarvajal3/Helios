@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 
-import type { Datos, Perfil, Recipe, ImagenesRecipe } from '../modelo.ts'
+import type { Datos, Perfil, PreciosPublicos, Recipe, ImagenesRecipe } from '../modelo.ts'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // La capa de datos real: la misma base y el mismo login que el panel. Los
@@ -136,6 +136,8 @@ export const datosSupabase: Datos = {
 
   listar: async (busqueda) =>
     (await rpc<Recipe[]>('rx_listar', { p_busqueda: busqueda || null, p_limite: 100 })).map(normalizar),
+
+  preciosPublicos: (token) => rpc<PreciosPublicos>('rx_precios_publicos', { p_token: token }),
 
   async enviar(id, correo) {
     const { data, error } = await supabase.functions.invoke<{ ok?: boolean; mensaje?: string }>('rx-enviar', {

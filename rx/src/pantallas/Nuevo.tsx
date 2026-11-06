@@ -535,9 +535,10 @@ function Listo({
         <Tarjeta
           titulo="Enviar por correo"
           detalle={
-            perfil.correo
+            (perfil.correo
               ? `Le llega con el PDF adjunto. Si responde, la respuesta te llega a ${perfil.correo}.`
-              : 'Le llega con el PDF adjunto.'
+              : 'Le llega con el PDF adjunto.') +
+            ' Si hay precios recientes de sus medicamentos, Helios le añade un enlace para compararlos; tú no los eliges ni los modificas.'
           }
         >
           <EnviarCorreo recipeId={recipe.id} correoInicial={recipe.paciente.correo} listoParaEnviar={Boolean(pdf)} />

@@ -95,5 +95,7 @@ Deno.serve(
     },
 
     aBase64: encodeBase64,
+
+    datosPrecios: (recipeId) => rpcServicio('rx_datos_precios_envio', { p_recipe_id: recipeId }),
   }),
 )

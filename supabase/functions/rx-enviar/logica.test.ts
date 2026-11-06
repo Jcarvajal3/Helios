@@ -8,6 +8,7 @@ import {
   armarCorreo,
   cabecerasCors,
   direccionDe,
+  enlaceDePrecios,
   errorDeLaBase,
   esPdf,
   escaparHtml,
@@ -64,6 +65,7 @@ const base = {
   correo: 'pedro@example.com',
   numero: 12,
   pdfBase64: 'QUJD',
+  enlacePrecios: null as string | null,
 }
 const correo = armarCorreo(base)
 comprueba(correo.from === '"Dra. Ana Lara vía Helios" <hola@conhelios.com>', 'el remitente', correo.from)
@@ -93,6 +95,23 @@ try {
   lanzo = true
 }
 comprueba(lanzo, 'sin dirección de remitente no se arma')
+
+// ─── El enlace a las farmacias y precios ─────────────────────────────────────
+
+const TOKEN = 'a'.repeat(32)
+comprueba(enlaceDePrecios(TOKEN, true) === `https://conhelios.com/rx/#/medicinas/${TOKEN}`, 'el enlace va en el hash')
+comprueba(enlaceDePrecios(TOKEN, false) === null, 'sin precios no hay enlace')
+comprueba(enlaceDePrecios(TOKEN, undefined) === null, 'si la base no lo dice, no hay enlace')
+comprueba(enlaceDePrecios('../otra', true) === null && enlaceDePrecios(undefined, true) === null, 'un token raro no arma enlace')
+
+comprueba(!correo.html.includes('medicinas') && !correo.text.includes('medicinas'), 'sin precios el correo no lo menciona')
+const conPrecios = armarCorreo({ ...base, enlacePrecios: enlaceDePrecios(TOKEN, true) })
+for (const cuerpo of [conPrecios.text, conPrecios.html]) {
+  comprueba(cuerpo.includes(`/rx/#/medicinas/${TOKEN}`), 'lleva el enlace')
+  comprueba(cuerpo.includes('Tu médico no elige estas farmacias'), 'dice que no es cosa del médico')
+  comprueba(!/recomienda|la mejor|más barat/i.test(cuerpo), 'no recomienda una farmacia')
+  comprueba(!/préstamo|financiamiento|financiar|crédito|\bfee\b/i.test(cuerpo), 'sin palabras prohibidas')
+}
 
 // ─── El manejador ────────────────────────────────────────────────────────────
 
@@ -125,6 +144,7 @@ function dobles(cambios: Partial<Dependencias> = {}) {
       return { ok: true, estado: 200, id: 'prov-1', mensaje: null }
     },
     aBase64: (b) => Buffer.from(b).toString('base64'),
+    datosPrecios: async () => ({ token_precios: 'b'.repeat(32), hay_precios: true }),
     ...cambios,
   }
   return { manejar: crearManejador(deps), anotados, enviados }
@@ -139,6 +159,18 @@ function peticion(auth = 'Bearer bueno', cuerpo: unknown = { recipe_id: ID, corr
 }
 
 async function principal() {
+  // El enlace llega al correo por la service_role, y si falla el récipe sale igual.
+  let conEnlace = dobles()
+  let respuesta = await conEnlace.manejar(peticion())
+  comprueba(respuesta.status === 200 && conEnlace.enviados[0].cuerpo.text.includes(`/rx/#/medicinas/${'b'.repeat(32)}`), 'el correo lleva el enlace')
+  comprueba(!JSON.stringify(await respuesta.json()).includes('b'.repeat(32)), 'el médico no recibe el enlace en la respuesta')
+  conEnlace = dobles({ datosPrecios: async () => { throw new Error('caída') } })
+  respuesta = await conEnlace.manejar(peticion())
+  comprueba(respuesta.status === 200 && !conEnlace.enviados[0].cuerpo.text.includes('medicinas'), 'si fallan los precios, el récipe sale sin enlace')
+  conEnlace = dobles({ datosPrecios: async () => ({ token_precios: 'b'.repeat(32), hay_precios: false }) })
+  await conEnlace.manejar(peticion())
+  comprueba(!conEnlace.enviados[0].cuerpo.text.includes('medicinas'), 'sin precios no hay enlace')
+
   let d = dobles()
   let r = await d.manejar(new Request('https://x.test', { method: 'OPTIONS', headers: { Origin: 'http://localhost:3002' } }))
   comprueba(r.status === 204 && r.headers.get('Access-Control-Allow-Origin') === 'http://localhost:3002', 'OPTIONS con CORS')

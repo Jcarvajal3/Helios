@@ -114,6 +114,24 @@ export const datosDemo: Datos = {
         String(r.numero).includes(q),
     )
   },
+  async preciosPublicos(token) {
+    await espera()
+    if (token !== 'demo') throw new Error('Este enlace no existe o ya venció.')
+    const hace = new Date(Date.now() - 2 * 86_400_000).toISOString()
+    return {
+      sin_precio: 1,
+      medicamentos: [
+        {
+          nombre: 'Amoxicilina 500 mg',
+          ofertas: [
+            { farmacia: 'Farmacia Uno', producto: 'AMOXICILINA 500MG CAPSULAS X 21', laboratorio: 'Laboratorio A', presentacion: 'Caja x 21', moneda: 'VES', precio: 1117.9, url: 'https://example.com', disponible: true, visto_en: hace },
+            { farmacia: 'Farmacia Dos', producto: 'Amoxicilina 500 mg cápsulas x 21', laboratorio: '', presentacion: '', moneda: 'VES', precio: 1555, url: '', disponible: null, visto_en: hace },
+            { farmacia: 'Farmacia Tres', producto: 'AMOXIL 500 MG', laboratorio: 'Laboratorio B', presentacion: 'Caja x 12', moneda: 'USD', precio: 5.22, url: 'https://example.com', disponible: null, visto_en: hace },
+          ],
+        },
+      ],
+    }
+  },
   async enviar(id, correo) {
     await espera(600)
     const r = recipes.find((x) => x.id === id)
