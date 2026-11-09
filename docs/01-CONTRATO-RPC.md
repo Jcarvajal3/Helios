@@ -1434,6 +1434,89 @@ La tarjeta y la ficha pública `/medico/<slug>` lo enseñan como «Consulta a pa
 $40» o «Consulta a partir de: €40» (`ROTULO_DE_PRECIO`): el precio es el mínimo,
 no uno fijo. Al estilo de aquí y sin céntimos si no los tiene (`precioDeTarjeta`). Suite: `supabase/tests/directorio_smoke.sql`, paso 9.
 
+### 2.17 La prueba A/B del directorio (2026-11-09, 20261109130000 y 20261109130100)
+
+Dos directorios conviven: **A** `/directorio` (y sus especialidades y fichas),
+el de siempre, y **B** `/consultas`, «¡Consultas médicas por solo $15 de
+inicial!», solo con los médicos cuya consulta vale **más de $15 y como mucho
+$60**, con el botón al WhatsApp de Helios y el código con la marca de B
+(`DIR-7K2P-B`). La inicial es solo texto: el cobro no cambia. Plan y
+decisiones: `docs/06-PRUEBA-AB-DEL-DIRECTORIO.md`. Variante: `text`, `'a'` o
+`'b'`. Solo cuenta lo público (`origin = 'publico'`).
+
+- **Precios del CSV** (20261109130000): Dra. Andreina Prieto €30 y Dr. Victor
+  Miguel Gómez Montaño €120, buscados por el nombre de su tarjeta (falla si no
+  hay exactamente una clínica de cada uno), por `admin_directorio_guardar`
+  firmado por Javier (queda en la bitácora).
+- `directory_contact_clicks.variant` y `directory_leads.variant`: `text not
+  null default 'a' check (variant in ('a','b'))`. Lo de antes quedó en `'a'`.
+- `helios_directorio_contacto(p_merchant_id uuid, p_visitante text default
+  null, p_origen jsonb default null, p_variante text default 'a') → boolean`
+  — **anon y authenticated**. Lo de §2.13 más la variante: `'b'` (sin
+  distinguir mayúsculas) es B; cualquier otra cosa, o nada, `'a'`. Reemplaza a
+  la de 3 argumentos (llamarla con 2 o 3, posicionales o nombrados, sigue
+  valiendo). Los límites (30 s, 30 al día) no miran la variante.
+- `directory_page_views` (RLS sin políticas, sin acceso de la API): `id uuid`,
+  `variant` (`a`/`b`), `visitor_id` (`^[A-Za-z0-9-]{8,64}$` o null),
+  `origin` (`publico`/`equipo`/`clinica`, la regla de los clics), `source`,
+  `referrer_host`, `landing_path`, `page_path`, `utm_source`, `utm_medium`,
+  `utm_campaign` (las validaciones de los clics) y `created_at`. Índices por
+  `(variant, created_at)` y `(visitor_id, created_at)`.
+- `helios_directorio_visita(p_variante text, p_visitante text default null,
+  p_origen jsonb default null) → boolean` — **anon y authenticated**. Apunta
+  una visita; `p_origen` como en el clic (lo malformado se descarta). `false`
+  y no apunta nada si la variante no es `a` ni `b` (sin distinguir
+  mayúsculas), si el mismo navegador ya abrió la misma página (misma variante
+  y `pagina`) en los últimos 30 minutos, o si ya lleva 200 visitas en 24
+  horas. Sin `p_visitante` válido se apunta siempre.
+- `bot_directorio_interesado(p_phone, p_code, p_message_id, p_variante text
+  default 'a') → jsonb` — **solo `service_role`**. Lo de §2.12 más la
+  variante (`'b'` → B; lo demás, `'a'`), que se guarda **al crear** el
+  interesado; si ya existía, conserva la suya. Devuelve además `variante` (la
+  guardada). El webhook sin `p_variante` sigue funcionando.
+- `helios_consultas_tope_usd() → numeric` (60) y
+  `helios_consultas_inicial_usd() → numeric` (15), `immutable`, anon y
+  authenticated.
+- La regla de B (no se exponen): `helios_directorio_precio_usd(precio,
+  moneda)` da el precio de la tarjeta en dólares a 2 decimales (en euros, por
+  la tasa cruzada `BCV_EUR / BCV` de hoy, la última con `effective_date` ≤ hoy
+  en Caracas, a 6 decimales, como `helios_usd_per_unit`; null sin precio o sin
+  tasa) y `helios_consultas_entra(precio_usd)` = más de 15 y como mucho 60.
+- `helios_directorio_consultas() → table(…las columnas de
+  helios_directorio(), en su orden…, consultation_price_usd numeric)` —
+  **anon y authenticated**. Los publicados que entran en B, en el **mismo
+  orden sorteado** de `helios_directorio()` (se filtra sin reordenar).
+- `admin_directorio_ab(p_desde date, p_hasta date) → jsonb` —
+  `is_platform_admin()` (`42501` si no). Días de Caracas, los dos incluidos;
+  `22023` si `p_desde > p_hasta` o pasa de 366 días. Sin `p_hasta`, hoy; sin
+  `p_desde`, los 7 días que acaban en `p_hasta`.
+  ```
+  { desde, hasta,
+    variantes: [ { variante: 'a', ruta: '/directorio', visitas, visitantes, clics,
+                   visitantes_con_clic, interesados, convertidos },
+                 { variante: 'b', ruta: '/consultas', … } ],
+    dias: [ { dia, a: { visitantes, visitantes_con_clic, clics }, b: { … } } ],
+    medicos: [ { merchant_id, medico, precio_cur, moneda, en_b,
+                 clics_a, clics_b, interesados_b, convertidos_b } ],
+    excluidos: { visitas_equipo, clics_equipo },
+    visitas_desde }
+  ```
+  `visitantes`: `coalesce(visitor_id, id)` distintos de las visitas.
+  `visitantes_con_clic`: los navegadores distintos con algún clic de esa
+  variante en el rango **que además tienen una visita de esa variante** en el
+  rango (en `dias`, ese mismo día; `20261109140000`): un clic sin navegador,
+  o sin visita, no cuenta en la tasa. `dias`: todos
+  los días del rango, también los vacíos. `interesados`: los de esa variante
+  con `first_at` en el rango; `convertidos`, los de esos con orden
+  (`helios_directorio_conversion`, §2.12). `medicos`: los que entran hoy en B
+  y cualquiera con un clic o un interesado de B en el rango, el de más clics
+  (A + B) primero; `medico` es el nombre de la tarjeta, `precio_cur` y
+  `moneda` los de la tarjeta (`precio_cur` null si no tiene). `excluidos`: las
+  visitas y los clics de `equipo` y `clinica` en el rango. `visitas_desde`: el
+  día de la primera visita apuntada (cualquier origen), o null.
+
+Suite: `supabase/tests/directorio_ab_smoke.sql`.
+
 ---
 
 ## 3. Parámetros nuevos (`business_parameters`)

@@ -96,6 +96,7 @@ SUITES=(
   rol_del_equipo_smoke
   directorio_smoke
   directorio_interesados_smoke
+  directorio_ab_smoke
   rx_smoke
   rx_precios_smoke
   rx_catalogo_smoke

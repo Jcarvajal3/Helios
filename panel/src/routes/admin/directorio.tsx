@@ -13,6 +13,7 @@ import { FichaDelDirectorio } from '@/components/admin/directorio-de-medicos/Fic
 import { columnasDelDirectorio } from '@/components/admin/directorio-de-medicos/columnas'
 import { columnasDeInteresados } from '@/components/admin/directorio-de-medicos/columnasDeInteresados'
 import { VistaDeOrigen } from '@/components/admin/directorio-de-medicos/VistaDeOrigen'
+import { VistaPruebaAB } from '@/components/admin/directorio-de-medicos/VistaPruebaAB'
 import { BarChart } from '@/components/charts/barras'
 import { PageAction } from '@/components/layouts/PageAction'
 import {
@@ -55,6 +56,8 @@ import type {
   QueSeVe,
   VistaDelDirectorio,
 } from '@/features/admin/directorioDeMedicos/directorioDeMedicos'
+import { RANGO_POR_DEFECTO, leerRangoDeLaPrueba } from '@/features/admin/directorioDeMedicos/pruebaAB'
+import type { RangoDeLaPrueba } from '@/features/admin/directorioDeMedicos/pruebaAB'
 import { FUENTES_DE_LA_PORTADA } from '@/lib/fuentes'
 import { comoId, comoTexto, unoDe } from '@/lib/busqueda'
 import { describeError } from '@/lib/supabase'
@@ -69,19 +72,23 @@ type DirectorioSearch = {
   q?: string
   /** La clínica cuya ficha está abierta. */
   medico?: string
+  /** El rango de la prueba A/B, en días (sin escribir, 30). */
+  dias?: RangoDeLaPrueba
 }
 
 export const Route = createFileRoute('/admin/directorio')({
   staticData: { title: 'Directorio de médicos', width: 'wide' },
   // La vista previa de la tarjeta lleva la letra de la portada.
   head: () => ({ links: [FUENTES_DE_LA_PORTADA] }),
-  // En Helios Lite, «Clics por médico (Ads)» de la maqueta (`lite/ClicsLite`).
-  component: conLite(DirectorioPage, ClicsLite),
+  // En Helios Lite, «Clics por médico (Ads)» de la maqueta (`lite/ClicsLite`),
+  // que con `?vista=ab` pinta la prueba A/B de Pro con el vestido de Lite.
+  component: conLite(DirectorioPage, ClicsLite, ['vista', 'dias']),
   validateSearch: (search: Record<string, unknown>): DirectorioSearch => ({
     vista: unoDe(VISTAS_DEL_DIRECTORIO, search.vista),
     ver: unoDe(VALORES_QUE_SE_VE, search.ver),
     q: comoTexto(search.q),
     medico: comoId(search.medico),
+    dias: leerRangoDeLaPrueba(search.dias),
   }),
 })
 
@@ -89,6 +96,7 @@ const OPCIONES_VISTA: Array<{ value: VistaDelDirectorio; label: string }> = [
   { value: 'medicos', label: 'Médicos' },
   { value: 'interesados', label: 'Interesados' },
   { value: 'origen', label: 'Origen' },
+  { value: 'ab', label: 'Prueba A/B' },
 ]
 
 const OPCIONES_VER: Array<{ value: QueSeVe; label: string }> = [
@@ -113,6 +121,8 @@ const cuenta = (n: number) => String(Math.round(n))
  * WhatsApp de Helios desde una tarjeta, con si ya es paciente de ese médico.
  * «Origen» (2026-10-30), de dónde vinieron las visitas que terminaron en un
  * clic: Google, ChatGPT, Instagram… y por qué página entraron.
+ * «Prueba A/B» (2026-11-09, docs/06), `/directorio` contra `/consultas`:
+ * visitantes, clics, tasa de clic y quién gana (`VistaPruebaAB`).
  * Nadie sale sin que alguien del equipo lo encienda. Los datos salen de
  * `admin_directorio`, `admin_directorio_interesados` y
  * `admin_directorio_origenes` (docs/01 §2.11, docs/04).
@@ -265,14 +275,16 @@ function DirectorioPage() {
             blanco. Con una fila por médico, la tabla se baja con la página. */}
         <div className="[--panel-table-max-h:none]">
           <FilterBar>
-            <BuscadorEnUrl
-              id="buscar-directorio"
-              valor={search.q}
-              placeholder={
-                vista === 'interesados' ? 'Médico, teléfono o paciente' : 'Médico, clínica, especialidad o teléfono'
-              }
-              onBuscar={(q) => cambiar({ q }, true)}
-            />
+            {vista !== 'ab' && (
+              <BuscadorEnUrl
+                id="buscar-directorio"
+                valor={search.q}
+                placeholder={
+                  vista === 'interesados' ? 'Médico, teléfono o paciente' : 'Médico, clínica, especialidad o teléfono'
+                }
+                onBuscar={(q) => cambiar({ q }, true)}
+              />
+            )}
             <Filtro label="Vista">
               <Segmented
                 options={OPCIONES_VISTA}
@@ -292,6 +304,13 @@ function DirectorioPage() {
           </FilterBar>
 
           {vista === 'origen' && <VistaDeOrigen consulta={origenes} />}
+
+          {vista === 'ab' && (
+            <VistaPruebaAB
+              dias={search.dias ?? RANGO_POR_DEFECTO}
+              onDias={(d) => cambiar({ dias: d === RANGO_POR_DEFECTO ? undefined : d })}
+            />
+          )}
 
           {vista === 'interesados' && (
             <VistaDeInteresados

@@ -3,12 +3,14 @@ import type { ReactNode } from 'react'
 import { Link, useNavigate, useRouter, useSearch } from '@tanstack/react-router'
 import { ChevronRight, ChevronUp, RotateCw, Search, Tag, X } from 'lucide-react'
 
+import { HeliosLogo } from '@/components/HeliosLogo'
 import { imagenDeEspecialidad } from '@/components/directorio/IlustracionDeEspecialidad'
 import { TarjetaDeMedico } from '@/components/directorio/TarjetaDeMedico'
 import { Pie } from '@/components/portada'
 import { Menu } from '@/components/portada/Menu'
 import { Desglose } from '@/components/portada/Pacientes'
 import { BotonAfiliarme, Boton, Lienzo, Revelar, Rotulo } from '@/components/portada/piezas'
+import { operador } from '@/config/legal'
 import { apuntarContacto } from '@/features/directorio/api'
 import {
   CLAVES_DE_TRAMO,
@@ -18,11 +20,18 @@ import {
   filtrarDirectorio,
   tramosConMedicos,
 } from '@/features/directorio/directorio'
-import type { ClaveDeTramo, EspecialidadPresente, MedicoDelDirectorio } from '@/features/directorio/directorio'
+import type {
+  ClaveDeTramo,
+  EspecialidadPresente,
+  MedicoDelDirectorio,
+  VarianteDelDirectorio,
+} from '@/features/directorio/directorio'
 import { unoDe } from '@/lib/busqueda'
 import { nombreDeEspecialidad } from '@/features/directorio/especialidades'
 import type { ClaveDeEspecialidad } from '@/features/directorio/especialidades'
+import { apuntarLlegada } from '@/features/directorio/origen'
 import { rutaDeEspecialidad } from '@/features/directorio/paginas'
+import { useVisitaDelDirectorio } from '@/features/directorio/visita'
 
 /**
  * EL DIRECTORIO DE MÉDICOS — la página de `/directorio` y de
@@ -47,6 +56,19 @@ import { rutaDeEspecialidad } from '@/features/directorio/paginas'
  * sigue viendo a todos los médicos.
  *
  * Tiene el aspecto de la portada (`styles/portada.css`), siempre en claro.
+ *
+ * LA VARIANTE B — `/consultas` (`variante="b"`, prueba A/B, docs/06). La
+ * misma página con otra oferta («$15 de inicial»), para quien llega por un
+ * anuncio o un enlace compartido. Lo que cambia:
+ *   - el filtro de especialidad se queda en la página (`?especialidad=`) y
+ *     no hay filtro de precio ni migas (ni enlaces a `/directorio`);
+ *   - las tarjetas no enlazan a la ficha y su botón pasa por el WhatsApp de
+ *     Helios con «-B» en el código;
+ *   - sin menú, pie, «Cómo pagas» ni «Para médicos»: todo eso enlaza a
+ *     guías que dicen «sin inicial» y las fechas de las cuotas, que
+ *     contradicen la oferta. Lleva una marca arriba y una línea legal abajo.
+ *
+ * Las dos apuntan la visita (`useVisitaDelDirectorio`) con su variante.
  */
 
 const NOCHE = '#020B24'
@@ -54,6 +76,25 @@ const NOCHE = '#020B24'
 /** El tramo de precio elegido, de la dirección. */
 function useTramoElegido(): ClaveDeTramo | undefined {
   return useSearch({ strict: false, select: (s) => unoDe(CLAVES_DE_TRAMO, (s as { precio?: unknown }).precio) })
+}
+
+/** Adónde lleva una ficha de especialidad (o «Todas», sin `clave`). */
+type Destino = { to: string; search: Record<string, string> }
+
+/**
+ * En A, cada especialidad es su página y el filtro de precio sigue puesto;
+ * en B, todo se queda en `/consultas` con `?especialidad=`.
+ */
+function useDestinos(variante: VarianteDelDirectorio): (clave?: ClaveDeEspecialidad) => Destino {
+  const precio = useTramoElegido()
+  return (clave) => {
+    if (variante === 'b') {
+      const search: Record<string, string> = clave ? { especialidad: clave } : {}
+      return { to: '/consultas', search }
+    }
+    const search: Record<string, string> = precio ? { precio } : {}
+    return { to: clave ? rutaDeEspecialidad(clave) : '/directorio', search }
+  }
 }
 
 export function PaginaDelDirectorio({
@@ -64,6 +105,7 @@ export function PaginaDelDirectorio({
   h1,
   entrada,
   guia,
+  variante = 'a',
 }: {
   medicos: MedicoDelDirectorio[]
   fallo: boolean
@@ -72,15 +114,19 @@ export function PaginaDelDirectorio({
   especialidad?: ClaveDeEspecialidad
   h1: { antes: string; enfasis: string }
   entrada: string
-  /** La guía del pago en cuotas que más se le parece («/odontologia-en-cuotas»). */
-  guia: { ruta: string; texto: string }
+  /** La guía del pago en cuotas que más se le parece («/odontologia-en-cuotas»). Solo en A. */
+  guia?: { ruta: string; texto: string }
+  /** `'b'`: `/consultas`. */
+  variante?: VarianteDelDirectorio
 }) {
   const especialidades = useMemo(() => especialidadesPresentes(medicos), [medicos])
   const deLaEspecialidad = useMemo(() => filtrarDirectorio(medicos, { especialidad }), [medicos, especialidad])
+  useVisitaDelDirectorio(variante)
+  const enB = variante === 'b'
 
   return (
     <div className="portada-raiz min-h-screen">
-      <Menu />
+      {enB ? <MarcaDeConsultas /> : <Menu />}
       <main>
         <Cabecera
           especialidades={especialidades}
@@ -88,6 +134,7 @@ export function PaginaDelDirectorio({
           total={medicos.length}
           h1={h1}
           entrada={entrada}
+          variante={variante}
         />
         <Resultados
           medicos={medicos}
@@ -95,12 +142,45 @@ export function PaginaDelDirectorio({
           fallo={fallo}
           whatsappHelios={whatsappHelios}
           especialidad={especialidad}
+          variante={variante}
         />
-        <ComoPagas guia={guia} />
-        <ParaMedicos />
+        {!enB && guia && <ComoPagas guia={guia} />}
+        {!enB && <ParaMedicos />}
       </main>
-      <Pie />
+      {enB ? <PieDeConsultas /> : <Pie />}
     </div>
+  )
+}
+
+/**
+ * Arriba de `/consultas`: solo la marca, sin enlaces (ni a la portada, que
+ * dice «0% inicial»). Apunta la llegada como el menú, que aquí no está.
+ */
+function MarcaDeConsultas() {
+  useEffect(() => apuntarLlegada(), [])
+  return (
+    <header className="absolute inset-x-0 top-0 z-50 px-3 pt-3 sm:px-5 sm:pt-4">
+      <div className="mx-auto flex w-full max-w-[calc(var(--portada-ancho)+1.5rem)] items-center py-2 pl-5">
+        <HeliosLogo height={26} color="#002770" />
+      </div>
+    </header>
+  )
+}
+
+/**
+ * Abajo de `/consultas`: quién opera Helios y la privacidad. Sin los
+ * términos ni las guías: dicen «sin inicial» (docs/06).
+ */
+function PieDeConsultas() {
+  return (
+    <footer className="border-t border-portada-linea bg-white">
+      <Lienzo className="flex flex-col gap-3 py-8 text-[0.82rem] leading-relaxed text-portada-tinta-3 sm:flex-row sm:items-center sm:justify-between">
+        <p>Helios es operado por {operador()} · Venezuela · Solo para mayores de 18 años.</p>
+        <Link to="/legal/privacidad" className="underline-offset-4 hover:text-portada-tinta hover:underline">
+          Política de privacidad
+        </Link>
+      </Lienzo>
+    </footer>
   )
 }
 
@@ -136,12 +216,14 @@ function Cabecera({
   total,
   h1,
   entrada,
+  variante,
 }: {
   especialidades: EspecialidadPresente[]
   elegida: ClaveDeEspecialidad | undefined
   total: number
   h1: { antes: string; enfasis: string }
   entrada: string
+  variante: VarianteDelDirectorio
 }) {
   return (
     <section className="relative isolate overflow-clip bg-white">
@@ -155,7 +237,7 @@ function Cabecera({
       />
       <Lienzo className="pb-7 pt-28 sm:pb-10 sm:pt-36">
         <div className="max-w-[52rem]">
-          {elegida && (
+          {elegida && variante === 'a' && (
             <div className="mb-6">
               <MigasDelDirectorio
                 tramos={[
@@ -174,7 +256,7 @@ function Cabecera({
         </div>
 
         {especialidades.length > 1 && (
-          <Especialidades especialidades={especialidades} elegida={elegida} total={total} />
+          <Especialidades especialidades={especialidades} elegida={elegida} total={total} variante={variante} />
         )}
       </Lienzo>
     </section>
@@ -194,11 +276,14 @@ function Especialidades({
   especialidades,
   elegida,
   total,
+  variante,
 }: {
   especialidades: EspecialidadPresente[]
   elegida: ClaveDeEspecialidad | undefined
   total: number
+  variante: VarianteDelDirectorio
 }) {
+  const destino = useDestinos(variante)
   const copia = useRef<HTMLUListElement>(null)
   // Cuántas fichas (contando «Todas») se ven con la lista cerrada; `null`
   // hasta medir (en el servidor, la lista se recorta con CSS).
@@ -244,7 +329,7 @@ function Especialidades({
   const visibles = caben === null || abierta ? especialidades : especialidades.slice(0, caben - 1)
 
   const todas = (
-    <ChipDeEspecialidad activa={!elegida} to="/directorio">
+    <ChipDeEspecialidad activa={!elegida} destino={destino()}>
       Todas
       <Cuenta activa={!elegida}>{total}</Cuenta>
     </ChipDeEspecialidad>
@@ -253,7 +338,7 @@ function Especialidades({
   const ficha = (e: EspecialidadPresente) => (
     <ChipDeEspecialidad
       activa={elegida === e.clave}
-      to={elegida === e.clave ? '/directorio' : rutaDeEspecialidad(e.clave)}
+      destino={destino(elegida === e.clave ? undefined : e.clave)}
     >
       {/* Con ancho y alto fijos: la medición de las fichas no depende de que cargue. */}
       <img src={imagenDeEspecialidad(e.clave)} alt="" width={26} height={26} decoding="async" className="-ml-1 size-[26px]" />
@@ -324,28 +409,26 @@ function Especialidades({
 }
 
 /**
- * Una ficha de especialidad (un enlace a su página, `to`) o «Ver más» (un
- * botón, `onClick`). El enlace no sube la página: quien elige una
- * especialidad sigue viendo las tarjetas.
+ * Una ficha de especialidad (un enlace, `destino`: su página en A, el filtro
+ * en B) o «Ver más» (un botón, `onClick`). El enlace no sube la página:
+ * quien elige una especialidad sigue viendo las tarjetas.
  */
 function ChipDeEspecialidad({
   activa,
-  to,
+  destino,
   onClick,
   variante = 'especialidad',
   children,
   ...aria
 }: {
   activa: boolean
-  to?: string
+  destino?: Destino
   onClick?: () => void
   variante?: 'especialidad' | 'mas'
   children: ReactNode
   'aria-expanded'?: boolean
   'aria-controls'?: string
 }) {
-  // El filtro de precio sigue puesto al cambiar de especialidad.
-  const precio = useTramoElegido()
   const clases = `directorio-chip inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-full border pl-3.5 pr-1.5 text-[0.88rem] tracking-[-0.01em] sm:pl-4 sm:text-[0.9rem] ${
     activa
       ? 'border-portada-tinta bg-portada-tinta text-white'
@@ -353,11 +436,11 @@ function ChipDeEspecialidad({
         ? 'border-dashed border-portada-tinta/25 bg-white/80 font-medium text-portada-tinta backdrop-blur hover:border-portada-tinta/45'
         : 'border-portada-linea bg-white/80 text-portada-tinta-2 backdrop-blur hover:border-portada-tinta/25 hover:text-portada-tinta'
   }`
-  if (to) {
+  if (destino) {
     return (
       <Link
-        to={to}
-        search={(precio ? { precio } : {}) as never}
+        to={destino.to}
+        search={destino.search as never}
         resetScroll={false}
         aria-current={activa ? 'page' : undefined}
         className={clases}
@@ -393,17 +476,23 @@ function Resultados({
   fallo,
   whatsappHelios,
   especialidad,
+  variante,
 }: {
   medicos: MedicoDelDirectorio[]
   deLaEspecialidad: MedicoDelDirectorio[]
   fallo: boolean
   whatsappHelios: string | null
   especialidad: ClaveDeEspecialidad | undefined
+  variante: VarianteDelDirectorio
 }) {
   const router = useRouter()
   const navigate = useNavigate()
   const [reintentando, setReintentando] = useState(false)
-  const precio = useTramoElegido()
+  const enB = variante === 'b'
+  const tramoElegido = useTramoElegido()
+  // B no tiene filtro de precio.
+  const precio = enB ? undefined : tramoElegido
+  const todos = useDestinos(variante)()
   const encontrados = useMemo(
     () => filtrarDirectorio(deLaEspecialidad, { precio }),
     [deLaEspecialidad, precio],
@@ -452,8 +541,8 @@ function Resultados({
               </p>
               {especialidad && (
                 <Link
-                  to="/directorio"
-                  search={(precio ? { precio } : {}) as never}
+                  to={todos.to}
+                  search={todos.search as never}
                   resetScroll={false}
                   className="inline-flex items-center gap-1.5 text-[0.9rem] font-medium text-portada-azul underline-offset-4 hover:underline"
                 >
@@ -462,7 +551,7 @@ function Resultados({
               )}
             </div>
 
-            <FiltroDePrecio medicos={deLaEspecialidad} elegido={precio} onElegir={elegirTramo} />
+            {!enB && <FiltroDePrecio medicos={deLaEspecialidad} elegido={precio} onElegir={elegirTramo} />}
             {precio && sinPrecio > 0 && (
               <p className="mt-2.5 text-[0.85rem] text-portada-tinta-3">
                 No incluye {sinPrecio === 1 ? 'al médico que no publica' : `a los ${sinPrecio} médicos que no publican`} su
@@ -492,7 +581,8 @@ function Resultados({
                   texto="Prueba con otra especialidad: todos los médicos de este directorio aceptan Helios."
                 >
                   <Link
-                    to="/directorio"
+                    to={todos.to}
+                    search={(enB ? {} : undefined) as never}
                     resetScroll={false}
                     className="inline-flex h-12 items-center rounded-full border border-portada-linea bg-white px-6 text-[0.95rem] font-medium tracking-[-0.01em] text-portada-tinta transition-colors hover:border-portada-tinta/25"
                   >
@@ -507,7 +597,8 @@ function Resultados({
                     <TarjetaDeMedico
                       medico={m}
                       whatsappHelios={whatsappHelios}
-                      onContacto={() => apuntarContacto(m.id)}
+                      onContacto={() => apuntarContacto(m.id, variante)}
+                      variante={variante}
                     />
                   </Revelar>
                 ))}

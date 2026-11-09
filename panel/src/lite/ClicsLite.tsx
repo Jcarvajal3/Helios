@@ -1,12 +1,14 @@
 import { useMemo, useState } from 'react'
-import { Link } from '@tanstack/react-router'
+import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
+import { VistaPruebaAB } from '@/components/admin/directorio-de-medicos/VistaPruebaAB'
 import { useToast } from '@/components/Toast'
 import { diaOperativo, formatPct } from '@/components/ui'
 import { sumarDias } from '@/components/kit/rango'
 import { consultaDirectorio, guardarTarjeta, refrescarDirectorio } from '@/features/admin/directorioDeMedicos/api'
 import type { MedicoEnElDirectorio } from '@/features/admin/directorioDeMedicos/directorioDeMedicos'
+import { RANGO_POR_DEFECTO, leerRangoDeLaPrueba } from '@/features/admin/directorioDeMedicos/pruebaAB'
 import { consultaDeJuanPablo } from '@/features/admin/metricas/juan-pablo/api'
 import { nombreDeEspecialidad } from '@/features/directorio/especialidades'
 import { describeError } from '@/lib/supabase'
@@ -21,7 +23,37 @@ import { Barritas, cambio, inicialesDeMedico } from './kit'
  */
 const ENTERO = new Intl.NumberFormat('es-VE')
 
-export function ClicsLite() {
+/**
+ * La pestaña «Prueba A/B» (`?vista=ab`) es la vista de Pro, con el vestido de
+ * Lite; sin vista (o con otra), los médicos del directorio.
+ */
+export function ClicsLite(): React.JSX.Element {
+  const conLaPrueba = useRouterState({
+    select: (s) => (s.location.search as Record<string, unknown> | undefined)?.vista === 'ab',
+  })
+  return conLaPrueba ? <PruebaABLite /> : <MedicosDelDirectorio />
+}
+
+/** La prueba A/B de Pro; el rango, en la dirección (`?dias=`) como en Pro. */
+function PruebaABLite(): React.JSX.Element {
+  const navigate = useNavigate()
+  const dias = useRouterState({
+    select: (s) => leerRangoDeLaPrueba((s.location.search as Record<string, unknown> | undefined)?.dias),
+  })
+  return (
+    <VistaPruebaAB
+      dias={dias ?? RANGO_POR_DEFECTO}
+      onDias={(d) =>
+        void navigate({
+          to: '/admin/directorio',
+          search: { vista: 'ab', dias: d === RANGO_POR_DEFECTO ? undefined : d },
+        })
+      }
+    />
+  )
+}
+
+function MedicosDelDirectorio() {
   const client = useQueryClient()
   const avisar = useToast()
   const [texto, setTexto] = useState('')

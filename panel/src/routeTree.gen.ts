@@ -15,6 +15,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AfiliacionRouteImport } from './routes/afiliacion'
 import { Route as AgendaRouteImport } from './routes/agenda'
 import { Route as ConsultaMedicaEnCuotasRouteImport } from './routes/consulta-medica-en-cuotas'
+import { Route as ConsultasRouteImport } from './routes/consultas'
 import { Route as CosmetologiaEnCuotasRouteImport } from './routes/cosmetologia-en-cuotas'
 import { Route as DirectorioRouteImport } from './routes/directorio'
 import { Route as IndexnowClaveDottxtRouteImport } from './routes/indexnow-clave[.]txt'
@@ -91,6 +92,11 @@ const AgendaRoute = AgendaRouteImport.update({
 const ConsultaMedicaEnCuotasRoute = ConsultaMedicaEnCuotasRouteImport.update({
   id: '/consulta-medica-en-cuotas',
   path: '/consulta-medica-en-cuotas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConsultasRoute = ConsultasRouteImport.update({
+  id: '/consultas',
+  path: '/consultas',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CosmetologiaEnCuotasRoute = CosmetologiaEnCuotasRouteImport.update({
@@ -342,6 +348,7 @@ export interface FileRoutesByFullPath {
   '/afiliacion': typeof AfiliacionRoute
   '/agenda': typeof AgendaRoute
   '/consulta-medica-en-cuotas': typeof ConsultaMedicaEnCuotasRoute
+  '/consultas': typeof ConsultasRoute
   '/cosmetologia-en-cuotas': typeof CosmetologiaEnCuotasRoute
   '/directorio': typeof DirectorioRoute
   '/indexnow-clave.txt': typeof IndexnowClaveDottxtRoute
@@ -396,6 +403,7 @@ export interface FileRoutesByTo {
   '/afiliacion': typeof AfiliacionRoute
   '/agenda': typeof AgendaRoute
   '/consulta-medica-en-cuotas': typeof ConsultaMedicaEnCuotasRoute
+  '/consultas': typeof ConsultasRoute
   '/cosmetologia-en-cuotas': typeof CosmetologiaEnCuotasRoute
   '/directorio': typeof DirectorioRoute
   '/indexnow-clave.txt': typeof IndexnowClaveDottxtRoute
@@ -453,6 +461,7 @@ export interface FileRoutesById {
   '/afiliacion': typeof AfiliacionRoute
   '/agenda': typeof AgendaRoute
   '/consulta-medica-en-cuotas': typeof ConsultaMedicaEnCuotasRoute
+  '/consultas': typeof ConsultasRoute
   '/cosmetologia-en-cuotas': typeof CosmetologiaEnCuotasRoute
   '/directorio': typeof DirectorioRoute
   '/indexnow-clave.txt': typeof IndexnowClaveDottxtRoute
@@ -510,6 +519,7 @@ export interface FileRouteTypes {
     | '/afiliacion'
     | '/agenda'
     | '/consulta-medica-en-cuotas'
+    | '/consultas'
     | '/cosmetologia-en-cuotas'
     | '/directorio'
     | '/indexnow-clave.txt'
@@ -564,6 +574,7 @@ export interface FileRouteTypes {
     | '/afiliacion'
     | '/agenda'
     | '/consulta-medica-en-cuotas'
+    | '/consultas'
     | '/cosmetologia-en-cuotas'
     | '/directorio'
     | '/indexnow-clave.txt'
@@ -620,6 +631,7 @@ export interface FileRouteTypes {
     | '/afiliacion'
     | '/agenda'
     | '/consulta-medica-en-cuotas'
+    | '/consultas'
     | '/cosmetologia-en-cuotas'
     | '/directorio'
     | '/indexnow-clave.txt'
@@ -677,6 +689,7 @@ export interface RootRouteChildren {
   AfiliacionRoute: typeof AfiliacionRoute
   AgendaRoute: typeof AgendaRoute
   ConsultaMedicaEnCuotasRoute: typeof ConsultaMedicaEnCuotasRoute
+  ConsultasRoute: typeof ConsultasRoute
   CosmetologiaEnCuotasRoute: typeof CosmetologiaEnCuotasRoute
   DirectorioRoute: typeof DirectorioRoute
   IndexnowClaveDottxtRoute: typeof IndexnowClaveDottxtRoute
@@ -738,6 +751,13 @@ declare module '@tanstack/react-router' {
       path: '/consulta-medica-en-cuotas'
       fullPath: '/consulta-medica-en-cuotas'
       preLoaderRoute: typeof ConsultaMedicaEnCuotasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/consultas': {
+      id: '/consultas'
+      path: '/consultas'
+      fullPath: '/consultas'
+      preLoaderRoute: typeof ConsultasRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/cosmetologia-en-cuotas': {
@@ -1166,6 +1186,7 @@ const rootRouteChildren: RootRouteChildren = {
   AfiliacionRoute: AfiliacionRoute,
   AgendaRoute: AgendaRoute,
   ConsultaMedicaEnCuotasRoute: ConsultaMedicaEnCuotasRoute,
+  ConsultasRoute: ConsultasRoute,
   CosmetologiaEnCuotasRoute: CosmetologiaEnCuotasRoute,
   DirectorioRoute: DirectorioRoute,
   IndexnowClaveDottxtRoute: IndexnowClaveDottxtRoute,

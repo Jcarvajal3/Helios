@@ -219,8 +219,11 @@ export function comoTarjetaPublica(id: string, d: DatosDeTarjeta): MedicoDelDire
 
 // ── Filtrar la lista ───────────────────────────────────────────────────────
 
-/** Una fila por médico, una por interesado, o de dónde llegan los clics. */
-export const VISTAS_DEL_DIRECTORIO = ['medicos', 'interesados', 'origen'] as const
+/**
+ * Una fila por médico, una por interesado, de dónde llegan los clics, o la
+ * prueba A/B de `/directorio` contra `/consultas` (`pruebaAB.ts`).
+ */
+export const VISTAS_DEL_DIRECTORIO = ['medicos', 'interesados', 'origen', 'ab'] as const
 export type VistaDelDirectorio = (typeof VISTAS_DEL_DIRECTORIO)[number]
 
 export const VALORES_QUE_SE_VE = ['todos', 'visibles', 'ocultos'] as const

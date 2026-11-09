@@ -252,12 +252,17 @@ export function cabeceraPublica({
       { rel: 'alternate', hrefLang: 'x-default', href: url },
       aspecto === 'portada' ? FUENTES_DE_LA_PORTADA : FUENTES_DEL_PANEL,
     ],
-    scripts: [
-      jsonLd({
-        '@context': 'https://schema.org',
-        '@graph': [ORGANIZACION, SITIO, pagina, ...miga, ...datos],
-      }),
-    ],
+    // Una página que no sale en Google no necesita datos estructurados. En
+    // `/consultas` (docs/06) además se evita que la descripción de la
+    // organización («sin inicial») contradiga la oferta de la página.
+    scripts: indexar
+      ? [
+          jsonLd({
+            '@context': 'https://schema.org',
+            '@graph': [ORGANIZACION, SITIO, pagina, ...miga, ...datos],
+          }),
+        ]
+      : [],
   }
 }
 

@@ -183,11 +183,20 @@ export function mensajeInicial(nombre: string): string {
 export const INTERESADOS_POR_HELIOS = false as boolean
 
 /**
- * Lo que el paciente encuentra escrito al abrir el chat con Helios: el
- * código es lo que el bot busca para saber de qué médico se trata.
+ * La variante de la prueba A/B del directorio (docs/06): `'a'` es
+ * `/directorio` (con sus especialidades y las fichas) y `'b'`, `/consultas`.
  */
-export function mensajeAHelios(nombre: string, codigo: string): string {
-  return `Hola, quiero agendar una consulta con ${nombre.trim()}. (Código ${codigo.trim()})`
+export type VarianteDelDirectorio = 'a' | 'b'
+
+/**
+ * Lo que el paciente encuentra escrito al abrir el chat con Helios: el
+ * código es lo que el bot busca para saber de qué médico se trata. Desde
+ * `/consultas` (`'b'`) lleva «-B» detrás («DIR-7K2P-B»): así el bot sabe de
+ * qué página viene el interesado.
+ */
+export function mensajeAHelios(nombre: string, codigo: string, variante: VarianteDelDirectorio = 'a'): string {
+  const marca = variante === 'b' ? '-B' : ''
+  return `Hola, quiero agendar una consulta con ${nombre.trim()}. (Código ${codigo.trim()}${marca})`
 }
 
 /**
@@ -195,16 +204,17 @@ export function mensajeAHelios(nombre: string, codigo: string): string {
  * el chat de Helios (`https://wa.me/58422…?text=…(Código DIR-7K2P)`): el bot
  * apunta al interesado y le pasa el WhatsApp del médico. Si falta cualquiera
  * de los dos, el chat directo con el médico, con `mensajeInicial`: el botón
- * nunca se queda sin funcionar.
+ * nunca se queda sin funcionar. Con `variante` `'b'`, el código va con «-B».
  */
 export function enlaceDeWhatsApp(
   m: Pick<MedicoDelDirectorio, 'whatsapp' | 'nombre' | 'codigo'>,
   whatsappHelios?: string | null,
+  variante: VarianteDelDirectorio = 'a',
 ): string {
   const helios = whatsappNumber(whatsappHelios ?? null)
   const codigo = m.codigo?.trim()
   if (helios && codigo) {
-    return `https://wa.me/${helios}?text=${encodeURIComponent(mensajeAHelios(m.nombre, codigo))}`
+    return `https://wa.me/${helios}?text=${encodeURIComponent(mensajeAHelios(m.nombre, codigo, variante))}`
   }
   return `https://wa.me/${whatsappNumber(m.whatsapp)}?text=${encodeURIComponent(mensajeInicial(m.nombre))}`
 }

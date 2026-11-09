@@ -82,9 +82,9 @@ begin
   -- =========================================================================
   -- 1. Permisos
   -- =========================================================================
-  if has_function_privilege('anon', 'public.bot_directorio_interesado(text, text, text)', 'execute')
-     or has_function_privilege('authenticated', 'public.bot_directorio_interesado(text, text, text)', 'execute')
-     or not has_function_privilege('service_role', 'public.bot_directorio_interesado(text, text, text)', 'execute') then
+  if has_function_privilege('anon', 'public.bot_directorio_interesado(text, text, text, text)', 'execute')
+     or has_function_privilege('authenticated', 'public.bot_directorio_interesado(text, text, text, text)', 'execute')
+     or not has_function_privilege('service_role', 'public.bot_directorio_interesado(text, text, text, text)', 'execute') then
     raise exception '1. bot_directorio_interesado debía ser solo de service_role';
   end if;
   if has_table_privilege('anon', 'public.directory_leads', 'select')

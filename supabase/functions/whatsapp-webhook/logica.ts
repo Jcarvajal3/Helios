@@ -171,3 +171,16 @@ export function codigoDelDirectorio(t: string | null | undefined): string | null
   const m = CODIGO_DEL_DIRECTORIO.exec(t ?? '')
   return m ? `DIR-${m[1].toUpperCase()}` : null
 }
+
+// El mismo código, seguido o no de «-B» (docs/06, la prueba A/B del directorio).
+const CODIGO_CON_VARIANTE = new RegExp(`${CODIGO_DEL_DIRECTORIO.source}(\\s*-\\s*B(?![A-Z0-9]))?`, 'i')
+
+/**
+ * La variante de la prueba A/B del directorio (docs/06) de la que viene el
+ * mensaje: 'b' si el código lleva «-B» detrás («(Código DIR-7K2P-B)», también
+ * «dir-7k2p - b»); 'a' en cualquier otro caso, también si no hay código.
+ */
+export function varianteDelDirectorio(t: string | null | undefined): 'a' | 'b' {
+  const m = CODIGO_CON_VARIANTE.exec(t ?? '')
+  return m?.[2] ? 'b' : 'a'
+}

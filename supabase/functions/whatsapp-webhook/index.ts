@@ -14,6 +14,8 @@
 //                                      personal, por los números de prueba
 //   3. Un código del directorio (DIR-XXXX, docs/04)
 //                                    → el contacto del médico (directorio.ts);
+//                                      con «-B» detrás, la variante B de la
+//                                      prueba A/B (docs/06);
 //                                      antes que el personal, para que un
 //                                      médico pueda probar su propia tarjeta
 //   4. Un número del personal        → el bot del médico (bot.ts)
@@ -48,6 +50,7 @@ import {
   extraerEventos,
   horaDelEstado,
   igualSeguro,
+  varianteDelDirectorio,
 } from './logica.ts'
 import type { EventoDeMensaje } from './logica.ts'
 
@@ -124,7 +127,7 @@ async function mensaje(m: EventoDeMensaje): Promise<void> {
   // 3. Un código del directorio: el contacto del médico de esa tarjeta.
   const codigo = codigoDelDirectorio(m.texto)
   if (codigo) {
-    const res = await atenderAlInteresado({ rpc, mensaje: m, codigo })
+    const res = await atenderAlInteresado({ rpc, mensaje: m, codigo, variante: varianteDelDirectorio(m.texto) })
     await listo('paciente', res)
     return
   }

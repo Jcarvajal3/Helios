@@ -38,16 +38,20 @@ export async function atenderAlInteresado({
   rpc,
   mensaje,
   codigo,
+  variante = 'a',
 }: {
   rpc: Rpc
   mensaje: EventoDeMensaje
   /** 'DIR-XXXX', de `codigoDelDirectorio`. */
   codigo: string
+  /** La variante de la prueba A/B (docs/06), de `varianteDelDirectorio`. */
+  variante?: 'a' | 'b'
 }): Promise<Record<string, unknown>> {
   const r = await rpc<Interesado>('bot_directorio_interesado', {
     p_phone: mensaje.from,
     p_code: codigo,
     p_message_id: mensaje.id,
+    p_variante: variante,
   })
 
   const enviar = (texto: string) =>
@@ -58,6 +62,6 @@ export async function atenderAlInteresado({
     return { accion: 'directorio', codigo, ok: false, motivo: r?.motivo ?? null }
   }
 
-  await enviar(mensajeContactoDelMedico(r))
+  await enviar(mensajeContactoDelMedico(r, variante))
   return { accion: 'directorio', codigo, ok: true, nuevo: r.nuevo, lead_id: r.lead_id, merchant_id: r.merchant_id }
 }

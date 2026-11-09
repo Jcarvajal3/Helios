@@ -11,6 +11,7 @@ import {
   horaDelEstado,
   igualSeguro,
   normalizar,
+  varianteDelDirectorio,
 } from './logica.ts'
 
 let fallos = 0
@@ -163,6 +164,33 @@ for (const nada of [
   undefined,
 ]) {
   comprueba(codigoDelDirectorio(nada) === null, `«${nada}» no es un código`, String(codigoDelDirectorio(nada)))
+}
+
+console.log('\nLa variante de la prueba A/B del directorio')
+const DESDE_LA_PAGINA_B = 'Hola, quiero agendar una consulta con la Dra. Ana Pérez. (Código DIR-7K2P-B)'
+comprueba(codigoDelDirectorio(DESDE_LA_PAGINA_B) === 'DIR-7K2P', 'el código de B sigue siendo DIR-7K2P', String(codigoDelDirectorio(DESDE_LA_PAGINA_B)))
+comprueba(varianteDelDirectorio(DESDE_LA_PAGINA_B) === 'b', 'el mensaje que escribe la página de B → b')
+comprueba(varianteDelDirectorio(DESDE_LA_PAGINA) === 'a', 'el mensaje que escribe la página de A → a')
+for (const [entra, sale] of [
+  ['DIR-7K2P-B', 'b'],
+  ['dir-7k2p-b', 'b'],
+  ['dir-7k2p - b', 'b'],
+  ['DIR - 7K2P -B', 'b'],
+  ['DIR-7K2P- B, gracias', 'b'],
+  ['(DIR-7K2P-B).', 'b'],
+  ['DIR-7K2P', 'a'],
+  ['DIR-7K2P-A', 'a'],
+  ['DIR-7K2P-BX', 'a'], // otra cosa, no la variante
+  ['DIR-7K2P - Buenos días', 'a'],
+  ['DIR-7K2P B', 'a'], // sin guion
+  ['B-DIR-7K2P', 'a'],
+  ['DIR-0O1I-B', 'a'], // no es un código
+  ['hola -B', 'a'],
+  ['', 'a'],
+  [null, 'a'],
+  [undefined, 'a'],
+] as const) {
+  comprueba(varianteDelDirectorio(entra) === sale, `«${entra}» → ${sale}`, varianteDelDirectorio(entra))
 }
 
 console.log('\nEl secreto')

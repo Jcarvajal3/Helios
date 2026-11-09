@@ -53,8 +53,15 @@ function lugar(t: TarjetaDelMedico): string | null {
   return direccion ?? ciudad
 }
 
-/** El contacto del médico de la tarjeta. */
-export function mensajeContactoDelMedico(t: TarjetaDelMedico): string {
+/** La última línea del contacto en la variante B de la prueba A/B (docs/06). */
+export const CIERRE_DE_LA_VARIANTE_B = 'Puedes pagar tu consulta con Helios en cuotas.'
+
+/**
+ * El contacto del médico de la tarjeta. `variante` es la de la prueba A/B del
+ * directorio (docs/06): con 'b' cierra con `CIERRE_DE_LA_VARIANTE_B`, sin los
+ * plazos, porque la página de B enseña otra forma de pago.
+ */
+export function mensajeContactoDelMedico(t: TarjetaDelMedico, variante: 'a' | 'b' = 'a'): string {
   const lineas = ['💙 ¡Hola! Gracias por escribirnos.', '', 'Aquí tienes el contacto:', `*${t.name.trim()}*`]
   const especialidad = limpio(t.specialty)
   if (especialidad) lineas.push(`🩺 ${especialidad}`)
@@ -68,7 +75,12 @@ export function mensajeContactoDelMedico(t: TarjetaDelMedico): string {
   } else {
     lineas.push(`Encuentra cómo escribirle en ${URL_DEL_DIRECTORIO}`)
   }
-  lineas.push('', 'Puedes pagar tu consulta con Helios en dos cuotas, a los 14 y 28 días, sin inicial.')
+  lineas.push(
+    '',
+    variante === 'b'
+      ? CIERRE_DE_LA_VARIANTE_B
+      : 'Puedes pagar tu consulta con Helios en dos cuotas, a los 14 y 28 días, sin inicial.',
+  )
   return lineas.join('\n')
 }
 

@@ -145,11 +145,12 @@ begin
       -- Las que hablan de euros porque la consulta se cobra en dólares o en
       -- euros (20261007000100–000400): ahí el euro es a propósito. También
       -- lo que se le debe a la clínica, por moneda (20261026235000), y el
-      -- precio de la tarjeta del directorio (20261106200000).
+      -- precio de la tarjeta del directorio (20261106200000) y el del alta de
+      -- una clínica (20261109120000).
       and p.proname not in ('admin_directorio_guardar', 'admin_merchant_payables',
                             'admin_payment_preview', 'admin_report_merchant_payout', 'admin_set_fx_rate',
                             'bot_patient_eligibility', 'helios_charge_currency', 'helios_currency_symbol',
-                            'helios_enqueue_reminders', 'helios_quote_installments', 'helios_usd_per_unit')
+                            'helios_crear_clinica', 'helios_enqueue_reminders', 'helios_quote_installments', 'helios_usd_per_unit')
   ) or exists (
     select 1 from public.notification_templates
     where concat(default_title, default_body, title, body, draft_title, draft_body) like '%€%'

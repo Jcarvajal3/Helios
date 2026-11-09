@@ -72,6 +72,8 @@ export const PRINCIPALES: ReadonlyArray<SeccionLite> = [
     pestanas: [
       { rotulo: 'Médicos y centros', to: '/admin/clinicas' },
       { rotulo: 'Clics por médico (Ads)', to: '/admin/directorio' },
+      // La vista de Pro, con el vestido de Lite (`ClicsLite` la pinta con `?vista=ab`).
+      { rotulo: 'Prueba A/B', to: '/admin/directorio', vista: 'ab' },
       { rotulo: 'Pacientes', to: '/admin/pacientes' },
       { rotulo: 'Órdenes', to: '/admin/financiamientos' },
       { rotulo: 'Seguimiento', to: '/admin/seguimiento' },

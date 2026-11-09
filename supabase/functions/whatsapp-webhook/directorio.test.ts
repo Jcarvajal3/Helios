@@ -32,7 +32,7 @@ const TARJETA = {
 }
 
 /** Corre la ruta con lo que devuelva `bot_directorio_interesado`. */
-async function correr(interesado: unknown) {
+async function correr(interesado: unknown, variante?: 'a' | 'b') {
   const llamadas: Llamada[] = []
   const rpc = async <T>(fn: string, args: Record<string, unknown>): Promise<T> => {
     llamadas.push({ fn, args })
@@ -49,7 +49,9 @@ async function correr(interesado: unknown) {
     adjunto: null,
     raw: {},
   }
-  const res = await atenderAlInteresado({ rpc, mensaje: m, codigo: 'DIR-7K2P' })
+  const res = await atenderAlInteresado(
+    variante ? { rpc, mensaje: m, codigo: 'DIR-7K2P', variante } : { rpc, mensaje: m, codigo: 'DIR-7K2P' },
+  )
   const envios = llamadas.filter((l) => l.fn === 'helios_whatsapp_patient_text').map((l) => l.args)
   return { res, llamadas, envios, fns: llamadas.map((l) => l.fn) }
 }
@@ -65,8 +67,8 @@ async function main() {
     )
     const a = r.llamadas[0].args
     comprueba(
-      a.p_phone === '584120009999' && a.p_code === 'DIR-7K2P' && a.p_message_id === 'wamid.DIR',
-      'bot_directorio_interesado con el teléfono, el código y el wamid',
+      a.p_phone === '584120009999' && a.p_code === 'DIR-7K2P' && a.p_message_id === 'wamid.DIR' && a.p_variante === 'a',
+      'bot_directorio_interesado con el teléfono, el código, el wamid y la variante a (por omisión)',
       JSON.stringify(a),
     )
     const e = r.envios[0]
@@ -86,6 +88,34 @@ async function main() {
     const r = await correr({ ...TARJETA, nuevo: false, specialty: null, address: null, city: null })
     comprueba(r.res.nuevo === false, 'un interesado que vuelve a escribir: nuevo = false')
     comprueba(!String(r.envios[0]?.p_text).includes('📍'), 'sin dirección, no la inventa')
+  }
+
+  console.log('\nLa variante de la prueba A/B (docs/06)')
+  {
+    const a = await correr(TARJETA, 'a')
+    comprueba(a.llamadas[0].args.p_variante === 'a', "con 'a', p_variante = 'a'", JSON.stringify(a.llamadas[0].args))
+    comprueba(
+      String(a.envios[0]?.p_text).endsWith('\n\nPuedes pagar tu consulta con Helios en dos cuotas, a los 14 y 28 días, sin inicial.'),
+      'A cierra con los plazos de siempre',
+      String(a.envios[0]?.p_text),
+    )
+    const b = await correr(TARJETA, 'b')
+    comprueba(b.llamadas[0].args.p_variante === 'b', "con 'b', p_variante = 'b'", JSON.stringify(b.llamadas[0].args))
+    const t = String(b.envios[0]?.p_text)
+    comprueba(t.endsWith('\n\nPuedes pagar tu consulta con Helios en cuotas.'), 'B cierra con «en cuotas.»', t)
+    comprueba(t.includes('*Dra. Ana Pérez*') && t.includes('https://wa.me/584141234567?text='), 'B también da el contacto', t)
+    comprueba(!PROHIBIDO.test(t), 'B sin vocabulario prohibido')
+    comprueba(
+      JSON.stringify(b.res) ===
+        JSON.stringify({ accion: 'directorio', codigo: 'DIR-7K2P', ok: true, nuevo: true, lead_id: 'lead-1', merchant_id: 'm-1' }),
+      'B: el mismo resultado',
+      JSON.stringify(b.res),
+    )
+    const fuera = await correr({ ok: false, motivo: 'no_publicado' }, 'b')
+    comprueba(
+      fuera.llamadas[0].args.p_variante === 'b' && String(fuera.envios[0]?.p_text).includes('ya no está en nuestro directorio'),
+      'B con la tarjeta fuera: apunta la variante y manda al directorio',
+    )
   }
 
   console.log('\nUna tarjeta que ya no sale')

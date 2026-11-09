@@ -3,6 +3,7 @@ import { AtSign, MapPin, Tag } from 'lucide-react'
 
 import { IlustracionDeEspecialidad } from './IlustracionDeEspecialidad'
 import { rutaDeFicha } from '@/features/directorio/paginas'
+import { CONDICIONES_DE_CONSULTAS, TEXTOS_DE_CONSULTAS } from '@/features/directorio/consultas'
 import {
   ROTULO_DE_PRECIO,
   enlaceDeRed,
@@ -11,7 +12,13 @@ import {
   lugarDeTarjeta,
   precioDeTarjeta,
 } from '@/features/directorio/directorio'
-import type { MedicoDelDirectorio } from '@/features/directorio/directorio'
+import type { MedicoDelDirectorio, VarianteDelDirectorio } from '@/features/directorio/directorio'
+
+/** El sello de la inicial, junto al botón: el mismo sitio en A y en B, con su oferta. */
+const SELLO_DE_INICIAL: Record<VarianteDelDirectorio, { cifra: string; texto: string }> = {
+  a: { cifra: '0%', texto: 'inicial' },
+  b: TEXTOS_DE_CONSULTAS.sello,
+}
 
 /** El globo de WhatsApp, para que el botón se reconozca sin leerlo. */
 export function LogoWhatsApp({ className = 'size-4' }: { className?: string }) {
@@ -38,21 +45,30 @@ export function LogoWhatsApp({ className = 'size-4' }: { className?: string }) {
  * apunta el clic; la vista previa no lo pasa. Con `whatsappHelios` (y el
  * código de la tarjeta), el botón lleva al chat de Helios; si no, directo al
  * médico (`enlaceDeWhatsApp`).
+ *
+ * En `/consultas` (`variante` `'b'`, docs/06) el nombre no enlaza a la ficha
+ * (la ficha es de A), debajo del precio va «Inicial $15 y el resto en 2
+ * cuotas quincenales», el sello dice «$15 inicial» y el código del mensaje a
+ * Helios lleva «-B».
  */
 export function TarjetaDeMedico({
   medico,
   whatsappHelios,
   onContacto,
+  variante = 'a',
 }: {
   medico: MedicoDelDirectorio
   whatsappHelios?: string | null
   onContacto?: () => void
+  variante?: VarianteDelDirectorio
 }) {
   const especialidad = especialidadDeTarjeta(medico)
   const lugar = lugarDeTarjeta(medico)
   const red = enlaceDeRed(medico)
   const precio = precioDeTarjeta(medico)
-  const enlace = enlaceDeWhatsApp(medico, whatsappHelios)
+  const enlace = enlaceDeWhatsApp(medico, whatsappHelios, variante)
+  const enB = variante === 'b'
+  const sello = SELLO_DE_INICIAL[variante]
 
   return (
     <article className="directorio-tarjeta group relative flex h-full flex-col gap-3.5 rounded-[24px] border p-4 sm:gap-4 sm:p-5">
@@ -74,8 +90,9 @@ export function TarjetaDeMedico({
           <h3 className="text-[1.08rem] font-semibold leading-tight tracking-[-0.025em] text-portada-tinta [overflow-wrap:anywhere]">
             {/* El nombre lleva a su ficha (2026-10-30), por encima del enlace
                 al chat: es el enlace que Google sigue hasta cada médico. La
-                vista previa del superadmin no tiene ficha. */}
-            {medico.slug ? (
+                vista previa del superadmin no tiene ficha, y `/consultas`
+                no lleva a ella. */}
+            {medico.slug && !enB ? (
               <Link
                 to={rutaDeFicha(medico.slug)}
                 className="relative z-10 underline-offset-4 hover:text-portada-azul hover:underline"
@@ -92,7 +109,7 @@ export function TarjetaDeMedico({
         </div>
       </div>
 
-      {(lugar || red || precio) && (
+      {(lugar || red || precio || enB) && (
         <div className="flex flex-col gap-2 text-[0.86rem] leading-snug text-portada-tinta-2">
           {lugar && (
             <p className="flex items-center gap-2.5" title={lugar}>
@@ -119,13 +136,23 @@ export function TarjetaDeMedico({
               </a>
             </p>
           )}
-          {precio && (
-            <p className="flex items-center gap-2.5">
+          {(precio || enB) && (
+            <p className={`flex gap-2.5 ${enB ? 'items-start' : 'items-center'}`}>
               <span aria-hidden className="directorio-dato">
                 <Tag className="size-3.5" />
               </span>
               <span>
-                {ROTULO_DE_PRECIO} <span className="font-semibold tabular-nums text-portada-tinta">{precio}</span>
+                {precio && (
+                  <span className={enB ? 'block' : undefined}>
+                    {ROTULO_DE_PRECIO} <span className="font-semibold tabular-nums text-portada-tinta">{precio}</span>
+                  </span>
+                )}
+                {/* En B, la oferta debajo del precio (o sola, si no lo tiene). */}
+                {enB && (
+                  <span className={`block font-medium text-portada-azul ${precio ? 'mt-0.5' : ''}`}>
+                    {CONDICIONES_DE_CONSULTAS}
+                  </span>
+                )}
               </span>
             </p>
           )}
@@ -136,8 +163,8 @@ export function TarjetaDeMedico({
       <div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-portada-linea pt-3.5 sm:pt-4">
         <div className="flex gap-1.5">
           <span className="directorio-sello inline-flex h-8 shrink-0 items-center gap-1 rounded-[10px] px-2 text-[0.78rem] font-medium tracking-[-0.01em] text-portada-azul">
-            <span className="font-[family-name:var(--font-portada-mono)] tabular-nums">0%</span>
-            inicial
+            <span className="font-[family-name:var(--font-portada-mono)] tabular-nums">{sello.cifra}</span>
+            {sello.texto}
           </span>
           <span className="directorio-sello inline-flex h-8 shrink-0 items-center gap-1 rounded-[10px] px-2 text-[0.78rem] font-medium tracking-[-0.01em] text-portada-azul">
             <span className="font-[family-name:var(--font-portada-mono)] tabular-nums">2</span>

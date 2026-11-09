@@ -4,6 +4,7 @@
  *   npx tsx supabase/functions/whatsapp-webhook/textos_directorio.test.ts
  */
 import {
+  CIERRE_DE_LA_VARIANTE_B,
   URL_DEL_DIRECTORIO,
   digitosDelWhatsApp,
   enlaceAlMedico,
@@ -82,6 +83,33 @@ console.log('\nEl contacto, sin especialidad ni dirección')
 {
   const t = mensajeContactoDelMedico({ ...ANA, whatsapp: null })
   comprueba(!t.includes('wa.me') && t.includes(URL_DEL_DIRECTORIO), 'sin WhatsApp, al directorio', t)
+}
+
+console.log('\nLa variante de la prueba A/B (docs/06)')
+{
+  const a = mensajeContactoDelMedico(ANA)
+  comprueba(mensajeContactoDelMedico(ANA, 'a') === a, "con 'a', igual que sin variante")
+  comprueba(
+    a.split('\n').at(-1) === 'Puedes pagar tu consulta con Helios en dos cuotas, a los 14 y 28 días, sin inicial.',
+    'A cierra con los plazos de siempre',
+    String(a.split('\n').at(-1)),
+  )
+  const b = mensajeContactoDelMedico(ANA, 'b')
+  console.log(b.replace(/^/gm, '        '))
+  comprueba(b.split('\n').at(-1) === 'Puedes pagar tu consulta con Helios en cuotas.', 'B cierra con «en cuotas.»', String(b.split('\n').at(-1)))
+  comprueba(b.split('\n').at(-1) === CIERRE_DE_LA_VARIANTE_B, 'la constante es esa línea')
+  comprueba(
+    b.split('\n').slice(0, -1).join('\n') === a.split('\n').slice(0, -1).join('\n'),
+    'todo lo demás, igual que en A',
+  )
+  comprueba(!b.includes('14 y 28') && !b.includes('sin inicial') && !b.includes('dos cuotas'), 'B no dice los plazos de A', b)
+  comprueba(!PROHIBIDO.test(b), 'sin vocabulario prohibido')
+  const sinNumero = mensajeContactoDelMedico({ ...ANA, whatsapp: null }, 'b')
+  comprueba(
+    sinNumero.includes(URL_DEL_DIRECTORIO) && sinNumero.endsWith('\n\n' + CIERRE_DE_LA_VARIANTE_B),
+    'B sin WhatsApp: al directorio y la misma última línea',
+    sinNumero,
+  )
 }
 
 console.log('\nEl médico que ya no está')

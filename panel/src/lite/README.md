@@ -31,7 +31,7 @@ acciones (desactivar un paciente, pausar un médico, aprobar un pago…).
 | `ResumenLite.tsx` | El Resumen (`/admin`). |
 | `OperacionesLite.tsx` | Pagos reportados, Por cobrar, Pagos a médicos, Contabilidad y Alertas. |
 | `PersonasLite.tsx` | Médicos y centros, Pacientes, Órdenes y Seguimiento. |
-| `ClicsLite.tsx` | Clics por médico (Ads): el directorio con su interruptor de publicar. |
+| `ClicsLite.tsx` | Clics por médico (Ads): el directorio con su interruptor de publicar. Con `?vista=ab`, la «Prueba A/B» de Pro (`VistaPruebaAB`) con el vestido de Lite. |
 | `ResultadosLite.tsx` | «Cobranza y caja» (`/admin/metricas` sin `vista`). |
 | `MetricasOriginalesLite.tsx` | Las Métricas de Pro (`?vista=…`) desde «Más vistas del admin original». |
 | `AgendaLite.tsx` | La Agenda; «Abrir contacto» abre la ficha del médico de Pro. |

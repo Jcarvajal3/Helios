@@ -1,8 +1,9 @@
-import { queryOptions } from '@tanstack/react-query'
+import { keepPreviousData, queryOptions } from '@tanstack/react-query'
 import type { QueryClient } from '@tanstack/react-query'
 
 import { supabase } from '@/lib/supabase'
 import { leerInteresados, leerOrigenes, leerTablero } from './directorioDeMedicos'
+import { leerPruebaAB } from './pruebaAB'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // La lectura y la escritura del Directorio de médicos del superadmin.
@@ -72,6 +73,26 @@ export function consultaOrigenes() {
       const { data, error } = await supabase.rpc('admin_directorio_origenes', { p_dias: 30 })
       if (error) throw error
       return leerOrigenes(data)
+    },
+  })
+}
+
+/**
+ * La prueba A/B del directorio (docs/06): `/directorio` contra `/consultas`
+ * entre `desde` y `hasta`, días de Caracas, los dos incluidos. Se relee como
+ * el tablero; al cambiar de rango se queda lo anterior en pantalla hasta que
+ * llega lo nuevo.
+ */
+export function consultaPruebaAB({ desde, hasta }: { desde: string; hasta: string }) {
+  return queryOptions({
+    queryKey: [...CLAVE, 'ab', desde, hasta],
+    refetchInterval: RELECTURA_MS,
+    refetchOnWindowFocus: true,
+    placeholderData: keepPreviousData,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('admin_directorio_ab', { p_desde: desde, p_hasta: hasta })
+      if (error) throw error
+      return leerPruebaAB(data)
     },
   })
 }

@@ -14,6 +14,7 @@ import { Menu } from '@/components/portada/Menu'
 import { Lienzo, Revelar, Rotulo } from '@/components/portada/piezas'
 import { cabeceraPublica, urlAbsoluta } from '@/config/sitio'
 import { apuntarContacto, cargarDirectorio, consultarMedico } from '@/features/directorio/api'
+import { useVisitaDelDirectorio } from '@/features/directorio/visita'
 import {
   ROTULO_DE_PRECIO,
   enlaceDeRed,
@@ -84,6 +85,8 @@ export const Route = createFileRoute('/medico/$slug')({
 
 function Ficha() {
   const { medico: m, otros, whatsappHelios } = Route.useLoaderData()
+  // La ficha es de A (prueba A/B, docs/06).
+  useVisitaDelDirectorio('a')
   return (
     <div className="portada-raiz min-h-screen">
       <Menu />
