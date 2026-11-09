@@ -1,5 +1,6 @@
 import { sumarDias } from '@/components/kit/rango'
 import { formatPhone } from '@/components/ui'
+import type { Moneda } from '@/components/ui'
 import { instanteDeCaracas } from '@/features/admin/agenda/agenda'
 import { BANKS } from '@/features/admin/banks'
 import {
@@ -12,6 +13,7 @@ import {
   tieneNumero,
 } from '@/lib/documento'
 import { comoFila, filaONula, numeroONulo, textoONulo } from '@/lib/json'
+import { leerPrecioDeConsulta } from '@/lib/montos'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Las clínicas en Helios (contrato §2.5): el alta con sus datos médicos, la
@@ -53,6 +55,12 @@ export type AltaDeClinica = {
   phone: string
   /** Opcional: el que sale en el directorio. En blanco, sale `phone`. */
   contactPhone: string
+  /**
+   * Opcional: el precio mínimo de su consulta, como se escribe («40»,
+   * «42,50»). Con él nace su ficha del directorio, oculta, ya con el precio.
+   */
+  consultationPrice: string
+  consultationCurrency: Moneda
   email: string
   socialNetwork: RedSocial | ''
   socialUser: string
@@ -233,6 +241,8 @@ export const ALTA_VACIA: AltaDeClinica = {
   address: '',
   phone: '',
   contactPhone: '',
+  consultationPrice: '',
+  consultationCurrency: 'USD',
   email: '',
   socialNetwork: '',
   socialUser: '',
@@ -302,6 +312,9 @@ export function motivoDeAlta(a: AltaDeClinica, modo: ModoDeAlta = 'equipo'): str
   if (a.contactPhone.trim() && !telefonoAE164(a.contactPhone)) {
     return 'El teléfono de contacto no parece venezolano: 0212 5551234 o 0414 1234567.'
   }
+  if (a.consultationPrice.trim() && leerPrecioDeConsulta(a.consultationPrice) === null) {
+    return 'El precio de la consulta debe ser un monto entre 1 y 10.000.'
+  }
   if (!pareceCorreo(a.email)) return 'El correo no parece un correo.'
 
   const usuario = limpiarUsuarioDeRed(a.socialUser)
@@ -337,6 +350,7 @@ export function motivoDeAlta(a: AltaDeClinica, modo: ModoDeAlta = 'equipo'): str
 export function datosDeAlta(a: AltaDeClinica, modo: ModoDeAlta = 'equipo'): Record<string, string> {
   const cuenta = digitosDeCuenta(a.accountNumber)
   const pagoMovil = modo === 'equipo' && a.pagoMovilPhone.trim() !== ''
+  const precio = modo === 'equipo' ? leerPrecioDeConsulta(a.consultationPrice) : null
   return {
     owner_name: a.ownerName.trim(),
     doctor_title: a.doctorTitle,
@@ -355,7 +369,7 @@ export function datosDeAlta(a: AltaDeClinica, modo: ModoDeAlta = 'equipo'): Reco
     holder_document: documentoParaEnviar(a.holderDocument, LETRAS_TITULAR),
     bank: cuenta ? a.bank : '',
     account_number: cuenta,
-    // La portada no manda Pago Móvil ni teléfono de contacto: los pone el equipo.
+    // La portada no manda Pago Móvil, teléfono de contacto ni precio: los pone el equipo.
     ...(modo === 'equipo'
       ? {
           contact_phone: a.contactPhone.trim(),
@@ -363,6 +377,8 @@ export function datosDeAlta(a: AltaDeClinica, modo: ModoDeAlta = 'equipo'): Reco
           pago_movil_phone: a.pagoMovilPhone.trim(),
         }
       : {}),
+    // Sin precio no va nada: la clínica nace sin ficha del directorio.
+    ...(precio !== null ? { consultation_price_cur: String(precio), consultation_currency: a.consultationCurrency } : {}),
   }
 }
 
@@ -431,8 +447,10 @@ export function leerSolicitud(raw: unknown): SolicitudDeAfiliacion {
       address: t(r.address),
       // La base los guarda en E.164; el formulario los enseña como se escriben.
       phone: telefonoLocal(textoONulo(r.phone)),
-      // La solicitud no lo trae: lo añade el equipo al revisarla.
+      // La solicitud no los trae: los añade el equipo al revisarla.
       contactPhone: '',
+      consultationPrice: '',
+      consultationCurrency: 'USD',
       email: t(r.email),
       socialNetwork: comoRedSocial(t(r.social_network)),
       socialUser: t(r.social_user),

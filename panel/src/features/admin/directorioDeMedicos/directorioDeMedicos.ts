@@ -8,7 +8,7 @@ import { leerEspecialidad, nombreDeEspecialidad } from '@/features/directorio/es
 import type { ClaveDeEspecialidad } from '@/features/directorio/especialidades'
 import { unoDe } from '@/lib/busqueda'
 import { booleano, comoFila, comoLista, filaONula, numero, numeroONulo, numeros, texto, textoONulo } from '@/lib/json'
-import { formatoMontoEditable, leerMonto } from '@/lib/montos'
+import { formatoMontoEditable, leerPrecioDeConsulta } from '@/lib/montos'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Superadmin › Directorio de médicos: quién sale en `/directorio`, con qué
@@ -368,12 +368,8 @@ export function borradorDe(d: DatosDeTarjeta): BorradorDeTarjeta {
   }
 }
 
-/** El precio tecleado, o `null` si está vacío o no vale: de 1 a 10.000, con hasta dos decimales. */
-function precioTecleado(tecleado: string): number | null {
-  const n = leerMonto(tecleado)
-  if (n === null || n < 1 || n > 10000 || Math.round(n * 100) / 100 !== n) return null
-  return n
-}
+/** El precio tecleado, o `null` si está vacío o no vale (`leerPrecioDeConsulta`). */
+const precioTecleado = leerPrecioDeConsulta
 
 /**
  * El WhatsApp tecleado en E.164, o `null` si no es un número venezolano de

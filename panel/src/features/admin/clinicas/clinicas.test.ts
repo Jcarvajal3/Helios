@@ -59,6 +59,8 @@ const alta: AltaDeClinica = {
   address: 'Av. Principal, piso 3',
   phone: '0212 555 12 34',
   contactPhone: '',
+  consultationPrice: '',
+  consultationCurrency: 'USD',
   email: 'demo@consultorio.com',
   socialNetwork: '',
   socialUser: '',
@@ -188,6 +190,21 @@ igual(
 igual('lo que se manda va limpio', datosDeAlta({ ...alta, email: ' Demo@Consultorio.com ' }).email, 'demo@consultorio.com')
 igual('el RIF vacío no se manda', datosDeAlta({ ...alta, taxId: 'J' }).tax_id, '')
 igual('la portada no manda Pago Móvil', 'pago_movil_phone' in datosDeAlta(altaSoloPagoMovil, 'portada'), false)
+
+// El precio de la consulta: opcional, y con él nace la ficha del directorio.
+igual('el precio es opcional', motivoDeAlta({ ...alta, consultationPrice: '  ' }), null)
+igual('sin precio no va nada', 'consultation_price_cur' in datosDeAlta(alta), false)
+igual('sin precio tampoco va la moneda', 'consultation_currency' in datosDeAlta({ ...alta, consultationCurrency: 'EUR' }), false)
+for (const malo of ['gratis', '0', '0,50', '10001', '12,345']) {
+  igual(`«${malo}» no vale de precio`, motivoDeAlta({ ...alta, consultationPrice: malo }), 'El precio de la consulta debe ser un monto entre 1 y 10.000.')
+}
+igual(
+  'con precio va el monto con punto y su moneda',
+  datosDeAlta({ ...alta, consultationPrice: ' 42,50 ', consultationCurrency: 'EUR' }),
+  { ...datosDeAlta(alta), consultation_price_cur: '42.5', consultation_currency: 'EUR' },
+)
+igual('el punto de miles se entiende', datosDeAlta({ ...alta, consultationPrice: '1.250' }).consultation_price_cur, '1250')
+igual('la portada no manda precio', 'consultation_price_cur' in datosDeAlta({ ...alta, consultationPrice: '40' }, 'portada'), false)
 igual('un celular a E.164', celularAE164('0414 1234567'), '+584141234567')
 igual('un fijo no es celular', celularAE164('0212 5551234'), null)
 igual('E.164 a como se escribe', telefonoLocal('+584141234567'), '0414 1234567')
@@ -228,6 +245,11 @@ igual(
   'solo va lo que se cambió',
   correccionesDeSolicitud(solicitud.alta, { ...solicitud.alta, clinicName: 'Consultorio Ana Pérez' }),
   { clinic_name: 'Consultorio Ana Pérez' },
+)
+igual(
+  'el precio que pone el equipo al revisarla va como corrección',
+  correccionesDeSolicitud(solicitud.alta, { ...solicitud.alta, consultationPrice: '40' }),
+  { consultation_price_cur: '40', consultation_currency: 'USD' },
 )
 igual('un fijo a E.164', telefonoAE164('0212-5551234'), '+582125551234')
 

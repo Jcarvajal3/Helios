@@ -30,6 +30,7 @@ declare
   v_res      jsonb;
   v_con_contacto uuid;
   v_sin_contacto uuid;
+  v_con_precio   uuid;
   v_failed   boolean;
   v_m        public.merchants%rowtype;
   v_cuenta   public.merchant_payout_accounts%rowtype;
@@ -307,7 +308,32 @@ begin
   v_con_contacto := (v_res->>'merchant_id')::uuid;
   v_res := public.admin_create_clinic(v_datos || '{"email":"sin.contacto@example.com","owner_document":"V11222337","phone":"0414 700 0907","contact_phone":" "}');
   v_sin_contacto := (v_res->>'merchant_id')::uuid;
+
+  -- El precio de la consulta (20261109120000): valida, y con él nace la ficha
+  -- del directorio, oculta, ya con su precio.
+  v_failed := false;
+  begin
+    perform public.admin_create_clinic(v_datos || '{"email":"mal.precio@example.com","owner_document":"V11222338","phone":"0414 700 0908","consultation_price_cur":"0"}');
+  exception when invalid_parameter_value then v_failed := true;
+  end;
+  if not v_failed then raise exception 'Aceptó un precio de consulta que no vale'; end if;
+  v_failed := false;
+  begin
+    perform public.admin_create_clinic(v_datos || '{"email":"mal.moneda@example.com","owner_document":"V11222339","phone":"0414 700 0909","consultation_price_cur":"40","consultation_currency":"VES"}');
+  exception when invalid_parameter_value then v_failed := true;
+  end;
+  if not v_failed then raise exception 'Aceptó una moneda que no es dólar ni euro'; end if;
+  v_res := public.admin_create_clinic(v_datos || '{"email":"con.precio@example.com","owner_document":"V11222340","phone":"0414 700 0910","consultation_price_cur":"42.5","consultation_currency":"EUR"}');
+  v_con_precio := (v_res->>'merchant_id')::uuid;
   reset role;
+  if not exists (select 1 from public.directory_listings l
+                  where l.merchant_id = v_con_precio and not l.is_visible
+                    and l.consultation_price_cur = 42.5 and l.consultation_currency = 'EUR') then
+    raise exception 'El alta no dejó la ficha del directorio oculta con su precio';
+  end if;
+  if exists (select 1 from public.directory_listings where merchant_id = v_sin_contacto) then
+    raise exception 'Sin precio, la clínica no debía nacer con ficha del directorio';
+  end if;
   if (select contact_phone from public.merchants where id = v_con_contacto) is distinct from '+584247000906' then
     raise exception 'El alta no guardó el teléfono de contacto';
   end if;

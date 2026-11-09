@@ -4,6 +4,7 @@ import { ChevronDown, CircleCheck } from 'lucide-react'
 
 import { CampoDocumento } from '@/components/CampoDocumento'
 import { Chip, Input, Segmented, Select } from '@/components/ui'
+import type { Moneda } from '@/components/ui'
 import { BANKS } from '@/features/admin/banks'
 import {
   REDES_SOCIALES,
@@ -18,6 +19,11 @@ import { LETRAS_CEDULA_O_RIF, bancoDeCuenta, esRifDeEmpresa } from '@/features/a
 import { LETRAS_CEDULA, LETRAS_TITULAR } from '@/lib/documento'
 
 const OPCIONES_BANCO = BANKS.map((b) => ({ value: b.name, label: b.name }))
+
+const OPCIONES_MONEDA: Array<{ value: Moneda; label: string }> = [
+  { value: 'USD', label: 'Dólares ($)' },
+  { value: 'EUR', label: 'Euros (€)' },
+]
 
 /** «Otras especialidades»: abre un campo para escribirla, como en la portada. */
 const OTRA = 'otra'
@@ -36,8 +42,9 @@ const NOMBRES_DE_LA_LISTA: ReadonlySet<string> = new Set(OPCIONES_ESPECIALIDAD.m
  *    cédula), la especialidad de la lista del directorio y, opcionales, el
  *    Colegio y el MPPS.
  * 2. El consultorio: nombre, dirección, teléfono personal, teléfono de
- *    contacto (opcional, el que sale en el directorio), correo y, opcional,
- *    la red social.
+ *    contacto (opcional, el que sale en el directorio), correo y, opcionales,
+ *    la red social y el precio mínimo de la consulta (con él nace su ficha
+ *    del directorio, oculta, ya con el precio).
  * 3. Dónde se le paga: a nombre de quién está la cuenta (del médico, o del
  *    consultorio u otra persona) y el número de cuenta, del que sale el
  *    banco. El equipo puede añadir además el Pago Móvil.
@@ -70,6 +77,7 @@ export function CamposDeAlta({
   )
   const [conColegio, setConColegio] = useState(() => !!(valor.collegeNumber || valor.mppsNumber))
   const [conRed, setConRed] = useState(() => !!(valor.socialNetwork || valor.socialUser))
+  const [conPrecio, setConPrecio] = useState(() => !!valor.consultationPrice.trim())
   const [conPagoMovil, setConPagoMovil] = useState(() => !!(valor.pagoMovilBank || valor.pagoMovilPhone))
 
   /** Cada cambio sale con el banco de la cuenta y, si la cuenta es suya, el médico de titular. */
@@ -262,6 +270,25 @@ export function CamposDeAlta({
             onChange={campo('socialUser')}
             autoComplete="off"
             placeholder="@consultorio.perez"
+          />
+        </Opcional>
+        <Opcional abierto={conPrecio} onAbrir={() => setConPrecio(true)} texto="Añadir precio de consulta">
+          <Input
+            id={`${id}-precio`}
+            label="Precio mínimo de consulta (opcional)"
+            value={valor.consultationPrice}
+            onChange={campo('consultationPrice')}
+            inputMode="decimal"
+            autoComplete="off"
+            placeholder="40"
+            hint="Sale en su ficha del directorio como «Consulta a partir de»."
+          />
+          <Select<Moneda>
+            id={`${id}-precio-moneda`}
+            label="Moneda"
+            value={valor.consultationCurrency}
+            options={OPCIONES_MONEDA}
+            onChange={(v) => emitir({ ...valor, consultationCurrency: v })}
           />
         </Opcional>
       </Bloque>

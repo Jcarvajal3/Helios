@@ -146,3 +146,17 @@ export function formatoMontoEditable(n: number | null | undefined): string {
   const redondo = Number(n.toFixed(6))
   return String(redondo === 0 ? 0 : redondo).replace('.', ',')
 }
+
+/**
+ * El precio de la consulta del directorio, escrito a mano: de 1 a 10.000 y
+ * con hasta dos decimales, como lo acepta la base. `null` si está vacío o no
+ * vale. Lo usan el alta de una clínica y la ficha del directorio.
+ *
+ * leerPrecioDeConsulta('42,50') → 42.5
+ * leerPrecioDeConsulta('0')     → null
+ */
+export function leerPrecioDeConsulta(texto: string): number | null {
+  const n = leerMonto(texto)
+  if (n === null || n < 1 || n > 10000 || Math.round(n * 100) / 100 !== n) return null
+  return n
+}

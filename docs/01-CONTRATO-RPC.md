@@ -1423,6 +1423,12 @@ Suite: `supabase/tests/rol_del_equipo_smoke.sql`.
 - `admin_directorio_guardar` acepta `consultation_price_cur` (texto o número, con
   hasta dos decimales y punto decimal; vacío lo borra) y `consultation_currency`.
   `22023` si no es un monto de 1 a 10.000 o una de esas dos monedas.
+- **En el alta** (2026-11-09, 20261109120000): `admin_create_clinic` y
+  `admin_approve_merchant_application` (vía `helios_crear_clinica`) aceptan en
+  `p` `consultation_price_cur` y `consultation_currency`, opcionales y con las
+  mismas reglas. Con precio, la clínica nace con su ficha del directorio
+  **oculta** y ese precio; sin precio, sin ficha, como antes. La moneda sin
+  precio se ignora. Solo los manda el formulario del equipo, no la portada.
 
 La tarjeta y la ficha pública `/medico/<slug>` lo enseñan como «Consulta a partir de:
 $40» o «Consulta a partir de: €40» (`ROTULO_DE_PRECIO`): el precio es el mínimo,
