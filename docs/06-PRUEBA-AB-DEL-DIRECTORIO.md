@@ -182,6 +182,11 @@ Variante: `text` con `'a'` o `'b'`.
   las dos variantes se parezcan en todo menos en la oferta.
 - El panel solo manda `p_variante` cuando es `'b'`: los clics de A no dependen
   de la migración.
+- **Precio fijo en B** (Javier, 2026-11-09, tras publicar): cada tarjeta de
+  `/consultas` dice «Consulta a partir de: $30», sea cual sea el precio del
+  médico (`PRECIO_DE_CONSULTAS_USD`). Es solo la interfaz: los precios de la
+  base no cambian y siguen decidiendo quién entra (≤ $60); `/directorio`
+  enseña el de cada médico.
 - El veredicto exige al menos 100 visitantes por variante y un 95% de
   confianza; si no, «aún no hay diferencia clara».
 - Hoy (2026-11-09) `/consultas` enseña **17 médicos**. No salen la Dra.

@@ -19,6 +19,17 @@ export const INICIAL_DE_CONSULTAS_USD = 15
  */
 export const TOPE_DE_CONSULTAS_USD = 60
 
+/**
+ * El precio que enseña cada tarjeta de `/consultas`, el mismo para todos los
+ * médicos (Javier, 2026-11-09): es texto de la prueba, no el precio de cada
+ * uno. Los precios reales de la base no cambian y siguen decidiendo quién
+ * entra (`TOPE_DE_CONSULTAS_USD`); `/directorio` enseña el de cada médico.
+ */
+export const PRECIO_DE_CONSULTAS_USD = 30
+
+/** «$30»: la cifra de la tarjeta, detrás de «Consulta a partir de:». */
+export const PRECIO_DE_CONSULTAS = `$${PRECIO_DE_CONSULTAS_USD}`
+
 /** «$15». */
 const INICIAL = `$${INICIAL_DE_CONSULTAS_USD}`
 

@@ -3,7 +3,7 @@ import { AtSign, MapPin, Tag } from 'lucide-react'
 
 import { IlustracionDeEspecialidad } from './IlustracionDeEspecialidad'
 import { rutaDeFicha } from '@/features/directorio/paginas'
-import { CONDICIONES_DE_CONSULTAS, TEXTOS_DE_CONSULTAS } from '@/features/directorio/consultas'
+import { CONDICIONES_DE_CONSULTAS, PRECIO_DE_CONSULTAS, TEXTOS_DE_CONSULTAS } from '@/features/directorio/consultas'
 import {
   ROTULO_DE_PRECIO,
   enlaceDeRed,
@@ -47,7 +47,8 @@ export function LogoWhatsApp({ className = 'size-4' }: { className?: string }) {
  * médico (`enlaceDeWhatsApp`).
  *
  * En `/consultas` (`variante` `'b'`, docs/06) el nombre no enlaza a la ficha
- * (la ficha es de A), debajo del precio va «Inicial $15 y el resto en 2
+ * (la ficha es de A), el precio es el mismo para todos («Consulta a partir
+ * de: $30», `PRECIO_DE_CONSULTAS`), debajo va «Inicial $15 y el resto en 2
  * cuotas quincenales», el sello dice «$15 inicial» y el código del mensaje a
  * Helios lleva «-B».
  */
@@ -65,9 +66,10 @@ export function TarjetaDeMedico({
   const especialidad = especialidadDeTarjeta(medico)
   const lugar = lugarDeTarjeta(medico)
   const red = enlaceDeRed(medico)
-  const precio = precioDeTarjeta(medico)
-  const enlace = enlaceDeWhatsApp(medico, whatsappHelios, variante)
   const enB = variante === 'b'
+  // En B, el mismo precio para todos (`PRECIO_DE_CONSULTAS`), no el del médico.
+  const precio = enB ? PRECIO_DE_CONSULTAS : precioDeTarjeta(medico)
+  const enlace = enlaceDeWhatsApp(medico, whatsappHelios, variante)
   const sello = SELLO_DE_INICIAL[variante]
 
   return (
