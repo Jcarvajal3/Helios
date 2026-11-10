@@ -13,6 +13,7 @@ import { Boton, BotonAfiliarme, Lienzo, Revelar, Rotulo } from './piezas'
 import { TarjetaDeMedico } from '@/components/directorio/TarjetaDeMedico'
 import { REDES, cabeceraPublica, preguntasFrecuentes, servicio } from '@/config/sitio'
 import { apuntarContacto, cargarDirectorio } from '@/features/directorio/api'
+import { clavesDelMedico } from '@/features/directorio/directorio'
 import type { MedicoDelDirectorio } from '@/features/directorio/directorio'
 
 /**
@@ -579,7 +580,7 @@ export async function cargarMedicosDeGuia(ruta: RutaDeGuia): Promise<MedicosDeGu
   const datos = await cargarDirectorio()
   if (datos.fallo) return SIN_MEDICOS
   const suyos = directorio.claves
-    ? datos.medicos.filter((m) => directorio.claves?.includes(m.clave))
+    ? datos.medicos.filter((m) => clavesDelMedico(m).some((c) => directorio.claves?.includes(c)))
     : datos.medicos
   return { lista: suyos.slice(0, 6), total: suyos.length, whatsappHelios: datos.whatsappHelios }
 }

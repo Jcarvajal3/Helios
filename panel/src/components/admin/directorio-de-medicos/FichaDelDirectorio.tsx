@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Save, Store } from 'lucide-react'
+import { Save, Store, X } from 'lucide-react'
 
 import { useToast } from '@/components/Toast'
 import { EstadoDelInteresado } from '@/components/admin/directorio-de-medicos/columnasDeInteresados'
@@ -11,6 +11,7 @@ import {
   Badge,
   Button,
   Callout,
+  Chip,
   ErrorBox,
   Input,
   Modal,
@@ -25,15 +26,18 @@ import { REDES_SOCIALES } from '@/features/admin/clinicas/clinicas'
 import type { RedSocial } from '@/features/admin/clinicas/clinicas'
 import { consultaInteresados, guardarTarjeta, refrescarDirectorio } from '@/features/admin/directorioDeMedicos/api'
 import {
+  MAXIMO_DE_OTRAS_ESPECIALIDADES,
   ROTULO_BLOQUEO,
   borradorDe,
   cambiosDelBorrador,
   comoTarjetaPublica,
   datosDelBorrador,
   motivoParaNoGuardar,
+  otrasDelBorrador,
 } from '@/features/admin/directorioDeMedicos/directorioDeMedicos'
 import type { BorradorDeTarjeta, MedicoEnElDirectorio } from '@/features/admin/directorioDeMedicos/directorioDeMedicos'
 import { ESPECIALIDADES, nombreDeEspecialidad } from '@/features/directorio/especialidades'
+import type { ClaveDeEspecialidad } from '@/features/directorio/especialidades'
 import { describeError } from '@/lib/supabase'
 
 const cuenta = (n: number) => String(Math.round(n))
@@ -77,7 +81,7 @@ export function FichaDelDirectorio({
   const motivo = motivoParaNoGuardar(borrador)
 
   const guardar = useMutation({
-    mutationFn: (c: Record<string, string | boolean>) => guardarTarjeta(m.id, c),
+    mutationFn: (c: Record<string, string | string[] | boolean>) => guardarTarjeta(m.id, c),
     onSuccess: (_, c) => {
       refrescarDirectorio(client)
       if ('visible' in c && Object.keys(c).length === 1) {
@@ -157,12 +161,13 @@ export function FichaDelDirectorio({
               />
               <Select
                 id="ficha-directorio-clave"
-                label="Filtro e icono"
+                label="Principal (filtro e icono)"
                 value={borrador.clave}
                 options={opcionesClave}
                 onChange={(clave) => cambiar({ clave })}
               />
             </div>
+            <OtrasEspecialidades borrador={borrador} onChange={(otrasClaves) => cambiar({ otrasClaves })} />
             <Input
               id="ficha-directorio-direccion"
               label="Dirección"
@@ -344,6 +349,62 @@ function SusInteresados({ medico: m }: { medico: MedicoEnElDirectorio }) {
         </ul>
       )}
     </section>
+  )
+}
+
+/**
+ * Las otras especialidades en las que sale (el psiquiatra que también es
+ * internista): cuentan en el filtro y en la página de cada una, y se leen en
+ * la tarjeta detrás de la principal. Una sola tarjeta: nada de duplicarla.
+ */
+function OtrasEspecialidades({
+  borrador: b,
+  onChange,
+}: {
+  borrador: BorradorDeTarjeta
+  onChange: (otrasClaves: ClaveDeEspecialidad[]) => void
+}) {
+  const elegidas = otrasDelBorrador(b)
+  const lleno = elegidas.length >= MAXIMO_DE_OTRAS_ESPECIALIDADES
+  const opciones = ESPECIALIDADES.filter((e) => e.clave !== 'otra' && e.clave !== b.clave && !elegidas.includes(e.clave)).map(
+    (e) => ({ value: e.clave, label: e.nombre }),
+  )
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="flex flex-col gap-1.5">
+          <p className="type-panel-label text-on-surface-variant">También sale en</p>
+          {elegidas.length === 0 ? (
+            <p className="type-panel-caption text-on-surface-variant">Solo en la principal.</p>
+          ) : (
+            <ul className="flex flex-wrap gap-2">
+              {elegidas.map((c) => (
+                <li key={c}>
+                  <Chip onClick={() => onChange(elegidas.filter((x) => x !== c))}>
+                    {nombreDeEspecialidad(c)} <X size={13} aria-label={`Quitar ${nombreDeEspecialidad(c)}`} />
+                  </Chip>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+        {!lleno && (
+          <Select
+            id="ficha-directorio-otras"
+            label="Añadir otra especialidad"
+            value=""
+            placeholder="Elige una…"
+            options={opciones}
+            onChange={(clave) => onChange([...elegidas, clave])}
+          />
+        )}
+      </div>
+      <p className="type-panel-caption text-on-surface-variant">
+        {lleno
+          ? `Como mucho ${MAXIMO_DE_OTRAS_ESPECIALIDADES} además de la principal.`
+          : 'Sale también en el filtro y en la página de cada una, con la misma tarjeta.'}
+      </p>
+    </div>
   )
 }
 

@@ -4,7 +4,7 @@ import { PaginaDelDirectorio } from '@/components/directorio/PaginaDelDirectorio
 import { NoEncontrada, PAGINA_NO_ENCONTRADA } from '@/components/directorio/NoEncontrada'
 import { cabeceraPublica, urlAbsoluta } from '@/config/sitio'
 import { cargarDirectorio } from '@/features/directorio/api'
-import { CLAVES_DE_TRAMO, directorioEnSchema } from '@/features/directorio/directorio'
+import { CLAVES_DE_TRAMO, directorioEnSchema, saleEn } from '@/features/directorio/directorio'
 import type { ClaveDeTramo } from '@/features/directorio/directorio'
 import { unoDe } from '@/lib/busqueda'
 import {
@@ -38,13 +38,13 @@ export const Route = createFileRoute('/directorio_/$especialidad')({
     const clave = claveDeSegmento(params.especialidad)
     if (!clave) throw notFound()
     const datos = await cargarDirectorio()
-    if (!datos.fallo && !datos.medicos.some((m) => m.clave === clave)) throw notFound()
+    if (!datos.fallo && !datos.medicos.some((m) => saleEn(m, clave))) throw notFound()
     return { ...datos, clave }
   },
   head: ({ loaderData }) => {
     if (!loaderData) return PAGINA_NO_ENCONTRADA
     const { clave, medicos } = loaderData
-    const suyos = medicos.filter((m) => m.clave === clave)
+    const suyos = medicos.filter((m) => saleEn(m, clave))
     const textos = textosDeEspecialidad(clave, ciudadDeLaMayoria(suyos))
     const ruta = rutaDeEspecialidad(clave)
     const base = cabeceraPublica({

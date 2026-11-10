@@ -136,7 +136,7 @@ console.log('── La tarjeta ────────────────�
 const [nadia, jesus, carlos] = medicos
 comprueba(especialidadDeTarjeta(nadia) === 'Odontóloga', 'con texto propio, el texto')
 comprueba(especialidadDeTarjeta(jesus) === 'Medicina interna', 'sin texto, el nombre de la especialidad')
-comprueba(especialidadDeTarjeta({ especialidad: null, clave: 'otra' }) === null, '«otra» sin texto no dice nada')
+comprueba(especialidadDeTarjeta({ especialidad: null, clave: 'otra', otrasClaves: [] }) === null, '«otra» sin texto no dice nada')
 comprueba(lugarDeTarjeta(nadia) === 'Av. Lara, Torre Médica, Barquisimeto', 'la ciudad no se repite si ya va en la dirección')
 comprueba(lugarDeTarjeta(jesus) === 'Centro Médico La Trinidad · Caracas', 'dirección y ciudad')
 comprueba(lugarDeTarjeta(carlos) === null, 'sin dirección ni ciudad, nada')
@@ -469,6 +469,108 @@ comprueba(
 comprueba(datosDelBorrador({ ...b, precio: '40', moneda: 'EUR' }, m1.ficha).moneda === 'EUR', 'la vista previa enseña la moneda del borrador')
 comprueba(datosDelBorrador({ ...b, moneda: 'EUR' }, m1.ficha).moneda === 'USD', 'sin precio no se recuerda la moneda')
 comprueba(comoTarjetaPublica('m1', enEuros).moneda === 'EUR', 'la tarjeta pública lleva la moneda')
+
+console.log('── Un médico en varias especialidades ────────────────────────')
+const [salomon, gastro] = leerDirectorio([
+  {
+    merchant_id: 's1',
+    name: 'Dr. Salomón Prueba',
+    specialty: 'Psiquiatría',
+    specialty_key: 'psiquiatria',
+    // La principal, «otra», una desconocida y una repetida no cuentan.
+    other_specialty_keys: ['medicina_interna', 'psiquiatria', 'otra', 'astrologia', 'medicina_interna'],
+    whatsapp: '+584141110001',
+  },
+  {
+    merchant_id: 's2',
+    name: 'Dr. Gastro Prueba',
+    specialty: 'Médico internista y gastroenterólogo',
+    specialty_key: 'medicina_interna',
+    other_specialty_keys: ['gastroenterologia'],
+    whatsapp: '+584141110002',
+  },
+])
+comprueba(
+  JSON.stringify(salomon.otrasClaves) === JSON.stringify(['medicina_interna']),
+  'se leen limpias: sin la principal, sin «otra», sin desconocidas ni repetidas',
+  salomon.otrasClaves,
+)
+comprueba(leerDirectorio([{ ...medicos[0], merchant_id: 'x', name: 'X', whatsapp: '+584141110003' }])[0].otrasClaves.length === 0, 'una base de antes no trae ninguna')
+comprueba(especialidadDeTarjeta(salomon) === 'Psiquiatría · Medicina interna', 'la tarjeta suma la otra detrás', especialidadDeTarjeta(salomon))
+comprueba(
+  especialidadDeTarjeta(gastro) === 'Médico internista y gastroenterólogo',
+  'si el texto ya la nombra, no se repite',
+  especialidadDeTarjeta(gastro),
+)
+const dos = [salomon, gastro]
+comprueba(
+  filtrarDirectorio(dos, { especialidad: 'medicina_interna' }).map((m) => m.id).join() === 's1,s2',
+  'sale en el filtro de la otra especialidad',
+)
+comprueba(filtrarDirectorio(dos, { especialidad: 'psiquiatria' }).map((m) => m.id).join() === 's1', 'y en el de la principal')
+comprueba(filtrarDirectorio(dos, { q: 'internista' }).length === 1, 'buscar «internista» encuentra al del texto (el nombre de la clave dice «interna»)')
+comprueba(filtrarDirectorio(dos, { q: 'medicina interna' }).map((m) => m.id).join() === 's1,s2', 'buscar por el nombre de la otra lo encuentra')
+const cuentas = Object.fromEntries(especialidadesPresentes(dos).map((e) => [e.clave, e.cuantos]))
+comprueba(
+  cuentas.medicina_interna === 2 && cuentas.psiquiatria === 1 && cuentas.gastroenterologia === 1,
+  'el filtro cuenta al médico en cada una de sus especialidades',
+  cuentas,
+)
+const schemaSalomon = directorioEnSchema([salomon], 'https://conhelios.com/directorio').itemListElement[0].item
+comprueba(
+  schemaSalomon.medicalSpecialty === 'https://schema.org/Psychiatric',
+  'en schema.org solo las que tienen equivalente (medicina interna no tiene), y una sola va sin lista',
+  schemaSalomon.medicalSpecialty,
+)
+const [neumo] = leerDirectorio([
+  { merchant_id: 's3', name: 'Dr. Neumo', specialty_key: 'cardiologia', other_specialty_keys: ['neumologia', 'angiologia'], whatsapp: '+584141110004' },
+])
+const schemaNeumo = directorioEnSchema([neumo], 'https://conhelios.com/directorio').itemListElement[0].item
+comprueba(
+  JSON.stringify(schemaNeumo.medicalSpecialty) ===
+    JSON.stringify(['https://schema.org/Cardiovascular', 'https://schema.org/Pulmonary']),
+  'con varias, una lista sin repetir (cardiología y angiología son Cardiovascular)',
+  schemaNeumo.medicalSpecialty,
+)
+
+const conOtras = leerTablero({
+  medicos: [
+    {
+      merchant_id: 's1',
+      clinic_name: 'Dr. Salomón Prueba',
+      listing: { name: 'Dr. Salomón Prueba', specialty_key: 'psiquiatria', other_specialty_keys: ['medicina_interna'] },
+      base: { name: 'Dr. Salomón Prueba', specialty_key: 'psiquiatria', other_specialty_keys: [] },
+    },
+  ],
+}).medicos[0]
+comprueba(conOtras.tarjeta.otrasClaves.join() === 'medicina_interna', 'el superadmin lee las otras de la tarjeta')
+comprueba(filtrarMedicos([conOtras], { q: 'interna', ver: 'todos' }).length === 1, 'y lo encuentra buscándolas')
+const bo = borradorDe(conOtras.tarjeta)
+comprueba(cambiosDelBorrador(bo, conOtras.tarjeta) === null, 'sin tocarlas no hay cambio')
+comprueba(
+  JSON.stringify(cambiosDelBorrador({ ...bo, otrasClaves: ['medicina_interna', 'gastroenterologia'] }, conOtras.tarjeta)) ===
+    JSON.stringify({ other_specialty_keys: ['medicina_interna', 'gastroenterologia'] }),
+  'añadir una manda la lista entera',
+)
+comprueba(
+  JSON.stringify(cambiosDelBorrador({ ...bo, otrasClaves: [] }, conOtras.tarjeta)) === JSON.stringify({ other_specialty_keys: [] }),
+  'quitarlas todas manda la lista vacía',
+)
+comprueba(
+  JSON.stringify(cambiosDelBorrador({ ...bo, clave: 'medicina_interna' }, conOtras.tarjeta)) ===
+    JSON.stringify({ specialty_key: 'medicina_interna', other_specialty_keys: [] }),
+  'si la otra pasa a principal, deja de contar aparte',
+)
+comprueba(
+  motivoParaNoGuardar({ ...bo, otrasClaves: ['cardiologia', 'neumologia', 'nefrologia', 'urologia'] }) !== null,
+  'más de tres no se pueden guardar',
+)
+const vista = comoTarjetaPublica('s1', datosDelBorrador({ ...bo, otrasClaves: ['medicina_interna', 'gastroenterologia'] }, conOtras.ficha))
+comprueba(
+  especialidadDeTarjeta(vista) === 'Psiquiatría · Medicina interna · Gastroenterología',
+  'la vista previa enseña las del borrador',
+  especialidadDeTarjeta(vista),
+)
 
 console.log(fallos === 0 ? '\nTodo bien.' : `\n${fallos} fallo(s).`)
 if (fallos > 0) process.exit(1)

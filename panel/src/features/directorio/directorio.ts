@@ -22,8 +22,13 @@ export type MedicoDelDirectorio = {
   nombre: string
   /** El texto de la tarjeta («Traumatología, cirugía de cadera y rodilla»). */
   especialidad: string | null
-  /** La del filtro y el icono. */
+  /** La principal: la del icono, la de su ficha y la de «Otros de la especialidad». */
   clave: ClaveDeEspecialidad
+  /**
+   * Las otras en las que sale (el Dr. psiquiatra e internista): cuenta en su
+   * filtro y en su página igual que la principal. Nunca la principal ni «otra».
+   */
+  otrasClaves: ClaveDeEspecialidad[]
   direccion: string | null
   ciudad: string | null
   /** E.164: '+584141234567'. */
@@ -53,11 +58,13 @@ export function leerDirectorio(raw: unknown): MedicoDelDirectorio[] {
   return comoLista(raw)
     .map((fila) => {
       const r = comoFila(fila)
+      const clave = leerEspecialidad(r.specialty_key)
       return {
         id: texto(r.merchant_id),
         nombre: texto(r.name),
         especialidad: textoONulo(r.specialty),
-        clave: leerEspecialidad(r.specialty_key),
+        clave,
+        otrasClaves: leerOtrasEspecialidades(r.other_specialty_keys, clave),
         direccion: textoONulo(r.address),
         ciudad: textoONulo(r.city),
         whatsapp: texto(r.whatsapp),
@@ -73,15 +80,53 @@ export function leerDirectorio(raw: unknown): MedicoDelDirectorio[] {
     .filter((m) => m.id !== '' && m.nombre !== '' && m.whatsapp !== '')
 }
 
+/**
+ * `other_specialty_keys` tal cual llega (de una base de antes, nada): solo
+ * las que el panel conoce, sin «otra», sin la principal y sin repetir.
+ */
+export function leerOtrasEspecialidades(v: unknown, principal: ClaveDeEspecialidad): ClaveDeEspecialidad[] {
+  const otras: ClaveDeEspecialidad[] = []
+  for (const x of Array.isArray(v) ? v : []) {
+    const clave = leerEspecialidad(x)
+    if (clave !== 'otra' && clave !== principal && !otras.includes(clave)) otras.push(clave)
+  }
+  return otras
+}
+
+/** Todas las especialidades en las que sale: la principal primero. */
+export function clavesDelMedico(m: Pick<MedicoDelDirectorio, 'clave' | 'otrasClaves'>): ClaveDeEspecialidad[] {
+  return [m.clave, ...m.otrasClaves.filter((c) => c !== m.clave)]
+}
+
+/** Si sale en esa especialidad, sea la principal o una de las otras. */
+export function saleEn(m: Pick<MedicoDelDirectorio, 'clave' | 'otrasClaves'>, clave: ClaveDeEspecialidad): boolean {
+  return m.clave === clave || m.otrasClaves.includes(clave)
+}
+
 // ── Lo que se lee en la tarjeta ────────────────────────────────────────────
 
 /**
  * La línea de la especialidad. Sin texto propio, el nombre de su
  * especialidad; con «Otras especialidades» y sin texto, nada (no dice nada).
+ * Las otras especialidades van detrás («Psiquiatría · Medicina interna»),
+ * salvo las que el texto ya nombra («Médico internista y gastroenterólogo»
+ * ya dice las dos).
  */
-export function especialidadDeTarjeta(m: Pick<MedicoDelDirectorio, 'especialidad' | 'clave'>): string | null {
-  if (m.especialidad) return m.especialidad
-  return m.clave === 'otra' ? null : nombreDeEspecialidad(m.clave)
+export function especialidadDeTarjeta(
+  m: Pick<MedicoDelDirectorio, 'especialidad' | 'clave' | 'otrasClaves'>,
+): string | null {
+  const principal = m.especialidad || (m.clave === 'otra' ? null : nombreDeEspecialidad(m.clave))
+  const dicho = normalizar(principal ?? '')
+  const otras = m.otrasClaves
+    .filter((c) => !yaLaNombra(dicho, c))
+    .map((c) => nombreDeEspecialidad(c))
+  return [principal, ...otras].filter(Boolean).join(' · ') || null
+}
+
+/** Si un texto (ya normalizado) nombra la especialidad o a quien la ejerce. */
+function yaLaNombra(dicho: string, clave: ClaveDeEspecialidad): boolean {
+  const e = ESPECIALIDADES.find((x) => x.clave === clave)
+  return !!e && [e.nombre, ...e.busca].some((forma) => dicho.includes(normalizar(forma)))
 }
 
 /** «Av. Lara, Torre Médica, piso 3 · Barquisimeto», sin repetir la ciudad. */
@@ -233,7 +278,9 @@ export function normalizar(t: string): string {
 
 function textoDeBusqueda(m: MedicoDelDirectorio): string {
   return normalizar(
-    [m.nombre, m.especialidad, nombreDeEspecialidad(m.clave), m.direccion, m.ciudad, m.usuarioDeRed].filter(Boolean).join(' '),
+    [m.nombre, m.especialidad, ...clavesDelMedico(m).map(nombreDeEspecialidad), m.direccion, m.ciudad, m.usuarioDeRed]
+      .filter(Boolean)
+      .join(' '),
   )
 }
 
@@ -277,7 +324,7 @@ export function filtrarDirectorio(
     .split(' ')
     .filter(Boolean)
   return medicos.filter((m) => {
-    if (especialidad && m.clave !== especialidad) return false
+    if (especialidad && !saleEn(m, especialidad)) return false
     if (precio && !estaEnElTramo(m, precio)) return false
     if (palabras.length === 0) return true
     const t = textoDeBusqueda(m)
@@ -323,10 +370,11 @@ export type EspecialidadPresente ={ clave: ClaveDeEspecialidad; nombre: string; 
 /**
  * Las especialidades que tienen algún médico, la de más médicos primero y
  * «Otras» siempre al final: un filtro que no devuelve a nadie no se ofrece.
+ * Quien sale en dos especialidades cuenta en las dos.
  */
 export function especialidadesPresentes(medicos: readonly MedicoDelDirectorio[]): EspecialidadPresente[] {
   const cuenta = new Map<ClaveDeEspecialidad, number>()
-  for (const m of medicos) cuenta.set(m.clave, (cuenta.get(m.clave) ?? 0) + 1)
+  for (const m of medicos) for (const c of clavesDelMedico(m)) cuenta.set(c, (cuenta.get(c) ?? 0) + 1)
   return [...cuenta.entries()]
     .map(([clave, cuantos]) => ({ clave, nombre: nombreDeEspecialidad(clave), cuantos }))
     .sort((a, b) => {
@@ -445,14 +493,23 @@ export function directorioEnSchema(
  */
 export function medicoEnSchema(m: MedicoDelDirectorio, urlDeFicha?: string) {
   const especialidad = especialidadDeTarjeta(m)
-  const schema = ESPECIALIDAD_EN_SCHEMA[m.clave]
+  // Una por especialidad en la que sale, sin repetir (cardiología y angiología
+  // son las dos `Cardiovascular`); con una sola, sin lista.
+  const schemas = [
+    ...new Set(
+      clavesDelMedico(m)
+        .map((c) => ESPECIALIDAD_EN_SCHEMA[c])
+        .filter((s): s is string => !!s)
+        .map((s) => `https://schema.org/${s}`),
+    ),
+  ]
   const red = enlaceDeRed(m)
   return {
     '@type': 'Physician',
     ...(urlDeFicha ? { '@id': `${urlDeFicha}#medico`, url: urlDeFicha } : {}),
     name: m.nombre,
     ...(especialidad ? { description: especialidad } : {}),
-    ...(schema ? { medicalSpecialty: `https://schema.org/${schema}` } : {}),
+    ...(schemas.length ? { medicalSpecialty: schemas.length === 1 ? schemas[0] : schemas } : {}),
     ...(m.direccion || m.ciudad
       ? {
           address: {

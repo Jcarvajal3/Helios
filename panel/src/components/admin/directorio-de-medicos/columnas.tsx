@@ -93,10 +93,19 @@ export function columnasDelDirectorio({
     {
       key: 'especialidad',
       header: 'Filtro',
-      info: 'La especialidad con la que se filtra y el icono de la tarjeta.',
+      info: 'La especialidad del icono y las del filtro: la principal y, debajo, las otras en las que también sale.',
       sort: (m) => nombreDeEspecialidad(m.tarjeta.clave),
-      csv: (m) => nombreDeEspecialidad(m.tarjeta.clave),
-      cell: (m) => <span className="text-on-surface">{nombreDeEspecialidad(m.tarjeta.clave)}</span>,
+      csv: (m) => [m.tarjeta.clave, ...m.tarjeta.otrasClaves].map(nombreDeEspecialidad).join(' · '),
+      cell: (m) => (
+        <div className="min-w-0">
+          <p className="text-on-surface">{nombreDeEspecialidad(m.tarjeta.clave)}</p>
+          {m.tarjeta.otrasClaves.length > 0 && (
+            <p className="type-panel-caption text-on-surface-variant">
+              También {m.tarjeta.otrasClaves.map(nombreDeEspecialidad).join(' · ')}
+            </p>
+          )}
+        </div>
+      ),
     },
 
     {

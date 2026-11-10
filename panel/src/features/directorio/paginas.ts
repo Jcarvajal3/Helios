@@ -1,4 +1,4 @@
-import { especialidadDeTarjeta } from './directorio'
+import { clavesDelMedico, especialidadDeTarjeta, saleEn } from './directorio'
 import type { MedicoDelDirectorio } from './directorio'
 import { CLAVES_DE_ESPECIALIDAD, nombreDeEspecialidad } from './especialidades'
 import type { ClaveDeEspecialidad } from './especialidades'
@@ -97,11 +97,11 @@ export function profesionales(clave: ClaveDeEspecialidad): string {
 
 /**
  * Las especialidades que tienen página: las que tienen al menos un médico
- * publicado, sin «Otras especialidades» (no es algo que se busque), en el
- * orden de la lista.
+ * publicado (como principal o como una de sus otras), sin «Otras
+ * especialidades» (no es algo que se busque), en el orden de la lista.
  */
 export function especialidadesConPagina(medicos: readonly MedicoDelDirectorio[]): ClaveDeEspecialidad[] {
-  const presentes = new Set(medicos.map((m) => m.clave))
+  const presentes = new Set(medicos.flatMap(clavesDelMedico))
   return CLAVES_DE_ESPECIALIDAD.filter((c) => c !== 'otra' && presentes.has(c))
 }
 
@@ -169,16 +169,17 @@ export function textosDeFicha(m: MedicoDelDirectorio) {
 }
 
 /**
- * Hasta `n` médicos de la misma especialidad, sin él: los enlaces de «Otros
- * especialistas» de la ficha (enlazado interno, y otra opción para el
- * paciente).
+ * Hasta `n` médicos que salen en su especialidad principal, sin él: los
+ * enlaces de «Otros especialistas» de la ficha (enlazado interno, y otra
+ * opción para el paciente). Primero los que la tienen de principal.
  */
 export function otrosDeLaEspecialidad(
   m: MedicoDelDirectorio,
   medicos: readonly MedicoDelDirectorio[],
   n = 6,
 ): MedicoDelDirectorio[] {
-  return medicos.filter((o) => o.clave === m.clave && o.id !== m.id && o.slug).slice(0, n)
+  const suyos = medicos.filter((o) => saleEn(o, m.clave) && o.id !== m.id && o.slug)
+  return [...suyos.filter((o) => o.clave === m.clave), ...suyos.filter((o) => o.clave !== m.clave)].slice(0, n)
 }
 
 /** Un enlace de Google Maps que busca la dirección tal cual la escribió el médico. */
@@ -207,7 +208,7 @@ export function paginasPublicas(
   const fijas = Object.entries(fijasPorRuta).map(([ruta, { actualizada }]) => ({ ruta, actualizada }))
   const especialidades = especialidadesConPagina(medicos).map((clave) => ({
     ruta: rutaDeEspecialidad(clave),
-    actualizada: ultimoCambio(medicos.filter((m) => m.clave === clave).map((m) => m.actualizado)),
+    actualizada: ultimoCambio(medicos.filter((m) => saleEn(m, clave)).map((m) => m.actualizado)),
   }))
   const fichas = medicos
     .filter((m): m is MedicoDelDirectorio & { slug: string } => !!m.slug)

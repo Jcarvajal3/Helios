@@ -17,6 +17,7 @@ import { apuntarContacto, cargarDirectorio, consultarMedico } from '@/features/d
 import { useVisitaDelDirectorio } from '@/features/directorio/visita'
 import {
   ROTULO_DE_PRECIO,
+  clavesDelMedico,
   enlaceDeRed,
   enlaceDeWhatsApp,
   especialidadDeTarjeta,
@@ -242,16 +243,17 @@ function Otros({ medico: m, otros }: { medico: MedicoDelDirectorio; otros: Medic
             </li>
           ))}
         </ul>
-        {m.clave !== 'otra' && (
-          <p className="mt-6 text-[0.95rem]">
-            <Link
-              to={rutaDeEspecialidad(m.clave)}
-              className="font-medium text-portada-azul underline-offset-4 hover:underline"
-            >
-              Ver todos los {profesionales(m.clave).toLowerCase()} del directorio
-            </Link>
-          </p>
-        )}
+        {/* Uno por especialidad en la que sale: el internista que también es
+            psiquiatra lleva a las dos páginas. */}
+        {clavesDelMedico(m)
+          .filter((c) => c !== 'otra')
+          .map((c, i) => (
+            <p key={c} className={`${i === 0 ? 'mt-6' : 'mt-2'} text-[0.95rem]`}>
+              <Link to={rutaDeEspecialidad(c)} className="font-medium text-portada-azul underline-offset-4 hover:underline">
+                Ver todos los {profesionales(c).toLowerCase()} del directorio
+              </Link>
+            </p>
+          ))}
       </Lienzo>
     </section>
   )

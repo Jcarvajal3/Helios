@@ -3,7 +3,7 @@ import type { Moneda } from '@/components/ui'
 import { limpiarUsuarioDeRed, motivoDelUsuarioDeRed } from '@/features/admin/clinicas/clinicas'
 import type { RedSocial } from '@/features/admin/clinicas/clinicas'
 import type { MedicoDelDirectorio } from '@/features/directorio/directorio'
-import { leerRed, normalizar } from '@/features/directorio/directorio'
+import { leerOtrasEspecialidades, leerRed, normalizar } from '@/features/directorio/directorio'
 import { leerEspecialidad, nombreDeEspecialidad } from '@/features/directorio/especialidades'
 import type { ClaveDeEspecialidad } from '@/features/directorio/especialidades'
 import { unoDe } from '@/lib/busqueda'
@@ -26,6 +26,8 @@ export type DatosDeTarjeta = {
   nombre: string
   especialidad: string | null
   clave: ClaveDeEspecialidad
+  /** Las otras en las que sale; la ficha de la clínica nunca tiene. */
+  otrasClaves: ClaveDeEspecialidad[]
   direccion: string | null
   ciudad: string | null
   /** E.164, o `null` si no hay. */
@@ -120,10 +122,12 @@ const BLOQUEOS = ['terminada', 'pausada', 'prueba', 'sin_whatsapp'] as const
 
 function leerDatos(raw: unknown): DatosDeTarjeta {
   const r = comoFila(raw)
+  const clave = leerEspecialidad(r.specialty_key)
   return {
     nombre: texto(r.name),
     especialidad: textoONulo(r.specialty),
-    clave: leerEspecialidad(r.specialty_key),
+    clave,
+    otrasClaves: leerOtrasEspecialidades(r.other_specialty_keys, clave),
     direccion: textoONulo(r.address),
     ciudad: textoONulo(r.city),
     whatsapp: textoONulo(r.whatsapp),
@@ -203,6 +207,7 @@ export function comoTarjetaPublica(id: string, d: DatosDeTarjeta): MedicoDelDire
     nombre: d.nombre.trim() || 'Sin nombre',
     especialidad: d.especialidad?.trim() || null,
     clave: d.clave,
+    otrasClaves: d.otrasClaves.filter((c) => c !== d.clave),
     direccion: d.direccion?.trim() || null,
     ciudad: d.ciudad?.trim() || null,
     whatsapp: d.whatsapp ?? '',
@@ -249,7 +254,7 @@ export function filtrarMedicos(
         m.tarjeta.nombre,
         m.clinica,
         m.tarjeta.especialidad,
-        nombreDeEspecialidad(m.tarjeta.clave),
+        ...[m.tarjeta.clave, ...m.tarjeta.otrasClaves].map(nombreDeEspecialidad),
         m.tarjeta.direccion,
         m.tarjeta.ciudad,
         m.tarjeta.whatsapp,
@@ -345,6 +350,8 @@ export type BorradorDeTarjeta = {
   nombre: string
   especialidad: string
   clave: ClaveDeEspecialidad
+  /** En el orden en que se eligieron. */
+  otrasClaves: ClaveDeEspecialidad[]
   direccion: string
   ciudad: string
   whatsapp: string
@@ -361,6 +368,7 @@ export function borradorDe(d: DatosDeTarjeta): BorradorDeTarjeta {
     nombre: d.nombre,
     especialidad: d.especialidad ?? '',
     clave: d.clave,
+    otrasClaves: [...d.otrasClaves],
     direccion: d.direccion ?? '',
     ciudad: d.ciudad ?? '',
     whatsapp: d.whatsapp ? formatPhone(d.whatsapp) : '',
@@ -393,6 +401,7 @@ export function datosDelBorrador(b: BorradorDeTarjeta, ficha: DatosDeTarjeta): D
     nombre: limpio(b.nombre) || ficha.nombre,
     especialidad: limpio(b.especialidad) || ficha.especialidad,
     clave: b.clave,
+    otrasClaves: otrasDelBorrador(b),
     direccion: limpio(b.direccion) || ficha.direccion,
     ciudad: limpio(b.ciudad) || ficha.ciudad,
     whatsapp: b.whatsapp.trim() ? whatsappE164(b.whatsapp) : ficha.whatsapp,
@@ -404,11 +413,26 @@ export function datosDelBorrador(b: BorradorDeTarjeta, ficha: DatosDeTarjeta): D
   }
 }
 
+/** Como mucho, cuántas especialidades además de la principal (la base dice lo mismo). */
+export const MAXIMO_DE_OTRAS_ESPECIALIDADES = 3
+
+/**
+ * Las otras especialidades del borrador como las guarda la base: sin la
+ * principal (si se elige como principal una de las otras, deja de contar
+ * aparte), sin «otra» y sin repetir.
+ */
+export function otrasDelBorrador(b: Pick<BorradorDeTarjeta, 'clave' | 'otrasClaves'>): ClaveDeEspecialidad[] {
+  return b.otrasClaves.filter((c, i) => c !== b.clave && c !== 'otra' && b.otrasClaves.indexOf(c) === i)
+}
+
 /** Por qué no se puede guardar el borrador, o `null`. */
 export function motivoParaNoGuardar(b: BorradorDeTarjeta): string | null {
   const nombre = b.nombre.trim()
   if (nombre && (nombre.length < 3 || nombre.length > 120)) return 'El nombre debe tener entre 3 y 120 caracteres.'
   if (b.especialidad.trim().length > 120) return 'La especialidad no puede pasar de 120 caracteres.'
+  if (otrasDelBorrador(b).length > MAXIMO_DE_OTRAS_ESPECIALIDADES) {
+    return `Como mucho ${MAXIMO_DE_OTRAS_ESPECIALIDADES} especialidades además de la principal.`
+  }
   if (b.direccion.trim().length > 300) return 'La dirección no puede pasar de 300 caracteres.'
   if (b.ciudad.trim().length > 80) return 'La ciudad no puede pasar de 80 caracteres.'
   if (b.whatsapp.trim() && !whatsappE164(b.whatsapp)) return 'El WhatsApp debe ser un número venezolano, como 0414-1234567.'
@@ -429,12 +453,18 @@ export function motivoParaNoGuardar(b: BorradorDeTarjeta): string | null {
 export function cambiosDelBorrador(
   b: BorradorDeTarjeta,
   actual: DatosDeTarjeta,
-): Record<string, string> | null {
-  const cambios: Record<string, string> = {}
+): Record<string, string | string[]> | null {
+  const cambios: Record<string, string | string[]> = {}
   const limpio = (t: string) => t.trim().replace(/\s+/g, ' ')
   if (limpio(b.nombre) !== actual.nombre) cambios.name = limpio(b.nombre)
   if (limpio(b.especialidad) !== (actual.especialidad ?? '')) cambios.specialty = limpio(b.especialidad)
   if (b.clave !== actual.clave) cambios.specialty_key = b.clave
+  const otras = otrasDelBorrador(b)
+  // Contra las de hoy tal cual: si una pasa a principal, se manda la lista sin
+  // ella, y no reaparece si luego la principal vuelve a ser la de antes.
+  if (otras.join(',') !== actual.otrasClaves.join(',')) {
+    cambios.other_specialty_keys = otras
+  }
   if (limpio(b.direccion) !== (actual.direccion ?? '')) cambios.address = limpio(b.direccion)
   if (limpio(b.ciudad) !== (actual.ciudad ?? '')) cambios.city = limpio(b.ciudad)
   const wa = b.whatsapp.trim() ? (whatsappE164(b.whatsapp) ?? b.whatsapp.trim()) : ''
@@ -450,7 +480,9 @@ export function cambiosDelBorrador(
 
 /** Qué datos de la tarjeta no son los de la ficha: se marcan en la ficha. */
 export function datosPropios(m: Pick<MedicoEnElDirectorio, 'tarjeta' | 'ficha'>): Array<keyof DatosDeTarjeta> {
-  return (Object.keys(m.tarjeta) as Array<keyof DatosDeTarjeta>).filter((k) => m.tarjeta[k] !== m.ficha[k])
+  const igual = (a: unknown, b: unknown) =>
+    Array.isArray(a) && Array.isArray(b) ? a.join(',') === b.join(',') : a === b
+  return (Object.keys(m.tarjeta) as Array<keyof DatosDeTarjeta>).filter((k) => !igual(m.tarjeta[k], m.ficha[k]))
 }
 
 // ── Las cifras ─────────────────────────────────────────────────────────────

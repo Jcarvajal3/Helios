@@ -138,6 +138,35 @@ comprueba(
 comprueba(new Set(rutas).size === rutas.length, 'ninguna ruta repetida')
 comprueba(ultimoCambio([null, null]) === undefined, 'sin fechas, sin lastmod')
 
+console.log('── Un médico en varias especialidades ────────────────────────')
+const conDoble = leerDirectorio([
+  ...[
+    { merchant_id: 'p1', name: 'Dr. Psiquiatra', specialty_key: 'psiquiatria', other_specialty_keys: ['medicina_interna'], slug: 'dr-psiquiatra', updated_at: '2026-11-10T12:00:00Z' },
+    { merchant_id: 'p2', name: 'Dra. Internista', specialty_key: 'medicina_interna', slug: 'dra-internista', updated_at: '2026-11-01T12:00:00Z' },
+    { merchant_id: 'p3', name: 'Dr. Otro Psiquiatra', specialty_key: 'psiquiatria', slug: 'dr-otro-psiquiatra', updated_at: null },
+  ].map((r, i) => ({ ...r, whatsapp: `+58414999000${i}` })),
+])
+const [psiq, internista] = conDoble
+comprueba(
+  especialidadesConPagina(conDoble).join() === 'medicina_interna,psiquiatria',
+  'la otra especialidad también tiene página',
+  especialidadesConPagina(conDoble),
+)
+const rutasDoble = paginasPublicas({}, conDoble)
+comprueba(
+  rutasDoble.find((r) => r.ruta === '/directorio/medicina-interna')?.actualizada === '2026-11-10',
+  'la página de la otra cambia cuando cambia él',
+  rutasDoble,
+)
+comprueba(
+  otrosDeLaEspecialidad(internista, conDoble).map((m) => m.id).join() === 'p1',
+  'en la ficha de la internista, él sale entre los otros internistas',
+)
+comprueba(
+  otrosDeLaEspecialidad(psiq, conDoble).map((m) => m.id).join() === 'p3',
+  'en la suya, los otros son los de su principal',
+)
+
 console.log('── De dónde llegó la visita ──────────────────────────────────')
 comprueba(fuenteDeLaVisita('google.com', null) === 'google', 'Google')
 comprueba(fuenteDeLaVisita('google.co.ve', null) === 'google', 'Google Venezuela')

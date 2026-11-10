@@ -1551,6 +1551,42 @@ el equipo sigue la conversación a mano en superadmin › WhatsApp
 
 Suite: `supabase/tests/whatsapp_inbox_quien_smoke.sql` (casos 8 a 10).
 
+### 2.19 Un médico en varias especialidades del directorio (2026-11-10, 20261110120000)
+
+Hay médicos con dos especialidades (psiquiatra e internista; internista y
+gastroenterólogo). En vez de una segunda tarjeta —que duplicaría su ficha
+`/medico/<slug>`, partiría sus clics y la prueba A/B, y repetiría su WhatsApp—
+la tarjeta suma otras especialidades.
+
+- `directory_listings.other_specialty_keys text[] not null default '{}'`:
+  hasta **tres** claves de `helios_directorio_especialidades()` además de
+  `specialty_key`, sin `otra` (check). No tiene valor en la ficha de la
+  clínica. La principal sigue siendo la del icono, la de las migas de la ficha
+  y la de «Otros de la especialidad».
+- `helios_directorio_fichas()`, `helios_directorio()`,
+  `helios_directorio_medico(p_slug)` y `helios_directorio_consultas()`
+  añaden al final `other_specialty_keys text[]`: en el orden en que se
+  eligieron y **sin la principal** (si la principal pasa a ser una de ellas,
+  no sale dos veces).
+- `admin_directorio()` las trae en `listing.other_specialty_keys` (lista);
+  `base.other_specialty_keys` es siempre `[]`.
+- `admin_directorio_guardar` acepta `other_specialty_keys`: una lista (o
+  null = vacía) que **reemplaza** la de hoy. Quita las repetidas y la
+  principal; `22023` con una clave desconocida, con `otra`, con más de tres o
+  si no es una lista. De paso (mismo cambio), una tarjeta nueva con precio y
+  sin `consultation_currency` va en `USD`: antes la columna `not null` la
+  rechazaba.
+
+En el panel, el médico cuenta en el filtro de cada una de sus especialidades,
+sale en su página `/directorio/<especialidad>` (y en el sitemap y
+`llms.txt`), la búsqueda encuentra el nombre de cada una, la tarjeta dice
+«Psiquiatría · Medicina interna» (sin repetir la que el texto ya nombra:
+`especialidadDeTarjeta`) y el JSON-LD lleva un `medicalSpecialty` por cada
+una con equivalente en schema.org. En superadmin › Directorio, la ficha del
+médico tiene «También sale en» bajo la principal.
+
+Suite: `supabase/tests/directorio_especialidades_smoke.sql`.
+
 ---
 
 ## 3. Parámetros nuevos (`business_parameters`)

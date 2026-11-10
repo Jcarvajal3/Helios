@@ -102,7 +102,7 @@ export function consultaPruebaAB({ desde, hasta }: { desde: string; hasta: strin
  * un mensaje que se puede enseñar tal cual, publicar una clínica que no se
  * puede publicar y un dato fuera de medida.
  */
-export async function guardarTarjeta(merchantId: string, cambios: Record<string, string | boolean>): Promise<void> {
+export async function guardarTarjeta(merchantId: string, cambios: Record<string, string | string[] | boolean>): Promise<void> {
   const { error } = await supabase.rpc('admin_directorio_guardar', {
     p_merchant_id: merchantId,
     p_cambios: cambios,

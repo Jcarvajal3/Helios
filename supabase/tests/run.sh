@@ -97,6 +97,7 @@ SUITES=(
   directorio_smoke
   directorio_interesados_smoke
   directorio_ab_smoke
+  directorio_especialidades_smoke
   whatsapp_inbox_quien_smoke
   rx_smoke
   rx_precios_smoke
