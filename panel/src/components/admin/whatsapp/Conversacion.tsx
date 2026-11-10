@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { FormEvent, KeyboardEvent } from 'react'
 import {
   useInfiniteQuery,
@@ -96,6 +96,7 @@ export function Conversacion({
               <span className="tabular-nums">{formatPhone(chat.telefono)}</span>
             )}
             <QuienEnLaCabecera chat={chat} />
+            <InteresadoEnLaCabecera chat={chat} />
           </p>
           {/* En el teléfono las etiquetas bajan debajo del nombre: en la fila,
               con dos de ellas el nombre se quedaba en nada. */}
@@ -189,6 +190,37 @@ function QuienEnLaCabecera({ chat }: { chat: Chat }) {
     >
       Buscar en pacientes
     </Link>
+  )
+}
+
+/**
+ * Si escribió desde el directorio: «Interesado en» y los médicos con los que
+ * quiere la cita, cada uno con el enlace a su clínica.
+ */
+function InteresadoEnLaCabecera({ chat }: { chat: Chat }) {
+  if (!chat.interesado) return null
+  const { medicos } = chat.interesado
+  if (medicos.length === 0) return <span>Interesado del directorio</span>
+  return (
+    <span>
+      Interesado en{' '}
+      {medicos.map((m, i) => (
+        <Fragment key={m.merchantId ?? i}>
+          {i > 0 && ', '}
+          {m.merchantId ? (
+            <Link
+              to="/admin/clinicas/$id"
+              params={{ id: m.merchantId }}
+              className={ENLACE}
+            >
+              {m.medico ?? 'su médico'}
+            </Link>
+          ) : (
+            (m.medico ?? 'su médico')
+          )}
+        </Fragment>
+      ))}
+    </span>
   )
 }
 

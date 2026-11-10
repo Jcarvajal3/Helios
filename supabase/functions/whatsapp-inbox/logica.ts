@@ -30,7 +30,7 @@ export type Peticion =
       tipo: 'chats'
       busqueda: string | null
       sinLeer: boolean
-      /** Solo los de médicos o solo los de pacientes; `null`, todos. */
+      /** Solo los de médicos, pacientes o interesados del directorio; `null`, todos. */
       quien: Quien | null
       limite: number
       desde: number
@@ -46,8 +46,14 @@ export type Peticion =
   | { tipo: 'resolver'; waId: string; resuelto: boolean }
   | { tipo: 'adjunto'; id: string; mime: string | null }
 
-/** De qué lado es un chat, según la base (`admin_whatsapp_inbox_contacts`). */
-export type Quien = 'medicos' | 'pacientes'
+/**
+ * De qué lado es un chat, según la base (`admin_whatsapp_inbox_contacts`).
+ * `directorio`: los interesados del directorio (`directory_leads`), sean o no
+ * además pacientes.
+ */
+export type Quien = 'medicos' | 'pacientes' | 'directorio'
+
+const QUIENES: readonly string[] = ['medicos', 'pacientes', 'directorio']
 
 export type PeticionInvalida = {
   error: 'ruta_desconocida' | 'peticion_invalida'
@@ -120,13 +126,12 @@ export function leerPeticion(
   if (metodo === 'GET' && ruta === 'chats' && !param) {
     const busqueda = (q.get('q') ?? '').trim().slice(0, 100)
     const quien = q.get('quien') || null
-    if (quien !== null && quien !== 'medicos' && quien !== 'pacientes')
-      return invalida('quien')
+    if (quien !== null && !QUIENES.includes(quien)) return invalida('quien')
     return {
       tipo: 'chats',
       busqueda: busqueda === '' ? null : busqueda,
       sinLeer: si(q.get('sin_leer')),
-      quien,
+      quien: quien as Quien | null,
       limite: entero(q.get('limite'), LIMITE_POR_DEFECTO, 1, LIMITE_MAXIMO),
       desde: entero(q.get('desde'), 0, 0, 1_000_000),
     }
@@ -296,9 +301,11 @@ export function waIdDelChat(chat: unknown): string | null {
 }
 
 /**
- * Cada chat con lo que la base sabe de él en `helios` (`null` si no es ni
- * médico ni paciente) y, si se filtra, solo los de ese lado. `quienes` es lo
- * que devuelve `admin_whatsapp_inbox_contacts`: {wa_id: {tipo, …}}.
+ * Cada chat con lo que la base sabe de él en `helios` (`null` si no es
+ * médico, paciente ni interesado del directorio) y, si se filtra, solo los de
+ * ese lado. `quienes` es lo que devuelve `admin_whatsapp_inbox_contacts`:
+ * {wa_id: {tipo?, …, interesado?: {medicos: […]}}}. Un interesado que además
+ * es paciente sale con los dos filtros.
  */
 export function anotarChats(
   chats: unknown[],
@@ -313,11 +320,13 @@ export function anotarChats(
       const helios = (id !== null && q[id]) || null
       return { ...(chat as Record<string, unknown>), helios }
     })
-    .filter(
-      (chat) =>
-        filtro === null ||
-        (chat.helios as { tipo?: unknown } | null)?.tipo === tipo,
-    )
+    .filter((chat) => {
+      if (filtro === null) return true
+      const h = chat.helios as { tipo?: unknown; interesado?: unknown } | null
+      if (filtro === 'directorio')
+        return typeof h?.interesado === 'object' && h.interesado !== null
+      return h?.tipo === tipo
+    })
 }
 
 /**

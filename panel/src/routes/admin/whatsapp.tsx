@@ -8,7 +8,7 @@ type WhatsAppSearch = {
   chat?: string
   q?: string
   sin_leer?: true
-  quien?: 'medicos' | 'pacientes'
+  quien?: 'medicos' | 'pacientes' | 'directorio'
 }
 
 export const Route = createFileRoute('/admin/whatsapp')({
@@ -18,7 +18,7 @@ export const Route = createFileRoute('/admin/whatsapp')({
     chat: comoTexto(search.chat),
     q: comoTexto(search.q),
     sin_leer: comoBooleano(search.sin_leer),
-    quien: unoDe(['medicos', 'pacientes'] as const, search.quien),
+    quien: unoDe(['medicos', 'pacientes', 'directorio'] as const, search.quien),
   }),
 })
 

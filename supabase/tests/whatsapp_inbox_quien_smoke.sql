@@ -10,6 +10,10 @@
 --   5. Un número revocado ya no es médico (si tiene perfil, es paciente).
 --   6. Un número que nadie conoce no viene; un wa_id raro, tampoco.
 --   7. Más de 200 de una vez, no (22023).
+--   8. Un interesado del directorio sin perfil viene sin `tipo`, con
+--      `interesado.medicos` (nombre de la tarjeta, variante) (20261109160000).
+--   9. Un paciente interesado trae las dos cosas, el último médico primero.
+--  10. Quien no escribió desde el directorio no trae `interesado`.
 --
 -- No llama al Inbox: la RPC no tiene red.
 -- ============================================================================
@@ -26,6 +30,7 @@ declare
   v_doble   uuid := gen_random_uuid();
   v_ex      uuid := gen_random_uuid();
   v_m       uuid;
+  v_m2      uuid;
   v_br      uuid;
   v_j       jsonb;
   v_fallo   boolean;
@@ -118,6 +123,45 @@ begin
   exception when sqlstate '22023' then v_fallo := true;
   end;
   if not v_fallo then raise exception '7. aceptó más de 200 chats de una vez'; end if;
+  reset role;
+
+  -- Los interesados del directorio (20261109160000).
+  set local role authenticated;
+  v_m2 := (public.admin_create_merchant('Clínica Quién Dos', null, 'J-610000078', 'clinica')).id;
+  reset role;
+  insert into public.directory_listings (merchant_id, display_name) values (v_m, 'Dra. Ana Lara');
+  insert into public.directory_leads (merchant_id, phone_e164, variant, first_at, last_at) values
+    (v_m,  '+584149997705', 'b', now() - interval '1 day', now() - interval '1 day'),
+    (v_m,  '+584149997703', 'a', now() - interval '3 days', now() - interval '3 days'),
+    (v_m2, '+584149997703', 'b', now() - interval '2 days', now() - interval '1 hour');
+
+  set local role authenticated;
+  v_j := public.admin_whatsapp_inbox_contacts(
+    array['584149997701', '584149997703', '584149997705', '584149997799']);
+
+  -- 8. Un interesado que no es médico ni paciente: sin tipo, con su médico.
+  if v_j -> '584149997705' ? 'tipo'
+     or jsonb_array_length(v_j -> '584149997705' -> 'interesado' -> 'medicos') <> 1
+     or v_j -> '584149997705' -> 'interesado' -> 'medicos' -> 0 ->> 'medico' is distinct from 'Dra. Ana Lara'
+     or (v_j -> '584149997705' -> 'interesado' -> 'medicos' -> 0 ->> 'merchant_id')::uuid is distinct from v_m
+     or v_j -> '584149997705' -> 'interesado' -> 'medicos' -> 0 ->> 'variante' is distinct from 'b' then
+    raise exception '8. el interesado sin perfil no salió bien: %', v_j -> '584149997705';
+  end if;
+
+  -- 9. Un paciente que además es interesado: las dos cosas, el último médico primero.
+  if v_j -> '584149997703' ->> 'tipo' is distinct from 'paciente'
+     or jsonb_array_length(v_j -> '584149997703' -> 'interesado' -> 'medicos') <> 2
+     or (v_j -> '584149997703' -> 'interesado' -> 'medicos' -> 0 ->> 'merchant_id')::uuid is distinct from v_m2
+     or v_j -> '584149997703' -> 'interesado' -> 'medicos' -> 0 ->> 'medico' is null
+     or (v_j -> '584149997703' -> 'interesado' -> 'medicos' -> 1 ->> 'merchant_id')::uuid is distinct from v_m then
+    raise exception '9. el paciente interesado no salió bien: %', v_j -> '584149997703';
+  end if;
+
+  -- 10. Quien no escribió desde el directorio no trae `interesado`; un
+  --     número que nadie conoce sigue sin venir.
+  if v_j -> '584149997701' ? 'interesado' or v_j ? '584149997799' then
+    raise exception '10. interesado de más: %', v_j;
+  end if;
   reset role;
 end;
 $$;

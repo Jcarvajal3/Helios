@@ -4,7 +4,7 @@
  *
  *   npx tsx supabase/functions/whatsapp-webhook/directorio.test.ts
  */
-import { atenderAlInteresado } from './directorio.ts'
+import { HORAS_PARA_AGENDAR, atenderAlInteresado } from './directorio.ts'
 import type { EventoDeMensaje } from './logica.ts'
 
 let fallos = 0
@@ -99,22 +99,40 @@ async function main() {
       'A cierra con los plazos de siempre',
       String(a.envios[0]?.p_text),
     )
+    comprueba(!a.fns.includes('bot_paciente_guardar'), 'A no calla al bot del paciente', JSON.stringify(a.fns))
     const b = await correr(TARJETA, 'b')
     comprueba(b.llamadas[0].args.p_variante === 'b', "con 'b', p_variante = 'b'", JSON.stringify(b.llamadas[0].args))
+    comprueba(
+      JSON.stringify(b.fns) ===
+        JSON.stringify(['bot_directorio_interesado', 'bot_paciente_guardar', 'helios_whatsapp_patient_text']),
+      'B: guarda al interesado, calla al bot y luego le escribe',
+      JSON.stringify(b.fns),
+    )
+    const g = b.llamadas[1].args
+    comprueba(
+      g.p_phone === '584120009999' && g.p_humano_horas === HORAS_PARA_AGENDAR && HORAS_PARA_AGENDAR === 24 &&
+        g.p_menu === null && g.p_estado === null && g.p_profile_id === null,
+      'B: el bot del paciente se calla 24 h en ese chat, sin tocar lo demás',
+      JSON.stringify(g),
+    )
     const t = String(b.envios[0]?.p_text)
-    comprueba(t.endsWith('\n\nPuedes pagar tu consulta con Helios en cuotas.'), 'B cierra con «en cuotas.»', t)
-    comprueba(t.includes('*Dra. Ana Pérez*') && t.includes('https://wa.me/584141234567?text='), 'B también da el contacto', t)
+    comprueba(t.includes('*Dra. Ana Pérez*') && t.includes('¿Qué día') && t.includes('¿A qué hora'), 'B pide día y hora', t)
+    comprueba(!t.includes('wa.me') && !t.includes('584141234567'), 'B no da el WhatsApp del médico', t)
     comprueba(!PROHIBIDO.test(t), 'B sin vocabulario prohibido')
     comprueba(
       JSON.stringify(b.res) ===
-        JSON.stringify({ accion: 'directorio', codigo: 'DIR-7K2P', ok: true, nuevo: true, lead_id: 'lead-1', merchant_id: 'm-1' }),
-      'B: el mismo resultado',
+        JSON.stringify({ accion: 'directorio', codigo: 'DIR-7K2P', ok: true, nuevo: true, lead_id: 'lead-1', merchant_id: 'm-1', pide_cita: true }),
+      'B: el resultado lo dice (pide_cita)',
       JSON.stringify(b.res),
     )
     const fuera = await correr({ ok: false, motivo: 'no_publicado' }, 'b')
     comprueba(
-      fuera.llamadas[0].args.p_variante === 'b' && String(fuera.envios[0]?.p_text).includes('ya no está en nuestro directorio'),
-      'B con la tarjeta fuera: apunta la variante y manda al directorio',
+      fuera.llamadas[0].args.p_variante === 'b' &&
+        String(fuera.envios[0]?.p_text).includes('ya no está en nuestro directorio') &&
+        String(fuera.envios[0]?.p_text).endsWith('https://conhelios.com/consultas') &&
+        !fuera.fns.includes('bot_paciente_guardar'),
+      'B con la tarjeta fuera: apunta la variante, devuelve a /consultas y no calla al bot',
+      String(fuera.envios[0]?.p_text),
     )
   }
 

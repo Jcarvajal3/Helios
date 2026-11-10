@@ -187,6 +187,19 @@ Variante: `text` con `'a'` o `'b'`.
   médico (`PRECIO_DE_CONSULTAS_USD`). Es solo la interfaz: los precios de la
   base no cambian y siguen decidiendo quién entra (≤ $60); `/directorio`
   enseña el de cada médico.
+- **Solo la zona en B** (Javier, 2026-11-09): las tarjetas de `/consultas`
+  enseñan la zona («San Bernardino», «Bello Monte»), sin edificio, piso ni
+  consultorio; sin zona, el edificio y «Caracas». Es una lista por código de
+  tarjeta (`ZONA_EN_CONSULTAS`, `panel/src/features/directorio/consultas.ts`):
+  un médico nuevo en B enseña solo su ciudad hasta que se añada ahí. La
+  dirección entera sigue en la base y en `/directorio`.
+- **El bot de B pide la cita** (Javier, 2026-11-09): a quien llega desde
+  `/consultas` ya no se le da el WhatsApp del médico. El bot le pide el día y
+  la hora («Con gusto te ayudamos a agendar tu consulta con *Dra. …*… 📅 ¿Qué
+  día te queda mejor? 🕐 ¿A qué hora lo prefieres?») y el bot del paciente se
+  calla 24 h en ese chat (`human_until`), para que su respuesta la lea y la
+  conteste el equipo en el superadmin › WhatsApp, que coordina la cita con el
+  médico. Si la tarjeta ya no sale, lo devuelve a `/consultas`. A no cambia.
 - El veredicto exige al menos 100 visitantes por variante y un 95% de
   confianza; si no, «aún no hay diferencia clara».
 - Hoy (2026-11-09) `/consultas` enseña **17 médicos**. No salen la Dra.

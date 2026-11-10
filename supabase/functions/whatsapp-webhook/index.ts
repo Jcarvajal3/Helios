@@ -15,7 +15,8 @@
 //   3. Un código del directorio (DIR-XXXX, docs/04)
 //                                    → el contacto del médico (directorio.ts);
 //                                      con «-B» detrás, la variante B de la
-//                                      prueba A/B (docs/06);
+//                                      prueba A/B (docs/06): se le pide día y
+//                                      hora y el bot se calla en ese chat;
 //                                      antes que el personal, para que un
 //                                      médico pueda probar su propia tarjeta
 //   4. Un número del personal        → el bot del médico (bot.ts)

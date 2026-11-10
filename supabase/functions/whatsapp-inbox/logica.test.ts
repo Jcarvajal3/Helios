@@ -77,6 +77,14 @@ comprueba(
   'chats: solo médicos',
 )
 comprueba(
+  (
+    leerPeticion('GET', u('/chats?quien=directorio'), null) as {
+      quien?: unknown
+    }
+  ).quien === 'directorio',
+  'chats: solo interesados del directorio',
+)
+comprueba(
   'error' in leerPeticion('GET', u('/chats?quien=todos'), null),
   'chats: un filtro desconocido, no',
 )
@@ -339,6 +347,37 @@ comprueba(
 comprueba(
   anotarChats(lista, null, null).every((c) => c.helios === null),
   'si la base no contestó, sin etiquetas',
+)
+
+console.log('Interesados del directorio')
+const interesado = {
+  interesado: { medicos: [{ merchant_id: 'm1', medico: 'Dra. Ana Lara' }] },
+}
+const conInteresados = {
+  ...quienes,
+  // Paciente e interesado a la vez.
+  '584142222222': { ...quienes['584142222222'], ...interesado },
+  // Solo interesado: sin tipo.
+  '584143333333': interesado,
+}
+comprueba(
+  igual(
+    anotarChats(lista, conInteresados, 'directorio').map(waIdDelChat),
+    ['584142222222', '584143333333'],
+  ),
+  'solo interesados del directorio',
+)
+comprueba(
+  igual(
+    anotarChats(lista, conInteresados, 'pacientes').map(waIdDelChat),
+    ['584142222222'],
+  ),
+  'el paciente interesado sale también en pacientes',
+)
+comprueba(
+  anotarChats(lista, conInteresados, null).length === 4 &&
+    anotarChats(lista, conInteresados, 'medicos').length === 1,
+  'el interesado sin tipo no cuenta como médico',
 )
 
 console.log(fallos === 0 ? '\nTodo bien.' : `\n${fallos} fallo(s).`)

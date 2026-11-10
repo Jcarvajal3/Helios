@@ -3,7 +3,12 @@ import { AtSign, MapPin, Tag } from 'lucide-react'
 
 import { IlustracionDeEspecialidad } from './IlustracionDeEspecialidad'
 import { rutaDeFicha } from '@/features/directorio/paginas'
-import { CONDICIONES_DE_CONSULTAS, PRECIO_DE_CONSULTAS, TEXTOS_DE_CONSULTAS } from '@/features/directorio/consultas'
+import {
+  CONDICIONES_DE_CONSULTAS,
+  PRECIO_DE_CONSULTAS,
+  TEXTOS_DE_CONSULTAS,
+  lugarEnConsultas,
+} from '@/features/directorio/consultas'
 import {
   ROTULO_DE_PRECIO,
   enlaceDeRed,
@@ -48,7 +53,8 @@ export function LogoWhatsApp({ className = 'size-4' }: { className?: string }) {
  *
  * En `/consultas` (`variante` `'b'`, docs/06) el nombre no enlaza a la ficha
  * (la ficha es de A), el precio es el mismo para todos («Consulta a partir
- * de: $30», `PRECIO_DE_CONSULTAS`), debajo va «Inicial $15 y el resto en 2
+ * de: $30», `PRECIO_DE_CONSULTAS`), de dónde atiende solo sale la zona
+ * (`lugarEnConsultas`), debajo del precio va «Inicial $15 y el resto en 2
  * cuotas quincenales», el sello dice «$15 inicial» y el código del mensaje a
  * Helios lleva «-B».
  */
@@ -64,7 +70,8 @@ export function TarjetaDeMedico({
   variante?: VarianteDelDirectorio
 }) {
   const especialidad = especialidadDeTarjeta(medico)
-  const lugar = lugarDeTarjeta(medico)
+  // En B, solo la zona (`ZONA_EN_CONSULTAS`), no la dirección entera.
+  const lugar = variante === 'b' ? lugarEnConsultas(medico) : lugarDeTarjeta(medico)
   const red = enlaceDeRed(medico)
   const enB = variante === 'b'
   // En B, el mismo precio para todos (`PRECIO_DE_CONSULTAS`), no el del médico.

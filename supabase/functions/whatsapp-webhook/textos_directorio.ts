@@ -53,15 +53,33 @@ function lugar(t: TarjetaDelMedico): string | null {
   return direccion ?? ciudad
 }
 
-/** La última línea del contacto en la variante B de la prueba A/B (docs/06). */
-export const CIERRE_DE_LA_VARIANTE_B = 'Puedes pagar tu consulta con Helios en cuotas.'
+/** La página de la variante B de la prueba A/B (docs/06). */
+export const URL_DE_CONSULTAS = 'https://conhelios.com/consultas'
 
 /**
- * El contacto del médico de la tarjeta. `variante` es la de la prueba A/B del
- * directorio (docs/06): con 'b' cierra con `CIERRE_DE_LA_VARIANTE_B`, sin los
- * plazos, porque la página de B enseña otra forma de pago.
+ * A quien llega desde `/consultas` (variante B, docs/06) el bot ya no le da
+ * el WhatsApp del médico (Javier, 2026-11-09): le pide el día y la hora, y
+ * nada más. La cita la coordina el equipo desde el superadmin › WhatsApp.
  */
-export function mensajeContactoDelMedico(t: TarjetaDelMedico, variante: 'a' | 'b' = 'a'): string {
+export function mensajePedirCita(t: Pick<TarjetaDelMedico, 'name'>): string {
+  return [
+    '💙 ¡Hola! Gracias por escribirnos.',
+    '',
+    `Con gusto te ayudamos a agendar tu consulta con *${t.name.trim()}*.`,
+    '',
+    'Para coordinarla, cuéntanos por aquí:',
+    '📅 ¿Qué día te queda mejor?',
+    '🕐 ¿A qué hora lo prefieres?',
+    '',
+    'Apenas nos respondas, lo coordinamos con tu médico y te confirmamos la cita por este chat.',
+  ].join('\n')
+}
+
+/**
+ * El contacto del médico de la tarjeta, para quien llega desde `/directorio`
+ * (variante A). A los de B se les pide la cita (`mensajePedirCita`).
+ */
+export function mensajeContactoDelMedico(t: TarjetaDelMedico): string {
   const lineas = ['💙 ¡Hola! Gracias por escribirnos.', '', 'Aquí tienes el contacto:', `*${t.name.trim()}*`]
   const especialidad = limpio(t.specialty)
   if (especialidad) lineas.push(`🩺 ${especialidad}`)
@@ -75,20 +93,19 @@ export function mensajeContactoDelMedico(t: TarjetaDelMedico, variante: 'a' | 'b
   } else {
     lineas.push(`Encuentra cómo escribirle en ${URL_DEL_DIRECTORIO}`)
   }
-  lineas.push(
-    '',
-    variante === 'b'
-      ? CIERRE_DE_LA_VARIANTE_B
-      : 'Puedes pagar tu consulta con Helios en dos cuotas, a los 14 y 28 días, sin inicial.',
-  )
+  lineas.push('', 'Puedes pagar tu consulta con Helios en dos cuotas, a los 14 y 28 días, sin inicial.')
   return lineas.join('\n')
 }
 
-/** El código no es de una tarjeta publicada: el médico ya no sale (o el código no existe). */
-export function mensajeMedicoNoDisponible(): string {
+/**
+ * El código no es de una tarjeta publicada: el médico ya no sale (o el código
+ * no existe). A quien llegó desde B se le devuelve a `/consultas`, no a
+ * `/directorio`, que anuncia otra forma de pago.
+ */
+export function mensajeMedicoNoDisponible(variante: 'a' | 'b' = 'a'): string {
   return (
     '💙 ¡Hola! Gracias por escribirnos.\n\n' +
     'Ese médico ya no está en nuestro directorio. Aquí puedes ver los médicos disponibles 👇\n' +
-    URL_DEL_DIRECTORIO
+    (variante === 'b' ? URL_DE_CONSULTAS : URL_DEL_DIRECTORIO)
   )
 }

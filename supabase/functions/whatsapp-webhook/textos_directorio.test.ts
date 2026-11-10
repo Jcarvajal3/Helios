@@ -4,13 +4,14 @@
  *   npx tsx supabase/functions/whatsapp-webhook/textos_directorio.test.ts
  */
 import {
-  CIERRE_DE_LA_VARIANTE_B,
+  URL_DE_CONSULTAS,
   URL_DEL_DIRECTORIO,
   digitosDelWhatsApp,
   enlaceAlMedico,
   mensajeAlMedico,
   mensajeContactoDelMedico,
   mensajeMedicoNoDisponible,
+  mensajePedirCita,
 } from './textos_directorio.ts'
 
 let fallos = 0
@@ -85,31 +86,24 @@ console.log('\nEl contacto, sin especialidad ni dirección')
   comprueba(!t.includes('wa.me') && t.includes(URL_DEL_DIRECTORIO), 'sin WhatsApp, al directorio', t)
 }
 
-console.log('\nLa variante de la prueba A/B (docs/06)')
+console.log('\nLa variante B pide la cita (docs/06, 2026-11-09)')
 {
   const a = mensajeContactoDelMedico(ANA)
-  comprueba(mensajeContactoDelMedico(ANA, 'a') === a, "con 'a', igual que sin variante")
   comprueba(
     a.split('\n').at(-1) === 'Puedes pagar tu consulta con Helios en dos cuotas, a los 14 y 28 días, sin inicial.',
     'A cierra con los plazos de siempre',
     String(a.split('\n').at(-1)),
   )
-  const b = mensajeContactoDelMedico(ANA, 'b')
+  const b = mensajePedirCita({ name: ' Dra. Ana Pérez ' })
   console.log(b.replace(/^/gm, '        '))
-  comprueba(b.split('\n').at(-1) === 'Puedes pagar tu consulta con Helios en cuotas.', 'B cierra con «en cuotas.»', String(b.split('\n').at(-1)))
-  comprueba(b.split('\n').at(-1) === CIERRE_DE_LA_VARIANTE_B, 'la constante es esa línea')
-  comprueba(
-    b.split('\n').slice(0, -1).join('\n') === a.split('\n').slice(0, -1).join('\n'),
-    'todo lo demás, igual que en A',
-  )
-  comprueba(!b.includes('14 y 28') && !b.includes('sin inicial') && !b.includes('dos cuotas'), 'B no dice los plazos de A', b)
+  comprueba(b.startsWith('💙 ¡Hola! Gracias por escribirnos.'), 'saluda')
+  comprueba(b.includes('agendar tu consulta con *Dra. Ana Pérez*.'), 'nombra al médico, sin espacios de sobra', b)
+  comprueba(b.includes('📅 ¿Qué día te queda mejor?') && b.includes('🕐 ¿A qué hora lo prefieres?'), 'pide el día y la hora')
+  comprueba(b.includes('te confirmamos la cita por este chat'), 'dice que la confirmamos por aquí')
+  comprueba(!b.includes('wa.me') && !/\+?58\d{10}/.test(b), 'no da el WhatsApp del médico', b)
+  comprueba(!b.includes('📍') && !b.includes('🩺'), 'nada más: ni dirección ni especialidad')
+  comprueba(!b.includes('14 y 28') && !b.includes('sin inicial') && !b.includes('$') && !b.includes('Bs'), 'ni plazos ni montos', b)
   comprueba(!PROHIBIDO.test(b), 'sin vocabulario prohibido')
-  const sinNumero = mensajeContactoDelMedico({ ...ANA, whatsapp: null }, 'b')
-  comprueba(
-    sinNumero.includes(URL_DEL_DIRECTORIO) && sinNumero.endsWith('\n\n' + CIERRE_DE_LA_VARIANTE_B),
-    'B sin WhatsApp: al directorio y la misma última línea',
-    sinNumero,
-  )
 }
 
 console.log('\nEl médico que ya no está')
@@ -117,8 +111,11 @@ console.log('\nEl médico que ya no está')
   const t = mensajeMedicoNoDisponible()
   console.log(t.replace(/^/gm, '        '))
   comprueba(t.includes('ya no está en nuestro directorio'), 'lo dice')
-  comprueba(t.includes('https://conhelios.com/directorio'), 'enlaza al directorio')
-  comprueba(!PROHIBIDO.test(t), 'sin vocabulario prohibido')
+  comprueba(t.endsWith(URL_DEL_DIRECTORIO), 'enlaza al directorio')
+  comprueba(mensajeMedicoNoDisponible('a') === t, "con 'a', igual")
+  const b = mensajeMedicoNoDisponible('b')
+  comprueba(b.endsWith(URL_DE_CONSULTAS) && !b.includes(URL_DEL_DIRECTORIO), 'desde B, de vuelta a /consultas', b)
+  comprueba(!PROHIBIDO.test(t) && !PROHIBIDO.test(b), 'sin vocabulario prohibido')
 }
 
 console.log(fallos === 0 ? '\nTODO BIEN' : `\n${fallos} FALLOS`)

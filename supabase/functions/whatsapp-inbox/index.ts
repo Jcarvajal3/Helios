@@ -136,7 +136,8 @@ function falloDelInbox(
 
 /**
  * La lista de chats, cada uno con lo que la base sabe de él (`helios`:
- * médico, paciente o `null`). Si se filtra por médicos o pacientes, recorre
+ * médico, paciente, interesado del directorio o `null`). Si se filtra por
+ * médicos, pacientes o interesados del directorio, recorre
  * páginas del Inbox hasta llenar la del panel o hasta `PAGINAS_POR_FILTRO`;
  * `siguiente` dice desde dónde seguir.
  */

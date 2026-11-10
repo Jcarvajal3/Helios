@@ -34,6 +34,22 @@ export type Chat = {
   etiquetas: string[]
   /** Quién es para Helios, si la base lo sabe (`admin_whatsapp_inbox_contacts`). */
   quien: QuienEs | null
+  /**
+   * Si escribió desde el directorio (`directory_leads`): con qué médicos
+   * quiere la cita. Independiente de `quien`: un paciente puede serlo.
+   */
+  interesado: Interesado | null
+}
+
+/** Los médicos por los que escribió desde el directorio, el último primero. */
+export type Interesado = {
+  medicos: {
+    merchantId: string | null
+    /** El nombre de la tarjeta: «Dra. Ana Lara». */
+    medico: string | null
+    /** De qué directorio llegó: `a` (/directorio) o `b` (/consultas). */
+    variante: string | null
+  }[]
 }
 
 /**
@@ -51,8 +67,37 @@ export type QuienEs =
     }
   | { tipo: 'paciente'; nombre: string | null; profileId: string | null }
 
-/** El filtro de la lista: solo los chats de un lado. */
-export type FiltroDeQuien = 'medicos' | 'pacientes'
+/**
+ * El filtro de la lista: solo los chats de un lado. `directorio`: los
+ * interesados del directorio (un paciente interesado sale en los dos).
+ */
+export type FiltroDeQuien = 'medicos' | 'pacientes' | 'directorio'
+
+export function leerInteresado(v: unknown): Interesado | null {
+  const i = filaONula(filaONula(v)?.interesado)
+  if (!i) return null
+  return {
+    medicos: comoLista(i.medicos).map((m) => {
+      const f = comoFila(m)
+      return {
+        merchantId: textoONulo(f.merchant_id),
+        medico: textoONulo(f.medico),
+        variante: textoONulo(f.variante),
+      }
+    }),
+  }
+}
+
+/**
+ * La pastilla del interesado: «Interesado · Dra. Ana Lara», o «… y 1 más»
+ * si escribió por varios médicos.
+ */
+export function rotuloDeInteresado(i: Interesado): string {
+  if (i.medicos.length === 0) return 'Interesado'
+  const [primero, ...resto] = i.medicos
+  if (!primero.medico) return 'Interesado'
+  return `Interesado · ${primero.medico}${resto.length > 0 ? ` y ${resto.length} más` : ''}`
+}
 
 export function leerQuien(v: unknown): QuienEs | null {
   const q = filaONula(v)
@@ -260,6 +305,7 @@ export function leerChat(v: unknown): Chat {
       .map((t) => textoONulo(comoFila(t).name))
       .filter((t): t is string => t !== null),
     quien: leerQuien(c.helios),
+    interesado: leerInteresado(c.helios),
   }
 }
 

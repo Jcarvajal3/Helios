@@ -7,6 +7,7 @@ import {
   leerChat,
   leerMensaje,
   leerPagina,
+  rotuloDeInteresado,
   rotuloDeQuien,
   ventanaAbierta,
   vistaPrevia,
@@ -208,6 +209,46 @@ check(
 check(
   chat.quien === null && leerChat({ helios: { tipo: 'otro' } }).quien === null,
   'sin saber quién es',
+)
+
+const soloInteresado = leerChat({
+  helios: {
+    interesado: {
+      medicos: [{ merchant_id: 'm1', medico: 'Dra. Ana Lara', variante: 'b' }],
+    },
+  },
+})
+check(
+  soloInteresado.quien === null &&
+    soloInteresado.interesado?.medicos[0].merchantId === 'm1' &&
+    rotuloDeInteresado(soloInteresado.interesado) ===
+      'Interesado · Dra. Ana Lara',
+  'un interesado del directorio sin perfil',
+)
+const pacienteInteresado = leerChat({
+  helios: {
+    tipo: 'paciente',
+    profile_id: 'p1',
+    interesado: {
+      medicos: [
+        { merchant_id: 'm2', medico: 'Dr. Luis Mora' },
+        { merchant_id: 'm1', medico: 'Dra. Ana Lara' },
+      ],
+    },
+  },
+})
+check(
+  pacienteInteresado.quien?.tipo === 'paciente' &&
+    pacienteInteresado.interesado !== null &&
+    rotuloDeInteresado(pacienteInteresado.interesado) ===
+      'Interesado · Dr. Luis Mora y 1 más',
+  'un paciente que además es interesado',
+)
+check(
+  chat.interesado === null &&
+    paciente.interesado === null &&
+    rotuloDeInteresado({ medicos: [] }) === 'Interesado',
+  'sin directorio, sin interesado',
 )
 
 console.log(failures === 0 ? '\nTodo bien.' : `\n${failures} fallo(s).`)

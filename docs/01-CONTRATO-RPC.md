@@ -1517,6 +1517,40 @@ decisiones: `docs/06-PRUEBA-AB-DEL-DIRECTORIO.md`. Variante: `text`, `'a'` o
 
 Suite: `supabase/tests/directorio_ab_smoke.sql`.
 
+### 2.18 El inbox de WhatsApp señala a los interesados del directorio (2026-11-09, 20261109160000)
+
+Desde el 2026-11-09 el bot le pide día y hora al interesado del directorio y
+el equipo sigue la conversación a mano en superadmin › WhatsApp
+(`/admin/whatsapp?quien=directorio`, «Directorio»).
+
+- `admin_whatsapp_inbox_contacts(p_wa_ids text[]) → jsonb` (de
+  20261021230000) — `is_platform_admin()` (`42501` si no); `22023` con más de
+  200 wa_id. La llama la Edge Function `whatsapp-inbox` con el JWT de quien
+  pide, una vez por página del Inbox.
+  ```
+  { "<wa_id>": { tipo: 'medico',   nombre, rol, merchant_id, clinica,
+                 interesado? }
+             | { tipo: 'paciente', nombre, profile_id, interesado? }
+             | { interesado } }        // ni médico ni paciente
+  interesado = { medicos: [ { merchant_id, medico, variante, first_at, last_at } ] }
+  ```
+  Médico: un número del bot sin revocar de alguien activo como gerente o
+  cajero (gana sobre paciente). Paciente: un perfil con ese teléfono o el de
+  `whatsapp_contacts`. **Nuevo**: `interesado` si el teléfono está en
+  `directory_leads`, de **cualquier variante**; `medicos`, uno por médico por
+  el que escribió, el último mensaje primero; `medico` es el nombre de la
+  tarjeta (`display_name` o `helios_doctor_name`), como en
+  `admin_directorio_interesados`. Un wa_id que no es nada de esto no viene.
+- Índice `directory_leads_phone_idx` (`phone_e164`).
+- Edge Function `whatsapp-inbox`, `GET /chats?quien=medicos|pacientes|directorio`:
+  `directorio` deja los chats que traen `interesado`. Un interesado que
+  además es paciente (o médico) sale también en ese filtro. En la lista, el
+  chat lleva la pastilla «Interesado · Dra. Ana Lara» («… y N más» si
+  escribió por varios); en la cabecera, «Interesado en» con el enlace a cada
+  clínica.
+
+Suite: `supabase/tests/whatsapp_inbox_quien_smoke.sql` (casos 8 a 10).
+
 ---
 
 ## 3. Parámetros nuevos (`business_parameters`)

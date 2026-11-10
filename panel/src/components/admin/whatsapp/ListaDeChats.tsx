@@ -14,6 +14,7 @@ import {
 import { consultaChats } from '@/features/admin/whatsapp/api'
 import {
   nombreDelChat,
+  rotuloDeInteresado,
   rotuloDeQuien,
   vistaPrevia,
 } from '@/features/admin/whatsapp/inbox'
@@ -22,8 +23,10 @@ import { horaCorta } from './horas'
 
 /**
  * La columna de la izquierda: los chats del número de Helios, del último
- * mensaje al primero, con buscador, «Sin leer» y el filtro de médicos o
- * pacientes (cada chat lleva su pastilla). Se refresca sola cada 15 s.
+ * mensaje al primero, con buscador, «Sin leer» y el filtro de médicos,
+ * pacientes o interesados del directorio (cada chat lleva su pastilla; el
+ * interesado, la del médico con el que quiere la cita). Se refresca sola
+ * cada 15 s.
  */
 export function ListaDeChats({
   q,
@@ -75,6 +78,7 @@ export function ListaDeChats({
             { value: 'todos', label: 'Todos' },
             { value: 'pacientes', label: 'Pacientes' },
             { value: 'medicos', label: 'Médicos' },
+            { value: 'directorio', label: 'Directorio' },
           ]}
           value={quien ?? 'todos'}
           onChange={(v) => onQuien(v === 'todos' ? null : v)}
@@ -107,7 +111,9 @@ export function ListaDeChats({
                     ? 'Ningún chat de médicos.'
                     : quien === 'pacientes'
                       ? 'Ningún chat de pacientes.'
-                      : 'Aún no hay conversaciones.'}
+                      : quien === 'directorio'
+                        ? 'Ningún interesado del directorio.'
+                        : 'Aún no hay conversaciones.'}
             </p>
           </div>
         ) : (
@@ -193,6 +199,17 @@ function FilaDeChat({
             </span>
           )}
         </span>
+        {/* Con quién quiere la cita: en su línea, para que un nombre largo
+            no se coma el del chat. */}
+        {chat.interesado && (
+          <span className="mt-1 flex">
+            <Badge className="h-5 max-w-full px-2">
+              <span className="truncate">
+                {rotuloDeInteresado(chat.interesado)}
+              </span>
+            </Badge>
+          </span>
+        )}
       </span>
     </button>
   )

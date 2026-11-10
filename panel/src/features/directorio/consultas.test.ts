@@ -16,6 +16,8 @@ import {
   PROHIBIDO_EN_CONSULTAS,
   TEXTOS_DE_CONSULTAS,
   TOPE_DE_CONSULTAS_USD,
+  ZONA_EN_CONSULTAS,
+  lugarEnConsultas,
 } from './consultas'
 
 let fallos = 0
@@ -97,6 +99,23 @@ comprueba(TEXTOS_DE_CONSULTAS.titulo.includes('$15 de inicial'), 'el título de 
   comprueba(PROHIBIDO_EN_CONSULTAS.some((re) => re.test('0% de inicial')), 'la lista atrapa «0% de inicial»')
   comprueba(PROHIBIDO_EN_CONSULTAS.some((re) => re.test('a los 14 y 28 días')), 'la lista atrapa «14 y 28 días»')
   comprueba(PROHIBIDO_EN_CONSULTAS.some((re) => re.test('Sin inicial')), 'la lista atrapa «Sin inicial»')
+}
+
+console.log('── La zona de cada tarjeta ───────────────────────────────────')
+{
+  comprueba(lugarEnConsultas({ codigo: 'DIR-P6U6', ciudad: 'Caracas' }) === 'San Bernardino', 'con zona: solo la zona')
+  comprueba(lugarEnConsultas({ codigo: ' dir-p6u6 ', ciudad: null }) === 'San Bernardino', 'el código, sin importar mayúsculas ni espacios')
+  comprueba(
+    lugarEnConsultas({ codigo: 'DIR-YGRY', ciudad: null }) === 'Edificio Qvadra, Caracas',
+    'sin zona: el edificio y «Caracas»',
+  )
+  comprueba(lugarEnConsultas({ codigo: 'DIR-ZZZZ', ciudad: 'Valencia' }) === 'Valencia', 'uno que no está en la lista: solo su ciudad')
+  comprueba(lugarEnConsultas({ codigo: null, ciudad: '  ' }) === null, 'sin lista ni ciudad: nada')
+  const especifico = /piso|oficina|ofi\b|consultorio|torre|nivel|local|\d/i
+  const malas = Object.entries(ZONA_EN_CONSULTAS).filter(([, z]) => especifico.test(z))
+  comprueba(malas.length === 0, 'ninguna zona lleva piso, oficina, consultorio, torre ni números', malas)
+  const codigos = Object.keys(ZONA_EN_CONSULTAS)
+  comprueba(codigos.every((c) => /^DIR-[A-Z0-9]{4}$/.test(c)), 'las claves son códigos de tarjeta', codigos)
 }
 
 console.log(fallos === 0 ? '\nTodo bien.' : `\n${fallos} fallo(s).`)
