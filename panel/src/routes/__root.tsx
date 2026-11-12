@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Analytics } from '@vercel/analytics/react'
 import { useState } from 'react'
 
+import { GoogleTagManager } from '@/components/GoogleTagManager'
 import { initSentry } from '@/lib/sentry'
 import { SCRIPT_DEL_TEMA } from '@/lib/tema'
 
@@ -70,6 +71,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
         {/* Vercel Web Analytics: fuera de Vercel (local) no envía nada. */}
         <Analytics />
+        <GoogleTagManager />
         <Scripts />
       </body>
     </html>

@@ -25,6 +25,14 @@ export const SITIO_URL = (import.meta.env.VITE_SITIO_URL || 'https://conhelios.c
 export const NOMBRE = 'Helios'
 
 /**
+ * Contenedor de Google Tag Manager (mide las conversiones de Google Ads y
+ * lo que se configure en el contenedor). Lo carga `GoogleTagManager`, solo
+ * en las páginas públicas: el panel de la clínica y el superadmin enseñan
+ * datos de pacientes y no se miden.
+ */
+export const GTM_ID = 'GTM-MB8TN2WK'
+
+/**
  * Cómo más se busca la marca. Google lo usa para el nombre del sitio en los
  * resultados y para entender que «Helios Salud» (el Instagram) es lo mismo.
  */
