@@ -75,6 +75,10 @@ export function mensajePedirCita(t: Pick<TarjetaDelMedico, 'name'>): string {
   ].join('\n')
 }
 
+/** Cómo se paga con Helios, al final del contacto de A (docs/07, la inicial del 50%). */
+export const TEXTO_DEL_PAGO_A =
+  'Puedes pagar tu consulta con Helios con una inicial del 50% el mismo día y dos cuotas, a los 14 y 28 días.'
+
 /**
  * El contacto del médico de la tarjeta, para quien llega desde `/directorio`
  * (variante A). A los de B se les pide la cita (`mensajePedirCita`).
@@ -93,7 +97,8 @@ export function mensajeContactoDelMedico(t: TarjetaDelMedico): string {
   } else {
     lineas.push(`Encuentra cómo escribirle en ${URL_DEL_DIRECTORIO}`)
   }
-  lineas.push('', 'Puedes pagar tu consulta con Helios en dos cuotas, a los 14 y 28 días, sin inicial.')
+  // La inicial del 50% (Javier, 2026-11-12, docs/07). Solo A: B no cambia.
+  lineas.push('', TEXTO_DEL_PAGO_A)
   return lineas.join('\n')
 }
 

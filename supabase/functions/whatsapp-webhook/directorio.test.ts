@@ -95,8 +95,10 @@ async function main() {
     const a = await correr(TARJETA, 'a')
     comprueba(a.llamadas[0].args.p_variante === 'a', "con 'a', p_variante = 'a'", JSON.stringify(a.llamadas[0].args))
     comprueba(
-      String(a.envios[0]?.p_text).endsWith('\n\nPuedes pagar tu consulta con Helios en dos cuotas, a los 14 y 28 días, sin inicial.'),
-      'A cierra con los plazos de siempre',
+      String(a.envios[0]?.p_text).endsWith(
+        '\n\nPuedes pagar tu consulta con Helios con una inicial del 50% el mismo día y dos cuotas, a los 14 y 28 días.',
+      ),
+      'A cierra con la inicial del 50% y las dos cuotas (docs/07)',
       String(a.envios[0]?.p_text),
     )
     comprueba(!a.fns.includes('bot_paciente_guardar'), 'A no calla al bot del paciente', JSON.stringify(a.fns))

@@ -7,11 +7,18 @@
 //
 //   1. Estados de entrega            → helios_whatsapp_status
 //   2. El botón de la pregunta       → helios_patient_decision (sin foto de
-//                                      su cédula, el «Sí» la pide)
+//                                      su cédula, el «Sí» la pide). Un «Sí»
+//                                      con la orden ya esperando la inicial:
+//                                      se le recuerda (recordarLaInicial)
 //   2b. Una foto o un PDF de quien tocó «Sí» sin foto de su cédula
 //                                    → helios_patient_id_photo: la guarda y
-//                                      confirma (docs/00 §15.11); antes que el
-//                                      personal, por los números de prueba
+//                                      acepta la orden (docs/00 §15.11); antes
+//                                      que el personal, por los números de
+//                                      prueba. Con inicial (docs/07) la orden
+//                                      queda esperándola y la base le pide el
+//                                      pago; desde ahí la orden ya no espera
+//                                      cédula, así que la captura de ese pago
+//                                      sigue al paso 6 (el lector)
 //   3. Un código del directorio (DIR-XXXX, docs/04)
 //                                    → el contacto del médico (directorio.ts);
 //                                      con «-B» detrás, la variante B de la
@@ -42,7 +49,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2'
 
 import { atenderAlPersonal } from './bot.ts'
 import { atenderAlInteresado } from './directorio.ts'
-import { atenderAlPaciente } from './paciente.ts'
+import { atenderAlPaciente, esUnSiRepetido, recordarLaInicial } from './paciente.ts'
 import type { Personal } from './bot.ts'
 import {
   codigoDelDirectorio,
@@ -98,19 +105,24 @@ async function mensaje(m: EventoDeMensaje): Promise<void> {
   // 2. El botón de la pregunta lleva el id de la orden.
   const boton = decisionDelBoton(m.boton)
   if (boton) {
-    const res = await rpc('helios_patient_decision', {
+    const res = await rpc<Record<string, unknown>>('helios_patient_decision', {
       p_charge_id: boton.chargeId,
       p_decision: boton.decision,
       p_from_phone: m.from,
       p_wa_message_id: m.id,
     })
-    await listo('paciente', res)
+    // «Sí» otra vez con la orden ya esperando la inicial (docs/07): la base no
+    // le contesta nada; se le recuerda la inicial y cómo pagarla.
+    const recordatorio = esUnSiRepetido(boton.decision, res) ? await recordarLaInicial({ rpc, mensaje: m }) : null
+    await listo('paciente', recordatorio ? { ...res, recordatorio } : res)
     return
   }
 
-  // 2b. La foto de la cédula de quien tocó «Sí» sin tenerla: la confirma. Si
-  // no se esperaba una cédula de ese teléfono, sigue como cualquier adjunto
-  // (el lector de comprobantes). El lector la baja al bucket y la revisa.
+  // 2b. La foto de la cédula de quien tocó «Sí» sin tenerla: acepta la orden
+  // (con inicial, la deja esperándola; los mensajes los manda la base). Si no
+  // se esperaba una cédula de ese teléfono (tampoco una vez aceptada: la
+  // captura de la inicial), sigue como cualquier adjunto (el lector de
+  // comprobantes). El lector la baja al bucket y la revisa.
   if (m.adjunto) {
     const res = await rpc<{ handled?: boolean; duplicate?: boolean }>('helios_patient_id_photo', {
       p_from_phone: m.from,
@@ -202,7 +214,7 @@ Deno.serve(async (req) => {
     return new Response('Error', { status: 500 })
   }
 
-  // Lo que se encoló (las respuestas del bot, la bienvenida tras un «Sí»)
+  // Lo que se encoló (las respuestas del bot, la bienvenida o la inicial tras un «Sí»)
   // sale ya, sin esperar al cron de 10 s. Si falla, el cron lo manda.
   try {
     const r = await rpc<{ errores?: unknown[] }>('helios_dispatch_whatsapp_batch', { p_limit: 10 })

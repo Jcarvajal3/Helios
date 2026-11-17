@@ -29,8 +29,16 @@
 // lo disponible en dólares (`disponible_usd`); aquí se dice en la moneda
 // elegida con `usd_per_eur`. Sin tasa del euro hoy, solo se cobra en dólares.
 //
+// La inicial (2026-11-12, docs/07): el resumen enseña la inicial de hoy y las
+// 2 cuotas (de `bot_preview_charge`); el paciente responde «Sí», manda su
+// cédula si se la pedimos y paga la inicial en las 2 horas siguientes. La
+// orden queda activa (y se le avisa al médico) cuando se aprueba la inicial;
+// si no la paga, se anula sola (y también se le avisa). Esos avisos los manda
+// la base. Una orden que espera la inicial no se reenvía. Las órdenes sin
+// inicial (`down_payment_pct` null o 0) siguen como antes.
+//
 // Las respuestas salen por la cola (`helios_whatsapp_text`); el webhook las
-// despacha en cuanto termina.
+// despacha en cuanto termina. Lo prueba `bot.test.ts`.
 // ═══════════════════════════════════════════════════════════════════════════
 
 import {
@@ -95,6 +103,8 @@ type Datos = {
   atendido?: string | null
   /** Las preguntas del último formulario enviado: el orden de las respuestas sin etiquetas. */
   pidiendo?: Clave[]
+  /** De la vista previa: el plazo de la inicial en minutos (null sin inicial). */
+  minutosDeLaInicial?: number | null
 }
 
 type Boton = { id: string; title: string }
@@ -134,10 +144,52 @@ const SOLO_DOLARES: Boton[] = [
 
 const ESTADO_DE_LA_ORDEN: Record<string, string> = {
   pending: 'Esperando al paciente',
+  // La inicial (2026-11-12, docs/07): aceptó y falta que pague la inicial.
+  awaiting_down_payment: 'Esperando la inicial',
   confirmed: 'Confirmado',
   declined: 'Rechazado',
   expired: 'Vencido',
+  // La anulada por no pagar la inicial se rotula aparte (`estadoDeLaOrden`).
+  reverted: 'Revertido',
 }
+
+/**
+ * El estado de una orden de la lista, en palabras. Una `reverted` con
+ * `down_payment_expired_at` se anuló sola por no pagar la inicial (docs/07);
+ * cualquier otra `reverted` la revirtió el equipo.
+ */
+function estadoDeLaOrden(f: Record<string, unknown>): string {
+  if (f.status === 'reverted' && f.down_payment_expired_at != null) return 'Anulado: no pagó la inicial'
+  return ESTADO_DE_LA_ORDEN[String(f.status)] ?? String(f.status)
+}
+
+/** El plazo de la inicial cuando la base no lo dice (`helios_down_payment_minutes()`). */
+const MINUTOS_DE_LA_INICIAL = 120
+
+/** 120 → «2 horas», 60 → «1 hora», 90 → «90 minutos». */
+function plazoEnPalabras(minutos: unknown): string {
+  const m = positivo(minutos) ?? MINUTOS_DE_LA_INICIAL
+  if (m % 60 === 0) return m === 60 ? '1 hora' : `${m / 60} horas`
+  return `${m} minutos`
+}
+
+/** ¿La orden (o la vista previa) lleva inicial? `down_payment_pct` > 0 o una cuota 0. */
+function llevaInicial(o: Record<string, unknown>): boolean {
+  if (positivo(o.down_payment_pct) !== null) return true
+  const cuotas = Array.isArray(o.installments) ? (o.installments as Array<Record<string, unknown>>) : []
+  return cuotas.some((c) => Number(c.sequence) === 0)
+}
+
+/** Lo que hace el paciente tras recibir la orden, con inicial o sin ella. */
+function loQueHaceElPaciente(inicial: boolean, plazo: string): string {
+  return inicial
+    ? `responderá «Sí», enviará una foto de su cédula si se la pedimos y pagará la inicial en las ${plazo} siguientes`
+    : 'responderá «Sí» y, si se lo pedimos, enviará una foto de su cédula'
+}
+
+/** Cuándo queda activa una orden con inicial y qué se le avisa al médico. */
+const ACTIVA_CON_LA_INICIAL =
+  'La orden queda activa cuando se aprueba la inicial y te aviso aquí; si no la paga a tiempo, se anula y también te aviso.'
 
 /**
  * Los códigos con los que la base lanza sus errores de negocio, escritos para
@@ -245,7 +297,13 @@ export async function atenderAlPersonal({
   // ── Reenviar una orden: «reenviar 1042» ───────────────────────────────
   const reenviar = /^reenviar\s*#?\s*(\d+)$/.exec(n)
   if (reenviar) {
-    const orden = await probar<{ id: string; status: string; order_number: number }>('bot_charge_by_order', {
+    const orden = await probar<{
+      id: string
+      status: string
+      order_number: number
+      down_payment_due_at?: string | null
+      down_payment_expired_at?: string | null
+    }>('bot_charge_by_order', {
       p_phone: tel,
       p_order_number: Number(reenviar[1]),
     })
@@ -253,17 +311,39 @@ export async function atenderAlPersonal({
       await enviar(orden.mensaje)
       return { paso: 'reenviar', error: orden.mensaje }
     }
-    const confirmado = orden.data.status === 'confirmed'
+    const o = orden.data
+    // La inicial (docs/07): una orden que la espera ya fue aceptada (no hay
+    // pregunta que reenviar) y aún no tiene comprobante; una anulada por no
+    // pagarla no se reabre.
+    if (o.status === 'awaiting_down_payment') {
+      const hasta = o.down_payment_due_at ? ` Tiene hasta las ${horaCaracas(o.down_payment_due_at)} para pagarla.` : ''
+      await enviar(
+        `La orden #${o.order_number} ya la aceptó el paciente y está esperando su inicial, así que no hay nada que reenviarle.${hasta}\n` +
+          ACTIVA_CON_LA_INICIAL,
+      )
+      return { paso: 'reenviar', ok: false, motivo: 'esperando_la_inicial' }
+    }
+    if (o.status === 'reverted' && o.down_payment_expired_at) {
+      await enviar(
+        `La orden #${o.order_number} se anuló porque el paciente no pagó la inicial a tiempo, así que ya no se puede reenviar. ` +
+          'Si aún quiere pagar en cuotas, regístrale una orden nueva.',
+      )
+      return { paso: 'reenviar', ok: false, motivo: 'inicial_no_pagada' }
+    }
+    const confirmado = o.status === 'confirmed'
     const r = await probar<Record<string, unknown>>(
       confirmado ? 'bot_resend_receipt' : 'bot_resend_confirmation',
-      { p_phone: tel, p_charge_id: orden.data.id },
+      { p_phone: tel, p_charge_id: o.id },
     )
+    // Al reabrir una vencida, la orden toma la inicial de hoy: lo dice la respuesta.
+    const conInicial = r.ok && !confirmado && llevaInicial(r.data ?? {})
     await enviar(
       !r.ok
         ? r.mensaje
         : confirmado
-          ? `Listo, le reenviamos el comprobante de la orden #${orden.data.order_number} a su correo.`
-          : `Listo, le reenviamos la pregunta al paciente de la orden #${orden.data.order_number}. Tiene 2 horas para confirmarla: responderá «Sí» y, si se lo pedimos, enviará una foto de su cédula.`,
+          ? `Listo, le reenviamos el comprobante de la orden #${o.order_number} a su correo.`
+          : `Listo, le reenviamos la pregunta al paciente de la orden #${o.order_number}. Tiene 2 horas para confirmarla: ${loQueHaceElPaciente(conInicial, plazoEnPalabras(MINUTOS_DE_LA_INICIAL))}.` +
+            (conInicial ? `\n${ACTIVA_CON_LA_INICIAL}` : ''),
     )
     return { paso: 'reenviar', ok: r.ok }
   }
@@ -276,8 +356,15 @@ export async function atenderAlPersonal({
       return { paso: 'mis', error: r.mensaje }
     }
     const lineas = r.data.map((f) => {
-      const estadoTexto = ESTADO_DE_LA_ORDEN[String(f.status)] ?? String(f.status)
-      const vence = f.status === 'pending' && f.expires_at ? ` (vence ${horaCaracas(String(f.expires_at))})` : ''
+      // Las fechas de las cuotas (`cuota_1/2_*`, null salvo en confirmed,
+      // pending y awaiting_down_payment) no se usan aquí.
+      const estadoTexto = estadoDeLaOrden(f)
+      const vence =
+        f.status === 'pending' && f.expires_at
+          ? ` (vence ${horaCaracas(String(f.expires_at))})`
+          : f.status === 'awaiting_down_payment' && f.down_payment_due_at
+            ? ` (hasta las ${horaCaracas(String(f.down_payment_due_at))})`
+            : ''
       // Cada orden en su moneda (sin comisión: es lo que recibe la clínica).
       const consulta =
         f.merchant_sale_cur != null
@@ -286,10 +373,12 @@ export async function atenderAlPersonal({
       return `#${f.order_number} · ${f.customer_name ?? 'Paciente'} · ${consulta} · ${estadoTexto}${vence}`
     })
     await guardar('menu')
+    // El ejemplo, con una orden que se pueda reenviar (no una que espera la inicial ni una anulada).
+    const ejemplo = r.data.find((f) => ['pending', 'expired', 'confirmed'].includes(String(f.status))) ?? r.data[0]
     await enviar(
       lineas.length === 0
         ? 'No tienes pagos en cuotas en los últimos 30 días.'
-        : `Tus últimos pagos en cuotas:\n${lineas.join('\n')}\n\nPara reenviarle algo a un paciente escribe, por ejemplo, «reenviar ${r.data[0].order_number}».`,
+        : `Tus últimos pagos en cuotas:\n${lineas.join('\n')}\n\nPara reenviarle algo a un paciente escribe, por ejemplo, «reenviar ${ejemplo.order_number}».`,
       MENU,
     )
     return { paso: 'mis', cuantos: lineas.length }
@@ -303,7 +392,8 @@ export async function atenderAlPersonal({
         '2. Si es nuevo, envíame sus datos en un solo mensaje.\n' +
         '3. Elige si cobras la consulta en dólares o en euros y escribe el monto.\n' +
         '4. Revisa el resumen y confírmalo.\n' +
-        '5. Al paciente le llega un WhatsApp para que la confirme (responderá «Sí» y, si se lo pedimos, enviará una foto de su cédula). Cuando la confirme, te aviso aquí.\n\n' +
+        `5. Al paciente le llega un WhatsApp para que la acepte: ${loQueHaceElPaciente(true, plazoEnPalabras(MINUTOS_DE_LA_INICIAL))}. ` +
+        `${ACTIVA_CON_LA_INICIAL}\n\n` +
         'El paciente paga siempre en bolívares, a la tasa BCV del día en que paga.\n\n' +
         'Escribe «menú» para volver al inicio en cualquier momento. El equipo de Helios ve este chat: si algo no funciona, escríbenos aquí.',
       MENU,
@@ -534,7 +624,17 @@ export async function atenderAlPersonal({
     const f = r.data.charge as Record<string, unknown>
     const conf = (f.confirmation ?? {}) as Record<string, unknown>
     const quien = d.nuevo ? `${d.paciente?.first_name ?? 'el paciente'}` : (d.nombre ?? 'el paciente')
-    if (f.status === 'pending') {
+    if (f.status === 'pending' && llevaInicial(f)) {
+      // La inicial (docs/07): el aviso al médico sale cuando se aprueba la
+      // inicial (o si se anula), no con el «Sí».
+      await enviar(
+        `Listo. Orden #${f.order_number} enviada. Le escribimos a ${quien}` +
+          `${conf.telefono_enmascarado ? ` al ${conf.telefono_enmascarado}` : ''} para que la acepte: ` +
+          `${loQueHaceElPaciente(true, plazoEnPalabras(d.minutosDeLaInicial))}.\n` +
+          `Tiene hasta las ${horaCaracas(String(f.expires_at ?? ''))} para responder. ${ACTIVA_CON_LA_INICIAL}`,
+        MENU,
+      )
+    } else if (f.status === 'pending') {
       await enviar(
         `Listo. Orden #${f.order_number} enviada. Le escribimos a ${quien}` +
           `${conf.telefono_enmascarado ? ` al ${conf.telefono_enmascarado}` : ''} para que lo confirme: responderá «Sí» y, si se lo pedimos, enviará una foto de su cédula.\n` +
@@ -627,12 +727,19 @@ export async function atenderAlPersonal({
     }
 
     // Cada cuota en la moneda de la orden y, de referencia, en bolívares de hoy.
-    const cuotas = (v.installments as Array<Record<string, unknown>>)
-      .map((c, i) => {
-        const bs = c.amount_ves != null ? ` (${bolivares(Number(c.amount_ves))} a la tasa de hoy)` : ''
-        return `${i + 1}. ${en(c.amount_cur, c.amount_usd)} el ${diaCorto(String(c.due_date))}${bs}`
-      })
+    // Con inicial (docs/07) la primera fila es la cuota 0: «Inicial, el día de
+    // hoy»; las otras dos conservan su número (1 y 2).
+    const filas = (v.installments as Array<Record<string, unknown>>) ?? []
+    const conInicial = llevaInicial(v)
+    const bsDe = (c: Record<string, unknown>) => (c.amount_ves != null ? ` (${bolivares(Number(c.amount_ves))} a la tasa de hoy)` : '')
+    const inicial = filas.find((c) => Number(c.sequence) === 0)
+    const cuotas = filas
+      .filter((c) => Number(c.sequence) !== 0)
+      .map((c, i) => `${Number(c.sequence) || i + 1}. ${en(c.amount_cur, c.amount_usd)} el ${diaCorto(String(c.due_date))}${bsDe(c)}`)
       .join('\n')
+    const plan =
+      (inicial ? `Inicial, el día de hoy: ${en(inicial.amount_cur, inicial.amount_usd)}${bsDe(inicial)}\n` : '') + `Cuotas:\n${cuotas}`
+    const plazo = plazoEnPalabras(v.down_payment_minutes)
     const pac = d.paciente ?? {}
     const quien = d.nuevo
       ? [
@@ -648,7 +755,9 @@ export async function atenderAlPersonal({
           ...(d.email ? [`Correo: *${d.email}*  ← ahí le llega el comprobante`] : []),
         ].join('\n')
 
-    await guardar('resumen', d)
+    // El plazo de la inicial, para el mensaje de «Listo» (sin otra consulta a la base).
+    const conPlazo: Datos = { ...d, minutosDeLaInicial: conInicial ? (positivo(v.down_payment_minutes) ?? MINUTOS_DE_LA_INICIAL) : null }
+    await guardar('resumen', conPlazo)
     await enviar(
       `Revisa antes de enviar:\n\n${quien}\n\n` +
         `Consulta: ${en(v.base_cur, v.base_usd)}${d.concepto ? ` (${d.concepto})` : ''}\n` +
@@ -656,9 +765,12 @@ export async function atenderAlPersonal({
         // ningún médico crea que se la descuentan.
         `Comisión Helios (${v.consumer_fee_pct}%): ${en(v.consumer_fee_cur, v.consumer_fee_usd)} (Lo paga el paciente)\n` +
         `IVA de la Comisión Helios: ${en(v.consumer_fee_vat_cur, v.consumer_fee_vat_usd)} (Lo paga el paciente)\n` +
-        `Cuotas:\n${cuotas}\n\n` +
+        `${plan}\n\n` +
         `El paciente paga en bolívares a la tasa BCV del ${nombreDeLaMoneda(m)} del día en que pague.\n` +
-        'Al confirmar, le llega un WhatsApp al paciente y tiene 2 horas para confirmarlo: responderá «Sí» y, si se lo pedimos, enviará una foto de su cédula.',
+        (conInicial
+          ? `Al confirmar, le llega un WhatsApp al paciente y tiene 2 horas para aceptarlo: ${loQueHaceElPaciente(true, plazo)}. ` +
+            ACTIVA_CON_LA_INICIAL
+          : 'Al confirmar, le llega un WhatsApp al paciente y tiene 2 horas para confirmarlo: responderá «Sí» y, si se lo pedimos, enviará una foto de su cédula.'),
       RESUMEN,
     )
     return { paso: 'resumen' }

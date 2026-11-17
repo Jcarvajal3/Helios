@@ -4,6 +4,7 @@
  *   npx tsx supabase/functions/whatsapp-webhook/textos_directorio.test.ts
  */
 import {
+  TEXTO_DEL_PAGO_A,
   URL_DE_CONSULTAS,
   URL_DEL_DIRECTORIO,
   digitosDelWhatsApp,
@@ -60,7 +61,12 @@ console.log('\nEl contacto, con todos los datos')
   comprueba(t.includes('🩺 Odontología'), 'su especialidad')
   comprueba(t.includes('📍 Av. Francisco de Miranda, Torre Delta, piso 3, Caracas'), 'su dirección y su ciudad')
   comprueba(t.includes(String(enlace)), 'el enlace a su WhatsApp')
-  comprueba(t.includes('dos cuotas, a los 14 y 28 días, sin inicial'), 'que puede pagar en dos cuotas')
+  comprueba(
+    t.includes('con una inicial del 50% el mismo día y dos cuotas, a los 14 y 28 días'),
+    'que paga una inicial del 50% y dos cuotas (docs/07)',
+    t,
+  )
+  comprueba(!t.includes('sin inicial'), 'ya no dice «sin inicial»', t)
   comprueba(!PROHIBIDO.test(t), 'sin vocabulario prohibido')
   comprueba(!t.includes('$') && !t.includes('Bs'), 'sin montos')
 }
@@ -90,8 +96,9 @@ console.log('\nLa variante B pide la cita (docs/06, 2026-11-09)')
 {
   const a = mensajeContactoDelMedico(ANA)
   comprueba(
-    a.split('\n').at(-1) === 'Puedes pagar tu consulta con Helios en dos cuotas, a los 14 y 28 días, sin inicial.',
-    'A cierra con los plazos de siempre',
+    a.split('\n').at(-1) === 'Puedes pagar tu consulta con Helios con una inicial del 50% el mismo día y dos cuotas, a los 14 y 28 días.' &&
+      a.split('\n').at(-1) === TEXTO_DEL_PAGO_A,
+    'A cierra con la inicial del 50% y las dos cuotas',
     String(a.split('\n').at(-1)),
   )
   const b = mensajePedirCita({ name: ' Dra. Ana Pérez ' })

@@ -552,7 +552,7 @@
     {
       "id": "por-cobrar-por-semana",
       "titulo": "Por cobrar › Cohortes",
-      "descripcion": "Cada cohorte (lo financiado una semana: A1, A2…), seguida hasta cobrar sus dos cuotas: total a cobrar, cobrado, vencido y por vencer (financiamiento + comisión), la cuota 1 y la 2, y quién debe de esa semana con sus señales.",
+      "descripcion": "Cada cohorte (lo financiado una semana: A1, A2…), seguida hasta cobrar sus cuotas 1 y 2 (la inicial no entra): total a cobrar, cobrado, vencido y por vencer (financiamiento + comisión), la cuota 1 y la 2, y quién debe de esa semana con sus señales.",
       "ruta": "/admin/cobranza",
       "espacio": "cobranza",
       "search": {
@@ -775,6 +775,7 @@
       "espacio": "directorio",
       "search": {
         "estado": [
+          "awaiting_down_payment",
           "confirmed",
           "pending"
         ]
@@ -1119,7 +1120,7 @@
     {
       "id": "total-a-cobrar-de-la-semana",
       "titulo": "Total a cobrar de la semana",
-      "que": "Lo que los pacientes pagan en sus dos cuotas por los financiamientos de la semana: el total financiado (sin comisión) más la Comisión Helios y su IVA. No es un total suelto: se enseña siempre con sus dos sumandos al lado, en la tarjeta, en la tabla y en el CSV.",
+      "que": "Lo que los pacientes pagan, en la inicial y sus dos cuotas (las órdenes de antes del 2026-11-12, solo en dos cuotas), por los financiamientos de la semana: el total financiado (sin comisión) más la Comisión Helios y su IVA. No es un total suelto: se enseña siempre con sus dos sumandos al lado, en la tarjeta, en la tabla y en el CSV.",
       "rpc": "admin_metricas_semana_resumen",
       "pantalla": "metricas"
     },
@@ -1147,7 +1148,7 @@
     {
       "id": "cuotas-de-una-semana",
       "titulo": "Cuota 1 y cuota 2 de una semana",
-      "que": "Para los financiamientos de una semana (de lunes a domingo, por día operativo), cada cuota en su tarjeta: lo que se cobra en ella con su financiamiento (sin comisión) y su Comisión Helios (IVA incluido), y cuánto está cobrado a tiempo, cobrado tarde, vencido sin pagar, por vencer o dado por perdido, con los pacientes de cada estado. Las dos cuotas suman el total a cobrar de la semana.",
+      "que": "Para los financiamientos de una semana (de lunes a domingo, por día operativo), cada cuota en su tarjeta: lo que se cobra en ella con su financiamiento (sin comisión) y su Comisión Helios (IVA incluido), y cuánto está cobrado a tiempo, cobrado tarde, vencido sin pagar, por vencer o dado por perdido, con los pacientes de cada estado. Las dos cuotas suman el total a cobrar de la semana. La inicial (desde el 2026-11-12) no entra: se cobra el día del «Sí» o la orden se anula.",
       "rpc": "admin_metricas_cohorte",
       "pantalla": "metricas"
     },
@@ -1777,7 +1778,7 @@
     {
       "id": "prueba-ab-del-directorio",
       "titulo": "Prueba A/B del directorio",
-      "que": "Entre dos días (incluidos, hasta 366), las dos variantes lado a lado: A es /directorio (sus especialidades y fichas incluidas) y B es /consultas, solo médicos cuya consulta vale más que la inicial (helios_consultas_inicial_usd) y como mucho el tope (helios_consultas_tope_usd), en euros por la tasa cruzada BCV de hoy, anunciados con esa inicial (solo texto: el cobro no cambia). Por variante: visitas (tabla directory_page_views, desde el 2026-11-09), visitantes distintos (por navegador), clics al WhatsApp (directory_contact_clicks.variant), visitantes que tocaron algún botón y además visitaron esa variante, interesados que escribieron al WhatsApp de Helios (directory_leads.variant; en la práctica solo B) y cuántos de ellos ya son pacientes; la tasa de clic es visitantes que tocaron / visitantes. También la serie diaria y, por médico, su precio, si entra hoy en B y sus clics de A y de B. Solo lo público: las visitas y los clics del equipo y de las clínicas salen aparte.",
+      "que": "Entre dos días (incluidos, hasta 366), las dos variantes lado a lado: A es /directorio (sus especialidades y fichas incluidas), que anuncia el cobro real (50% de inicial y 2 cuotas desde el 2026-11-12), y B es /consultas, solo médicos cuya consulta vale más que la inicial (helios_consultas_inicial_usd) y como mucho el tope (helios_consultas_tope_usd), en euros por la tasa cruzada BCV de hoy, anunciados con esa inicial (solo texto: el cobro no cambia). Por variante: visitas (tabla directory_page_views, desde el 2026-11-09), visitantes distintos (por navegador), clics al WhatsApp (directory_contact_clicks.variant), visitantes que tocaron algún botón y además visitaron esa variante, interesados que escribieron al WhatsApp de Helios (directory_leads.variant; en la práctica solo B) y cuántos de ellos ya son pacientes; la tasa de clic es visitantes que tocaron / visitantes. También la serie diaria y, por médico, su precio, si entra hoy en B y sus clics de A y de B. Solo lo público: las visitas y los clics del equipo y de las clínicas salen aparte.",
       "rpc": "admin_directorio_ab",
       "pantalla": "directorio-de-medicos"
     }

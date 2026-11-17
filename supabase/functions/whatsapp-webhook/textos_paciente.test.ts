@@ -12,7 +12,9 @@ import {
   bolivaresDeHoy,
   cuotasAPagar,
   diaLargo,
+  esperaLaInicial,
   fechaLarga,
+  nombreDeLaCuota,
   mensajeAyuda,
   mensajeCedulaNoCoincide,
   mensajeComprobante,
@@ -21,6 +23,7 @@ import {
   mensajePagar,
   mensajePedirCedula,
   mensajeSinFinanciamientos,
+  mensajeYaAceptaste,
   mensajeYaPague,
   tienePendientes,
 } from './textos_paciente.ts'
@@ -368,6 +371,159 @@ comprueba(
 const mezcla = mensajeFinanciamientos({ ...enEuros, financiamientos: [...base.financiamientos, ...enEuros.financiamientos] })
 comprueba(mezcla.includes('*Por pagar: $113,92 + €113,92*'), 'una en dólares y otra en euros: no se suman entre sí', mezcla)
 
+console.log('\nLa inicial (docs/07)')
+// $100 → total $113,92 → inicial $56,96 hoy + 2 cuotas de $28,48. El «Sí» a
+// las 14:30 de Caracas: tiene hasta las 16:30 (20:30 UTC).
+const esperando: ResumenDelPaciente = {
+  ...base,
+  financiamientos: [
+    {
+      orden: 6261,
+      clinica: 'Consultorio 103',
+      medico: 'Dra. Nadia Khabbaze',
+      medico_ref: 'la Dra. Nadia Khabbaze',
+      moneda: 'USD',
+      consulta: 100,
+      estado: 'awaiting_down_payment',
+      inicial_vence_at: '2026-11-12T20:30:00Z',
+      cuotas: [
+        { sequence: 0, due_date: '2026-11-12', monto: 56.96, cargo_atraso: 0, vencida: false },
+        { sequence: 1, due_date: '2026-11-26', monto: 28.48, cargo_atraso: 0, vencida: false },
+        { sequence: 2, due_date: '2026-12-10', monto: 28.48, cargo_atraso: 0, vencida: false },
+      ],
+      pagadas: [],
+    },
+  ],
+}
+comprueba(nombreDeLaCuota(0) === 'Inicial' && nombreDeLaCuota(1) === '1.ª cuota', 'la cuota 0 se llama «Inicial»')
+comprueba(esperaLaInicial(esperando.financiamientos[0]) && !esperaLaInicial(base.financiamientos[0]), 'qué orden espera la inicial')
+comprueba(cuotasAPagar(esperando)[0].c.sequence === 0 && cuotasAPagar(esperando).length === 1, 'Pagar mi cuota: la inicial primero')
+const pagarInicial = mensajePagar(esperando)
+comprueba(
+  pagarInicial.startsWith(
+    '💳 *Tu inicial*\n' +
+      '$56,96 · págala antes de las 16:30 ⏰\n' +
+      'Consulta con la Dra. Nadia Khabbaze (orden #6261)\n' +
+      'Tu pago en cuotas se activa en cuanto confirmemos tu inicial.\n\n',
+  ),
+  'la inicial: monto, hora de Caracas, el médico y que con ella se activa',
+  pagarInicial,
+)
+// 56,96 × 184,52 = 10.510,2592; 113,92 × 184,52 = 21.020,5184
+comprueba(pagarInicial.includes('💵 *Monto en bolívares hoy: Bs 10.510,26*'), 'los bolívares de la inicial', pagarInicial)
+comprueba(
+  pagarInicial.includes('💰 *Para pagar todo de una vez hoy: Bs 21.020,52*\nSon tu inicial y tus 2 cuotas pendientes ($113,92).'),
+  'todo de una vez: la inicial y las 2 cuotas',
+  pagarInicial,
+)
+comprueba(pagarInicial.trimEnd().endsWith(FRASE_NIVEL), 'el bloque de pago cierra con la frase de los niveles', pagarInicial)
+comprueba(
+  pagarInicial.split('Bs ').length === 3 && pagarInicial.lastIndexOf('Bs ') < pagarInicial.indexOf('🏦 *Pago Móvil*'),
+  'los bolívares, solo en el bloque de pago',
+  pagarInicial,
+)
+const verInicial = mensajeFinanciamientos(esperando)
+comprueba(
+  verInicial ===
+    '📋 *Tu cuenta Helios*\n\n' +
+      '🏅 *Nivel 1*\n' +
+      '💰 *Saldo total: $150*\n' +
+      '✨ *Disponible para tu próxima consulta: $50*\n\n' +
+      '*Tus pagos en cuotas*\n' +
+      '🩺 Dra. Nadia Khabbaze · orden #6261\n' +
+      'Consulta: $100\n' +
+      '⏳ Inicial $56,96 · págala antes de las 16:30\n' +
+      '⏳ 1.ª cuota $28,48 · vence el jueves 26/11\n' +
+      '⏳ 2.ª cuota $28,48 · vence el jueves 10/12\n' +
+      '🔔 Tu pago en cuotas se activa en cuanto confirmemos tu inicial.\n\n' +
+      '*Por pagar: $113,92*\n\n' +
+      '⭐ Si pagas a tiempo, puedes subir de nivel y aumentar tu saldo máximo.',
+  'Mi saldo con una orden que espera la inicial: «Inicial», su hora y que aún no está activa',
+  verInicial,
+)
+comprueba(verInicial.length <= MAXIMO_CON_BOTONES && tienePendientes(esperando), 'cabe con el botón «Pagar mi cuota»')
+const sinCero = [pagarInicial, verInicial].filter((t) => /0\.ª|cuota 0|\b0\. /i.test(t))
+comprueba(sinCero.length === 0, 'nunca «0.ª cuota» ni «cuota 0»', sinCero.join(' | '))
+// El «Sí» a las 22:30: el plazo cae pasada la medianoche (00:30 del viernes).
+const medianoche = mensajePagar({
+  ...esperando,
+  financiamientos: [{ ...esperando.financiamientos[0], inicial_vence_at: '2026-11-13T04:30:00Z' }],
+})
+comprueba(medianoche.includes('$56,96 · págala antes de las 00:30 del viernes 13/11 ⏰'), 'pasada la medianoche, con el día', medianoche)
+// Ya activa: la inicial pagada sale como «Inicial … · pagada».
+const activa = mensajeFinanciamientos({
+  ...esperando,
+  financiamientos: [
+    {
+      ...esperando.financiamientos[0],
+      estado: 'confirmed',
+      inicial_vence_at: null,
+      cuotas: esperando.financiamientos[0].cuotas.slice(1),
+      pagadas: [{ sequence: 0, due_date: '2026-11-12', monto: 56.96 }],
+    },
+  ],
+})
+comprueba(
+  activa.includes('*Pagos en cuotas activos*\n') &&
+    activa.includes('Consulta: $100\n✅ Inicial $56,96 · pagada\n⏳ 1.ª cuota $28,48 · vence el jueves 26/11\n') &&
+    !activa.includes('🔔') &&
+    activa.includes('*Por pagar: $56,96*'),
+  'ya activa: la inicial pagada primero y sin el aviso',
+  activa,
+)
+comprueba(
+  mensajePagar({
+    ...esperando,
+    financiamientos: [{ ...esperando.financiamientos[0], estado: 'confirmed', cuotas: esperando.financiamientos[0].cuotas.slice(1) }],
+  }).startsWith('💳 *Tu próxima cuota*\n$28,48 · vence el jueves 26/11\nConsulta con la Dra. Nadia Khabbaze (orden #6261)\n\n'),
+  'ya activa: «Tu próxima cuota» como siempre',
+)
+// Raro, pero posible: una cuota vencida de otra orden y una inicial pendiente.
+const vencidaEInicial = mensajePagar({
+  ...esperando,
+  financiamientos: [
+    { ...base.financiamientos[0], cuotas: [{ sequence: 2, due_date: '2026-11-02', monto: 56.96, cargo_atraso: 0, vencida: true }] },
+    esperando.financiamientos[0],
+  ],
+})
+comprueba(
+  vencidaEInicial.startsWith(
+    '⚠️ *Tienes 2 pagos pendientes*\n' +
+      '• $56,96 · venció el lunes 02/11 · Dra. Nadia Khabbaze\n' +
+      '• $56,96 · inicial, antes de las 16:30 · Dra. Nadia Khabbaze\n' +
+      '*Total: $113,92*',
+  ) &&
+    // 170,88 × 184,52 = 31.530,7776
+    vencidaEInicial.includes('💰 *Para pagar todo de una vez hoy: Bs 31.530,78*') &&
+    vencidaEInicial.trimEnd().endsWith(FRASE_NIVEL),
+  'una vencida y una inicial: las dos, la inicial con su hora',
+  vencidaEInicial,
+)
+const inicialEnEuros = mensajePagar({
+  ...esperando,
+  tasa_bcv_eur: 215.3,
+  financiamientos: [{ ...esperando.financiamientos[0], moneda: 'EUR', medico_ref: 'el Dr. Hiram Padrón' }],
+})
+// 56,96 × 215,30 = 12.263,488 → 12.263,49
+comprueba(
+  inicialEnEuros.startsWith('💳 *Tu inicial*\n€56,96 · págala antes de las 16:30 ⏰\nConsulta con el Dr. Hiram Padrón') &&
+    inicialEnEuros.includes('Monto en bolívares hoy: Bs 12.263,49*') &&
+    inicialEnEuros.includes('a la tasa BCV del euro de hoy'),
+  'la inicial en euros, a la tasa del euro',
+  inicialEnEuros,
+)
+
+const yaAceptaste = mensajeYaAceptaste({
+  ...esperando,
+  financiamientos: [...base.financiamientos, ...esperando.financiamientos],
+})
+comprueba(
+  yaAceptaste === `✅ ¡Ya aceptaste tu pago en cuotas, María! Solo falta tu inicial para activarlo 👇\n\n${pagarInicial}`,
+  '«Sí» otra vez: ya aceptó y la vista de la inicial (solo la orden que la espera)',
+  String(yaAceptaste),
+)
+comprueba(mensajeYaAceptaste(base) === null, 'sin orden esperando la inicial: nada')
+
 console.log('\nVocabulario')
 const PROHIBIDAS = /pr[ée]stamo|financ|cr[ée]dito|\bfee\b/i
 const todos = [
@@ -389,6 +545,13 @@ const todos = [
   pagarEur,
   eurVencida,
   mezcla,
+  pagarInicial,
+  verInicial,
+  medianoche,
+  activa,
+  vencidaEInicial,
+  inicialEnEuros,
+  String(yaAceptaste),
 ]
 const conPalabras = todos.filter((t) => PROHIBIDAS.test(t))
 comprueba(conPalabras.length === 0, 'ningún texto dice préstamo, financiamiento, crédito ni fee', conPalabras.join(' | '))

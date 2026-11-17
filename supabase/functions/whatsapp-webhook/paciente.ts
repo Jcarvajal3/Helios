@@ -37,6 +37,14 @@
 //               (estado «datos_pago»: banco, teléfono y referencia completa).
 //   Con una persona atendiendo el chat, la captura se lee igual, en silencio.
 //
+// La inicial (2026-11-12, docs/07): tras el «Sí» (y la cédula) la orden
+// espera la inicial y la BASE le manda al paciente el mensaje para pagarla;
+// el webhook no dice nada más. La captura de ese pago llega aquí como la de
+// cualquier cuota (la foto de la cédula solo se toma antes, en index.ts,
+// mientras la orden está pendiente y la pidió), y el lector la cobra
+// (`helios_receipt_tramo` toma la inicial primero). «Pagar mi cuota» y «Mi
+// saldo y cuotas» enseñan la inicial como «Inicial», con su hora límite.
+//
 // Lo que recuerda de cada número vive en `whatsapp_contacts`.
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -63,6 +71,7 @@ import {
   mensajePedirDatosDePago,
   mensajeReferenciaRecibida,
   mensajeSinFinanciamientos,
+  mensajeYaAceptaste,
   mensajeYaPague,
   mensajeYaPagueConDatos,
   tienePendientes,
@@ -100,6 +109,40 @@ const INTENTOS_DE_DATOS = 2
 function perfilConocido(ctx: Contexto): Perfil | null {
   if (ctx.perfiles.length === 1) return ctx.perfiles[0]
   return ctx.perfiles.find((p) => p.id === ctx.elegido) ?? null
+}
+
+/**
+ * ¿El botón «Sí» de la pregunta llegó cuando la orden ya espera la inicial?
+ * `helios_patient_decision` no contesta nada al paciente en ese caso (solo
+ * `{ok: false, reason: 'no_pendiente', status: 'awaiting_down_payment'}`):
+ * entonces se le recuerda la inicial (`recordarLaInicial`).
+ */
+export function esUnSiRepetido(decision: 'si' | 'no', res: unknown): boolean {
+  const r = (res ?? {}) as { reason?: unknown; status?: unknown }
+  return decision === 'si' && r.reason === 'no_pendiente' && r.status === 'awaiting_down_payment'
+}
+
+/**
+ * Ya aceptó y su orden espera la inicial: que ya aceptó, que falta la inicial
+ * y cómo pagarla (`mensajeYaAceptaste`). Solo con un paciente conocido (el
+ * único del teléfono o el que ya eligió): de un teléfono de varios no se
+ * enseña nada sin la cédula. Null si no se le dijo nada.
+ */
+async function recordarSiEspera(rpc: Rpc, tel: string, ctx: Contexto): Promise<Record<string, unknown> | null> {
+  const perfil = perfilConocido(ctx)
+  if (!perfil) return null
+  const r = await rpc<ResumenDelPaciente>('bot_paciente_resumen', { p_profile_id: perfil.id })
+  const texto = r ? mensajeYaAceptaste(r) : null
+  if (!texto) return null
+  await rpc('bot_paciente_guardar', { p_phone: tel, p_menu: null, p_humano_horas: 0, p_estado: null, p_profile_id: null })
+  await rpc('helios_whatsapp_patient_text', { p_to: tel, p_text: texto, p_profile_id: perfil.id, p_buttons: [] })
+  return { paso: 'ya_acepto' }
+}
+
+/** El botón «Sí» otra vez (index.ts, con `esUnSiRepetido`): se le recuerda la inicial. */
+export async function recordarLaInicial({ rpc, mensaje }: { rpc: Rpc; mensaje: EventoDeMensaje }): Promise<Record<string, unknown> | null> {
+  const ctx = await rpc<Contexto>('bot_paciente_contexto', { p_phone: mensaje.from })
+  return recordarSiEspera(rpc, mensaje.from, ctx)
 }
 
 /** Devuelve qué hizo (para `whatsapp_inbound.result`), o null si se calló (lo atiende una persona). */
@@ -156,6 +199,14 @@ export async function atenderAlPaciente({
     const quien = esAdjunto ? perfilConocido(ctx) : null
     if (quien) await encolar(quien.id, true)
     return null
+  }
+
+  // Un «sí» escrito cuando ya aceptó y su orden espera la inicial (no hay
+  // ninguna `pending`: esa la contesta index.ts): que falta la inicial, en
+  // vez del menú. Antes que la vencida: la orden que espera es la de ahora.
+  if (!pidioAlgo && decisionDelTexto(mensaje.texto) === 'si') {
+    const hecho = await recordarSiEspera(rpc, tel, ctx)
+    if (hecho) return hecho
   }
 
   // Un «sí» o un «no» a una orden que ya venció: que pida que se la reenvíen.

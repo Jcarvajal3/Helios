@@ -13,9 +13,15 @@
 // a la tasa BCV de su moneda del día en que paga. Las monedas no se suman
 // entre sí: el total que las junta es el de bolívares, y los bolívares salen
 // solo en el bloque de pago, junto a las cuentas (2026-10-19).
+//
+// La inicial (2026-11-12, docs/07): una orden nueva se paga con una inicial
+// del 50% el día del «Sí» y 2 cuotas. La inicial es la cuota con `sequence`
+// 0; mientras no se confirma, la orden está `awaiting_down_payment` y tiene
+// hasta `inicial_vence_at` para pagarla (si no, se anula sola). Aquí se
+// llama «Inicial», nunca «cuota 0», y se dice hasta qué hora hay.
 // ═══════════════════════════════════════════════════════════════════════════
 
-import { bolivares, dinero, dineroEn, monedaDe, nombreDeLaMoneda } from './datos.ts'
+import { bolivares, dinero, dineroEn, diaYHoraCaracas, monedaDe, nombreDeLaMoneda } from './datos.ts'
 import type { Moneda } from './datos.ts'
 import { formularioDePago, nombrarCampos } from './datos_pago.ts'
 import type { Campo } from './datos_pago.ts'
@@ -65,6 +71,11 @@ export type FinanciamientoActivo = {
   moneda?: Moneda
   /** En la moneda de la orden. */
   consulta: number
+  /** 'confirmed' o 'awaiting_down_payment' (esperando la inicial); sin él (una base vieja), confirmada. */
+  estado?: string
+  /** Hasta cuándo puede pagar la inicial (ISO), si la espera; null en las órdenes sin inicial. */
+  inicial_vence_at?: string | null
+  /** Con inicial, la primera es la cuota 0 (la inicial). */
   cuotas: CuotaPendiente[]
   pagadas?: CuotaPagada[]
 }
@@ -102,6 +113,36 @@ function medicoDe(f: FinanciamientoActivo): string {
 function medicoRefDe(f: FinanciamientoActivo): string {
   return f.medico_ref ?? medicoDe(f)
 }
+
+/** ¿La orden espera su inicial (aún no está activa)? */
+export function esperaLaInicial(f: FinanciamientoActivo): boolean {
+  return f.estado === 'awaiting_down_payment'
+}
+
+/** La inicial es la cuota 0. */
+function esInicial(c: { sequence: number }): boolean {
+  return c.sequence === 0
+}
+
+/** «Inicial», «1.ª cuota», «2.ª cuota». Nunca «0.ª cuota». */
+export function nombreDeLaCuota(sequence: number): string {
+  return sequence === 0 ? 'Inicial' : `${sequence}.ª cuota`
+}
+
+/**
+ * Hasta cuándo puede pagar la inicial, en Caracas, como lo dice la base en
+ * `pagar_inicial`: «antes de las 16:30» o, si el plazo cae otro día que el de
+ * la inicial (el «Sí» pasadas las 22:00), «antes de las 00:30 del viernes
+ * 13/11». Sin plazo (no debería pasar), «hoy».
+ */
+export function plazoDeLaInicial(f: FinanciamientoActivo, c: CuotaPendiente): string {
+  const plazo = diaYHoraCaracas(f.inicial_vence_at ?? null)
+  if (!plazo) return 'hoy'
+  return `antes de las ${plazo.hora}${plazo.fecha !== c.due_date.slice(0, 10) ? ` del ${diaLargo(plazo.fecha)}` : ''}`
+}
+
+/** Lo que se dice de una orden que espera la inicial. */
+const SE_ACTIVA = 'Tu pago en cuotas se activa en cuanto confirmemos tu inicial.'
 
 /** Lo que se debe, por moneda, en el orden en que aparece cada una. */
 type PorMoneda = Map<Moneda, number>
@@ -182,7 +223,19 @@ export function fechaLarga(fecha: string): string {
 }
 
 /** Todo lo que le queda por pagar, para quien quiera pagarlo de una vez. */
-type Todo = { cuotas: number; s: PorMoneda }
+type Todo = { cuotas: number; s: PorMoneda; /** Cuántas de `cuotas` son una inicial. */ iniciales?: number }
+
+/** «tus 2 cuotas pendientes», «tu inicial y tus 2 cuotas pendientes», «tu inicial y tu cuota pendiente». */
+function loQueQueda(todo: Todo): string {
+  const iniciales = todo.iniciales ?? 0
+  const cuotas = todo.cuotas - iniciales
+  const partes: string[] = []
+  if (iniciales === 1) partes.push('tu inicial')
+  else if (iniciales > 1) partes.push(`tus ${iniciales} iniciales`)
+  if (cuotas === 1) partes.push('tu cuota pendiente')
+  else if (cuotas > 1) partes.push(`tus ${cuotas} cuotas pendientes`)
+  return partes.join(' y ')
+}
 
 /**
  * El bloque de pago (el mismo que `helios_payment_block` en la base): los
@@ -237,7 +290,7 @@ export function bloqueDePago(r: ResumenDelPaciente, s: PorMoneda, todo: Todo | n
   const deUnaVez =
     todo && bsTodo !== null
       ? `💰 *Para pagar todo de una vez hoy: ${bolivares(bsTodo)}*\n` +
-        `Son tus ${todo.cuotas} cuotas pendientes (${enSusMonedas(todo.s)}).`
+        `Son ${loQueQueda(todo)} (${enSusMonedas(todo.s)}).`
       : null
   return [
     monto,
@@ -340,7 +393,9 @@ export function cuotasAPagar(r: ResumenDelPaciente): Array<{ f: FinanciamientoAc
     .flatMap((f) => f.cuotas.map((c) => ({ f, c })))
     .sort((a, b) => a.c.due_date.localeCompare(b.c.due_date) || a.c.sequence - b.c.sequence)
   const vencidas = todas.filter((x) => x.c.vencida)
-  if (vencidas.length > 0) return vencidas
+  // La inicial nunca vence (si no se paga a tiempo, la orden se anula sola),
+  // pero corre prisa: si hay vencidas, va con ellas.
+  if (vencidas.length > 0) return todas.filter((x) => x.c.vencida || (esInicial(x.c) && esperaLaInicial(x.f)))
   return todas.slice(0, 1)
 }
 
@@ -361,29 +416,44 @@ export function mensajePagar(r: ResumenDelPaciente): string {
 
   const total = porMoneda(aPagar)
   const vencidas = aPagar.some((x) => x.c.vencida)
+  const conInicial = aPagar.some((x) => esInicial(x.c))
   let cabeza: string
   if (vencidas) {
     const n = aPagar.length
-    const lineas = aPagar.map(({ f, c }) => `• ${montoDeLaCuota(f, c)} · venció el ${diaLargo(c.due_date)} · ${medicoDe(f)}`)
+    const lineas = aPagar.map(({ f, c }) =>
+      esInicial(c)
+        ? `• ${montoDeLaCuota(f, c)} · inicial, ${plazoDeLaInicial(f, c)} · ${medicoDe(f)}`
+        : `• ${montoDeLaCuota(f, c)} · venció el ${diaLargo(c.due_date)} · ${medicoDe(f)}`,
+    )
+    // Con una inicial en la lista no son todas «cuotas».
+    const que = conInicial ? (n === 1 ? 'pago pendiente' : 'pagos pendientes') : n === 1 ? 'cuota pendiente' : 'cuotas pendientes'
     cabeza =
-      `⚠️ *Tienes ${n} ${n === 1 ? 'cuota pendiente' : 'cuotas pendientes'}*\n${lineas.join('\n')}\n` +
+      `⚠️ *Tienes ${n} ${que}*\n${lineas.join('\n')}\n` +
       (n > 1 ? `*Total: ${enSusMonedas(total)}*\n` : '') +
       '\nAún estás a tiempo de ponerte al día 💙' +
       // 2026-10-29: con dos o más, que puede empezar por la más antigua.
       (n > 1 ? ` Puedes pagar ${n === 2 ? 'las dos' : 'todas'} o empezar por la más antigua.` : '')
   } else {
     const { f, c } = aPagar[0]
-    cabeza =
-      '💳 *Tu próxima cuota*\n' +
-      `${montoDeLaCuota(f, c)} · vence el ${diaLargo(c.due_date)}\n` +
-      `Consulta con ${medicoRefDe(f)} (orden #${f.orden})`
+    cabeza = esInicial(c)
+      ? // La inicial de una orden que la espera: hasta qué hora y que con ella se activa.
+        '💳 *Tu inicial*\n' +
+        `${montoDeLaCuota(f, c)} · págala ${plazoDeLaInicial(f, c)} ⏰\n` +
+        `Consulta con ${medicoRefDe(f)} (orden #${f.orden})` +
+        (esperaLaInicial(f) ? `\n${SE_ACTIVA}` : '')
+      : '💳 *Tu próxima cuota*\n' +
+        `${montoDeLaCuota(f, c)} · vence el ${diaLargo(c.due_date)}\n` +
+        `Consulta con ${medicoRefDe(f)} (orden #${f.orden})`
   }
 
   // Todo lo que le queda, si es más de lo que toca. No con un pago en
   // revisión: sus cuotas no entran en lo que el bot reconoce al leer el
   // siguiente comprobante.
   const pendientes = r.financiamientos.flatMap((f) => f.cuotas.map((c) => ({ f, c })))
-  const todo = pendientes.length > aPagar.length && !r.pago_en_revision ? { cuotas: pendientes.length, s: porMoneda(pendientes) } : null
+  const todo =
+    pendientes.length > aPagar.length && !r.pago_en_revision
+      ? { cuotas: pendientes.length, s: porMoneda(pendientes), iniciales: pendientes.filter((x) => esInicial(x.c)).length }
+      : null
 
   // Dos o más vencidas: la más antigua (las de su fecha) y todo de una vez.
   let bloque: string | null = null
@@ -393,11 +463,6 @@ export function mensajePagar(r: ResumenDelPaciente): string {
   }
 
   return [cabeza, ...(r.pago_en_revision ? [PAGO_EN_REVISION] : []), bloque ?? bloqueDePago(r, total, todo)].join('\n\n')
-}
-
-/** «1.ª cuota». */
-function ordinal(n: number): string {
-  return `${n}.ª cuota`
 }
 
 /** Lo disponible: lo que puede usar hoy, o por qué es cero. Null si la base no lo manda. */
@@ -440,24 +505,48 @@ export function mensajeFinanciamientos(r: ResumenDelPaciente): string {
   if (r.financiamientos.length > 0) {
     const bloques = r.financiamientos.map((f) => {
       const m = monedaDe(f.moneda)
-      const pagadas = (f.pagadas ?? []).map((p) => ({ sequence: p.sequence, linea: `✅ ${ordinal(p.sequence)} ${dineroEn(p.monto, m)} · pagada` }))
+      const pagadas = (f.pagadas ?? []).map((p) => ({
+        sequence: p.sequence,
+        linea: `✅ ${nombreDeLaCuota(p.sequence)} ${dineroEn(p.monto, m)} · pagada`,
+      }))
       const pendientes = f.cuotas.map((c) => ({
         sequence: c.sequence,
-        linea: c.vencida
-          ? `⚠️ ${ordinal(c.sequence)} ${montoDeLaCuota(f, c)} · venció el ${diaLargo(c.due_date)}`
-          : `⏳ ${ordinal(c.sequence)} ${montoDeLaCuota(f, c)} · vence el ${diaLargo(c.due_date)}`,
+        linea: esInicial(c)
+          ? `⏳ ${nombreDeLaCuota(0)} ${montoDeLaCuota(f, c)} · págala ${plazoDeLaInicial(f, c)}`
+          : c.vencida
+            ? `⚠️ ${nombreDeLaCuota(c.sequence)} ${montoDeLaCuota(f, c)} · venció el ${diaLargo(c.due_date)}`
+            : `⏳ ${nombreDeLaCuota(c.sequence)} ${montoDeLaCuota(f, c)} · vence el ${diaLargo(c.due_date)}`,
       }))
       const cuotas = [...pagadas, ...pendientes].sort((a, b) => a.sequence - b.sequence).map((x) => x.linea)
-      return `🩺 ${medicoDe(f)} · orden #${f.orden}\nConsulta: ${dineroEn(f.consulta, m)}\n${cuotas.join('\n')}`
+      // La que espera la inicial aún no está activa: que lo sepa.
+      const aviso = esperaLaInicial(f) ? `\n🔔 ${SE_ACTIVA}` : ''
+      return `🩺 ${medicoDe(f)} · orden #${f.orden}\nConsulta: ${dineroEn(f.consulta, m)}\n${cuotas.join('\n')}${aviso}`
     })
     const porPagar = porMoneda(r.financiamientos.flatMap((f) => f.cuotas.map((c) => ({ f, c }))))
-    partes.push(`*Pagos en cuotas activos*\n${bloques.join('\n\n')}`)
+    // Con una orden que espera la inicial, no son todos «activos».
+    const titulo = r.financiamientos.some(esperaLaInicial) ? '*Tus pagos en cuotas*' : '*Pagos en cuotas activos*'
+    partes.push(`${titulo}\n${bloques.join('\n\n')}`)
     partes.push(`*Por pagar: ${enSusMonedas(porPagar)}*`)
   }
 
   if (r.pago_en_revision) partes.push('🔎 Tienes un pago en revisión: aún no aparece descontado.')
   partes.push(FRASE_SUBIR_DE_NIVEL)
   return partes.join('\n\n')
+}
+
+/**
+ * Un «Sí» (escrito o el botón otra vez) cuando ya aceptó y la orden espera la
+ * inicial: que ya aceptó, que falta la inicial, y la vista de «Pagar mi
+ * cuota» de esa orden (monto, hasta qué hora y el bloque de pago). Null si
+ * ninguna orden espera su inicial.
+ */
+export function mensajeYaAceptaste(r: ResumenDelPaciente): string | null {
+  const esperando = r.financiamientos.filter((f) => esperaLaInicial(f) && f.cuotas.some(esInicial))
+  if (esperando.length === 0) return null
+  return (
+    `✅ ¡Ya aceptaste tu pago en cuotas${hola(r.nombre)}! Solo falta tu inicial para activarlo 👇\n\n` +
+    mensajePagar({ ...r, financiamientos: esperando })
+  )
 }
 
 /** ¿Hay algo que pagar? (para ofrecer el botón «Pagar mi cuota»). */

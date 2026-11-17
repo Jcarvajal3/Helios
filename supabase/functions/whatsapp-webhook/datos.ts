@@ -465,3 +465,20 @@ export function horaCaracas(iso: string | null): string {
     hour12: false,
   }).format(new Date(iso))
 }
+
+/**
+ * Un instante ISO en Caracas: su fecha («2026-11-12») y su hora («16:30»).
+ * Null sin instante o si no es una fecha.
+ */
+export function diaYHoraCaracas(iso: string | null): { fecha: string; hora: string } | null {
+  if (!iso) return null
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return null
+  const fecha = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Caracas',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(d)
+  return { fecha, hora: horaCaracas(iso) }
+}

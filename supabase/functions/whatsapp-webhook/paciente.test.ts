@@ -4,7 +4,7 @@
  *
  *   npx tsx supabase/functions/whatsapp-webhook/paciente.test.ts
  */
-import { atenderAlPaciente } from './paciente.ts'
+import { atenderAlPaciente, esUnSiRepetido, recordarLaInicial } from './paciente.ts'
 import type { EventoDeMensaje } from './logica.ts'
 
 let fallos = 0
@@ -179,6 +179,140 @@ async function main() {
       { bot_comprobante_datos: { ok: true, id: 'l9', outcome: 'monto_no_cuadra' } },
     )
     comprueba(r.guardados.some((g) => g.p_humano_horas === 8), 'si la base no puede, lo ve una persona')
+  }
+
+  console.log('La inicial (docs/07)')
+  const ESPERANDO = {
+    nombre: 'Lia',
+    tasa_bcv: 100,
+    cuentas_de_cobro: '• Pago Móvil',
+    datos_de_pago: '🏦 *Pago Móvil*',
+    pago_en_revision: false,
+    disponible_usd: 50,
+    nivel: 1,
+    nivel_nombre: 'Nivel 1',
+    limite_usd: 150,
+    financiamientos: [
+      {
+        orden: 6261,
+        clinica: 'Consultorio 103',
+        medico: 'Dra. Nadia Khabbaze',
+        medico_ref: 'la Dra. Nadia Khabbaze',
+        moneda: 'USD',
+        consulta: 100,
+        estado: 'awaiting_down_payment',
+        inicial_vence_at: '2026-11-12T20:30:00Z',
+        cuotas: [
+          { sequence: 0, due_date: '2026-11-12', monto: 56.96, cargo_atraso: 0, vencida: false },
+          { sequence: 1, due_date: '2026-11-26', monto: 28.48, cargo_atraso: 0, vencida: false },
+          { sequence: 2, due_date: '2026-12-10', monto: 28.48, cargo_atraso: 0, vencida: false },
+        ],
+        pagadas: [],
+      },
+    ],
+  }
+  {
+    // La captura de la inicial: el webhook ya no la toma por cédula (la orden
+    // fue aceptada), así que llega aquí y va al lector como cualquier cuota.
+    const r = await correr(FOTO, contexto({ lector: 'activo' }), {
+      bot_comprobante_nuevo: { ok: true, id: 'l1', mode: 'activo' },
+    })
+    comprueba(r.fns.includes('bot_comprobante_nuevo') && r.despertado === 1, 'la captura de la inicial va al lector')
+    comprueba(!r.textos.some((t) => /confirmad/i.test(t)), 'sin «confirmado»', r.textos.join(' | '))
+  }
+  {
+    const r = await correr({ boton: 'paciente:pagar', texto: 'Pagar mi cuota' }, contexto(), { bot_paciente_resumen: ESPERANDO })
+    comprueba(
+      r.textos[0]?.startsWith('💳 *Tu inicial*\n$56,96 · págala antes de las 16:30 ⏰'),
+      '«Pagar mi cuota» con la orden esperando: la inicial y su hora',
+      r.textos[0],
+    )
+  }
+  {
+    const r = await correr({ boton: 'paciente:financiamientos', texto: 'Mi saldo y cuotas' }, contexto(), { bot_paciente_resumen: ESPERANDO })
+    const envio = r.llamadas.find((l) => l.fn === 'helios_whatsapp_patient_text')?.args
+    comprueba(
+      String(envio?.p_text).includes('⏳ Inicial $56,96 · págala antes de las 16:30\n⏳ 1.ª cuota $28,48') &&
+        String(envio?.p_text).includes('🔔 Tu pago en cuotas se activa en cuanto confirmemos tu inicial.'),
+      '«Mi saldo y cuotas» con la orden esperando',
+      String(envio?.p_text),
+    )
+    comprueba(
+      JSON.stringify(envio?.p_buttons) === JSON.stringify([{ id: 'paciente:pagar', title: 'Pagar mi cuota' }]),
+      'con el botón «Pagar mi cuota»',
+      JSON.stringify(envio?.p_buttons),
+    )
+  }
+
+  console.log('«Sí» otra vez, con la orden esperando la inicial')
+  const YA_ACEPTO = '✅ ¡Ya aceptaste tu pago en cuotas, Lia! Solo falta tu inicial para activarlo 👇\n\n💳 *Tu inicial*\n$56,96 · págala antes de las 16:30 ⏰'
+  for (const texto of ['Sí', 'sí, acepto', 'Acepto']) {
+    const r = await correr({ texto }, contexto(), { bot_paciente_resumen: ESPERANDO })
+    comprueba(
+      r.textos.length === 1 && r.textos[0].startsWith(YA_ACEPTO) && r.textos[0].trimEnd().endsWith('⭐ Recuerda pagar a tiempo para subir de nivel y disponer de mayores beneficios.'),
+      `«${texto}» escrito: ya aceptó, falta la inicial, con el bloque de pago (un solo mensaje)`,
+      r.textos.join(' | '),
+    )
+    comprueba(!r.guardados.some((g) => g.p_menu === true), 'sin el menú genérico')
+  }
+  {
+    // Con una vencida de las últimas 12 h, manda la orden que espera.
+    const r = await correr({ texto: 'si' }, contexto({ vencida_texto: 'esta solicitud venció' }), { bot_paciente_resumen: ESPERANDO })
+    comprueba(r.textos.length === 1 && r.textos[0].startsWith(YA_ACEPTO), 'antes que la orden vencida', r.textos.join(' | '))
+  }
+  {
+    const r = await correr({ texto: 'si' }, contexto({ vencida_texto: 'esta solicitud venció' }), {
+      bot_paciente_resumen: { ...ESPERANDO, financiamientos: [] },
+    })
+    comprueba(r.textos[0] === 'esta solicitud venció', 'sin orden esperando: la vencida, como antes', r.textos[0])
+  }
+  {
+    const r = await correr({ texto: 'si' }, contexto(), {
+      bot_paciente_resumen: { ...ESPERANDO, financiamientos: [{ ...ESPERANDO.financiamientos[0], estado: 'confirmed' }] },
+    })
+    comprueba(r.res?.paso === 'menu', 'sin orden esperando ni vencida: el menú, como antes', JSON.stringify(r.res))
+  }
+  {
+    const r = await correr({ texto: 'si' }, contexto({ perfiles: [PERFIL, { ...PERFIL, id: 'p2' }] }), { bot_paciente_resumen: ESPERANDO })
+    comprueba(!r.fns.includes('bot_paciente_resumen'), 'un teléfono de varios pacientes sin elegir: no enseña nada sin la cédula')
+  }
+  {
+    const r = await correr({ texto: 'no' }, contexto(), { bot_paciente_resumen: ESPERANDO })
+    comprueba(!r.textos.some((t) => t.startsWith('✅ ¡Ya aceptaste')), 'un «no» no recibe el recordatorio')
+  }
+
+  console.log('El botón «Sí» otra vez (index.ts)')
+  comprueba(
+    esUnSiRepetido('si', { ok: false, reason: 'no_pendiente', status: 'awaiting_down_payment' }),
+    'lo que devuelve helios_patient_decision con la orden esperando: se recuerda',
+  )
+  comprueba(
+    !esUnSiRepetido('si', { ok: false, reason: 'no_pendiente', status: 'confirmed' }) &&
+      !esUnSiRepetido('si', { ok: false, reason: 'no_pendiente', status: 'expired' }) &&
+      !esUnSiRepetido('no', { ok: false, reason: 'no_pendiente', status: 'awaiting_down_payment' }) &&
+      !esUnSiRepetido('si', { ok: true, status: 'awaiting_down_payment', down_payment_due_at: 'x' }) &&
+      !esUnSiRepetido('si', null),
+    'lo demás no (la vencida ya la contesta la base; el «Sí» que acepta, también)',
+  )
+  {
+    const llamadas: Llamada[] = []
+    const rpc = async <T>(fn: string, args: Record<string, unknown>): Promise<T> => {
+      llamadas.push({ fn, args })
+      if (fn === 'bot_paciente_contexto') return contexto({ humano: true }) as T
+      if (fn === 'bot_paciente_resumen') return ESPERANDO as T
+      return null as T
+    }
+    const m: EventoDeMensaje = {
+      kind: 'message', id: 'wamid.2', from: '584140009501', type: 'interactive', texto: 'Sí',
+      boton: 'confirmar:0b0e4a52-6a0c-4c55-9a3f-2b8a1c1d2e3f', adjunto: null, raw: {},
+    }
+    const res = await recordarLaInicial({ rpc, mensaje: m })
+    const textos = llamadas.filter((l) => l.fn === 'helios_whatsapp_patient_text').map((l) => String(l.args.p_text))
+    comprueba(
+      res?.paso === 'ya_acepto' && textos.length === 1 && textos[0].startsWith(YA_ACEPTO),
+      'el botón: el mismo recordatorio, también con una persona atendiendo (pulsó el botón)',
+      textos.join(' | '),
+    )
   }
 
   if (fallos > 0) {

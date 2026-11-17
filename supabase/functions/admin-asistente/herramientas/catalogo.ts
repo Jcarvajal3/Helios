@@ -34,21 +34,28 @@ export const VISTAS: readonly Vista[] = [
     nombre: 'ordenes',
     que:
       "cada orden de pago en cuotas que registra una clínica; solo cuentan como financiadas las de estado = 'confirmada' " +
-      '(también hay esperando al paciente, rechazada por el paciente, vencida sin respuesta, anulada y revertida)',
+      '(también hay esperando al paciente, esperando la inicial —aceptada, con deuda, pero sin la inicial aprobada—, ' +
+      'rechazada por el paciente, vencida sin respuesta, anulada y revertida; una revertida con anulada_sin_inicial_at ' +
+      'se anuló sola por no pagar la inicial)',
     columnas:
       'orden_id, numero_orden, user_id y paciente, clinica_id, clinica, medico, sede, concepto (lo que se cobra: ' +
       '«Consulta»…), estado, canal (panel o whatsapp: desde dónde la registró el médico), moneda (USD o EUR), dia ' +
       '(el día en que se registró), creada_at, respondida_at (cuando el paciente dijo sí o no), confirmada_at, ' +
       'anulada_at, consulta_usd (financiado, SIN comisión: lo que recibe la clínica), comision_usd (Comisión Helios ' +
       'sin IVA), comision_iva_usd, total_a_cobrar_usd (CON la comisión: lo que paga el paciente en cuotas), ' +
-      'a_la_clinica_usd, consulta_en_moneda (la consulta en la moneda de la orden), motivo_rechazo',
+      'a_la_clinica_usd, consulta_en_moneda (la consulta en la moneda de la orden), motivo_rechazo, inicial_pct (la ' +
+      'inicial en % del total con comisión; null o 0 = orden sin inicial), inicial_vence_at (hasta cuándo puede ' +
+      'pagarla), activada_at (cuándo se aprobó la inicial), anulada_sin_inicial_at (cuándo se anuló por no pagarla)',
   },
   {
     nombre: 'cuotas',
-    que: 'cada cuota de una orden confirmada (dos por orden)',
+    que:
+      'cada cuota de una orden confirmada o que espera la inicial (dos por orden; tres con inicial: la inicial es la ' +
+      'numero 0). Para cobro a tiempo, impago o mora mira solo numero 1 y 2',
     columnas:
       'cuota_id, orden_id, numero_orden, user_id, paciente, clinica_id, clinica, dia_de_la_orden, moneda, numero ' +
-      '(1 o 2), vence_el, estado (pendiente, pagada), vencida (pendiente y ya pasó el día), dias_atraso, cuota_usd ' +
+      '(0 = la inicial, 1 o 2), vence_el, estado (pendiente, pagada), vencida (pendiente y ya pasó el día; la inicial ' +
+      'nunca), dias_atraso, cuota_usd ' +
       '(deuda CON comisión), consulta_usd (la parte de la consulta, SIN comisión), cuota_en_moneda, pagada_at, ' +
       'pagada_dia, castigada_at (dada por perdida)',
   },
@@ -94,7 +101,8 @@ export const VISTAS: readonly Vista[] = [
     que: 'cada WhatsApp o correo que sale de Helios (a pacientes y a médicos)',
     columnas:
       'mensaje_id, user_id, paciente (vacío si fue a un médico), orden_id, canal (whatsapp, whatsapp_manual, email), ' +
-      'plantilla (bienvenida, confirmar_financiamiento, comprobante_financiamiento, bot_respuesta…), estado ' +
+      'plantilla (bienvenida, confirmar_financiamiento, confirmar_pago_con_inicial, pagar_inicial, ' +
+      'comprobante_financiamiento, bot_respuesta…), estado ' +
       '(pendiente, enviado, omitido, fallido, cancelado), intentos, error, creado_at, enviado_at',
   },
   { nombre: 'niveles', que: 'la escalera de niveles', columnas: 'nivel, nombre, limite_usd, activo' },
