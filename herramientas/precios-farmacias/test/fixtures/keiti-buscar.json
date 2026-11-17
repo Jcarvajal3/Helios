@@ -1,0 +1,25 @@
+{
+  "query": "pruebamol",
+  "total_encontrados": 1,
+  "productos": [
+    {
+      "id_producto": "abc123",
+      "titulo_visual": "Pruebamol | Prueba | 500mg | Tabletas | x20",
+      "producto": "Pruebamol",
+      "marca": "Laboratorio de Prueba",
+      "principio_activo": "Prueba",
+      "concentracion": "500mg",
+      "presentacion": "Tabletas",
+      "cantidad": "20",
+      "ean": "7590000000017",
+      "ofertas": [
+        { "cadena": "Farmacia Permitida", "precio_usd": 3.43, "precio_bs": 2976.0, "region_geografica": "Nacional" },
+        { "cadena": "Farmadon", "precio_usd": 3.1, "precio_bs": 2700.5, "region_geografica": "Nacional" },
+        { "cadena": "FARMADÓN C.A.", "precio_usd": 3.1, "precio_bs": 2700.5, "region_geografica": "Nacional" },
+        { "cadena": "Farmapaz", "precio_usd": 3.2, "precio_bs": 2800.0, "region_geografica": "Nacional" },
+        { "cadena": "farma páz", "precio_usd": 3.2, "precio_bs": 2800.0, "region_geografica": "Nacional" },
+        { "cadena": "Farmacia de Oriente", "precio_usd": 3.59, "precio_bs": 3110.95, "region_geografica": "Oriente" }
+      ]
+    }
+  ]
+}

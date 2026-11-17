@@ -1,0 +1,15 @@
+{
+  "name": "precios-farmacias",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Recolecta precios de medicamentos de fuentes autorizadas y los entrega en un CSV.",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "recolectar": "node src/cli.mjs",
+    "verificar": "node src/verificar.mjs",
+    "test": "node --test \"test/*.test.mjs\""
+  }
+}

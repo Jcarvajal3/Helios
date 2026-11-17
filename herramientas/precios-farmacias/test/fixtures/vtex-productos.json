@@ -1,0 +1,70 @@
+[
+  {
+    "productId": "9001",
+    "productName": "PRUEBAMOL TAB 500MG X20 LAB",
+    "brand": "LABORATORIO DE PRUEBA",
+    "link": "https://farmacia.test/9001-pruebamol/p",
+    "Presentación": ["Caja"],
+    "Capacidad": ["20"],
+    "Unidad": ["TAB"],
+    "Clase terapéutica": ["Analgesico"],
+    "Concentración": ["500 MG"],
+    "items": [
+      {
+        "itemId": "9001",
+        "nameComplete": "PRUEBAMOL TAB 500MG X20 LAB",
+        "ean": "7590000000017",
+        "sellers": [
+          { "sellerId": "1", "sellerDefault": true, "commertialOffer": { "Price": 1.22, "ListPrice": 1.5, "IsAvailable": true } }
+        ]
+      }
+    ]
+  },
+  {
+    "productId": "9002",
+    "productName": "JARABINA SOL ORAL X120ML",
+    "brand": "OTRO LAB",
+    "link": "https://farmacia.test/9002-jarabina/p",
+    "Concentración": ["15 MG/5 ML"],
+    "items": [
+      {
+        "itemId": "9002",
+        "nameComplete": "JARABINA SOL ORAL X120ML",
+        "sellers": [
+          { "sellerId": "1", "sellerDefault": true, "commertialOffer": { "Price": 13.5, "IsAvailable": false } }
+        ]
+      }
+    ]
+  },
+  {
+    "productId": "9003",
+    "productName": "SINPRECIO TAB 10MG X10",
+    "brand": "OTRO LAB",
+    "link": "https://farmacia.test/9003-sinprecio/p",
+    "items": [
+      {
+        "itemId": "9003",
+        "nameComplete": "SINPRECIO TAB 10MG X10",
+        "sellers": [
+          { "sellerId": "1", "sellerDefault": true, "commertialOffer": { "Price": 0, "IsAvailable": false } }
+        ]
+      }
+    ]
+  },
+  {
+    "productId": "9004",
+    "productName": "VENDEDORES CAP 20MG X30",
+    "brand": "OTRO LAB",
+    "link": "http://farmacia.test/9004-vendedores/p",
+    "items": [
+      {
+        "itemId": "9004",
+        "nameComplete": "VENDEDORES CAP 20MG X30",
+        "sellers": [
+          { "sellerId": "2", "sellerDefault": false, "commertialOffer": { "Price": 99, "IsAvailable": true } },
+          { "sellerId": "1", "sellerDefault": true, "commertialOffer": { "Price": 7.25 } }
+        ]
+      }
+    ]
+  }
+]
