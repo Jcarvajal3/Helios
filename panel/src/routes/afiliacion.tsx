@@ -16,7 +16,7 @@ export const Route = createFileRoute('/afiliacion')({
     const base = cabeceraPublica({
       titulo: 'Afilia tu consultorio y ofrece pago en cuotas | Helios',
       descripcion:
-        'Afilia tu consultorio y agenda tu capacitación: tus pacientes pagan en 2 cuotas y tú cobras el 100% a los 8 y 15 días. Sin costo ni permanencia.',
+        'Afilia tu consultorio y agenda tu capacitación: tus pacientes pagan el 50% en la consulta y el resto en 2 cuotas, y tú cobras el 100% a los 8 y 15 días.',
       ruta: '/afiliacion',
       migas: [
         { nombre: 'Médicos y centros', ruta: '/medicos' },
@@ -32,13 +32,14 @@ export const Route = createFileRoute('/afiliacion')({
   component: Afiliacion,
 })
 
-const NOCHE = '#020B24'
+/** El fondo del bloque: el azul de marca (rediseño del 2026-11-12). */
+const AZUL = '#0B47CC'
 
 /** Lo que gana el médico, en el bloque oscuro y, en el teléfono, en píldoras. */
 const PROMESAS = [
   {
     corta: '100% de cada consulta',
-    larga: 'Recibes el 100% de cada consulta, pague o no el paciente.',
+    larga: 'Recibes el 100% de cada consulta, pague o no el paciente sus cuotas.',
   },
   {
     corta: 'Cobras a los 8 y 15 días',
@@ -106,7 +107,7 @@ function Afiliacion() {
                   <span className="portada-linea">
                     <span style={{ '--retraso': '100ms' } as CSSProperties}>
                       Afilia tu{' '}
-                      <em className="portada-serif portada-degradado pr-[0.06em]">
+                      <em className="portada-serif portada-acento pr-[0.06em]">
                         consultorio.
                       </em>
                     </span>
@@ -185,7 +186,7 @@ function Afiliacion() {
       {/* ── El bloque oscuro (solo escritorio; se queda mientras se baja) ── */}
       <aside
         className="sticky top-4 isolate hidden h-[calc(100dvh-2rem)] w-[min(42%,620px)] shrink-0 flex-col justify-between overflow-hidden rounded-[36px] p-12 lg:flex xl:p-14"
-        style={{ backgroundColor: NOCHE }}
+        style={{ backgroundColor: AZUL }}
       >
         <div
           aria-hidden
@@ -193,13 +194,13 @@ function Afiliacion() {
         >
           <CampoDePuntos
             escena="marea"
-            fondo={NOCHE}
-            tintas={['#062460', '#0D4CC0', '#2F86F0']}
+            fondo={AZUL}
+            tintas={['#1C5BE0', '#3F8CF8', '#8CC4FF']}
             celda={7}
             semilla={11}
             intensidad={0.6}
           />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(2,11,36,0.95)_25%,transparent_70%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(20,102,242,0.95)_25%,transparent_70%)]" />
         </div>
 
         <Entra retraso={200}>
@@ -217,11 +218,11 @@ function Afiliacion() {
             {PROMESAS.map((p) => (
               <li
                 key={p.corta}
-                className="flex gap-3 text-[1rem] leading-snug text-white/75"
+                className="flex gap-3 text-[1rem] leading-snug text-white/90"
               >
                 <span
                   aria-hidden
-                  className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-white/10 text-portada-cielo-2"
+                  className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-white text-portada-azul"
                 >
                   <Check className="size-3" strokeWidth={3} />
                 </span>
@@ -285,7 +286,7 @@ function Agendada({ agendada }: { agendada: CapacitacionAgendada }) {
       <Rotulo className="mt-8">Capacitación agendada</Rotulo>
       <h1 className="portada-titular mt-5 !text-[clamp(2.2rem,1.5rem+2.4vw,3.4rem)] text-portada-tinta">
         ¡Nos{' '}
-        <em className="portada-serif portada-degradado pr-[0.06em]">vemos!</em>
+        <em className="portada-serif portada-acento pr-[0.06em]">vemos!</em>
       </h1>
       <p className="mt-5 max-w-[48ch] rounded-2xl border border-portada-linea bg-portada-niebla px-4 py-3.5 text-[0.95rem] leading-relaxed text-portada-tinta-2">
         Anotamos tu capacitación presencial para el{' '}

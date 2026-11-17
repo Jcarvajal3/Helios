@@ -46,7 +46,7 @@ export function Textarea({
         onChange={(e) => onChange(e.target.value)}
         aria-invalid={!!error}
         aria-describedby={conPie ? idAyuda : undefined}
-        className={`resize-y py-2.5 ${CLASE_CAMPO} ${bordeDeCampo(!!error)}`}
+        className={`resize-y py-2.5 ${CLASE_CAMPO.replace('rounded-full', 'rounded-panel-control')} ${bordeDeCampo(!!error)}`}
       />
       {conPie && (
         <div id={idAyuda} className="flex gap-3 type-panel-caption">

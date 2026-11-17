@@ -1,7 +1,8 @@
 import { createFileRoute, Link, notFound } from '@tanstack/react-router'
-import { ArrowUpRight, AtSign, MapPin, Tag } from 'lucide-react'
+import { ArrowUpRight, AtSign, MapPin } from 'lucide-react'
+import type { CSSProperties } from 'react'
 
-import { IconoDeEspecialidad } from '@/components/directorio/IconoDeEspecialidad'
+import { IlustracionDeEspecialidad } from '@/components/directorio/IlustracionDeEspecialidad'
 import { NoEncontrada, PAGINA_NO_ENCONTRADA } from '@/components/directorio/NoEncontrada'
 import {
   ComoPagas,
@@ -111,102 +112,110 @@ function Cabecera({ medico: m, whatsappHelios }: { medico: MedicoDelDirectorio; 
   const chat = enlaceDeWhatsApp(m, whatsappHelios)
 
   return (
-    <section className="relative isolate overflow-clip bg-white">
-      <div
-        aria-hidden
-        className="portada-aurora absolute -right-[25%] -top-[35%] -z-10 size-[900px] rounded-full"
-      />
-      <Lienzo className="pb-20 pt-28 sm:pb-24 sm:pt-36">
-        <MigasDelDirectorio
-          tramos={[
-            { texto: 'Inicio', to: '/' },
-            { texto: 'Directorio', to: '/directorio' },
-            ...(m.clave === 'otra' ? [] : [{ texto: nombreDeEspecialidad(m.clave), to: rutaDeEspecialidad(m.clave) }]),
-            { texto: m.nombre },
-          ]}
-        />
+    // La ficha, con el amanecer del sistema (2026-11-12): el icono, el nombre
+    // y el precio centrados, y el sol saliendo detrás del horizonte.
+    <section className="directorio-cielo portada-cierre relative isolate overflow-clip">
+      <div aria-hidden className="directorio-rayos" />
+      <div aria-hidden className="directorio-sol" />
+      <div aria-hidden className="directorio-horizonte" />
+      <Lienzo className="relative pb-[clamp(13rem,22vw,19rem)] pt-28 text-center sm:pt-36">
+        <div className="directorio-entra flex justify-center">
+          <MigasDelDirectorio
+            tramos={[
+              { texto: 'Inicio', to: '/' },
+              { texto: 'Directorio', to: '/directorio' },
+              ...(m.clave === 'otra' ? [] : [{ texto: nombreDeEspecialidad(m.clave), to: rutaDeEspecialidad(m.clave) }]),
+              { texto: m.nombre },
+            ]}
+          />
+        </div>
 
-        <div className="mt-10 flex max-w-[52rem] flex-col gap-6 sm:flex-row sm:items-start sm:gap-8">
-          <span className="directorio-icono grid size-16 shrink-0 place-items-center rounded-[20px] text-portada-azul sm:size-20">
-            <IconoDeEspecialidad clave={m.clave} className="size-7 sm:size-8" />
-          </span>
-          <div className="min-w-0">
-            <h1 className="text-[clamp(1.9rem,1.3rem+2.4vw,3.2rem)] font-medium leading-[1.05] tracking-[-0.045em] text-portada-tinta [overflow-wrap:anywhere]">
-              {m.nombre}
-            </h1>
-            <p className="mt-3 text-[1.1rem] leading-snug text-portada-azul">{especialidad}</p>
+        <div className="mx-auto mt-10 flex max-w-[60rem] flex-col items-center">
+          <div className="directorio-entra" style={{ '--retraso': '60ms' } as CSSProperties}>
+            <IlustracionDeEspecialidad clave={m.clave} grande />
+          </div>
+          <h1
+            className="directorio-titular-2 directorio-entra mt-8 text-portada-tinta [overflow-wrap:anywhere]"
+            style={{ '--retraso': '140ms' } as CSSProperties}
+          >
+            {m.nombre}
+          </h1>
+          <p className="mt-4 text-[clamp(1.1rem,1rem+0.5vw,1.35rem)] font-medium leading-snug tracking-[-0.015em] text-portada-azul-texto">
+            {especialidad}
+          </p>
 
-            {(lugar || red || precio) && (
-              <div className="mt-6 flex flex-col gap-2.5 text-[0.98rem] leading-snug text-portada-tinta-2">
-                {lugar && (
-                  <p className="flex gap-2.5">
-                    <MapPin aria-hidden className="mt-[0.2em] size-4 shrink-0 text-portada-tinta-3" />
-                    <span className="[overflow-wrap:anywhere]">
-                      {lugar}
-                      {mapa && (
-                        <>
-                          {' · '}
-                          <a
-                            href={mapa}
-                            target="_blank"
-                            rel="noopener noreferrer nofollow"
-                            className="font-medium text-portada-azul underline-offset-4 hover:underline"
-                          >
-                            Ver en el mapa
-                          </a>
-                        </>
-                      )}
-                    </span>
-                  </p>
-                )}
-                {red && (
-                  <p className="flex gap-2.5">
-                    <AtSign aria-hidden className="mt-[0.2em] size-4 shrink-0 text-portada-tinta-3" />
-                    <a
-                      href={red.url}
-                      target="_blank"
-                      rel="noopener noreferrer nofollow"
-                      className="min-w-0 truncate underline-offset-4 hover:text-portada-azul hover:underline"
-                    >
-                      <span className="font-medium text-portada-tinta">{red.texto}</span>
-                      <span className="text-portada-tinta-3"> · {red.red}</span>
-                    </a>
-                  </p>
-                )}
-                {precio && (
-                  <p className="flex gap-2.5">
-                    <Tag aria-hidden className="mt-[0.2em] size-4 shrink-0 text-portada-tinta-3" />
-                    <span>
-                      {ROTULO_DE_PRECIO} <span className="font-medium tabular-nums text-portada-tinta">{precio}</span>
-                    </span>
-                  </p>
-                )}
-              </div>
-            )}
-
-            <p className="portada-entrada mt-8 max-w-[56ch] text-portada-tinta-2">
-              {m.nombre} acepta Helios: pagas tu consulta en 2 cuotas, a los 14 y 28 días, sin inicial.
-              Escríbele por WhatsApp para agendar tu cita.
-            </p>
-
-            <div className="mt-8 flex flex-wrap items-center gap-3">
-              <a
-                href={chat}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => apuntarContacto(m.id)}
-                className="portada-boton inline-flex h-12 items-center gap-2.5 whitespace-nowrap rounded-full bg-portada-tinta pl-6 pr-2 text-[0.98rem] font-medium tracking-[-0.01em] text-white shadow-[0_10px_30px_-12px_rgba(0,39,112,0.55)] transition-colors duration-300 hover:bg-portada-marino"
-              >
-                Agendar cita por WhatsApp
-                <span aria-hidden className="grid size-8 place-items-center rounded-full bg-[#25D366] text-white">
-                  <LogoWhatsApp className="size-4" />
-                </span>
-              </a>
-              <span className="directorio-sello inline-flex h-9 items-center gap-1 rounded-full px-3 text-[0.85rem] font-medium tracking-[-0.01em] text-portada-azul">
-                <span className="font-[family-name:var(--font-portada-mono)] tabular-nums">0%</span>
-                inicial
-              </span>
+          {(lugar || red) && (
+            <div className="mt-6 flex flex-wrap justify-center gap-x-6 gap-y-2.5 text-[1rem] leading-snug text-portada-tinta-2">
+              {lugar && (
+                <p className="flex max-w-[52ch] gap-2 text-left">
+                  <MapPin aria-hidden className="mt-[0.15em] size-[18px] shrink-0" strokeWidth={1.6} />
+                  <span className="[overflow-wrap:anywhere]">
+                    {lugar}
+                    {mapa && (
+                      <>
+                        {' · '}
+                        <a
+                          href={mapa}
+                          target="_blank"
+                          rel="noopener noreferrer nofollow"
+                          className="font-medium text-portada-azul-texto underline-offset-4 hover:underline"
+                        >
+                          Ver en el mapa
+                        </a>
+                      </>
+                    )}
+                  </span>
+                </p>
+              )}
+              {red && (
+                <p className="flex gap-2">
+                  <AtSign aria-hidden className="mt-[0.15em] size-[18px] shrink-0" strokeWidth={1.6} />
+                  <a
+                    href={red.url}
+                    target="_blank"
+                    rel="noopener noreferrer nofollow"
+                    className="min-w-0 truncate underline-offset-4 hover:text-portada-azul hover:underline"
+                  >
+                    <span className="font-medium text-portada-tinta">{red.texto}</span>
+                    <span className="text-portada-tinta-3"> · {red.red}</span>
+                  </a>
+                </p>
+              )}
             </div>
+          )}
+
+          {precio && (
+            <p className="mt-8 text-[0.95rem] text-portada-tinta-2">
+              {ROTULO_DE_PRECIO}
+              <span className="directorio-precio-grande mt-1 block !text-[clamp(3.5rem,2.6rem+3vw,5.5rem)] tabular-nums">
+                {precio}
+              </span>
+            </p>
+          )}
+
+          <p className="mx-auto mt-7 max-w-[52ch] text-[clamp(1.05rem,0.98rem+0.3vw,1.2rem)] leading-relaxed text-portada-tinta-2">
+            {m.nombre} acepta Helios: pagas el 50% el día de la consulta y el resto en 2 cuotas, a los
+            14 y 28 días.
+            Escríbele por WhatsApp para agendar tu cita.
+          </p>
+
+          <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
+            <a
+              href={chat}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => apuntarContacto(m.id)}
+              className="directorio-agendar inline-flex h-[58px] items-center gap-3 whitespace-nowrap rounded-full pl-7 pr-2 text-[1.05rem] font-medium tracking-[-0.015em] text-white"
+            >
+              Agendar cita por WhatsApp
+              <span aria-hidden className="directorio-agendar-icono grid size-[42px] place-items-center rounded-full">
+                <LogoWhatsApp className="size-[18px]" />
+              </span>
+            </a>
+            <span className="directorio-sello inline-flex h-9 items-center gap-1 rounded-full px-3.5 text-[0.88rem] font-semibold">
+              <span className="tabular-nums">50%</span>
+              inicial
+            </span>
           </div>
         </div>
       </Lienzo>
@@ -217,7 +226,7 @@ function Cabecera({ medico: m, whatsappHelios }: { medico: MedicoDelDirectorio; 
 /** Otros médicos de la misma especialidad, y el enlace a todos. */
 function Otros({ medico: m, otros }: { medico: MedicoDelDirectorio; otros: MedicoDelDirectorio[] }) {
   return (
-    <section className="relative border-t border-portada-linea bg-portada-niebla">
+    <section className="relative bg-portada-niebla">
       <Lienzo className="py-20 sm:py-24">
         <Revelar>
           <Rotulo>{nombreDeEspecialidad(m.clave)}</Rotulo>

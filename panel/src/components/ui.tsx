@@ -37,18 +37,21 @@ import { ICONO_DE_TONO, TINTE_DE_TONO } from './kit/tonos'
 //
 // Las cuatro reglas que mandan:
 //
-//   1. FORMA  — `panel-card` (16) para superficies, `panel-hero` (20) para la
-//      que manda en su pantalla y `panel-control` (9) para todo lo que se
-//      pulsa. La píldora sobrevive donde la forma ES el significado: `Badge`.
+//   1. FORMA  — `panel-card` (28) para superficies y `panel-hero` (34) para la
+//      que manda en su pantalla. Lo que se pulsa —botón, campo, segmentado,
+//      ítem del menú— va en píldora (`rounded-full`); `panel-control` (14)
+//      queda para cajas pequeñas: un globo, un desplegable, un campo de varias
+//      líneas.
 //   2. SUPERFICIE — lienzo → `panel-card` con borde `panel-hairline` →
 //      `panel-raised` (lo levantado) → `panel-control` (controles, pistas).
 //   3. COLOR — cada uno con un trabajo. Lima: SOLO la acción principal y el
 //      anillo de foco. El tono del área (`bg-area`, `text-area`) orienta.
 //      Verde, ámbar y rojo: solo estado, siempre con icono y rótulo. El
 //      número de una cifra va siempre en blanco.
-//   4. TIPOGRAFÍA — Montserrat en lo que se mira (.type-panel-page/-section/
-//      -figure/-hero/-control), Source Sans en lo que se lee (-body/-label/
-//      -caption). Nada en MAYÚSCULAS fuera de las cabeceras del menú.
+//   4. TIPOGRAFÍA — Inter Tight en todo (rediseño del 2026-11-12); los roles
+//      .type-panel-* cambian tamaño y peso, no familia. Las cifras de un
+//      tablero van en `.degradado`. Nada en MAYÚSCULAS fuera de las cabeceras
+//      del menú.
 //
 // Las piezas nuevas —Tooltip, Callout, Meter, Menu, Periodo, Checkbox,
 // Switch, Textarea, IconoDeArea, Seccion— viven una por archivo en `kit/` y
@@ -203,7 +206,7 @@ export function IconButton({
       disabled={disabled}
       aria-label={label}
       title={disabled ? undefined : title}
-      className={`inline-flex size-panel-control-md items-center justify-center rounded-panel-control transition-colors duration-[var(--transition-fast)] disabled:opacity-40 ${variants[variant]} ${className}`}
+      className={`inline-flex size-panel-control-md items-center justify-center rounded-full transition-colors duration-[var(--transition-fast)] disabled:opacity-40 ${variants[variant]} ${className}`}
     >
       {children}
     </button>
@@ -263,8 +266,8 @@ export function Card({
   as?: 'div' | 'section' | 'article'
 }) {
   const tones: Record<CardTone, string> = {
-    default: 'border border-panel-hairline bg-panel-card',
-    brand: 'border border-panel-hairline bg-panel-card',
+    default: 'border border-panel-hairline bg-panel-card shadow-[0_24px_48px_-34px_rgb(10_60_160/0.28)]',
+    brand: 'border border-panel-hairline bg-panel-card shadow-[0_24px_48px_-34px_rgb(10_60_160/0.28)]',
     inset: 'bg-panel-raised',
   }
 
@@ -404,7 +407,7 @@ export function Chip({
       type="button"
       onClick={onClick}
       aria-pressed={selected}
-      className={`inline-flex h-panel-control-sm items-center gap-2 whitespace-nowrap rounded-panel-control px-3.5 type-panel-control transition-colors duration-[var(--transition-fast)] ${
+      className={`inline-flex h-panel-control-sm items-center gap-2 whitespace-nowrap rounded-full px-4 type-panel-control transition-colors duration-[var(--transition-fast)] ${
         selected
           ? 'bg-on-surface text-shell-canvas'
           : 'bg-panel-control text-on-surface-variant hover:text-on-surface'
@@ -1137,8 +1140,8 @@ export function Stat({
           className={`${
             hero
               ? 'type-panel-hero max-sm:text-[1.75rem] max-sm:leading-9'
-              : 'type-panel-figure max-sm:text-[1.375rem] max-sm:leading-7'
-          } text-on-surface`}
+              : 'type-panel-figure max-sm:text-[1.625rem] max-sm:leading-8'
+          } degradado`}
         >
           {value}
         </p>
@@ -1150,11 +1153,11 @@ export function Stat({
   return (
     <div
       aria-busy={estado === 'cargando' || undefined}
-      className={`group/stat relative flex h-full flex-col gap-2 border border-panel-hairline bg-panel-card p-panel-pad-card max-sm:p-3.5 ${
+      className={`group/stat relative flex h-full flex-col gap-2 border border-panel-hairline bg-panel-card p-panel-pad-card shadow-[0_24px_48px_-34px_rgb(10_60_160/0.28)] max-sm:p-4 ${
         hero ? 'rounded-panel-hero' : 'rounded-panel-card'
       } ${
         link
-          ? 'transition-colors duration-[var(--transition-fast)] hover:border-panel-hairline-strong hover:bg-panel-raised'
+          ? 'tarjeta-viva'
           : ''
       }`}
     >
@@ -1469,7 +1472,9 @@ export function Tabs<T extends string>({
     // sin avisar de que existen.
     <div
       role="tablist"
-      className={`flex flex-wrap gap-x-6 border-b border-panel-hairline ${className ?? 'mb-6'}`}
+      // Píldoras, como el segmentado de la maqueta (2026-11-12): antes era
+      // una fila de palabras subrayadas sobre una raya.
+      className={`flex w-fit max-w-full flex-wrap gap-1 rounded-[24px] bg-panel-control p-1 ${className ?? 'mb-6'}`}
     >
       {options.map((o) => {
         const seleccionada = o.value === value
@@ -1483,11 +1488,10 @@ export function Tabs<T extends string>({
             // fichas para decir a qué pestaña regresa.
             data-rotulo={o.label}
             onClick={() => onChange(o.value)}
-            // Sin relleno a los lados: el subrayado mide lo que mide la palabra.
-            className={`-mb-px inline-flex h-11 shrink-0 items-center gap-2 whitespace-nowrap border-b-2 type-panel-body font-semibold transition-colors duration-[var(--transition-fast)] ${
+            className={`inline-flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-4 type-panel-body font-medium transition-[background-color,color,box-shadow] duration-200 ${
               seleccionada
-                ? 'border-on-surface text-on-surface'
-                : 'border-transparent text-panel-muted hover:text-on-surface'
+                ? 'bg-panel-card text-on-surface shadow-[0_1px_0_rgb(255_255_255/0.9)_inset,0_4px_12px_-4px_rgb(10_60_160/0.35)]'
+                : 'text-panel-muted hover:text-on-surface'
             }`}
           >
             {o.label}
@@ -1530,7 +1534,7 @@ export function Segmented<T extends string>({
     <div
       role="group"
       aria-label={etiqueta}
-      className={`inline-flex max-w-full flex-wrap gap-0.5 rounded-panel-control border border-panel-hairline bg-shell-canvas p-0.5 ${className}`}
+      className={`inline-flex max-w-full flex-wrap gap-0.5 rounded-[21px] bg-panel-control p-[3px] ${className}`}
     >
       {options.map((o) => {
         const activa = o.value === value
@@ -1544,9 +1548,9 @@ export function Segmented<T extends string>({
             // iguales, la opción asomaría por las esquinas de la caja. El
             // alto es el del control menos el relleno y el borde. Escrito así
             // sigue a la escala: 36 con ratón, 40 en la tablet del local.
-            className={`h-[calc(var(--spacing-panel-control-sm)-6px)] whitespace-nowrap rounded-[calc(var(--radius-panel-control)-2px)] px-3 type-panel-label transition-colors duration-[var(--transition-fast)] ${
+            className={`h-[calc(var(--spacing-panel-control-sm)-6px)] whitespace-nowrap rounded-full px-3.5 type-panel-label transition-[background-color,color,box-shadow] duration-200 ${
               activa
-                ? 'bg-panel-control text-on-surface'
+                ? 'bg-panel-card text-on-surface shadow-[0_1px_0_rgb(255_255_255/0.9)_inset,0_4px_12px_-4px_rgb(10_60_160/0.35)]'
                 : 'text-panel-muted hover:text-on-surface'
             }`}
           >

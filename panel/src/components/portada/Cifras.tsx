@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 
 import type { CSSProperties } from 'react'
-import { LIMITE } from './datos'
+import { INICIAL_PCT, LIMITE } from './datos'
 import { Cifra, Lienzo, Revelar, Rotulo } from './piezas'
 
 /**
@@ -13,19 +13,19 @@ import { Cifra, Lienzo, Revelar, Rotulo } from './piezas'
 
 const CIFRAS = [
   {
-    valor: 0,
-    formato: (n: number) => `$${Math.round(n)}`,
-    pie: 'pagas hoy, en la consulta',
+    valor: INICIAL_PCT,
+    formato: (n: number) => `${Math.round(n)}%`,
+    pie: 'pagas el día de la consulta',
   },
   {
     valor: 2,
     formato: (n: number) => String(Math.max(1, Math.round(n))),
-    pie: 'cuotas, a los 14 y a los 28 días',
+    pie: 'cuotas para el resto, a los 14 y a los 28 días',
   },
   {
-    valor: 100,
-    formato: (n: number) => `${Math.round(n)}%`,
-    pie: 'de la consulta para el médico, a los 8 y a los 15 días',
+    valor: 28,
+    formato: (n: number) => String(Math.round(n)),
+    pie: 'días para terminar de pagar',
   },
   {
     valor: LIMITE,
@@ -37,23 +37,23 @@ const CIFRAS = [
 export function Cifras() {
   return (
     <section id="cifras" className="relative bg-white">
-      <Lienzo className="py-20 sm:py-24">
-        <div className="grid grid-cols-2 gap-x-6 gap-y-12 lg:grid-cols-4">
+      <Lienzo className="py-20 sm:py-28">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
           {CIFRAS.map((c, i) => (
             <Revelar
               key={c.pie}
               retraso={i * 90}
-              className="border-t border-portada-linea pt-6"
+              className="h-full rounded-[32px] bg-portada-niebla p-6 sm:p-8"
             >
               <p className="portada-etiqueta text-portada-tinta-3">0{i + 1}</p>
-              <p className="portada-cifra mt-5 text-portada-tinta">
+              <p className="portada-cifra-acento mt-6">
                 {c.valor === 0 ? (
                   c.formato(0)
                 ) : (
                   <Cifra valor={c.valor} formato={c.formato} />
                 )}
               </p>
-              <p className="mt-3 max-w-[24ch] text-[0.95rem] leading-snug text-portada-tinta-2">
+              <p className="mt-4 max-w-[24ch] text-[0.98rem] leading-snug text-portada-tinta-2">
                 {c.pie}
               </p>
             </Revelar>
@@ -66,7 +66,7 @@ export function Cifras() {
 
 /** Las palabras, con `*` alrededor de las que van en cursiva. */
 const FRASE =
-  'Atenderse no debería esperar a fin de mes. Con Helios, el paciente paga su consulta en *dos cuotas* y el médico la cobra *completa.*'
+  'Atenderse no debería esperar a fin de mes. Con Helios pagas la mitad de tu consulta hoy y el resto en *dos cuotas,* sin descargar *nada.*'
 
 export function Manifiesto() {
   const ref = useRef<HTMLParagraphElement>(null)
@@ -120,7 +120,7 @@ export function Manifiesto() {
             <span
               key={i}
               className={
-                p.cursiva ? 'portada-serif text-portada-azul' : undefined
+                p.cursiva ? 'portada-serif portada-acento pr-[0.06em]' : undefined
               }
               style={{ '--i': i } as CSSProperties}
             >

@@ -13,8 +13,10 @@ import {
   PASOS,
   comision,
   cuota,
+  cuota2,
   dinero,
   dineroCorto,
+  inicial,
   iva,
 } from './datos'
 import {
@@ -32,16 +34,17 @@ import { HeliosIsotipo } from '@/components/HeliosLogo'
  *
  * Cada una tiene su campo de puntos de fondo y, encima, una miniatura que se
  * mueve sola mientras se ve: el formulario del médico, la conversación del
- * paciente y el calendario de las dos cuotas. Las miniaturas son ilustración;
+ * paciente y el calendario de sus pagos (la inicial del día 0 y las dos
+ * cuotas). Las miniaturas son ilustración;
  * los textos de abajo son los que cuentan.
  */
 
 type Fondo = { fondo: string; tintas: readonly [string, string, string] }
 
 const FONDOS: ReadonlyArray<Fondo> = [
-  { fondo: '#031338', tintas: ['#0B3A9C', '#157EFD', '#73C3FE'] },
-  { fondo: '#0546C4', tintas: ['#1C63E6', '#45A8FD', '#CDEBFF'] },
-  { fondo: '#02163F', tintas: ['#0A4AB8', '#1F99FE', '#A6DBFF'] },
+  { fondo: '#0B47CC', tintas: ['#1C5BE0', '#45A8FD', '#BFE2FF'] },
+  { fondo: '#1466F2', tintas: ['#2E7BF6', '#73C3FE', '#E3F1FF'] },
+  { fondo: '#0A3CB0', tintas: ['#1553D6', '#4EADFD', '#CDEBFF'] },
 ]
 
 function Tarjeta({
@@ -63,7 +66,7 @@ function Tarjeta({
     <Revelar retraso={indice * 120} className="h-full">
       <article
         ref={ref}
-        className="portada-tarjeta group relative isolate flex h-[540px] flex-col overflow-hidden rounded-[28px] sm:h-[580px]"
+        className="portada-tarjeta group relative isolate flex h-[540px] flex-col overflow-hidden rounded-[32px] sm:h-[580px]"
         style={{ backgroundColor: fondo.fondo }}
       >
         <div aria-hidden className="absolute inset-0 -z-10">
@@ -90,7 +93,7 @@ function Tarjeta({
             </span>
             helios
           </span>
-          <span className="portada-etiqueta text-white/60">Paso {paso.n}</span>
+          <span className="portada-etiqueta text-white/80">Paso {paso.n}</span>
         </header>
 
         <div className="relative flex flex-1 items-center justify-center px-6">
@@ -103,7 +106,7 @@ function Tarjeta({
           <h3 className="text-[1.3rem] font-medium leading-tight tracking-[-0.025em] text-white">
             {paso.titulo}
           </h3>
-          <p className="mt-2.5 text-[0.93rem] leading-relaxed text-white/70">
+          <p className="mt-2.5 text-[0.93rem] leading-relaxed text-white/90">
             {paso.texto}
           </p>
         </footer>
@@ -239,13 +242,17 @@ function Conversacion({ activo }: { activo: boolean }) {
             <dt>Comisión Helios</dt>
             <dd className="tabular-nums">{dinero(comision + iva)}</dd>
           </div>
-          <div className="flex justify-between gap-3 border-t border-portada-linea pt-1 text-portada-tinta">
+          <div className="flex justify-between gap-3 border-t border-portada-linea pt-1 font-medium text-portada-tinta">
+            <dt>Inicial · hoy</dt>
+            <dd className="tabular-nums">{dinero(inicial)}</dd>
+          </div>
+          <div className="flex justify-between gap-3 text-portada-tinta">
             <dt>Cuota 1 · 14 días</dt>
             <dd className="tabular-nums">{dinero(cuota)}</dd>
           </div>
           <div className="flex justify-between gap-3 text-portada-tinta">
             <dt>Cuota 2 · 28 días</dt>
-            <dd className="tabular-nums">{dinero(cuota)}</dd>
+            <dd className="tabular-nums">{dinero(cuota2)}</dd>
           </div>
         </dl>
         <p className="mt-2 text-portada-tinta-2">¿Confirmas? Responde «Sí».</p>
@@ -271,7 +278,7 @@ function Conversacion({ activo }: { activo: boolean }) {
             <span className="grid size-5 shrink-0 place-items-center rounded-full bg-[#E7F7EE] text-[#0B7A43]">
               <Check className="size-3" />
             </span>
-            Listo. Tu comprobante va a tu correo.
+            Listo. Paga la inicial y tu orden queda activa.
           </p>
         ) : null}
       </div>
@@ -285,13 +292,14 @@ const DIAS = Array.from({ length: 30 }, (_, i) => i)
 const ANCHO_DIA = 38
 
 function Calendario({ activo }: { activo: boolean }) {
-  // Del día 0 al 28, y una pausa al final. El aviso del día anterior a cada
-  // cuota dura lo suficiente para leerse.
+  // Del día 0 (la inicial, pagada en la consulta) al 28, y una pausa al
+  // final. El aviso del día anterior a cada cuota dura lo suficiente para
+  // leerse.
   const paso = useCiclo(
     30,
     (p) =>
       p === 0
-        ? 900
+        ? 1300
         : p === 29
           ? 2600
           : p === 14 || p === 28
@@ -304,9 +312,10 @@ function Calendario({ activo }: { activo: boolean }) {
   const dia = activo ? Math.min(paso, 28) : 28
   const aviso = dia === 13 || dia === 27
 
-  const cuotas = [
-    { n: 1, vence: 14 },
-    { n: 2, vence: 28 },
+  const pagos = [
+    { marca: '½', titulo: 'Inicial', cuando: 'El día de la consulta', vence: 0, monto: inicial },
+    { marca: '1', titulo: 'Cuota 1', cuando: 'A los 14 días', vence: 14, monto: cuota },
+    { marca: '2', titulo: 'Cuota 2', cuando: 'A los 28 días', vence: 28, monto: cuota2 },
   ]
 
   return (
@@ -333,7 +342,7 @@ function Calendario({ activo }: { activo: boolean }) {
               className={`grid h-8 shrink-0 place-items-center text-[0.8rem] tabular-nums transition-all duration-300 ${
                 d === dia
                   ? 'scale-110 font-semibold text-portada-tinta'
-                  : d === 14 || d === 28
+                  : d === 0 || d === 14 || d === 28
                     ? 'text-white'
                     : 'text-white/45'
               }`}
@@ -349,24 +358,24 @@ function Calendario({ activo }: { activo: boolean }) {
         />
         <span
           aria-hidden
-          className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-[#02163F] to-transparent opacity-70"
+          className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-[#0A3CB0] to-transparent opacity-70"
         />
         <span
           aria-hidden
-          className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-[#02163F] to-transparent opacity-70"
+          className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-[#0A3CB0] to-transparent opacity-70"
         />
       </div>
-      <p className="mt-2 text-center text-[0.65rem] uppercase tracking-[0.14em] text-white/50">
+      <p className="mt-2 text-center text-[0.65rem] uppercase tracking-[0.14em] text-white/75">
         Día de la consulta → día 28
       </p>
 
       <div className="mt-4 rounded-[20px] bg-white p-2 shadow-[0_30px_60px_-20px_rgba(0,8,40,0.55)]">
-        {cuotas.map((c) => {
+        {pagos.map((c) => {
           const pagada = dia >= c.vence
           return (
             <div
-              key={c.n}
-              className="flex items-center gap-3 rounded-[14px] px-2.5 py-2.5 transition-colors duration-500 even:mt-1"
+              key={c.titulo}
+              className="flex items-center gap-3 rounded-[14px] px-2.5 py-2 transition-colors duration-500 [&+&]:mt-0.5"
               style={{
                 backgroundColor:
                   dia === c.vence ? 'rgba(4,94,243,0.06)' : undefined,
@@ -382,20 +391,20 @@ function Calendario({ activo }: { activo: boolean }) {
                 {pagada ? (
                   <Check className="size-3.5" />
                 ) : (
-                  <span className="text-[0.65rem] font-medium">{c.n}</span>
+                  <span className="text-[0.65rem] font-medium">{c.marca}</span>
                 )}
               </span>
               <span className="min-w-0 flex-1 leading-tight">
                 <span className="block text-[0.8rem] font-medium text-portada-tinta">
-                  Cuota {c.n}
+                  {c.titulo}
                 </span>
                 <span className="block text-[0.68rem] text-portada-tinta-3">
-                  A los {c.vence} días
+                  {c.cuando}
                 </span>
               </span>
               <span className="text-right leading-tight">
                 <span className="block text-[0.82rem] font-medium tabular-nums text-portada-tinta">
-                  {dinero(cuota)}
+                  {dinero(c.monto)}
                 </span>
                 <span
                   className={`block text-[0.65rem] ${pagada ? 'text-[#0B7A43]' : 'text-portada-tinta-3'}`}
@@ -430,13 +439,12 @@ export function ComoFunciona() {
             <Rotulo>Cómo funciona</Rotulo>
             <h2 className="portada-titular mt-6 text-portada-tinta">
               Tres pasos,{' '}
-              <em className="portada-serif text-portada-azul">y listo.</em>
+              <em className="portada-serif portada-acento pr-[0.06em]">y listo.</em>
             </h2>
           </Revelar>
           <Revelar retraso={120}>
             <p className="portada-entrada text-portada-tinta-2">
-              Sin app, sin cuenta y sin contraseña, ni para el médico ni para el
-              paciente.
+              Sin app, sin cuenta y sin contraseña.
             </p>
           </Revelar>
         </div>

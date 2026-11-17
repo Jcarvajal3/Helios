@@ -185,7 +185,11 @@ export function Cifra({
 
 // ── Textos ─────────────────────────────────────────────────────────────────
 
-/** El rótulo de una sección: un punto que late y el texto en monoespaciada. */
+/**
+ * El rótulo de una sección: en mayúsculas espaciadas y en azul, como en la
+ * maqueta aprobada (2026-11-12). Sin el punto que latía, que era del diseño
+ * anterior.
+ */
 export function Rotulo({
   children,
   tono = 'claro',
@@ -200,11 +204,10 @@ export function Rotulo({
 }) {
   return (
     <Etiqueta
-      className={`portada-etiqueta inline-flex items-center gap-2.5 ${
-        tono === 'claro' ? 'text-portada-azul' : 'text-portada-cielo-2'
+      className={`portada-rotulo inline-flex items-center ${
+        tono === 'claro' ? 'text-portada-azul-texto' : 'text-[#d6edff]'
       } ${className}`}
     >
-      <span className="portada-latido relative inline-block size-1.5 rounded-full bg-current" />
       {children}
     </Etiqueta>
   )
@@ -241,13 +244,15 @@ export function EnlaceMas({
 type Tono = 'tinta' | 'contorno' | 'claro' | 'vidrio'
 
 const TONOS: Record<Tono, string> = {
+  // La acción principal, en la tinta marina; al pasar, el azul de los rayos
+  // con su halo (rediseño del 2026-11-12).
   tinta:
-    'bg-portada-tinta text-white hover:bg-portada-marino shadow-[0_10px_30px_-12px_rgba(0,39,112,0.55)]',
+    'bg-portada-tinta text-white shadow-[0_10px_30px_-12px_rgba(0,39,112,0.55)] hover:bg-portada-azul hover:shadow-[0_0_0_5px_rgba(21,126,253,0.14),0_16px_34px_-12px_rgba(4,94,243,0.65)]',
   contorno:
-    'border border-portada-linea bg-white/70 text-portada-tinta backdrop-blur hover:border-portada-tinta/25 hover:bg-white',
+    'border border-portada-tinta/[0.07] bg-white text-portada-tinta shadow-[0_6px_14px_-10px_rgba(10,60,160,0.3)] hover:border-portada-azul/40',
   claro: 'bg-white text-portada-tinta hover:bg-portada-cielo-3',
   vidrio:
-    'border border-white/20 bg-white/5 text-white backdrop-blur hover:bg-white/12',
+    'border border-white/30 bg-white/14 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] backdrop-blur-xl hover:bg-white/22',
 }
 
 export function Boton({
@@ -267,7 +272,7 @@ export function Boton({
   flecha?: 'derecha' | 'fuera' | 'ninguna'
   className?: string
 }) {
-  const forma = `portada-boton group inline-flex h-12 items-center justify-center gap-2 rounded-full pl-6 ${
+  const forma = `portada-boton group inline-flex h-[3.25rem] items-center justify-center gap-2 rounded-full pl-6 ${
     flecha === 'ninguna' ? 'pr-6' : 'pr-2'
   } text-[0.95rem] font-medium tracking-[-0.01em] transition-[background-color,border-color,transform,box-shadow] duration-300 active:scale-[0.98] ${TONOS[tono]} ${className}`
 

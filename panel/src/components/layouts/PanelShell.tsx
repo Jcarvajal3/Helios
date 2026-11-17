@@ -160,6 +160,9 @@ export function PanelShell({
           } as React.CSSProperties
         }
       >
+        {/* El sol que asoma arriba, detrás de todo (styles.css › .amanecer). */}
+        <div aria-hidden className="amanecer" />
+
         <Sidebar
           groups={groups}
           pie={pie}
@@ -174,7 +177,7 @@ export function PanelShell({
         />
 
         <div
-          className={`flex min-h-dvh flex-col transition-[margin] duration-200 lg:ml-(--sidebar-actual) ${
+          className={`relative z-[1] flex min-h-dvh flex-col transition-[margin] duration-200 lg:ml-[calc(var(--sidebar-actual)+0.75rem)] ${
             lateral?.abierto ? 'xl:mr-(--lateral-ancho)' : ''
           }`}
         >

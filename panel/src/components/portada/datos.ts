@@ -5,7 +5,10 @@
  * Las cifras salen de las reglas vigentes (docs/00 §1 y §1.1, CLAUDE.md). Si
  * una cambia, esta página miente y hay que venir a arreglarla:
  *
- *   · 0 al registrar, 2 cuotas a +14 y +28 días
+ *   · Inicial del 50% del total con la comisión, el día de la consulta, y el
+ *     resto en 2 cuotas a +14 y +28 días (docs/07). La orden queda activa
+ *     cuando se aprueba la inicial; si no se paga en 2 horas desde el «Sí»,
+ *     se anula
  *   · Comisión Helios 12% + IVA 16% sobre la comisión, la paga el paciente
  *   · Límite inicial $150 (no decir que «crece»: no hay reglas para subirlo)
  *   · La consulta va en dólares o en euros; el paciente paga en bolívares a la
@@ -24,6 +27,8 @@ export const CONSULTA = 100
 export const COMISION_PCT = 12
 export const IVA_PCT = 16
 export const LIMITE = 150
+/** La inicial, en % del total con la comisión (`down_payment_pct`). */
+export const INICIAL_PCT = 50
 
 export type Moneda = 'USD' | 'EUR'
 
@@ -42,15 +47,28 @@ export function dineroCorto(n: number, moneda: Moneda = 'USD'): string {
   return dinero(n, moneda).replace(/,00$/, '')
 }
 
-/** Lo que paga el paciente por una consulta de `monto`: comisión, IVA, total y cada cuota. */
+/**
+ * Lo que paga el paciente por una consulta de `monto`: comisión, IVA, total,
+ * la inicial del día de la consulta y las dos cuotas. Las mismas cuentas que
+ * la base (docs/07 «Cuentas»), en céntimos para no arrastrar decimales:
+ *
+ *   inicial = round(T × 50%) · cuota 1 = round((T − inicial) / 2)
+ *   cuota 2 = T − inicial − cuota 1
+ *
+ * `cuota` es la primera; si no salen iguales, `cuota2` es un céntimo menos
+ * ($30 → $17,09 + $8,55 + $8,54).
+ */
 export function desglose(monto: number) {
   const comision = Math.round(monto * COMISION_PCT) / 100
   const iva = Math.round(comision * IVA_PCT) / 100
-  const total = monto + comision + iva
-  return { comision, iva, total, cuota: Math.round((total / 2) * 100) / 100 }
+  const t = Math.round((monto + comision + iva) * 100)
+  const i = Math.round((t * INICIAL_PCT) / 100)
+  const c1 = Math.round((t - i) / 2)
+  const c2 = t - i - c1
+  return { comision, iva, total: t / 100, inicial: i / 100, cuota: c1 / 100, cuota2: c2 / 100 }
 }
 
-export const { comision, iva, total, cuota } = desglose(CONSULTA)
+export const { comision, iva, total, inicial, cuota, cuota2 } = desglose(CONSULTA)
 
 export const ESPECIALIDADES = [
   'Medicina',
@@ -75,21 +93,21 @@ export const MENU = [
 export const PASOS = [
   {
     n: '01',
-    titulo: 'El médico registra la consulta',
+    titulo: 'Tu médico registra la consulta',
     texto:
-      'Desde la plataforma de Helios o por WhatsApp, con la cédula del paciente y el monto. Toma un par de minutos.',
+      'Desde la plataforma de Helios o por WhatsApp, con tu cédula y el monto. Toma un par de minutos.',
   },
   {
     n: '02',
-    titulo: 'El paciente confirma',
+    titulo: 'Confirmas por WhatsApp',
     texto:
-      'Le llega un WhatsApp con el monto, la Comisión Helios y sus dos cuotas con fecha. Lo confirma por WhatsApp y el comprobante le llega por correo.',
+      'Te llega un WhatsApp con el monto, la Comisión Helios, la inicial y tus dos cuotas con fecha. Lo confirmas y pagas la inicial, el 50%, ese mismo día.',
   },
   {
     n: '03',
-    titulo: 'Paga en dos cuotas',
+    titulo: 'Pagas el resto en dos cuotas',
     texto:
-      'A los 14 y a los 28 días, por Pago Móvil o transferencia. Le recordamos cada fecha por WhatsApp.',
+      'A los 14 y a los 28 días, por Pago Móvil o transferencia. Te recordamos cada fecha por WhatsApp.',
   },
 ] as const
 
@@ -117,23 +135,23 @@ export const PARA_MEDICOS = [
 
 export const PARA_PACIENTES = [
   {
-    titulo: 'Dos cuotas, a los 14 y a los 28 días',
+    titulo: 'La mitad hoy y dos cuotas',
     texto:
-      'Sin inicial. Las fechas van en el mensaje que confirmas y en tu comprobante, y no se mueven.',
+      'Pagas el 50% el día de la consulta y el resto en dos cuotas, a los 14 y a los 28 días. Las fechas van en el mensaje que confirmas y en tu comprobante, y no se mueven.',
   },
   {
     titulo: `Comisión Helios del ${COMISION_PCT}%`,
-    texto: `Es el ${COMISION_PCT}% del monto de la consulta, más el IVA de esa comisión, y va incluida en tus cuotas. Sin inscripción ni mensualidad.`,
+    texto: `Es el ${COMISION_PCT}% del monto de la consulta, más el IVA de esa comisión, y va repartida en la inicial y tus cuotas. Sin inscripción ni mensualidad.`,
   },
   {
     titulo: `Límite inicial de $${LIMITE}`,
     texto:
-      'Es lo máximo que puedes tener en cuotas a la vez. Lo que usaste vuelve a estar disponible cuando pagas las dos cuotas.',
+      'Es lo máximo que puedes tener en cuotas a la vez, contando la consulta entera. Lo que usaste vuelve a estar disponible cuando terminas de pagar.',
   },
   {
     titulo: 'Pagas en bolívares',
     texto:
-      'Tus cuotas van en la moneda de tu consulta, dólares o euros. Pagas en bolívares a la tasa oficial del BCV del día en que pagas, por Pago Móvil o transferencia.',
+      'La inicial y tus cuotas van en la moneda de tu consulta, dólares o euros. Pagas en bolívares a la tasa oficial del BCV del día en que pagas, por Pago Móvil o transferencia.',
   },
   {
     titulo: 'Si te retrasas',
@@ -149,7 +167,7 @@ export const PARA_PACIENTES = [
 /** La pregunta que más se hace: va en la portada y en las páginas de pacientes. */
 export const PREGUNTA_COSTO = {
   pregunta: '¿Cuánto cuesta pagar en cuotas?',
-  respuesta: `La Comisión Helios es el ${COMISION_PCT}% del monto de la consulta, más el ${IVA_PCT}% de IVA sobre esa comisión, y va incluida en tus dos cuotas. Por una consulta de ${dineroCorto(CONSULTA)} pagas dos cuotas de ${dinero(cuota)}. No hay inicial, inscripción ni mensualidad.`,
+  respuesta: `La Comisión Helios es el ${COMISION_PCT}% del monto de la consulta, más el ${IVA_PCT}% de IVA sobre esa comisión, y va incluida en lo que pagas. Por una consulta de ${dineroCorto(CONSULTA)} pagas ${dinero(total)}: una inicial de ${dinero(inicial)} el día de la consulta y dos cuotas de ${dinero(cuota)}, a los 14 y a los 28 días. No hay inscripción ni mensualidad.`,
 }
 
 export const PREGUNTAS = [
@@ -167,7 +185,7 @@ export const PREGUNTAS = [
   {
     pregunta: '¿Cuánto pago en bolívares?',
     respuesta:
-      'Tus cuotas van en dólares o en euros, según la moneda de tu consulta. Pagas en bolívares a la tasa oficial del BCV del día en que haces el pago.',
+      'La inicial y tus cuotas van en dólares o en euros, según la moneda de tu consulta. Pagas en bolívares a la tasa oficial del BCV del día en que haces el pago.',
   },
   {
     pregunta: '¿El médico ve lo que debo?',
@@ -177,7 +195,7 @@ export const PREGUNTAS = [
   {
     pregunta: 'Soy médico: ¿qué pasa si el paciente no paga?',
     respuesta:
-      'Te pagamos igual, a los 8 y a los 15 días. El cobro al paciente es responsabilidad de Helios.',
+      'Si no paga la inicial en las 2 horas siguientes a confirmar, el pago en cuotas se anula y te avisamos. Si la paga, te pagamos el 100% a los 8 y a los 15 días aunque no pague sus cuotas: el cobro al paciente es responsabilidad de Helios.',
   },
   {
     pregunta: 'Soy médico: ¿cuánto me cuesta afiliarme?',

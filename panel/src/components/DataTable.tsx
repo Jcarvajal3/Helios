@@ -311,7 +311,7 @@ export function DataTable<T>({
     return !ordenEnServidor || ordenEnServidor.claves.includes(columna.key)
   }
 
-  const celda = apretada ? 'px-4 py-2' : 'px-4 py-2.5'
+  const celda = apretada ? 'px-5 py-2.5' : 'px-5 py-3.5'
   const truncada = limit !== undefined && rows.length >= limit
 
   const columnasCsv = columns.filter((c) => c.csv !== undefined)
@@ -427,7 +427,7 @@ export function DataTable<T>({
         para todo lo demás. Sin columnas a lo ancho, la caja ya no necesita
         tope de alto: desplaza la página, no una caja dentro de ella.
       */}
-      <div className="overflow-auto rounded-panel-card border border-panel-hairline bg-panel-card [max-height:var(--panel-table-max-h)] max-sm:[max-height:none]">
+      <div className="overflow-auto rounded-panel-card border border-panel-hairline bg-panel-card shadow-[0_24px_48px_-34px_rgb(10_60_160/0.28)] [max-height:var(--panel-table-max-h)] max-sm:[max-height:none]">
         {/*
           border-separate y no collapse: con las celdas colapsadas el borde
           pertenece a la rejilla y no a la celda, así que la cabecera pegajosa
@@ -547,7 +547,7 @@ function Cabecera<T>({
   if (!ordenable) {
     return (
       <span
-        className={`inline-flex items-center gap-1 type-panel-caption font-semibold text-panel-muted ${
+        className={`inline-flex items-center gap-1 text-[11.5px] font-semibold uppercase leading-4 tracking-[0.12em] text-panel-muted ${
           columna.type === 'number' ? 'flex-row-reverse' : ''
         }`}
       >
@@ -568,7 +568,7 @@ function Cabecera<T>({
       <button
         type="button"
         onClick={onOrdenar}
-        className={`group/orden inline-flex items-center gap-1 type-panel-caption font-semibold transition-colors duration-[var(--transition-fast)] ${
+        className={`group/orden inline-flex items-center gap-1 text-[11.5px] font-semibold uppercase leading-4 tracking-[0.12em] transition-colors duration-[var(--transition-fast)] ${
           columna.type === 'number' ? 'flex-row-reverse' : ''
         } ${activa ? 'text-on-surface' : 'text-panel-muted hover:text-on-surface'}`}
       >

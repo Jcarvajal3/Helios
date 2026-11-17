@@ -141,7 +141,7 @@ export function Sidebar({
         // leyendo un lector de pantalla.
         inert={apagado}
         aria-hidden={apagado || undefined}
-        className={`fixed inset-y-0 left-0 z-40 flex w-(--sidebar-width) flex-col border-r border-panel-hairline bg-panel-bar pt-4.5 pb-3 transition-transform duration-200 lg:w-(--sidebar-actual) lg:translate-x-0 ${
+        className={`vidrio fixed inset-y-0 left-0 z-40 flex w-(--sidebar-width) flex-col rounded-r-panel-hero pt-4.5 pb-3 transition-transform duration-200 lg:inset-y-3 lg:left-3 lg:w-(--sidebar-actual) lg:translate-x-0 lg:rounded-panel-hero ${
           abierto ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -167,7 +167,7 @@ export function Sidebar({
             aria-label={plegado ? 'Desplegar el menú' : 'Plegar el menú'}
             aria-pressed={plegado}
             title={plegado ? 'Desplegar el menú' : 'Plegar el menú'}
-            className="hidden size-8 shrink-0 items-center justify-center rounded-panel-control text-panel-muted transition-colors duration-(--transition-fast) hover:bg-panel-card hover:text-on-surface lg:inline-flex"
+            className="hidden size-8 shrink-0 items-center justify-center rounded-full text-panel-muted transition-colors duration-(--transition-fast) hover:bg-panel-card hover:text-on-surface lg:inline-flex"
           >
             <PanelLeft size={18} strokeWidth={1.75} aria-hidden />
           </button>
@@ -202,7 +202,7 @@ export function Sidebar({
                     onClick={() => alternarPlegado(clave)}
                     aria-expanded={desplegado}
                     aria-controls={`menu-${clave}`}
-                    className={`flex h-6.5 items-center gap-2 rounded-panel-control px-2.5 text-left type-panel-overline text-panel-muted transition-colors duration-(--transition-fast) hover:text-on-surface ${
+                    className={`flex h-6.5 items-center gap-2 rounded-full px-3 text-left type-panel-overline text-panel-muted transition-colors duration-(--transition-fast) hover:text-on-surface ${
                       plegado ? 'lg:hidden' : ''
                     }`}
                   >

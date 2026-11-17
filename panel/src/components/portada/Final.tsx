@@ -1,9 +1,8 @@
 import { Link } from '@tanstack/react-router'
 import { ArrowUpRight, Plus } from 'lucide-react'
 
-import { CampoDePuntos } from './CampoDePuntos'
 import { PREGUNTAS } from './datos'
-import { Boton, BotonAfiliarme, Lienzo, Revelar, Rotulo } from './piezas'
+import { Boton, Lienzo, Revelar, Rotulo } from './piezas'
 import { HeliosLogo } from '@/components/HeliosLogo'
 import { operador } from '@/config/legal'
 import { REDES } from '@/config/sitio'
@@ -35,7 +34,7 @@ export function Preguntas({
             <Revelar retraso={80}>
               <h2 className="portada-titular mt-6 text-portada-tinta">
                 {titular.antes}{' '}
-                <em className="portada-serif text-portada-azul">
+                <em className="portada-serif portada-acento pr-[0.06em]">
                   {titular.enfasis}
                 </em>
               </h2>
@@ -58,26 +57,26 @@ export function Preguntas({
               <Revelar key={p.pregunta} retraso={i * 60}>
                 {/* `<details>` nativo, como en Ronda: se abre sin JavaScript y el
                     teclado ya sabe manejarlo. El CSS anima la altura donde se puede. */}
-                <details className="portada-pregunta group rounded-[22px] border border-portada-linea bg-white transition-[border-color,box-shadow] duration-500 open:border-portada-azul/20 open:shadow-[0_24px_50px_-30px_rgba(0,39,112,0.3)]">
-                  <summary className="flex cursor-pointer list-none items-center justify-between gap-6 px-6 py-5 [&::-webkit-details-marker]:hidden">
+                <details className="portada-pregunta group rounded-[28px] bg-white shadow-[0_0_0_1px_rgba(2,11,36,0.04),0_10px_24px_-18px_rgba(10,60,160,0.3)] transition-shadow duration-500 open:shadow-[0_0_0_1px_rgba(21,126,253,0.25),0_30px_60px_-30px_rgba(10,60,160,0.45)]">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-6 px-6 py-6 sm:px-7 [&::-webkit-details-marker]:hidden">
                     {/* La pregunta es un `<h3>`: buscadores y lectores de
                         pantalla la leen como pregunta, no como texto suelto. */}
                     <h3 className="flex items-baseline gap-4">
-                      <span aria-hidden className="portada-etiqueta text-portada-tinta-3/70">
-                        {String(i + 1).padStart(2, '0')}
+                      <span aria-hidden className="portada-numero portada-acento w-7 shrink-0 text-[1.6rem] leading-none">
+                        {i + 1}
                       </span>
-                      <span className="text-[1.06rem] font-medium leading-snug tracking-[-0.02em] text-portada-tinta">
+                      <span className="text-[1.12rem] font-medium leading-snug tracking-[-0.025em] text-portada-tinta">
                         {p.pregunta}
                       </span>
                     </h3>
                     <span
                       aria-hidden
-                      className="grid size-9 shrink-0 place-items-center rounded-full bg-portada-niebla text-portada-tinta transition-all duration-500 group-open:rotate-[135deg] group-open:bg-portada-tinta group-open:text-white"
+                      className="grid size-10 shrink-0 place-items-center rounded-full bg-portada-niebla text-portada-tinta transition-all duration-500 group-open:rotate-[135deg] group-open:bg-portada-tinta group-open:text-white"
                     >
                       <Plus className="size-4" />
                     </span>
                   </summary>
-                  <p className="max-w-[60ch] px-6 pb-6 pl-[3.6rem] text-[0.97rem] leading-relaxed text-portada-tinta-2">
+                  <p className="max-w-[60ch] px-6 pb-7 pl-[4.25rem] text-[1rem] leading-relaxed text-portada-tinta-2 sm:pl-[4.5rem]">
                     {p.respuesta}
                   </p>
                 </details>
@@ -92,35 +91,29 @@ export function Preguntas({
 
 export function Cierre() {
   return (
-    <section className="relative isolate overflow-hidden bg-white">
-      <div aria-hidden className="absolute inset-0 -z-10">
-        <CampoDePuntos
-          escena="sol"
-          foco={[0.5, -0.32]}
-          radio={0.72}
-          luz={[0, 1]}
-          celda={6.5}
-          semilla={4}
-        />
-        <div className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white via-white/80 to-transparent" />
-      </div>
-      <Lienzo className="flex min-h-[640px] flex-col items-center pb-64 pt-28 text-center sm:min-h-[760px] sm:pt-36">
+    <section className="directorio-cielo portada-cierre relative isolate overflow-clip">
+      {/* El amanecer del sistema (el mismo de /directorio): el sol de Helios
+          sale detrás del horizonte, al final de la página. */}
+      <div aria-hidden className="directorio-rayos" />
+      <div aria-hidden className="directorio-sol" />
+      <div aria-hidden className="directorio-horizonte" />
+      <Lienzo className="relative flex flex-col items-center pb-[clamp(15rem,24vw,21rem)] pt-28 text-center sm:pt-40">
         <Revelar>
           <Rotulo>Medicina · Odontología · Cosmetología</Rotulo>
         </Revelar>
         <Revelar retraso={100}>
-          <h2 className="portada-display mt-7 max-w-[14ch] text-portada-tinta">
-            Tu salud hoy,{' '}
-            <em className="portada-serif portada-degradado pr-[0.06em]">
-              en dos cuotas.
+          <h2 className="directorio-titular mt-7 max-w-[13ch] text-portada-tinta">
+            La mitad hoy,{' '}
+            <em className="portada-serif portada-acento pr-[0.06em]">
+              el resto en dos cuotas.
             </em>
           </h2>
         </Revelar>
         <Revelar retraso={200}>
           <div className="mt-10 flex flex-wrap justify-center gap-3">
-            <BotonAfiliarme />
-            <Boton to="/login" tono="contorno">
-              Entrar a la plataforma
+            <Boton to="/directorio">Encuentra tu médico</Boton>
+            <Boton to="/medicos" tono="contorno">
+              Soy médico
             </Boton>
           </div>
         </Revelar>
@@ -140,7 +133,7 @@ export function Pie() {
           <div>
             <HeliosLogo height={30} color="#002770" />
             <p className="mt-4 max-w-[30ch] text-[0.95rem] text-portada-tinta-3">
-              Tu salud hoy, en dos cuotas.
+              Tu salud hoy: la mitad en la consulta y el resto en dos cuotas.
             </p>
           </div>
 

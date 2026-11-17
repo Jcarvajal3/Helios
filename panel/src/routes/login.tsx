@@ -177,7 +177,7 @@ function Login() {
               </span>
               <span className="portada-linea">
                 <span style={{ '--retraso': '180ms' } as CSSProperties}>
-                  <em className="portada-serif portada-degradado pr-[0.06em]">
+                  <em className="portada-serif portada-acento pr-[0.06em]">
                     panel.
                   </em>
                 </span>

@@ -1,15 +1,16 @@
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
 import { ArrowUpRight, ChevronRight } from 'lucide-react'
 
 import { CONSULTA, dinero, dineroCorto } from './datos'
 import { Preguntas, Pie } from './Final'
-import { CALENDARIO_DE_COBRO, GUIAS, NOMBRE_DE_RUTA, TABLA_DE_CUOTAS } from './guias'
+import { CALENDARIO_DE_COBRO, GUIAS, NOMBRE_DE_RUTA, TABLA_DE_CUOTAS, cadaCuota } from './guias'
 import type { Guia as DatosDeGuia, RutaDeGuia } from './guias'
 import { LineaDeCobro } from './Medicos'
 import { Menu } from './Menu'
 import { Desglose } from './Pacientes'
 import { Boton, BotonAfiliarme, Lienzo, Revelar, Rotulo } from './piezas'
+import { IsologoHelios } from '@/components/directorio/IsologoHelios'
 import { TarjetaDeMedico } from '@/components/directorio/TarjetaDeMedico'
 import { REDES, cabeceraPublica, preguntasFrecuentes, servicio } from '@/config/sitio'
 import { apuntarContacto, cargarDirectorio } from '@/features/directorio/api'
@@ -38,8 +39,6 @@ import type { MedicoDelDirectorio } from '@/features/directorio/directorio'
  * `head: () => cabeceraDeGuia(ruta)`, `component: () => <Guia ruta=… />` y,
  * en las del paciente, `loader: () => cargarMedicosDeGuia(ruta)`.
  */
-
-const NOCHE = '#020B24'
 
 /** El `head` de una guía: metadatos, miga de pan, servicio y preguntas. */
 export function cabeceraDeGuia(ruta: RutaDeGuia) {
@@ -112,28 +111,42 @@ function Migas({ nombre }: { nombre: string }) {
   )
 }
 
+/**
+ * La portada de la guía, con el amanecer del sistema (2026-11-12): el
+ * titular centrado y el sol detrás de un horizonte curvo. El ejemplo (el
+ * desglose o la línea de cobro) se apoya sobre el horizonte.
+ */
 function Cabecera({ guia: g }: { guia: DatosDeGuia }) {
   return (
-    <section className="relative isolate overflow-hidden bg-white">
-      <div
-        aria-hidden
-        className="portada-aurora absolute -right-[25%] -top-[30%] -z-10 size-[900px] rounded-full"
-      />
-      <Lienzo className="pb-20 pt-32 sm:pb-28 sm:pt-40">
-        <Migas nombre={g.nombre} />
-        <div className="mt-10 grid gap-14 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)] lg:items-center lg:gap-16">
+    <>
+    <section className="directorio-cielo portada-cierre relative isolate overflow-clip">
+      <div aria-hidden className="directorio-rayos" />
+      <div aria-hidden className="directorio-sol" />
+      <div aria-hidden className="directorio-horizonte" />
+      <Lienzo className="relative pb-[clamp(13rem,22vw,19rem)] pt-32 text-center sm:pt-40">
+        <div className="directorio-entra flex justify-center">
+          <Migas nombre={g.nombre} />
+        </div>
+        <div className="mx-auto mt-8 max-w-[64rem]">
           <div>
-            <Rotulo>{g.rotulo}</Rotulo>
-            <h1 className="portada-titular mt-6 text-portada-tinta">
+            <Rotulo className="directorio-entra justify-center">{g.rotulo}</Rotulo>
+            <h1
+              className="directorio-titular directorio-entra mt-6 text-portada-tinta"
+              style={{ '--retraso': '100ms' } as CSSProperties}
+            >
               {g.h1.antes}{' '}
-              <em className="portada-serif portada-degradado pr-[0.06em]">
-                {g.h1.enfasis}
-              </em>
+              <em className="directorio-enfasis">{g.h1.enfasis}</em>
             </h1>
-            <p className="portada-entrada mt-7 max-w-[52ch] text-portada-tinta-2">
+            <p
+              className="directorio-entra mx-auto mt-7 max-w-[46ch] text-[clamp(1.1rem,0.95rem+0.6vw,1.4rem)] leading-[1.45] tracking-[-0.012em] text-portada-tinta-2"
+              style={{ '--retraso': '240ms' } as CSSProperties}
+            >
               {g.entrada}
             </p>
-            <div className="mt-9 flex flex-wrap gap-3">
+            <div
+              className="directorio-entra mt-10 flex flex-wrap justify-center gap-3"
+              style={{ '--retraso': '360ms' } as CSSProperties}
+            >
               {g.publico === 'medico' ? (
                 <>
                   <BotonAfiliarme />
@@ -163,11 +176,15 @@ function Cabecera({ guia: g }: { guia: DatosDeGuia }) {
             </div>
           </div>
 
+        </div>
+      </Lienzo>
+    </section>
+    {/* El ejemplo, apoyado sobre el horizonte. */}
+    <section className="relative z-[2] -mt-[7rem] bg-transparent">
+      <Lienzo className="pb-20 sm:pb-28">
+        <div className="mx-auto max-w-[44rem]">
           {g.publico === 'medico' ? (
-            <div
-              className="rounded-[32px] p-2 sm:rounded-[40px]"
-              style={{ backgroundColor: NOCHE }}
-            >
+            <div className="portada-bloque-azul rounded-[32px] p-2 sm:rounded-[40px]">
               <LineaDeCobro />
             </div>
           ) : (
@@ -176,6 +193,7 @@ function Cabecera({ guia: g }: { guia: DatosDeGuia }) {
         </div>
       </Lienzo>
     </section>
+    </>
   )
 }
 
@@ -184,17 +202,14 @@ function Resumen({ guia: g }: { guia: DatosDeGuia }) {
   return (
     <section aria-labelledby="resumen" className="relative bg-white">
       <Lienzo className="pb-20 sm:pb-24">
-        <h2 id="resumen" className="portada-etiqueta text-portada-tinta-3">
+        <h2 id="resumen" className="portada-rotulo text-portada-azul-texto">
           En resumen
         </h2>
-        <dl className="mt-6 grid overflow-hidden rounded-[28px] border border-portada-linea sm:grid-cols-2 lg:grid-cols-3">
+        <dl className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {g.resumen.map((d) => (
-            <div
-              key={d.termino}
-              className="-mb-px -mr-px border-b border-r border-portada-linea px-6 py-5"
-            >
-              <dt className="text-[0.85rem] text-portada-tinta-3">{d.termino}</dt>
-              <dd className="mt-1.5 text-[1.02rem] font-medium leading-snug tracking-[-0.015em] text-portada-tinta">
+            <div key={d.termino} className="rounded-[28px] bg-portada-niebla px-6 py-6 sm:px-7">
+              <dt className="text-[0.9rem] text-portada-tinta-2">{d.termino}</dt>
+              <dd className="mt-2 text-[1.2rem] font-medium leading-snug tracking-[-0.03em] text-portada-tinta">
                 {d.valor}
               </dd>
             </div>
@@ -218,17 +233,17 @@ function SeccionDeTabla({
   children: ReactNode
 }) {
   return (
-    <section className="relative border-t border-portada-linea bg-white">
+    <section className="relative bg-white">
       <Lienzo className="py-24 sm:py-32">
         <Revelar>
           <Rotulo>{rotulo}</Rotulo>
           <h2 className="portada-titular mt-6 max-w-[20ch] text-portada-tinta">
             {titular.antes}{' '}
-            <em className="portada-serif text-portada-azul">{titular.enfasis}</em>
+            <em className="portada-serif portada-acento pr-[0.06em]">{titular.enfasis}</em>
           </h2>
         </Revelar>
         <Revelar retraso={80}>
-          <div className="mt-12 overflow-x-auto rounded-[28px] border border-portada-linea">
+          <div className="portada-tarjeta-solida mt-12 overflow-x-auto rounded-[32px] bg-white">
             {children}
           </div>
           <p className="mt-5 max-w-[70ch] text-[0.92rem] leading-relaxed text-portada-tinta-3">
@@ -250,9 +265,9 @@ function CuantoPagas() {
     <SeccionDeTabla
       rotulo="Las cifras"
       titular={{ antes: 'Cuánto pagas,', enfasis: 'según tu consulta.' }}
-      nota="En dólares o en euros, según la moneda de tu consulta (en euros, las mismas cifras en €). Pagas cada cuota en bolívares, a la tasa oficial del BCV del día en que pagas."
+      nota="En dólares o en euros, según la moneda de tu consulta (en euros, las mismas cifras en €). La inicial es el 50% del total. Cada pago se hace en bolívares, a la tasa oficial del BCV del día en que pagas."
     >
-      <table className="w-full min-w-[34rem] border-collapse text-[0.97rem]">
+      <table className="w-full min-w-[42rem] border-collapse text-[0.97rem]">
         <caption className="sr-only">
           Lo que pagas en cuotas con Helios según el monto de la consulta
         </caption>
@@ -261,6 +276,7 @@ function CuantoPagas() {
             <th scope="col" className={`${CELDA} ${CABECERA_DE_TABLA}`}>Consulta</th>
             <th scope="col" className={`${CELDA} ${CABECERA_DE_TABLA}`}>Comisión Helios + IVA</th>
             <th scope="col" className={`${CELDA} ${CABECERA_DE_TABLA}`}>Total</th>
+            <th scope="col" className={`${CELDA} ${CABECERA_DE_TABLA}`}>Inicial (día de la consulta)</th>
             <th scope="col" className={`${CELDA} ${CABECERA_DE_TABLA}`}>Cada cuota (días 14 y 28)</th>
           </tr>
         </thead>
@@ -272,7 +288,8 @@ function CuantoPagas() {
               </th>
               <td className={CELDA}>{dinero(f.comision + f.iva)}</td>
               <td className={CELDA}>{dinero(f.total)}</td>
-              <td className={`${CELDA} font-medium text-portada-azul`}>{dinero(f.cuota)}</td>
+              <td className={`${CELDA} font-medium text-portada-tinta`}>{dinero(f.inicial)}</td>
+              <td className={`${CELDA} font-medium text-portada-azul`}>{cadaCuota(f)}</td>
             </tr>
           ))}
         </tbody>
@@ -324,7 +341,7 @@ function Pasos({ guia: g }: { guia: DatosDeGuia }) {
           <Rotulo>Cómo funciona</Rotulo>
           <h2 className="portada-titular mt-6 max-w-[18ch] text-portada-tinta">
             {g.pasos.titulo.antes}{' '}
-            <em className="portada-serif text-portada-azul">
+            <em className="portada-serif portada-acento pr-[0.06em]">
               {g.pasos.titulo.enfasis}
             </em>
           </h2>
@@ -335,12 +352,12 @@ function Pasos({ guia: g }: { guia: DatosDeGuia }) {
               key={p.titulo}
               como="li"
               retraso={i * 80}
-              className="rounded-[28px] border border-portada-linea bg-white p-7"
+              className="portada-tarjeta-solida rounded-[34px] bg-white p-7 sm:p-8"
             >
-              <span className="portada-etiqueta text-portada-tinta-3">
-                0{i + 1}
+              <span aria-hidden className="directorio-numeral block">
+                {i + 1}
               </span>
-              <h3 className="mt-8 text-[1.2rem] font-medium leading-snug tracking-[-0.02em] text-portada-tinta">
+              <h3 className="mt-8 text-[1.35rem] font-medium leading-snug tracking-[-0.03em] text-portada-tinta">
                 {p.titulo}
               </h3>
               <p className="mt-3 text-[0.97rem] leading-relaxed text-portada-tinta-2">
@@ -364,20 +381,23 @@ function Ventajas({ guia: g }: { guia: DatosDeGuia }) {
           </Rotulo>
           <h2 className="portada-titular mt-6 max-w-[20ch] text-portada-tinta">
             {g.ventajas.titulo.antes}{' '}
-            <em className="portada-serif text-portada-azul">
+            <em className="portada-serif portada-acento pr-[0.06em]">
               {g.ventajas.titulo.enfasis}
             </em>
           </h2>
         </Revelar>
-        <ul className="mt-14 grid gap-x-10 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="mt-14 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:gap-4">
           {g.ventajas.lista.map((v, i) => (
             <Revelar
               key={v.titulo}
               como="li"
               retraso={(i % 3) * 80}
-              className="border-t border-portada-linea pt-6"
+              className="rounded-[32px] bg-portada-niebla p-7 sm:p-8"
             >
-              <h3 className="text-[1.12rem] font-medium leading-snug tracking-[-0.02em] text-portada-tinta">
+              <span aria-hidden className="portada-numero portada-acento block text-[2.75rem]">
+                {i + 1}
+              </span>
+              <h3 className="mt-6 text-[1.25rem] font-medium leading-snug tracking-[-0.03em] text-portada-tinta">
                 {v.titulo}
               </h3>
               <p className="mt-3 text-[0.97rem] leading-relaxed text-portada-tinta-2">
@@ -394,17 +414,15 @@ function Ventajas({ guia: g }: { guia: DatosDeGuia }) {
 function Aparte({ titulo, texto }: { titulo: string; texto: string }) {
   return (
     <section className="relative bg-white px-2 pb-2 sm:px-4 sm:pb-4">
-      <div
-        className="relative overflow-hidden rounded-[32px] sm:rounded-[44px]"
-        style={{ backgroundColor: NOCHE }}
-      >
-        <Lienzo className="flex flex-col gap-8 py-16 sm:py-20 lg:flex-row lg:items-center lg:justify-between">
+      <div className="portada-bloque-azul relative overflow-hidden rounded-[32px] sm:rounded-[44px]">
+        <IsologoHelios aria-hidden className="portada-rueda absolute -right-36 top-1/2 size-[40rem] -translate-y-1/2 opacity-[0.16]" />
+        <Lienzo className="relative flex flex-col gap-8 py-16 sm:py-24 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <Rotulo tono="oscuro">Para médicos y centros</Rotulo>
-            <h2 className="mt-5 text-[clamp(1.7rem,1.2rem+1.8vw,2.6rem)] font-medium leading-tight tracking-[-0.04em] text-white">
+            <h2 className="mt-5 max-w-[17ch] text-[clamp(2rem,1.2rem+3vw,4.5rem)] font-medium leading-none tracking-[-0.045em] text-white">
               {titulo}
             </h2>
-            <p className="mt-4 max-w-[52ch] text-[1.02rem] leading-relaxed text-white/70">
+            <p className="mt-5 max-w-[50ch] text-[1.08rem] leading-relaxed text-white/90">
               {texto}
             </p>
           </div>
@@ -424,7 +442,7 @@ function Relacionadas({ rutas }: { rutas: DatosDeGuia['relacionadas'] }) {
   return (
     <section className="relative bg-white">
       <Lienzo className="py-20 sm:py-24">
-        <h2 className="portada-etiqueta text-portada-tinta-3">
+        <h2 className="portada-rotulo text-portada-azul-texto">
           También te puede interesar
         </h2>
         <ul className="mt-6 grid gap-3 sm:grid-cols-3">
@@ -432,10 +450,12 @@ function Relacionadas({ rutas }: { rutas: DatosDeGuia['relacionadas'] }) {
             <li key={r}>
               <Link
                 to={r}
-                className="group flex h-full items-center justify-between gap-4 rounded-[22px] border border-portada-linea bg-white px-6 py-5 text-[1.06rem] font-medium tracking-[-0.02em] text-portada-tinta transition-[border-color,box-shadow] duration-300 hover:border-portada-azul/30 hover:shadow-[0_24px_50px_-30px_rgba(0,39,112,0.3)]"
+                className="portada-tarjeta-solida group flex h-full items-center justify-between gap-4 rounded-[28px] bg-white px-7 py-6 text-[1.15rem] font-medium tracking-[-0.025em] text-portada-tinta transition-[box-shadow,transform] duration-500 hover:-translate-y-1"
               >
                 {NOMBRE_DE_RUTA[r]}
-                <ArrowUpRight className="size-4 shrink-0 text-portada-azul transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                <span className="grid size-10 shrink-0 place-items-center rounded-full bg-portada-tinta text-white transition-colors duration-300 group-hover:bg-portada-azul">
+                  <ArrowUpRight className="size-4" />
+                </span>
               </Link>
             </li>
           ))}
@@ -453,28 +473,31 @@ function Relacionadas({ rutas }: { rutas: DatosDeGuia['relacionadas'] }) {
 function Cierre({ guia: g }: { guia: DatosDeGuia }) {
   const directorio = g.publico === 'paciente' ? g.directorio : undefined
   return (
-    <section className="relative isolate overflow-hidden border-t border-portada-linea bg-portada-niebla">
-      <Lienzo className="flex flex-col items-center py-24 text-center sm:py-32">
+    <section className="directorio-cielo portada-cierre relative isolate overflow-clip">
+      <div aria-hidden className="directorio-rayos" />
+      <div aria-hidden className="directorio-sol" />
+      <div aria-hidden className="directorio-horizonte" />
+      <Lienzo className="relative flex flex-col items-center pb-[clamp(14rem,22vw,19rem)] pt-28 text-center sm:pt-36">
         <Rotulo>Medicina · Odontología · Cosmetología</Rotulo>
-        <h2 className="portada-titular mt-6 max-w-[18ch] text-portada-tinta">
+        <h2 className="directorio-titular-2 mt-6 max-w-[16ch] text-portada-tinta">
           {g.publico === 'medico' ? (
             <>
               Afilia tu consultorio,{' '}
-              <em className="portada-serif portada-degradado pr-[0.06em]">
+              <em className="portada-serif portada-acento pr-[0.06em]">
                 sin costo.
               </em>
             </>
           ) : directorio ? (
             <>
               {directorio.cierre.antes}{' '}
-              <em className="portada-serif portada-degradado pr-[0.06em]">
+              <em className="portada-serif portada-acento pr-[0.06em]">
                 {directorio.cierre.enfasis}
               </em>
             </>
           ) : (
             <>
               Pregunta por Helios{' '}
-              <em className="portada-serif portada-degradado pr-[0.06em]">
+              <em className="portada-serif portada-acento pr-[0.06em]">
                 en tu próxima consulta.
               </em>
             </>
@@ -524,17 +547,17 @@ function MedicosDeLaGuia({ guia: g, medicos }: { guia: DatosDeGuia; medicos: Med
   const directorio = g.directorio
   if (!directorio || medicos.lista.length === 0) return null
   return (
-    <section className="relative border-t border-portada-linea bg-portada-niebla">
+    <section className="relative bg-portada-niebla">
       <Lienzo className="py-24 sm:py-32">
         <Revelar>
           <Rotulo>Directorio</Rotulo>
           <h2 className="portada-titular mt-6 max-w-[20ch] text-portada-tinta">
             {directorio.quienes} que{' '}
-            <em className="portada-serif text-portada-azul">ya aceptan Helios.</em>
+            <em className="portada-serif portada-acento pr-[0.06em]">ya aceptan Helios.</em>
           </h2>
           <p className="mt-5 max-w-[56ch] text-[1rem] leading-relaxed text-portada-tinta-2">
-            Escríbeles por WhatsApp para agendar tu cita y paga tu consulta en 2 cuotas, a los 14 y
-            28 días, sin inicial.
+            Escríbeles por WhatsApp para agendar tu cita y paga el 50% el día de la consulta y el
+            resto en 2 cuotas, a los 14 y 28 días.
           </p>
         </Revelar>
         <ul className="mt-12 grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">

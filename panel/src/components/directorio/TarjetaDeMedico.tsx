@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { AtSign, MapPin, Tag } from 'lucide-react'
+import { AtSign, MapPin } from 'lucide-react'
 
 import { IlustracionDeEspecialidad } from './IlustracionDeEspecialidad'
 import { rutaDeFicha } from '@/features/directorio/paginas'
@@ -21,7 +21,7 @@ import type { MedicoDelDirectorio, VarianteDelDirectorio } from '@/features/dire
 
 /** El sello de la inicial, junto al botón: el mismo sitio en A y en B, con su oferta. */
 const SELLO_DE_INICIAL: Record<VarianteDelDirectorio, { cifra: string; texto: string }> = {
-  a: { cifra: '0%', texto: 'inicial' },
+  a: { cifra: '50%', texto: 'inicial' },
   b: TEXTOS_DE_CONSULTAS.sello,
 }
 
@@ -37,7 +37,7 @@ export function LogoWhatsApp({ className = 'size-4' }: { className?: string }) {
 /**
  * La tarjeta de un médico del directorio: el icono de su especialidad, su
  * nombre, su especialidad, dónde atiende, su red social y el precio de su
- * consulta (si los tiene), el «0% inicial», las «2 cuotas» y el botón para
+ * consulta (si los tiene), el «50% inicial», las «2 cuotas» y el botón para
  * escribirle.
  *
  * Compacta, para que en el teléfono se vean varias de un vistazo, y entera
@@ -80,7 +80,13 @@ export function TarjetaDeMedico({
   const sello = SELLO_DE_INICIAL[variante]
 
   return (
-    <article className="directorio-tarjeta group relative flex h-full flex-col gap-3.5 rounded-[24px] border p-4 sm:gap-4 sm:p-5">
+    // Como la maqueta aprobada (2026-11-12), blanca y sólida, con una luz azul
+    // que sigue al puntero (`--mx`, `--my`). En vez del orbe, el icono 3D de
+    // la especialidad (Javier, 2026-11-12).
+    <article
+      onMouseMove={seguirLaLuz}
+      className="directorio-tarjeta group relative flex h-full flex-col gap-[22px] overflow-hidden rounded-[34px] border p-[26px]"
+    >
       {/* Toda la tarjeta lleva al chat. Para el teclado y el lector de
           pantalla, el enlace es el botón de abajo. */}
       <a
@@ -90,13 +96,13 @@ export function TarjetaDeMedico({
         onClick={onContacto}
         aria-hidden
         tabIndex={-1}
-        className="absolute inset-0 rounded-[inherit]"
+        className="absolute inset-0 z-[1] rounded-[inherit]"
       />
 
-      <div className="flex items-center gap-3.5">
+      <div className="relative flex items-center gap-4">
         <IlustracionDeEspecialidad clave={medico.clave} />
         <div className="min-w-0">
-          <h3 className="text-[1.08rem] font-semibold leading-tight tracking-[-0.025em] text-portada-tinta [overflow-wrap:anywhere]">
+          <h3 className="text-[21px] font-medium leading-[1.15] tracking-[-0.03em] text-portada-tinta [overflow-wrap:anywhere]">
             {/* El nombre lleva a su ficha (2026-10-30), por encima del enlace
                 al chat: es el enlace que Google sigue hasta cada médico. La
                 vista previa del superadmin no tiene ficha, y `/consultas`
@@ -113,26 +119,22 @@ export function TarjetaDeMedico({
             )}
           </h3>
           {especialidad && (
-            <p className="mt-1 line-clamp-2 text-[0.88rem] leading-snug text-portada-tinta-2">{especialidad}</p>
+            <p className="mt-1 line-clamp-2 text-[15px] leading-[1.35] text-portada-tinta-2">{especialidad}</p>
           )}
         </div>
       </div>
 
-      {(lugar || red || precio || enB) && (
-        <div className="flex flex-col gap-2 text-[0.86rem] leading-snug text-portada-tinta-2">
+      {(lugar || red) && (
+        <div className="relative flex flex-col gap-2.5 text-[14.5px] leading-[1.35] text-portada-tinta-2">
           {lugar && (
             <p className="flex items-center gap-2.5" title={lugar}>
-              <span aria-hidden className="directorio-dato">
-                <MapPin className="size-3.5" />
-              </span>
+              <MapPin aria-hidden className="size-[17px] shrink-0" strokeWidth={1.6} />
               <span className="line-clamp-2 [overflow-wrap:anywhere]">{lugar}</span>
             </p>
           )}
           {red && (
             <p className="flex items-center gap-2.5">
-              <span aria-hidden className="directorio-dato">
-                <AtSign className="size-3.5" />
-              </span>
+              <AtSign aria-hidden className="size-[17px] shrink-0" strokeWidth={1.6} />
               <a
                 href={red.url}
                 target="_blank"
@@ -145,40 +147,38 @@ export function TarjetaDeMedico({
               </a>
             </p>
           )}
-          {(precio || enB) && (
-            <p className={`flex gap-2.5 ${enB ? 'items-start' : 'items-center'}`}>
-              <span aria-hidden className="directorio-dato">
-                <Tag className="size-3.5" />
-              </span>
-              <span>
-                {precio && (
-                  <span className={enB ? 'block' : undefined}>
-                    {ROTULO_DE_PRECIO} <span className="font-semibold tabular-nums text-portada-tinta">{precio}</span>
-                  </span>
-                )}
-                {/* En B, la oferta debajo del precio (o sola, si no lo tiene). */}
-                {enB && (
-                  <span className={`block font-medium text-portada-azul ${precio ? 'mt-0.5' : ''}`}>
-                    {CONDICIONES_DE_CONSULTAS}
-                  </span>
-                )}
-              </span>
-            </p>
-          )}
         </div>
       )}
 
-      {/* Las condiciones junto al botón, como el precio junto a «Comprar». */}
-      <div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-portada-linea pt-3.5 sm:pt-4">
-        <div className="flex gap-1.5">
-          <span className="directorio-sello inline-flex h-8 shrink-0 items-center gap-1 rounded-[10px] px-2 text-[0.78rem] font-medium tracking-[-0.01em] text-portada-azul">
-            <span className="font-[family-name:var(--font-portada-mono)] tabular-nums">{sello.cifra}</span>
-            {sello.texto}
-          </span>
-          <span className="directorio-sello inline-flex h-8 shrink-0 items-center gap-1 rounded-[10px] px-2 text-[0.78rem] font-medium tracking-[-0.01em] text-portada-azul">
-            <span className="font-[family-name:var(--font-portada-mono)] tabular-nums">2</span>
-            cuotas
-          </span>
+      {/* El precio grande y las condiciones, y debajo el botón entero. */}
+      <div className="relative mt-auto flex flex-col gap-[18px] border-t border-portada-tinta/[0.08] pt-[22px]">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          {(precio || enB) && (
+            <div className="text-[13.5px] text-portada-tinta-2">
+              {precio && (
+                <p>
+                  {ROTULO_DE_PRECIO}
+                  <span className="directorio-precio-grande block tabular-nums">{precio}</span>
+                </p>
+              )}
+              {/* En B, la oferta debajo del precio (o sola, si no lo tiene). */}
+              {enB && (
+                <p className={`max-w-[22ch] font-medium text-portada-azul ${precio ? 'mt-1.5' : ''}`}>
+                  {CONDICIONES_DE_CONSULTAS}
+                </p>
+              )}
+            </div>
+          )}
+          <p className="mb-1 ml-auto flex gap-1.5">
+            <span className="directorio-sello inline-flex h-7 shrink-0 items-center gap-1 rounded-full px-[11px] text-[12.5px] font-semibold">
+              <span className="tabular-nums">{sello.cifra}</span>
+              {sello.texto}
+            </span>
+            <span className="directorio-sello inline-flex h-7 shrink-0 items-center gap-1 rounded-full px-[11px] text-[12.5px] font-semibold">
+              <span className="tabular-nums">2</span>
+              cuotas
+            </span>
+          </p>
         </div>
         <a
           href={enlace}
@@ -186,12 +186,22 @@ export function TarjetaDeMedico({
           rel="noopener noreferrer"
           onClick={onContacto}
           aria-label={`Agendar cita por WhatsApp con ${medico.nombre}`}
-          className="directorio-agendar relative z-10 inline-flex h-11 items-center gap-2 whitespace-nowrap rounded-full px-4 text-[0.88rem] font-medium tracking-[-0.01em] text-white"
+          className="directorio-agendar relative z-10 flex h-[54px] items-center justify-between gap-2 whitespace-nowrap rounded-full pl-6 pr-2 text-[16px] font-medium tracking-[-0.015em] text-white"
         >
           Agendar cita
-          <LogoWhatsApp className="size-[17px]" />
+          <span aria-hidden className="directorio-agendar-icono grid size-[38px] place-items-center rounded-full">
+            <LogoWhatsApp className="size-[17px]" />
+          </span>
         </a>
       </div>
     </article>
   )
+}
+
+/** La luz de la tarjeta sigue al puntero. */
+function seguirLaLuz(evento: React.MouseEvent<HTMLElement>) {
+  const el = evento.currentTarget
+  const r = el.getBoundingClientRect()
+  el.style.setProperty('--mx', `${evento.clientX - r.left}px`)
+  el.style.setProperty('--my', `${evento.clientY - r.top}px`)
 }

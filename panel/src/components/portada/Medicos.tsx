@@ -24,11 +24,13 @@ import {
  * PARA MÉDICOS Y CENTROS — el bloque oscuro.
  *
  * Lo central es la línea de tiempo: la clínica cobra cada mitad a los 8 y a
- * los 15 días, pague o no el paciente, que paga a los 14 y a los 28. Aquí,
+ * los 15 días, pague o no el paciente, que paga la inicial el día 0 y sus
+ * cuotas a los 14 y a los 28. Aquí,
  * como en todo lo que ve una clínica, los montos van sin la Comisión Helios.
  */
 
-const NOCHE = '#020B24'
+/** El fondo del bloque: el azul de marca, el único color fuerte del sistema. */
+const AZUL = '#0B47CC'
 const ICONOS = [CalendarCheck2, Wallet, MessageCircle, DoorOpen]
 
 const MITAD = CONSULTA / 2
@@ -37,6 +39,7 @@ const MITAD = CONSULTA / 2
 const ULTIMO_DIA = 28
 
 const HITOS = [
+  { dia: 0, carril: 'arriba', texto: 'Inicial', corto: 'Inicial' },
   { dia: 0, carril: 'abajo', texto: 'Atiendes', corto: 'Hoy' },
   {
     dia: 8,
@@ -80,15 +83,15 @@ export function LineaDeCobro() {
     <div ref={ref} className="portada-vidrio-oscuro rounded-[28px] p-6 sm:p-8">
       <div className="flex flex-wrap items-end justify-between gap-6">
         <div>
-          <p className="portada-etiqueta text-white/50">
+          <p className="portada-etiqueta text-white/75">
             Una consulta de {dineroCorto(CONSULTA)}
           </p>
-          <p className="mt-3 text-[0.95rem] text-white/70">
+          <p className="mt-3 text-[0.95rem] text-white/85">
             Día <span className="tabular-nums text-white">{dia}</span> de {ULTIMO_DIA}
           </p>
         </div>
         <div className="sm:text-right">
-          <p className="portada-etiqueta text-white/50">Recibes</p>
+          <p className="portada-etiqueta text-white/75">Recibes</p>
           <p
             key={recibido}
             className="portada-cifra portada-salta mt-1 text-white"
@@ -103,10 +106,10 @@ export function LineaDeCobro() {
 
       <div className="mt-10 flex gap-4 sm:gap-6">
         <div className="flex h-36 shrink-0 flex-col justify-between py-3">
-          <span className="portada-etiqueta text-[0.6rem] text-white/40">
+          <span className="portada-etiqueta text-[0.6rem] text-white/65">
             Paciente
           </span>
-          <span className="portada-etiqueta text-[0.6rem] text-white/40">
+          <span className="portada-etiqueta text-[0.6rem] text-white/65">
             Tú
           </span>
         </div>
@@ -122,12 +125,12 @@ export function LineaDeCobro() {
             const llego = dia >= h.dia
             const x = `${(h.dia / ULTIMO_DIA) * 100}%`
             return (
-              <div key={h.dia} className="absolute top-1/2" style={{ left: x }}>
+              <div key={`${h.dia}-${h.carril}`} className="absolute top-1/2" style={{ left: x }}>
                 <span
                   className={`absolute left-0 top-0 block size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 transition-all duration-500 ${
                     llego
                       ? 'scale-110 border-white bg-portada-cielo shadow-[0_0_0_6px_rgba(69,168,253,0.18)]'
-                      : 'border-white/30 bg-[#020B24]'
+                      : 'border-white/45 bg-[#0B47CC]'
                   }`}
                 />
                 <span
@@ -144,12 +147,12 @@ export function LineaDeCobro() {
                       ? h.carril === 'abajo'
                         ? 'text-portada-cielo-2'
                         : 'text-white'
-                      : 'text-white/35'
+                      : 'text-white/60'
                   }`}
                 >
                   <span className="sm:hidden">{h.corto}</span>
                   <span className="hidden sm:inline">{h.texto}</span>
-                  <span className="block text-[0.62rem] font-normal tabular-nums text-white/40">
+                  <span className="block text-[0.62rem] font-normal tabular-nums text-white/65">
                     Día {h.dia}
                   </span>
                 </span>
@@ -159,7 +162,7 @@ export function LineaDeCobro() {
         </div>
       </div>
 
-      <p className="mt-6 flex items-center gap-2 border-t border-white/10 pt-5 text-[0.88rem] text-white/70">
+      <p className="mt-6 flex items-center gap-2 border-t border-white/15 pt-5 text-[0.88rem] text-white/85">
         <ShieldCheck className="size-4 shrink-0 text-portada-cielo-2" />
         Pague o no el paciente. El cobro corre por cuenta de Helios.
       </p>
@@ -173,20 +176,17 @@ export function Medicos() {
       id="medicos"
       className="relative bg-white px-2 py-2 sm:px-4 sm:py-4"
     >
-      <div
-        className="relative isolate overflow-hidden rounded-[32px] sm:rounded-[44px]"
-        style={{ backgroundColor: NOCHE }}
-      >
-        <div aria-hidden className="absolute inset-0 -z-10 opacity-80">
+      <div className="portada-bloque-azul relative isolate overflow-hidden rounded-[32px] sm:rounded-[44px]">
+        <div aria-hidden className="absolute inset-0 -z-10 opacity-70">
           <CampoDePuntos
             escena="marea"
-            fondo={NOCHE}
-            tintas={['#062460', '#0D4CC0', '#2F86F0']}
+            fondo={AZUL}
+            tintas={['#1C5BE0', '#3F8CF8', '#8CC4FF']}
             celda={7}
             semilla={11}
             intensidad={0.55}
           />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(2,11,36,0.95)_20%,transparent_65%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(20,102,242,0.95)_20%,transparent_65%)]" />
         </div>
 
         <Lienzo className="py-24 sm:py-32">
@@ -204,7 +204,7 @@ export function Medicos() {
                 </h2>
               </Revelar>
               <Revelar retraso={160}>
-                <p className="portada-entrada mt-7 max-w-[46ch] text-white/70">
+                <p className="portada-entrada mt-7 max-w-[46ch] text-white/90">
                   Atiendes hoy y Helios te paga la consulta completa. El cobro
                   al paciente corre por nuestra cuenta.
                 </p>
@@ -229,23 +229,22 @@ export function Medicos() {
             </Revelar>
           </div>
 
-          <div className="mt-20 grid gap-px overflow-hidden rounded-[28px] border border-white/10 bg-white/10 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-20 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {PARA_MEDICOS.map((b, i) => {
               const Icono = ICONOS[i] ?? Wallet
               return (
                 <Revelar
                   key={b.titulo}
                   retraso={i * 90}
-                  className="portada-beneficio group relative p-7"
-                  style={{ backgroundColor: NOCHE }}
+                  className="portada-beneficio group relative rounded-[28px] border border-white/20 bg-white/10 p-7 shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] backdrop-blur-xl"
                 >
-                  <span className="grid size-11 place-items-center rounded-2xl border border-white/10 bg-white/[0.04] text-portada-cielo-2 transition-all duration-500 group-hover:border-portada-cielo/40 group-hover:bg-portada-azul/20">
+                  <span className="grid size-11 place-items-center rounded-full bg-white text-portada-azul transition-transform duration-500 group-hover:scale-110">
                     <Icono className="size-5" strokeWidth={1.6} />
                   </span>
                   <h3 className="mt-8 text-[1.12rem] font-medium leading-snug tracking-[-0.02em] text-white">
                     {b.titulo}
                   </h3>
-                  <p className="mt-2.5 text-[0.93rem] leading-relaxed text-white/60">
+                  <p className="mt-2.5 text-[0.93rem] leading-relaxed text-white/85">
                     {b.texto}
                   </p>
                 </Revelar>

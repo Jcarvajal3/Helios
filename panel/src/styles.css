@@ -68,8 +68,7 @@
      `--radius-panel-control`; no hay un tercer radio para nada más. */
   --radius-sm: var(--radius-small);
 
-  /* El cuerpo va en Source Sans 3; los títulos piden --font-display o una
-     clase .type-headline-* / .type-title-*. */
+  /* Inter Tight en el cuerpo y en los títulos (rediseño del 2026-11-12). */
   --font-sans: var(--font-body);
 
   /* M3 Expressive usa muelles, no duraciones. En el panel la dosis de
@@ -110,12 +109,17 @@
      Dos radios, igual que en la app, pero medidos para un monitor. La píldora
      no desaparece del panel: se queda para lo único que de verdad es una
      píldora, la insignia de estado, donde la forma ES el significado. */
-  --radius-panel-card: 16px;
-  --radius-panel-control: 9px;
+  /* Rediseño del 2026-11-12: radios amplios, al estilo de Apple. Lo que se
+     pulsa (botón, campo, segmentado, ítem del menú) va en píldora y lo pide
+     con `rounded-full` en su pieza; `panel-control` queda para lo que es
+     una caja pequeña (un globo, un menú desplegable, un campo de varias
+     líneas), que en píldora se deformaría. */
+  --radius-panel-card: 28px;
+  --radius-panel-control: 14px;
   --radius-panel-pill: var(--radius-full);
   /* La tarjeta que manda en su pantalla (la barra del asistente en Inicio, la
      cifra titular de un tablero) va un paso más redonda que las demás. */
-  --radius-panel-hero: 20px;
+  --radius-panel-hero: 34px;
 
   /* ── Alturas de control ─────────────────────────────────────────────────
      36 es la medida del ratón. La app usa 56 porque ahí manda el pulgar; en
@@ -144,8 +148,8 @@
   /* ── Relleno ────────────────────────────────────────────────────────────
      Lo de dentro de una caja, que es lo que decide cuántas filas caben en
      pantalla. Lo de fuera sigue siendo del sistema. */
-  --spacing-panel-pad-card: 20px;
-  --spacing-panel-pad-control: 14px;
+  --spacing-panel-pad-card: 24px;
+  --spacing-panel-pad-control: 18px;
   --spacing-panel-pad-row: 14px;
 }
 
@@ -168,15 +172,16 @@
      control    #E6ECF4   #1F2C45  controles, pistas de medidores, tooltips
    ═══════════════════════════════════════════════════════════════════════════ */
 @theme {
-  --color-panel-bar: #ffffff;
+  /* La barra es vidrio: deja ver el amanecer del lienzo. */
+  --color-panel-bar: rgb(255 255 255 / 0.72);
   --color-panel-card: #ffffff;
-  --color-panel-raised: #eef3fa;
-  --color-panel-control: #e6ecf4;
-  --color-panel-hairline: rgb(15 26 46 / 0.09);
-  --color-panel-hairline-strong: rgb(15 26 46 / 0.16);
+  --color-panel-raised: #f0f5fd;
+  --color-panel-control: #ecf1f9;
+  --color-panel-hairline: rgb(2 11 36 / 0.07);
+  --color-panel-hairline-strong: rgb(2 11 36 / 0.14);
   /* Texto de tercer nivel (pies, ejes, lo que está vacío). 5,4:1 sobre la
      tarjeta: pasa AA también a 12 px. */
-  --color-panel-muted: #5e6a82;
+  --color-panel-muted: #56627c;
   /* El rojo de un texto sobre su tinte (pastilla «Crítico», contador
      vencido): 5,3:1 sobre el tinte de error. */
   --color-panel-critico: #b42318;
@@ -200,13 +205,13 @@
 /* El chrome del panel en oscuro: los mismos nombres, otra luz. Junto a los
    roles del sistema, que redefine tokens.gen.css con los mismos selectores. */
 :root[data-theme='dark'] {
-  --color-panel-bar: #0e1626;
-  --color-panel-card: #111a2b;
-  --color-panel-raised: #18233a;
-  --color-panel-control: #1f2c45;
-  --color-panel-hairline: rgb(255 255 255 / 0.07);
-  --color-panel-hairline-strong: rgb(255 255 255 / 0.12);
-  --color-panel-muted: #93a0b8;
+  --color-panel-bar: rgb(10 19 48 / 0.62);
+  --color-panel-card: #0a1330;
+  --color-panel-raised: #121d42;
+  --color-panel-control: #18244c;
+  --color-panel-hairline: rgb(255 255 255 / 0.09);
+  --color-panel-hairline-strong: rgb(255 255 255 / 0.16);
+  --color-panel-muted: #a3adc4;
   --color-panel-critico: #ff8a7e;
   --color-area-cobranza: #4fa3d9;
   --color-area-caja: #1db38f;
@@ -216,13 +221,13 @@
 }
 @media (prefers-color-scheme: dark) {
   :root[data-theme='auto'] {
-    --color-panel-bar: #0e1626;
-    --color-panel-card: #111a2b;
-    --color-panel-raised: #18233a;
-    --color-panel-control: #1f2c45;
-    --color-panel-hairline: rgb(255 255 255 / 0.07);
-    --color-panel-hairline-strong: rgb(255 255 255 / 0.12);
-    --color-panel-muted: #93a0b8;
+    --color-panel-bar: rgb(10 19 48 / 0.62);
+    --color-panel-card: #0a1330;
+    --color-panel-raised: #121d42;
+    --color-panel-control: #18244c;
+    --color-panel-hairline: rgb(255 255 255 / 0.09);
+    --color-panel-hairline-strong: rgb(255 255 255 / 0.16);
+    --color-panel-muted: #a3adc4;
     --color-panel-critico: #ff8a7e;
     --color-area-cobranza: #4fa3d9;
     --color-area-caja: #1db38f;
@@ -274,27 +279,27 @@
 
    Van en @layer components por lo mismo que las del sistema: las utilidades
    text-* de Tailwind no traen la familia, y en Helios la familia cambia según el
-   rol —Outfit en lo que se mira, Source Sans en lo que se lee—. */
+   rol —hoy Inter Tight en todo, con tamaño y peso por rol—. */
 @layer components {
   /* Título de página. Un paso por debajo del headline de la app: aquí no abre
      una pantalla, rotula una zona de trabajo que ya tiene su sitio en el
      sidebar. */
   .type-panel-page {
     font-family: var(--font-display);
-    font-size: 1.375rem;
-    line-height: 1.75rem;
-    letter-spacing: -0.01em;
-    font-weight: 600;
+    font-size: 1.625rem;
+    line-height: 2rem;
+    letter-spacing: -0.035em;
+    font-weight: 500;
   }
 
   /* Rótulo de zona dentro de una página. Subió de 16 a 18: con la cifra a 28,
      un título de 16 quedaba por debajo de lo que rotula. */
   .type-panel-section {
     font-family: var(--font-display);
-    font-size: 1.125rem;
-    line-height: 1.5rem;
-    letter-spacing: 0;
-    font-weight: 600;
+    font-size: 1.625rem;
+    line-height: 1.875rem;
+    letter-spacing: -0.04em;
+    font-weight: 500;
   }
 
   /* La cifra de una tarjeta de tablero. A 28 y con cifras proporcionales: a
@@ -302,46 +307,48 @@
      números sí se alinean en columna —tablas, ejes— va `tabular-nums`. */
   .type-panel-figure {
     font-family: var(--font-display);
-    font-size: 1.75rem;
-    line-height: 2.125rem;
-    letter-spacing: -0.01em;
-    font-weight: 600;
+    font-size: 2.75rem;
+    line-height: 1;
+    letter-spacing: -0.05em;
+    font-weight: 500;
   }
 
   /* La cifra titular de una pantalla: una por pantalla, como mucho. */
   .type-panel-hero {
     font-family: var(--font-display);
-    font-size: 2.5rem;
-    line-height: 2.875rem;
-    letter-spacing: -0.015em;
-    font-weight: 600;
+    font-size: 3.25rem;
+    line-height: 3.375rem;
+    letter-spacing: -0.05em;
+    font-weight: 500;
   }
 
   /* El saludo de Inicio, encima de la barra del asistente. */
   .type-panel-greeting {
     font-family: var(--font-display);
-    font-size: 2rem;
-    line-height: 2.5rem;
-    letter-spacing: -0.01em;
-    font-weight: 600;
+    font-size: 2.75rem;
+    line-height: 3rem;
+    letter-spacing: -0.045em;
+    font-weight: 500;
   }
 
   /* Rótulo de una cifra, de un filtro o de una columna. En minúscula de
      frase: las MAYÚSCULAS en cada tarjeta, filtro y cabecera eran la textura
      dominante del panel y hacían gritar a lo que solo rotula. */
+  /* Como los rótulos de las cifras de la maqueta (2026-11-12): a 14 y sin
+     negrita; lo que manda es la cifra de debajo. */
   .type-panel-label {
     font-family: var(--font-body);
-    font-size: 0.8125rem;
-    line-height: 1.125rem;
-    letter-spacing: 0;
-    font-weight: 600;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    letter-spacing: -0.005em;
+    font-weight: 500;
   }
 
   /* Pie de una cifra, eje de un gráfico, detalle de una fila. */
   .type-panel-caption {
     font-family: var(--font-body);
-    font-size: 0.75rem;
-    line-height: 1rem;
+    font-size: 0.8125rem;
+    line-height: 1.125rem;
     letter-spacing: 0;
     font-weight: 400;
   }
@@ -352,8 +359,8 @@
     font-family: var(--font-body);
     font-size: 0.6875rem;
     line-height: 1rem;
-    letter-spacing: 0.07em;
-    font-weight: 700;
+    letter-spacing: 0.14em;
+    font-weight: 600;
     text-transform: uppercase;
   }
 
@@ -363,17 +370,17 @@
     font-family: var(--font-display);
     font-size: 0.875rem;
     line-height: 1.25rem;
-    letter-spacing: 0.01em;
-    font-weight: 600;
+    letter-spacing: -0.01em;
+    font-weight: 500;
   }
 
   /* Texto de un campo, de una celda y de un párrafo. Uno solo: el panel
      mezclaba 14 y 15 según quién hubiera escrito la pantalla. */
   .type-panel-body {
     font-family: var(--font-body);
-    font-size: 0.875rem;
-    line-height: 1.25rem;
-    letter-spacing: 0.005em;
+    font-size: 0.9375rem;
+    line-height: 1.375rem;
+    letter-spacing: -0.005em;
     font-weight: 400;
   }
 
@@ -391,6 +398,185 @@
       line-height: 1.5rem;
     }
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   El sistema del amanecer (2026-11-12, aprobado por Javier).
+
+   Las piezas que comparten la web y el panel:
+     .vidrio        lo que flota (menús, barras de filtros): blanco translúcido
+                    con desenfoque y un brillo en el borde de arriba
+     .degradado     la cifra o la palabra que se quiere subrayar, del marino
+                    del logotipo al azul de los rayos
+     .serif         Instrument Serif en cursiva, para esa misma palabra
+     .tarjeta-viva  la tarjeta que lleva a otro sitio: sube y se enciende
+     .amanecer      el sol que asoma arriba del panel, detrás de todo
+
+   La regla: el vidrio solo en lo que flota. Una tabla, una tarjeta o una
+   cifra van sobre superficie sólida, que es lo que se lee.
+   ═══════════════════════════════════════════════════════════════════════════ */
+@layer components {
+  .vidrio {
+    background: linear-gradient(180deg, rgb(255 255 255 / 0.86), rgb(255 255 255 / 0.6));
+    -webkit-backdrop-filter: blur(30px) saturate(190%);
+    backdrop-filter: blur(30px) saturate(190%);
+    border: 1px solid rgb(255 255 255 / 0.95);
+    box-shadow:
+      0 1px 0 #fff inset,
+      0 0 0 1px rgb(2 11 36 / 0.04),
+      0 24px 56px -30px rgb(10 60 160 / 0.32);
+  }
+
+  .degradado {
+    background: linear-gradient(100deg, #002770 0%, #045ef3 52%, #157efd 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: #045ef3;
+  }
+
+  .serif {
+    font-family: 'Instrument Serif', ui-serif, Georgia, serif;
+    font-style: italic;
+    font-weight: 400;
+    letter-spacing: -0.02em;
+  }
+
+  .tarjeta-viva {
+    transition:
+      transform 600ms cubic-bezier(0.16, 1, 0.3, 1),
+      box-shadow 600ms cubic-bezier(0.16, 1, 0.3, 1),
+      border-color 400ms;
+  }
+  @media (hover: hover) {
+    .tarjeta-viva:hover {
+      transform: translateY(-3px);
+      border-color: rgb(21 126 253 / 0.35);
+      box-shadow: 0 30px 60px -34px rgb(21 126 253 / 0.55);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tarjeta-viva,
+    .tarjeta-viva:hover {
+      transition: none;
+      transform: none;
+    }
+  }
+}
+
+.amanecer {
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: 480px;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  background: linear-gradient(180deg, #fff 0%, rgb(255 255 255 / 0.6) 34%, transparent 100%);
+}
+.amanecer::before {
+  content: '';
+  position: absolute;
+  left: 62%;
+  top: 0;
+  width: 900px;
+  height: 300px;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  background: radial-gradient(
+    closest-side,
+    rgb(4 94 243 / 0.9) 0%,
+    rgb(21 126 253 / 0.7) 22%,
+    rgb(69 168 253 / 0.5) 46%,
+    rgb(115 195 254 / 0) 100%
+  );
+}
+
+/* Los rayos del logo, muy despacio, detrás del sol. */
+.amanecer::after {
+  content: '';
+  position: absolute;
+  left: 62%;
+  top: 0;
+  width: 1500px;
+  height: 1500px;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  background: repeating-conic-gradient(from 8deg, transparent 0deg, rgb(21 126 253 / 0.14) 5deg, transparent 12deg, transparent 30deg);
+  -webkit-mask-image: radial-gradient(closest-side, #000 10%, transparent 72%);
+  mask-image: radial-gradient(closest-side, #000 10%, transparent 72%);
+  z-index: -1;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .amanecer::after {
+    animation: amanecer-gira 160s linear infinite;
+  }
+}
+@keyframes amanecer-gira {
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+/* El orbe: las iniciales de una persona o una clínica, en los azules del logo. */
+.orbe {
+  background: radial-gradient(circle at 32% 24%, #bfe2ff 0%, #45a8fd 26%, #157efd 56%, #0a3cb0 100%);
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 0.4) inset,
+    0 8px 18px -8px rgb(21 126 253 / 0.6);
+  text-shadow: 0 1px 6px rgb(0 39 112 / 0.7);
+}
+
+/* En oscuro: el mismo sol, de noche. */
+:root[data-theme='dark'] .vidrio {
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.1), rgb(255 255 255 / 0.035));
+  border-color: rgb(255 255 255 / 0.12);
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.2) inset,
+    0 24px 56px -30px rgb(0 0 0 / 0.7);
+}
+:root[data-theme='dark'] .degradado {
+  background-image: linear-gradient(100deg, #fff 0%, #bfe2ff 42%, #5fb4ff 100%);
+  color: #bfe2ff;
+}
+:root[data-theme='dark'] .amanecer {
+  background: linear-gradient(180deg, #071640 0%, transparent 100%);
+}
+:root[data-theme='dark'] .amanecer::before {
+  background: radial-gradient(closest-side, rgb(214 237 255 / 0.5) 0%, rgb(115 195 254 / 0.36) 30%, rgb(21 126 253 / 0.22) 60%, transparent 100%);
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-theme='auto'] .vidrio {
+    background: linear-gradient(180deg, rgb(255 255 255 / 0.1), rgb(255 255 255 / 0.035));
+    border-color: rgb(255 255 255 / 0.12);
+    box-shadow:
+      0 1px 0 rgb(255 255 255 / 0.2) inset,
+      0 24px 56px -30px rgb(0 0 0 / 0.7);
+  }
+  :root[data-theme='auto'] .degradado {
+    background-image: linear-gradient(100deg, #fff 0%, #bfe2ff 42%, #5fb4ff 100%);
+    color: #bfe2ff;
+  }
+  :root[data-theme='auto'] .amanecer {
+    background: linear-gradient(180deg, #071640 0%, transparent 100%);
+  }
+  :root[data-theme='auto'] .amanecer::before {
+    background: radial-gradient(closest-side, rgb(214 237 255 / 0.5) 0%, rgb(115 195 254 / 0.36) 30%, rgb(21 126 253 / 0.22) 60%, transparent 100%);
+  }
+}
+
+/* Las páginas sencillas (soporte, términos, privacidad): el sol asoma por
+   arriba y el título va grande, como en el resto de la web. */
+.pagina-sencilla {
+  background:
+    radial-gradient(1100px 380px at 50% -140px, rgb(21 126 253 / 0.22), transparent 70%),
+    var(--color-shell-canvas);
+}
+.pagina-sencilla-titulo {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 1.6rem + 3vw, 4.5rem);
+  line-height: 1;
+  letter-spacing: -0.05em;
+  font-weight: 500;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -441,9 +627,9 @@ body {
      por diferencia de tono, sin depender de un borde. */
   background-color: var(--color-shell-canvas);
   color: var(--color-on-surface);
-  /* Cuerpo en Source Sans 3. Los títulos piden font-display explícitamente
-     o una clase .type-headline-* / .type-title-*. */
+  /* Inter Tight en todo (rediseño del 2026-11-12). */
   font-family: var(--font-body);
+  font-feature-settings: 'ss01', 'cv11';
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

@@ -30,11 +30,11 @@ export const Route = createFileRoute('/soporte')({
  */
 function Soporte() {
   return (
-    <div className="min-h-screen bg-shell-canvas px-6 py-12">
+    <div className="pagina-sencilla min-h-screen px-6 py-12 sm:py-16">
       <div className="mx-auto w-full max-w-3xl">
         <header className="flex flex-col items-start">
           <HeliosLogo height={32} />
-          <h1 className="mt-[var(--spacing-shell-gap-block)] type-headline-medium-emphasized text-on-surface">
+          <h1 className="mt-[var(--spacing-shell-gap-block)] pagina-sencilla-titulo text-on-surface">
             Soporte
           </h1>
         </header>

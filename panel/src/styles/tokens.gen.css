@@ -10,34 +10,34 @@
 
 @theme {
   /* ── Color (tema claro) ────────────────────────────────────────── */
-  --color-primary: #0040B8;
+  --color-primary: #0A4FCB;
   --color-on-primary: #FFFFFF;
-  --color-primary-container: #DCE8FF;
-  --color-on-primary-container: #00205E;
-  --color-primary-dim: #00338F;
-  --color-primary-bright: #015CF1;
-  --color-secondary: #0057D9;
+  --color-primary-container: #E8F1FF;
+  --color-on-primary-container: #002770;
+  --color-primary-dim: #083FA3;
+  --color-primary-bright: #045EF3;
+  --color-secondary: #045EF3;
   --color-on-secondary: #FFFFFF;
   --color-secondary-container: #E3F1FF;
   --color-on-secondary-container: #00306E;
   --color-secondary-dim: #0046AE;
   --color-secondary-bright: #0B6FFB;
   --color-surface: #FFFFFF;
-  --color-surface-dim: #DDE3EC;
+  --color-surface-dim: #DCE4F0;
   --color-surface-bright: #FFFFFF;
-  --color-surface-container-lowest: #F3F6FB;
+  --color-surface-container-lowest: #F3F7FE;
   --color-surface-container-low: #FFFFFF;
-  --color-surface-container: #F7F9FC;
-  --color-surface-container-high: #EDF1F7;
-  --color-surface-container-highest: #E4EAF2;
-  --color-on-surface: #0F1A2E;
-  --color-on-surface-variant: #44506A;
-  --color-on-surface-faint: #66728B;
+  --color-surface-container: #F6F9FE;
+  --color-surface-container-high: #EDF2FA;
+  --color-surface-container-highest: #E4EBF6;
+  --color-on-surface: #020B24;
+  --color-on-surface-variant: #3B4763;
+  --color-on-surface-faint: #5E6A82;
   --color-placeholder: #7B869C;
-  --color-inverse-surface: #1B2436;
+  --color-inverse-surface: #020B24;
   --color-on-inverse-surface: #F2F5FA;
   --color-outline: #7D889E;
-  --color-outline-variant: #D3DAE5;
+  --color-outline-variant: #DCE3EE;
   --color-error: #C4221B;
   --color-on-error: #FFFFFF;
   --color-error-container: #FDE8E6;
@@ -76,8 +76,8 @@
   --radius-full: 999px;
 
   /* ── Tipografía ────────────────────────────────────────────────── */
-  --font-display: 'Outfit', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-body: 'Source Sans 3', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-body: 'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
 
   --text-display-large: 3.5625rem;
   --text-display-large--line-height: 4rem;
@@ -201,10 +201,10 @@
   --text-label-small-emphasized--font-weight: 700;
 
   /* ── Armazón ───────────────────────────────────────────────────── */
-  --color-shell-canvas: #F3F6FB;
+  --color-shell-canvas: #F3F7FE;
   --color-shell-card: #FFFFFF;
-  --color-shell-control: #EDF1F7;
-  --color-shell-inset: #E4EAF2;
+  --color-shell-control: #EDF2FA;
+  --color-shell-inset: #E4EBF6;
   --color-shell-bar: #FFFFFF;
   --radius-shell-card: 28px;
   --radius-shell-control: 999px;
@@ -263,34 +263,34 @@
 /* ── Tema oscuro ──────────────────────────────────────────────────── */
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --color-primary: #8FC8FF;
-  --color-on-primary: #00214F;
+  --color-primary: #A9D4FF;
+  --color-on-primary: #002152;
   --color-primary-container: #0B3E8C;
   --color-on-primary-container: #D9ECFF;
   --color-primary-dim: #62A9F2;
-  --color-primary-bright: #C0E3FF;
+  --color-primary-bright: #D6EDFF;
   --color-secondary: #A5D8FE;
   --color-on-secondary: #002A55;
   --color-secondary-container: #123A6B;
   --color-on-secondary-container: #D6EBFF;
   --color-secondary-dim: #78B8F0;
   --color-secondary-bright: #C0E3FF;
-  --color-surface: #0E1626;
-  --color-surface-dim: #0A0F1A;
+  --color-surface: #081029;
+  --color-surface-dim: #020818;
   --color-surface-bright: #2A3A58;
-  --color-surface-container-lowest: #0A101C;
-  --color-surface-container-low: #111A2B;
-  --color-surface-container: #152033;
-  --color-surface-container-high: #1C2940;
-  --color-surface-container-highest: #243350;
-  --color-on-surface: #EEF3FB;
-  --color-on-surface-variant: #B3BFD4;
+  --color-surface-container-lowest: #020818;
+  --color-surface-container-low: #0A1330;
+  --color-surface-container: #0E1838;
+  --color-surface-container-high: #152043;
+  --color-surface-container-highest: #1C2950;
+  --color-on-surface: #FFFFFF;
+  --color-on-surface-variant: #B4BDD2;
   --color-on-surface-faint: #8591A9;
   --color-placeholder: #8E99AF;
   --color-inverse-surface: #EEF3FB;
   --color-on-inverse-surface: #111A2B;
   --color-outline: #7F8BA3;
-  --color-outline-variant: #2A3650;
+  --color-outline-variant: #1F2B4E;
   --color-error: #FF6F63;
   --color-on-error: #2B0300;
   --color-error-container: #5C1611;
@@ -307,44 +307,44 @@
   --color-scrim: #000000;
   --color-shadow: #000000;
   --color-logo-wordmark: #EAF3FF;
-  --color-shell-canvas: #0A101C;
-  --color-shell-card: #111A2B;
-  --color-shell-control: #1C2940;
-  --color-shell-inset: #243350;
-  --color-shell-bar: #0E1626;
+  --color-shell-canvas: #020818;
+  --color-shell-card: #0A1330;
+  --color-shell-control: #152043;
+  --color-shell-inset: #1C2950;
+  --color-shell-bar: #081029;
 }
 
 @media (prefers-color-scheme: dark) {
   :root[data-theme='auto'] {
     color-scheme: dark;
-    --color-primary: #8FC8FF;
-    --color-on-primary: #00214F;
+    --color-primary: #A9D4FF;
+    --color-on-primary: #002152;
     --color-primary-container: #0B3E8C;
     --color-on-primary-container: #D9ECFF;
     --color-primary-dim: #62A9F2;
-    --color-primary-bright: #C0E3FF;
+    --color-primary-bright: #D6EDFF;
     --color-secondary: #A5D8FE;
     --color-on-secondary: #002A55;
     --color-secondary-container: #123A6B;
     --color-on-secondary-container: #D6EBFF;
     --color-secondary-dim: #78B8F0;
     --color-secondary-bright: #C0E3FF;
-    --color-surface: #0E1626;
-    --color-surface-dim: #0A0F1A;
+    --color-surface: #081029;
+    --color-surface-dim: #020818;
     --color-surface-bright: #2A3A58;
-    --color-surface-container-lowest: #0A101C;
-    --color-surface-container-low: #111A2B;
-    --color-surface-container: #152033;
-    --color-surface-container-high: #1C2940;
-    --color-surface-container-highest: #243350;
-    --color-on-surface: #EEF3FB;
-    --color-on-surface-variant: #B3BFD4;
+    --color-surface-container-lowest: #020818;
+    --color-surface-container-low: #0A1330;
+    --color-surface-container: #0E1838;
+    --color-surface-container-high: #152043;
+    --color-surface-container-highest: #1C2950;
+    --color-on-surface: #FFFFFF;
+    --color-on-surface-variant: #B4BDD2;
     --color-on-surface-faint: #8591A9;
     --color-placeholder: #8E99AF;
     --color-inverse-surface: #EEF3FB;
     --color-on-inverse-surface: #111A2B;
     --color-outline: #7F8BA3;
-    --color-outline-variant: #2A3650;
+    --color-outline-variant: #1F2B4E;
     --color-error: #FF6F63;
     --color-on-error: #2B0300;
     --color-error-container: #5C1611;
@@ -361,11 +361,11 @@
     --color-scrim: #000000;
     --color-shadow: #000000;
     --color-logo-wordmark: #EAF3FF;
-    --color-shell-canvas: #0A101C;
-    --color-shell-card: #111A2B;
-    --color-shell-control: #1C2940;
-    --color-shell-inset: #243350;
-    --color-shell-bar: #0E1626;
+    --color-shell-canvas: #020818;
+    --color-shell-card: #0A1330;
+    --color-shell-control: #152043;
+    --color-shell-inset: #1C2950;
+    --color-shell-bar: #081029;
   }
 }
 

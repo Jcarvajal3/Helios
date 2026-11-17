@@ -7,15 +7,16 @@
    la portada no se usa nada de --*-portada-*.
 
    Tipografía propia, que solo se descarga en `/` (ver routes/index.tsx):
-   Geist para todo, Geist Mono para los rótulos e Instrument Serif, en
+   Inter Tight para todo (rediseño del 2026-11-12), Geist Mono para los
+   rótulos e Instrument Serif, en
    cursiva, para la palabra que se quiere subrayar de cada titular.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 @theme {
   /* Tinta: el marino del logotipo, oscurecido para el texto largo. */
-  --color-portada-tinta: #050f2c;
-  --color-portada-tinta-2: #46526f;
-  --color-portada-tinta-3: #6b7690;
+  --color-portada-tinta: #020b24;
+  --color-portada-tinta-2: #3b4763;
+  --color-portada-tinta-3: #5e6a82;
   --color-portada-marino: #002770;
 
   /* Los rayos del isotipo. */
@@ -24,12 +25,16 @@
   --color-portada-cielo-2: #73c3fe;
   --color-portada-cielo-3: #e8f3ff;
 
-  /* Superficies. */
-  --color-portada-niebla: #f4f6fa;
-  --color-portada-linea: #e3e8f1;
+  /* Superficies. La línea, más suave: el sistema separa con superficies y
+     sombras, no con rayas (2026-11-12). */
+  --color-portada-niebla: #f3f7fe;
+  --color-portada-linea: #e9eef6;
+
+  /* El azul de los rótulos y los enlaces sobre blanco (AA a 14 px). */
+  --color-portada-azul-texto: #0a4fcb;
 
   --font-portada:
-    'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    'Inter Tight', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-portada-mono:
     'Geist Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
   --font-portada-serif: 'Instrument Serif', ui-serif, Georgia, serif;
@@ -83,18 +88,18 @@ html:has(.portada-raiz) {
 @layer components {
   .portada-display {
     font-family: var(--font-portada);
-    font-size: clamp(2.75rem, 1.05rem + 6.1vw, 6.5rem);
-    line-height: 0.98;
-    letter-spacing: -0.052em;
+    font-size: clamp(2.9rem, 1rem + 6.8vw, 7.75rem);
+    line-height: 0.95;
+    letter-spacing: -0.055em;
     font-weight: 500;
     text-wrap: balance;
   }
 
   .portada-titular {
     font-family: var(--font-portada);
-    font-size: clamp(2.3rem, 1.25rem + 3.7vw, 4.5rem);
-    line-height: 1.02;
-    letter-spacing: -0.047em;
+    font-size: clamp(2.4rem, 1.1rem + 4.4vw, 5.5rem);
+    line-height: 0.98;
+    letter-spacing: -0.05em;
     font-weight: 500;
     text-wrap: balance;
   }
@@ -121,12 +126,24 @@ html:has(.portada-raiz) {
     letter-spacing: -0.012em;
   }
 
+  /* La etiqueta pequeña (2026-11-12): Inter Tight en mayúsculas espaciadas,
+     como en la maqueta. La monoespaciada era del diseño anterior. */
   .portada-etiqueta {
-    font-family: var(--font-portada-mono);
-    font-size: 0.72rem;
+    font-family: var(--font-portada);
+    font-size: 0.75rem;
     line-height: 1rem;
-    letter-spacing: 0.12em;
-    font-weight: 500;
+    letter-spacing: 0.14em;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  /* El rótulo de una sección: el de la maqueta, encima de cada titular. */
+  .portada-rotulo {
+    font-family: var(--font-portada);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    letter-spacing: 0.16em;
+    font-weight: 600;
     text-transform: uppercase;
   }
 
@@ -138,6 +155,17 @@ html:has(.portada-raiz) {
     font-size: 1.08em;
     letter-spacing: -0.02em;
     line-height: 0.9;
+  }
+
+  /* El acento del sistema (rediseño del 2026-11-12): la palabra en serif de
+     cada titular, del marino del logotipo al azul de los rayos. El hero del
+     home conserva su `.portada-degradado`. */
+  .portada-acento {
+    background: linear-gradient(100deg, #002770 0%, #045ef3 48%, #157efd 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: #045ef3;
   }
 
   .portada-degradado {
@@ -334,18 +362,19 @@ html:has(.portada-raiz) {
     inset 0 1px 0 rgb(255 255 255 / 0.9);
 }
 
+/* Vidrio sobre el bloque azul (antes, sobre azul noche). */
 .portada-vidrio-oscuro {
   background: linear-gradient(
     160deg,
-    rgb(255 255 255 / 0.07),
-    rgb(255 255 255 / 0.02)
+    rgb(255 255 255 / 0.16),
+    rgb(255 255 255 / 0.05)
   );
-  border: 1px solid rgb(255 255 255 / 0.1);
+  border: 1px solid rgb(255 255 255 / 0.22);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.08),
-    0 40px 80px -40px rgb(0 0 0 / 0.6);
+    inset 0 1px 0 rgb(255 255 255 / 0.3),
+    0 40px 80px -40px rgb(2 11 36 / 0.5);
 }
 
 .portada-recibo-riel {
@@ -570,15 +599,25 @@ html:has(.portada-raiz) {
 
 /* ── Pacientes ────────────────────────────────────────────────────────────── */
 
+/* Antes una aurora difusa; desde el rediseño, el sol del sistema: un azul
+   intenso en el centro que se abre al cielo. */
 .portada-aurora {
   background: radial-gradient(
     closest-side,
-    rgb(115 195 254 / 0.22),
-    rgb(4 94 243 / 0.06) 55%,
+    rgb(4 94 243 / 0.42),
+    rgb(21 126 253 / 0.26) 30%,
+    rgb(115 195 254 / 0.16) 58%,
     transparent
   );
-  filter: blur(20px);
+  filter: blur(14px);
   pointer-events: none;
+}
+
+/* Una tarjeta blanca y sólida: sin raya, separada por su sombra. */
+.portada-tarjeta-solida {
+  box-shadow:
+    0 0 0 1px rgb(2 11 36 / 0.05),
+    0 24px 48px -32px rgb(10 60 160 / 0.32);
 }
 
 .portada-desglose-barra {
@@ -678,29 +717,204 @@ html:has(.portada-raiz) {
 
 /* ── El directorio de médicos (`/directorio`) ─────────────────────────────── */
 
+/* El amanecer (rediseño del 2026-11-12, aprobado por Javier): el titular
+   centrado y, debajo, el sol de Helios saliendo detrás de un horizonte curvo.
+   La barra de filtros se apoya sobre el horizonte. Todo es decoración: las
+   capas no reciben eventos. */
+
+.directorio-raiz {
+  background: var(--color-portada-niebla);
+}
+
+.directorio-cielo {
+  background: linear-gradient(180deg, #fff 0%, #fff 34%, #e3f0ff 100%);
+}
+
+.directorio-rayos,
+.directorio-sol,
+.directorio-horizonte {
+  position: absolute;
+  left: 50%;
+  top: calc(100% - 6rem);
+  pointer-events: none;
+}
+
+/* Los rayos del logo, girando muy despacio detrás del sol. */
+.directorio-rayos {
+  z-index: -3;
+  width: 1700px;
+  height: 1700px;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  background: repeating-conic-gradient(
+    from 8deg,
+    rgb(21 126 253 / 0) 0deg,
+    rgb(21 126 253 / 0.15) 5deg,
+    rgb(21 126 253 / 0) 12deg,
+    rgb(21 126 253 / 0) 30deg
+  );
+  -webkit-mask-image: radial-gradient(closest-side, #000 12%, transparent 78%);
+  mask-image: radial-gradient(closest-side, #000 12%, transparent 78%);
+}
+
+.directorio-sol {
+  z-index: -2;
+  width: min(1100px, 150vw);
+  height: 400px;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  background: radial-gradient(
+    closest-side,
+    rgb(4 94 243 / 0.95) 0%,
+    rgb(21 126 253 / 0.8) 20%,
+    rgb(69 168 253 / 0.6) 42%,
+    rgb(115 195 254 / 0.35) 66%,
+    rgb(115 195 254 / 0) 100%
+  );
+}
+
+/* El horizonte: un círculo enorme, blanco, con el borde encendido. */
+.directorio-horizonte {
+  z-index: -1;
+  width: max(230vw, 2600px);
+  height: max(230vw, 2600px);
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: linear-gradient(180deg, #fff 0, var(--color-portada-niebla) 6rem);
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 0.9),
+    0 -4px 24px 0 rgb(255 255 255 / 0.95),
+    0 -14px 60px 0 rgb(69 168 253 / 0.75),
+    0 -40px 140px 10px rgb(21 126 253 / 0.4),
+    0 -90px 260px 40px rgb(115 195 254 / 0.4);
+}
+
+.directorio-titular {
+  font-size: clamp(2.9rem, 1rem + 7.4vw, 9.25rem);
+  line-height: 0.96;
+  letter-spacing: -0.055em;
+  font-weight: 500;
+  text-wrap: balance;
+}
+
+.directorio-titular-2 {
+  font-size: clamp(2.4rem, 1.1rem + 4.4vw, 5.5rem);
+  line-height: 0.98;
+  letter-spacing: -0.05em;
+  font-weight: 500;
+  text-wrap: balance;
+}
+
+/* La palabra que se subraya: serif en cursiva y el degradado del logotipo. */
+.directorio-enfasis {
+  font-family: var(--font-portada-serif);
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  padding: 0 0.06em;
+  background: linear-gradient(100deg, #002770 0%, #045ef3 48%, #157efd 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: #045ef3;
+}
+
+.directorio-numeral,
+.directorio-cuenta,
+.directorio-precio-cifra {
+  font-family: var(--font-portada-serif);
+  font-style: italic;
+  font-weight: 400;
+}
+
+.directorio-numeral {
+  font-size: 4.5rem;
+  line-height: 0.85;
+  background: linear-gradient(160deg, #002770, #157efd);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: #045ef3;
+}
+
+.directorio-cuenta {
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.directorio-precio-cifra {
+  font-size: 1.75rem;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  color: var(--color-portada-tinta);
+}
+
+/* La barra de filtros: vidrio blanco. */
+.directorio-barra {
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.88), rgb(255 255 255 / 0.62));
+  -webkit-backdrop-filter: blur(32px) saturate(190%);
+  backdrop-filter: blur(32px) saturate(190%);
+  border: 1px solid rgb(255 255 255 / 0.95);
+  box-shadow:
+    0 1px 0 #fff inset,
+    0 0 0 1px rgb(2 11 36 / 0.04),
+    0 28px 60px -28px rgb(10 60 160 / 0.32);
+}
+
+/* Las tarjetas: blancas y sólidas, con una luz azul al pasar por encima. */
 .directorio-tarjeta {
-  background: linear-gradient(145deg, #fff 55%, #f6faff);
-  border-color: #e3eaf4;
-  box-shadow:
-    inset 0 1px 1px #fff,
-    0 12px 28px -22px rgb(16 39 70 / 0.5);
+  background: #fff;
+  border-color: rgb(2 11 36 / 0.06);
+  box-shadow: 0 24px 48px -32px rgb(10 60 160 / 0.28);
+  container-type: inline-size;
   transition:
-    transform 600ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 600ms cubic-bezier(0.16, 1, 0.3, 1),
     border-color 400ms,
-    box-shadow 600ms cubic-bezier(0.22, 1, 0.36, 1);
+    box-shadow 600ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* La baldosa del icono 3D: casi blanca, para que mande el icono. */
-.directorio-ilustracion {
-  background: linear-gradient(150deg, #f7fbff, #dfecfd);
+.directorio-aviso {
   box-shadow:
-    inset 0 0 0 1px rgb(4 94 243 / 0.08),
-    inset 0 1px 1px #fff;
+    0 0 0 1px rgb(2 11 36 / 0.05),
+    0 24px 48px -32px rgb(10 60 160 / 0.28);
 }
 
-.directorio-ilustracion img {
-  filter: drop-shadow(0 5px 5px rgb(16 39 70 / 0.16));
-  transition: transform 600ms cubic-bezier(0.22, 1, 0.36, 1);
+/* El icono de la especialidad: una baldosa de vidrio azul con el glifo en
+   blanco, al estilo de los iconos de app de Apple. Tres capas: el degradado
+   de la marca, un brillo que entra por arriba a la izquierda y el canto de
+   luz del cristal. Todo vectorial. */
+.directorio-ilustracion {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 90% at 18% 0%, rgb(255 255 255 / 0.55) 0%, rgb(255 255 255 / 0) 55%),
+    linear-gradient(155deg, #5fb4ff 0%, #1f7dff 38%, #0a52e6 72%, #0a3cb0 100%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.65),
+    inset 0 0 0 1px rgb(255 255 255 / 0.22),
+    inset 0 -10px 18px -8px rgb(4 30 110 / 0.55),
+    0 12px 24px -12px rgb(10 82 230 / 0.7);
+  transition:
+    box-shadow 600ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 600ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* El reflejo curvo de la mitad de arriba, como el de un cristal. */
+.directorio-ilustracion::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 46% 0;
+  z-index: -1;
+  border-radius: inherit;
+  border-bottom-left-radius: 60% 40%;
+  border-bottom-right-radius: 60% 40%;
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.3), rgb(255 255 255 / 0.04));
+}
+
+.directorio-ilustracion-glifo {
+  filter: drop-shadow(0 2px 3px rgb(4 30 110 / 0.45));
+  transition: transform 600ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* El icono de cada dato de la tarjeta (dónde atiende, su red, su precio). */
@@ -708,65 +922,59 @@ html:has(.portada-raiz) {
   display: grid;
   flex-shrink: 0;
   place-items: center;
-  width: 1.75rem;
-  height: 1.75rem;
-  border-radius: 0.625rem;
+  width: 1.875rem;
+  height: 1.875rem;
+  border-radius: 999px;
   color: var(--color-portada-azul);
-  background: linear-gradient(145deg, #fff, #edf4fe);
-  box-shadow: inset 0 0 0 1px #deebf9;
+  background: #e8f1ff;
 }
 
-/* El botón de la tarjeta, en el verde de WhatsApp oscurecido para que el
-   blanco se lea. */
+/* El botón de la tarjeta: la acción principal del sistema, en marino, con el
+   globo de WhatsApp en un círculo blanco. Al pasar, el azul de la marca. */
 .directorio-agendar {
-  background: #087f46;
-  box-shadow: 0 8px 18px -10px rgb(8 127 70 / 0.7);
+  background: var(--color-portada-tinta);
   transition:
-    background-color 300ms,
-    transform 300ms;
+    background-color 350ms,
+    transform 350ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 350ms;
+}
+
+.directorio-agendar-icono {
+  background: #fff;
+  color: var(--color-portada-tinta);
+  transition: color 350ms;
 }
 
 .directorio-agendar:active {
   transform: scale(0.98);
 }
 
-/* En una tarjeta estrecha, los sellos arriba y el botón entero debajo. */
-.directorio-tarjeta {
-  container-type: inline-size;
-}
-
-@container (max-width: 18.25rem) {
-  .directorio-agendar {
-    justify-content: center;
-    width: 100%;
-  }
-}
-
 .portada-raiz .directorio-agendar:focus-visible {
-  outline: 3px solid #087f46;
+  outline: 3px solid var(--color-portada-azul);
   outline-offset: 3px;
 }
 
-/* El filtro de precio: un control segmentado, para que no se confunda con las
-   píldoras de las especialidades. */
+/* El filtro de precio: un control segmentado en píldora, para que no se
+   confunda con las fichas de las especialidades. */
 .directorio-precios {
   display: inline-flex;
   max-width: 100%;
-  padding: 0.25rem;
+  gap: 2px;
+  padding: 3px;
   overflow-x: auto;
-  border-radius: 0.875rem;
-  background: #e6edf7;
-  box-shadow: inset 0 1px 2px rgb(16 39 70 / 0.06);
+  border-radius: 999px;
+  background: rgb(2 11 36 / 0.06);
   scrollbar-width: none;
 }
 
 .directorio-precio {
   flex-shrink: 0;
-  height: 2.25rem;
-  padding-inline: 0.7rem;
-  border-radius: 0.625rem;
+  height: 2.375rem;
+  padding-inline: 1rem;
+  border-radius: 999px;
   color: var(--color-portada-tinta-2);
-  font-size: 0.82rem;
+  font-size: 0.9rem;
+  font-weight: 500;
   letter-spacing: -0.01em;
   white-space: nowrap;
   transition:
@@ -777,7 +985,7 @@ html:has(.portada-raiz) {
 
 @media (max-width: 639px) {
   .directorio-precio {
-    padding-inline: 0.5rem;
+    padding-inline: 0.75rem;
   }
 }
 
@@ -789,41 +997,52 @@ html:has(.portada-raiz) {
 
 .directorio-precio[aria-pressed='true'] {
   background: #fff;
-  color: var(--color-portada-azul);
-  font-weight: 500;
-  box-shadow: 0 2px 6px -2px rgb(16 39 70 / 0.25);
+  color: var(--color-portada-tinta);
+  font-weight: 600;
+  box-shadow:
+    0 1px 0 #fff inset,
+    0 4px 12px -4px rgb(10 60 160 / 0.35);
 }
 
-/* El icono, en una baldosa con el cielo del logotipo. */
+/* El icono del aviso: un orbe con el azul del logo. */
 .directorio-icono {
-  background:
-    radial-gradient(120% 120% at 20% 0%, #fff 0%, transparent 60%),
-    linear-gradient(150deg, var(--color-portada-cielo-3), #d6eaff);
+  background: radial-gradient(circle at 32% 24%, #bfe2ff 0%, #45a8fd 26%, #157efd 56%, #0a3cb0 100%);
   box-shadow:
-    inset 0 0 0 1px rgb(4 94 243 / 0.1),
-    0 12px 24px -16px rgb(4 94 243 / 0.55);
-  transition: transform 600ms cubic-bezier(0.22, 1, 0.36, 1);
+    inset 0 0 0 1px rgb(255 255 255 / 0.4),
+    0 14px 30px -10px rgb(21 126 253 / 0.6);
 }
 
 @media (hover: hover) {
   .directorio-tarjeta:hover {
-    transform: translateY(-3px);
-    border-color: rgb(4 94 243 / 0.22);
-    box-shadow: 0 40px 70px -44px rgb(0 39 112 / 0.45);
+    transform: translateY(-6px);
+    border-color: rgb(21 126 253 / 0.4);
+    box-shadow: 0 40px 80px -32px rgb(21 126 253 / 0.5);
   }
-  .directorio-tarjeta:hover .directorio-ilustracion img {
-    transform: rotate(-4deg) scale(1.08);
+  .directorio-tarjeta:hover .directorio-ilustracion {
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.7),
+      inset 0 0 0 1px rgb(255 255 255 / 0.28),
+      inset 0 -10px 18px -8px rgb(4 30 110 / 0.55),
+      0 18px 34px -12px rgb(10 82 230 / 0.85);
   }
-  .directorio-tarjeta:hover .directorio-agendar {
-    background: #066d3c;
+  .directorio-tarjeta:hover .directorio-ilustracion-glifo {
+    transform: scale(1.1);
+  }
+  .directorio-tarjeta:hover .directorio-agendar,
+  .directorio-agendar:hover {
+    background: var(--color-portada-azul);
+    box-shadow:
+      0 0 0 5px rgb(21 126 253 / 0.14),
+      0 16px 34px -12px rgb(4 94 243 / 0.65);
+  }
+  .directorio-tarjeta:hover .directorio-agendar-icono {
+    color: var(--color-portada-azul);
   }
 }
 
-/* El «0% inicial» de la tarjeta: el cielo del icono, sin competir con el
-   botón. */
+/* El «0% inicial» y las «2 cuotas» de la tarjeta. */
 .directorio-sello {
-  background: linear-gradient(150deg, var(--color-portada-cielo-3), #ddeeff);
-  box-shadow: inset 0 0 0 1px rgb(4 94 243 / 0.12);
+  background: #e8f1ff;
 }
 
 .directorio-chip {
@@ -831,11 +1050,38 @@ html:has(.portada-raiz) {
     background-color 250ms,
     border-color 250ms,
     color 250ms,
-    transform 250ms;
+    box-shadow 300ms,
+    transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.directorio-chip:not(.directorio-chip-activa) {
+  box-shadow: 0 6px 14px -10px rgb(10 60 160 / 0.3);
+}
+
+@media (hover: hover) {
+  .directorio-chip:hover {
+    transform: translateY(-2px);
+  }
+}
+
+.directorio-chip-activa {
+  box-shadow:
+    0 0 0 5px rgb(21 126 253 / 0.14),
+    0 14px 30px -10px rgb(4 94 243 / 0.6);
 }
 
 .directorio-chip:active {
   transform: scale(0.97);
+}
+
+/* ── El bloque azul ─────────────────────────────────────────────────────────
+   El único color fuerte del sistema: «Para médicos» en el home, el directorio
+   y las guías. Sustituye a los bloques azul noche de antes. */
+.portada-bloque-azul {
+  background: linear-gradient(135deg, #1466f2 0%, #0b47cc 45%, #06257a 100%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.35),
+    0 50px 100px -50px rgb(21 126 253 / 0.8);
 }
 
 .directorio-esqueleto {
@@ -853,9 +1099,67 @@ html:has(.portada-raiz) {
   }
 }
 
+/* El movimiento: el titular entra con desenfoque, el sol sale, los rayos y
+   el isologo giran muy despacio. */
+@keyframes directorio-entra {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+    filter: blur(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+@keyframes directorio-amanece {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -25%) scale(0.7);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes directorio-gira-centrado {
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+@keyframes directorio-gira {
+  to {
+    rotate: 360deg;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .directorio-entra {
+    animation: directorio-entra 1100ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: var(--retraso, 0ms);
+  }
+  .directorio-sol {
+    animation: directorio-amanece 2200ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .directorio-rayos {
+    animation: directorio-gira-centrado 140s linear infinite;
+  }
+  .portada-rueda {
+    animation: directorio-gira 90s linear infinite;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .directorio-esqueleto {
     animation: none;
+  }
+  .directorio-tarjeta,
+  .directorio-chip {
+    transition: none;
   }
 }
 
@@ -871,4 +1175,184 @@ html:has(.portada-raiz) {
    pantalla): no hace falta marcarlo. */
 .portada-raiz .afiliacion-titulo:focus-visible {
   outline: none;
+}
+
+/* ── El home con el sistema del amanecer (2026-11-12) ─────────────────────── */
+
+/* Una cifra en serif cursiva: los montos del recibo, el total del desglose,
+   los numerales de las reglas y de las preguntas. */
+.portada-numero {
+  font-family: var(--font-portada-serif);
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+
+/* Las cifras grandes de «En cifras». */
+.portada-cifra-acento {
+  font-family: var(--font-portada-serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(4rem, 2.6rem + 4.4vw, 7.5rem);
+  line-height: 0.9;
+  letter-spacing: -0.02em;
+  background: linear-gradient(160deg, #002770 0%, #045ef3 55%, #157efd 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: #045ef3;
+}
+
+/* La luz azul detrás del recibo del hero y del desglose de pacientes. */
+.portada-sol-recibo {
+  border-radius: 999px;
+  background: radial-gradient(
+    closest-side,
+    rgb(21 126 253 / 0.32) 0%,
+    rgb(69 168 253 / 0.18) 45%,
+    rgb(115 195 254 / 0) 100%
+  );
+  filter: blur(10px);
+  pointer-events: none;
+}
+
+/* En el cierre, el horizonte da al pie, que es blanco. */
+.portada-cierre .directorio-horizonte {
+  background: #fff;
+}
+
+/* ── La tarjeta del médico, tal cual la maqueta aprobada (2026-11-12) ─────── */
+
+.directorio-tarjeta {
+  box-shadow: 0 1px 0 #fff inset, 0 24px 48px -32px rgb(10 60 160 / 0.28);
+}
+
+/* La luz azul que sigue al puntero. */
+.directorio-tarjeta::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    460px circle at var(--mx, 50%) var(--my, 0%),
+    rgb(115 195 254 / 0.34),
+    rgb(115 195 254 / 0) 62%
+  );
+  opacity: 0;
+  transition: opacity 500ms;
+  pointer-events: none;
+}
+
+@media (hover: hover) {
+  .directorio-tarjeta:hover::before {
+    opacity: 1;
+  }
+  .directorio-tarjeta:hover .directorio-orbe {
+    box-shadow:
+      0 0 0 1px rgb(255 255 255 / 0.5) inset,
+      0 10px 34px -2px rgb(21 126 253 / 0.75);
+  }
+}
+
+/* El orbe con las iniciales: los azules del logo, con un brillo arriba. */
+.directorio-orbe {
+  background: radial-gradient(circle at 32% 24%, #bfe2ff 0%, #45a8fd 26%, #157efd 56%, #0a3cb0 100%);
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 0.4) inset,
+    0 8px 22px -6px rgb(21 126 253 / 0.55);
+  text-shadow: 0 1px 6px rgb(0 39 112 / 0.7);
+  transition: box-shadow 600ms;
+}
+
+/* El precio: la cifra grande, en el degradado del logotipo. */
+.directorio-precio-grande {
+  margin-top: 2px;
+  font-size: 52px;
+  line-height: 1;
+  font-weight: 500;
+  letter-spacing: -0.05em;
+  background: linear-gradient(100deg, #002770 0%, #045ef3 48%, #157efd 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: #045ef3;
+}
+
+.directorio-sello {
+  background: #e8f1ff;
+  color: #0a4fcb;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .directorio-tarjeta::before,
+  .directorio-orbe {
+    transition: none;
+  }
+}
+
+/* El desglose de «Cómo pagas», dentro de un sol (como el «$0» de la maqueta). */
+.directorio-sol-desglose {
+  background: linear-gradient(180deg, #dcedff 0%, #f3f7fe 100%);
+}
+.directorio-sol-desglose-luz {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 820px;
+  height: 560px;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  background: radial-gradient(
+    closest-side,
+    #fff 0%,
+    #fff 18%,
+    rgb(115 195 254 / 0.85) 46%,
+    rgb(69 168 253 / 0.4) 72%,
+    rgb(69 168 253 / 0) 100%
+  );
+  pointer-events: none;
+}
+.directorio-numeral {
+  font-size: 84px;
+  line-height: 0.9;
+}
+
+/* ── El home para el paciente (2026-11-12) ────────────────────────────────── */
+
+/* La baldosa de una especialidad: sube y se enciende al pasar. */
+.portada-especialidad {
+  transition:
+    transform 600ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 600ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 400ms;
+}
+
+@media (hover: hover) {
+  .portada-especialidad:hover {
+    transform: translateY(-6px);
+    background-color: #fff;
+    box-shadow:
+      0 0 0 1px rgb(21 126 253 / 0.3),
+      0 40px 80px -36px rgb(21 126 253 / 0.5);
+  }
+  .portada-especialidad:hover .directorio-ilustracion {
+    transform: translateY(-2px) scale(1.04);
+  }
+  .portada-especialidad:hover .directorio-ilustracion-glifo {
+    transform: scale(1.1);
+  }
+}
+
+/* «Ver todas»: la única en el azul de marca. */
+.portada-especialidad-todas,
+.portada-especialidad-todas:hover {
+  background: linear-gradient(135deg, #1466f2 0%, #0b47cc 55%, #06257a 100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .portada-especialidad,
+  .directorio-ilustracion,
+  .directorio-ilustracion-glifo {
+    transition: none;
+  }
 }

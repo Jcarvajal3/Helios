@@ -3,7 +3,7 @@
  *
  *   Menu          el menú flotante
  *   Heroe         qué es, con las manos en trama y el ejemplo de $100
- *   Cifras        $0 hoy · 2 cuotas · 100% para el médico · $150 de límite
+ *   Cifras        50% hoy · 2 cuotas · 100% para el médico · $150 de límite
  *   Manifiesto    una frase que se enciende al bajar
  *   ComoFunciona  los tres pasos, con sus miniaturas vivas
  *   Medicos       pago garantizado a los 8 y 15 días, «Quiero afiliarme»

@@ -72,7 +72,7 @@ function Agenda() {
                   <span className="portada-linea">
                     <span style={{ '--retraso': '100ms' } as CSSProperties}>
                       Agenda tu{' '}
-                      <em className="portada-serif portada-degradado pr-[0.06em]">
+                      <em className="portada-serif portada-acento pr-[0.06em]">
                         capacitación.
                       </em>
                     </span>
@@ -166,7 +166,7 @@ function Agendada({ agendada }: { agendada: CapacitacionAgendada }) {
       <Rotulo className="mt-8">Capacitación agendada</Rotulo>
       <h1 className="portada-titular mt-5 !text-[clamp(2.1rem,1.5rem+2.2vw,3rem)] text-portada-tinta">
         ¡Nos{' '}
-        <em className="portada-serif portada-degradado pr-[0.06em]">vemos!</em>
+        <em className="portada-serif portada-acento pr-[0.06em]">vemos!</em>
       </h1>
       <p className="mt-5 max-w-[46ch] rounded-2xl border border-portada-linea bg-portada-niebla px-4 py-3.5 text-[0.95rem] leading-relaxed text-portada-tinta-2">
         Anotamos tu capacitación presencial para el{' '}

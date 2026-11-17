@@ -10,7 +10,7 @@ export const Route = createFileRoute('/legal/terminos')({
   head: () =>
     cabeceraPublica({
       titulo: 'Términos y condiciones · Helios',
-      descripcion: 'Las condiciones del pago en cuotas de Helios para pacientes y para médicos y centros de salud: cuotas, Comisión Helios, límite y pagos.',
+      descripcion: 'Las condiciones del pago en cuotas de Helios para pacientes y para médicos y centros de salud: inicial, cuotas, Comisión Helios, límite y pagos.',
       ruta: '/legal/terminos',
       migas: [{ nombre: 'Términos y condiciones', ruta: '/legal/terminos' }],
       aspecto: 'panel',
@@ -32,17 +32,17 @@ export const Route = createFileRoute('/legal/terminos')({
  */
 function Terminos() {
   return (
-    <div className="min-h-screen bg-shell-canvas px-6 py-12">
+    <div className="pagina-sencilla min-h-screen px-6 py-12 sm:py-16">
       <div className="mx-auto w-full max-w-3xl">
         <header className="flex flex-col items-start">
           <Link to="/" aria-label="Helios, ir a la portada">
             <HeliosLogo height={32} />
           </Link>
-          <h1 className="mt-[var(--spacing-shell-gap-block)] type-headline-medium-emphasized text-on-surface">
+          <h1 className="mt-[var(--spacing-shell-gap-block)] pagina-sencilla-titulo text-on-surface">
             Términos y condiciones
           </h1>
           <p className="mt-2 type-body-small text-on-surface-faint">
-            Vigentes desde el 6 de noviembre de 2026.
+            Vigentes desde el 17 de noviembre de 2026.
           </p>
         </header>
 
@@ -60,10 +60,17 @@ function Terminos() {
           <Lista>
             <li>
               El médico o el centro registra la consulta. Recibes un WhatsApp con
-              el monto, la Comisión Helios y tus dos cuotas con sus fechas, y
-              el pago en cuotas solo existe si lo confirmas: respondiendo «Sí»
-              y, cuando te lo pidamos, enviando una foto de tu cédula. Después te
-              llega el comprobante por correo.
+              el monto, la Comisión Helios, la inicial y tus dos cuotas con sus
+              fechas, y el pago en cuotas solo existe si lo confirmas: respondiendo
+              «Sí» y, cuando te lo pidamos, enviando una foto de tu cédula.
+            </li>
+            <li>
+              Al confirmar, pagas la inicial ese mismo día. Tu pago en cuotas
+              queda activo cuando se aprueba el pago de la inicial, y entonces te
+              llega el comprobante por correo. Si no la pagas en las 2 horas
+              siguientes a confirmar, el pago en cuotas se anula y te avisamos a
+              ti y a tu médico. Basta con que nos envíes el pago (la captura o sus
+              datos) dentro de ese plazo: si su aprobación tarda, esperamos.
             </li>
             <li>
               Si aún no la tenemos, te pedimos por WhatsApp una foto de tu
@@ -72,16 +79,18 @@ function Terminos() {
               equipo de Helios: ningún médico ni centro tiene acceso a ella.
             </li>
             <li>
-              Pagas en dos cuotas iguales, a los 14 y a los 28 días de la
-              consulta, sin inicial. Los pagos en cuotas que ya estaban
-              confirmados cuando entraron en vigor estas condiciones conservan
-              las fechas de su comprobante.
+              Pagas el 50% del total el día de la consulta (la inicial) y el
+              resto en dos cuotas, a los 14 y a los 28 días de la consulta. Los
+              pagos en cuotas registrados antes de que entraran en vigor estas
+              condiciones conservan las suyas: sin inicial y con las fechas de su
+              comprobante.
             </li>
             <li>
               La Comisión Helios es del 12% del monto de la consulta, más el
-              IVA de esa comisión, y va incluida en las cuotas. Por ejemplo, en
-              una consulta de $100 la Comisión Helios es de $12 y su IVA de $1,92: pagas
-              $113,92 en dos cuotas de $56,96.
+              IVA de esa comisión, y va incluida en la inicial y en las cuotas.
+              Por ejemplo, en una consulta de $100 la Comisión Helios es de $12 y
+              su IVA de $1,92: pagas $113,92, con una inicial de $56,96 el día de
+              la consulta y dos cuotas de $28,48.
             </li>
             <li>
               Los montos están en la moneda de la consulta, dólares o euros. Se
@@ -92,8 +101,9 @@ function Terminos() {
             </li>
             <li>
               El límite inicial es de $150: es lo máximo que puedes tener en
-              cuotas a la vez. Lo que usaste vuelve a estar disponible cuando
-              pagas las dos cuotas de esa consulta.
+              cuotas a la vez, contando la consulta entera (la inicial no lo
+              amplía). Lo que usaste vuelve a estar disponible cuando terminas de
+              pagar esa consulta.
             </li>
             <li>
               Si una cuota vence sin pagarse, no puedes registrar otro pago en
@@ -126,8 +136,11 @@ function Terminos() {
               de la consulta.
             </li>
             <li>
-              El pago está garantizado: se hace aunque el paciente no pague. El
-              cobro al paciente es responsabilidad de Helios.
+              El pago está garantizado desde que el paciente paga la inicial y su
+              pago en cuotas queda activo: se hace aunque el paciente no pague sus
+              cuotas. El cobro al paciente es responsabilidad de Helios. Si el
+              paciente no paga la inicial a tiempo, el pago en cuotas se anula y
+              se le avisa al médico o centro.
             </li>
             <li>
               Afiliarse no tiene costo: la Comisión Helios la paga el

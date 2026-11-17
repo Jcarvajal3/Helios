@@ -44,7 +44,7 @@ export function Topbar({
 }) {
   if (inmersiva) {
     return (
-      <header className="sticky top-0 z-20 flex h-(--topbar-height) shrink-0 items-center bg-shell-canvas/90 px-4 backdrop-blur lg:hidden">
+      <header className="sticky top-0 z-20 flex h-(--topbar-height) shrink-0 items-center bg-shell-canvas/55 px-4 backdrop-blur-xl backdrop-saturate-150 lg:hidden">
         <AbrirMenu onClick={onAbrirCajon} />
       </header>
     )
@@ -57,16 +57,19 @@ export function Topbar({
     // encima del título. El título no empuja a nadie (`basis-0`): se recorta,
     // y lo que decide si la acción baja es lo que miden los botones. Así
     // «Empezar de nuevo» de la clínica, que sí cabe, se queda en su fila.
-    <header className="sticky top-0 z-20 flex h-(--topbar-height) shrink-0 items-center gap-3 border-b border-panel-hairline bg-shell-canvas/90 px-4 backdrop-blur max-sm:h-auto max-sm:min-h-(--topbar-height) max-sm:flex-wrap max-sm:gap-y-2 max-sm:py-2 lg:px-8">
+    // En escritorio, como la maqueta aprobada (2026-11-12): el título grande,
+    // sin barra, y lo de la derecha alineado con su base. En la tableta y el
+    // teléfono sigue siendo una barra pegada arriba.
+    <header className="sticky top-0 z-20 flex h-(--topbar-height) shrink-0 items-center gap-3 bg-shell-canvas/55 px-4 backdrop-blur-xl backdrop-saturate-150 max-sm:h-auto max-sm:min-h-(--topbar-height) max-sm:flex-wrap max-sm:gap-y-2 max-sm:py-2 lg:static lg:h-auto lg:items-end lg:bg-transparent lg:px-8 lg:pb-2 lg:pt-10 lg:backdrop-blur-none">
       <AbrirMenu onClick={onAbrirCajon} soloTableta={conBarraInferior} />
 
       {/* A 18 en el teléfono: a 22, «Nuevo pago en cuotas» y su acción no
           caben juntos en 343 px y el título se cortaba en «Nuevo pago en…». */}
-      <h1 className="type-panel-page min-w-0 shrink truncate text-on-surface max-sm:flex-1 max-sm:basis-0 max-sm:text-lg max-sm:leading-6">
+      <h1 className="type-panel-page min-w-0 shrink truncate text-on-surface max-sm:flex-1 max-sm:basis-0 max-sm:text-lg max-sm:leading-6 lg:whitespace-normal lg:pb-1 lg:text-[clamp(2.75rem,1rem+2.6vw,4.5rem)] lg:leading-[1] lg:tracking-[-0.05em]">
         {title}
       </h1>
 
-      <div className="flex min-w-0 items-center justify-end gap-3 max-sm:flex-none sm:flex-1">
+      <div className="flex min-w-0 items-center justify-end gap-3 max-sm:flex-none sm:flex-1 lg:pb-2">
         {/* Compacto a propósito, 340 como mucho: busca en TODO el panel, y si
             midiera lo mismo que el buscador de una lista, en Consumos habría
             dos cajas iguales en la misma pantalla y nadie sabría cuál teclear.
@@ -77,7 +80,7 @@ export function Topbar({
 
       {/* Fuera del grupo de la derecha para poder bajar sola de fila. Vacío
           (casi todas las pantallas) no pinta nada, ni el hueco. */}
-      <div ref={slotRef} className="flex shrink-0 items-center gap-2 empty:hidden max-sm:ml-auto" />
+      <div ref={slotRef} className="flex shrink-0 items-center gap-2 empty:hidden max-sm:ml-auto lg:pb-2" />
     </header>
   )
 }
@@ -89,7 +92,7 @@ function AbrirMenu({ onClick, soloTableta = false }: { onClick: () => void; solo
       type="button"
       onClick={onClick}
       aria-label="Abrir el menú"
-      className={`inline-flex size-10 shrink-0 items-center justify-center rounded-panel-control text-on-surface-variant transition-colors duration-(--transition-fast) hover:bg-panel-raised hover:text-on-surface lg:hidden ${
+      className={`inline-flex size-10 shrink-0 items-center justify-center rounded-full text-on-surface-variant transition-colors duration-(--transition-fast) hover:bg-panel-raised hover:text-on-surface lg:hidden ${
         soloTableta ? 'max-md:hidden' : ''
       }`}
     >

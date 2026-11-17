@@ -1,59 +1,36 @@
+import { IconoDeEspecialidad } from './IconoDeEspecialidad'
 import type { ClaveDeEspecialidad } from '@/features/directorio/especialidades'
 
 /**
- * El icono 3D de cada especialidad, el de la tarjeta del directorio. Los
- * modela `scripts/iconos-3d/` y viven en `public/images/especialidades/`.
+ * El icono de una especialidad en la tarjeta del directorio, la ficha del
+ * médico y el home: una baldosa de vidrio azul con el glifo en blanco, como
+ * los iconos de app de Apple (Javier, 2026-11-12).
  *
- * Las que aún no tienen el suyo usan el de la más cercana y, si no hay
- * ninguna, `general` (la cruz médica): así ninguna tarjeta cambia de estilo.
+ * Es todo vectorial (`IconoDeEspecialidad` y CSS, `.directorio-ilustracion`):
+ * nítido a cualquier tamaño. Sustituye a los modelos 3D en `.webp`, que se
+ * veían pixelados al ampliarse y con aire de juguete.
+ *
+ * Decorativo: la especialidad ya se lee al lado, en texto. `grande` es el de
+ * la ficha del médico y el de las baldosas del home.
  */
-const IMAGEN: Partial<Record<ClaveDeEspecialidad, string>> = {
-  angiologia: 'cardiologia',
-  cardiologia: 'cardiologia',
-  cirugia_cardiaca: 'cardiologia',
-  cirugia_maxilofacial: 'odontologia',
-  cirugia_pediatrica: 'pediatria',
-  coloproctologia: 'gastroenterologia',
-  cosmetologia: 'cosmetologia',
-  dermatologia: 'dermatologia',
-  fisioterapia: 'traumatologia',
-  gastroenterologia: 'gastroenterologia',
-  ginecologia: 'ginecologia',
-  hepatologia: 'gastroenterologia',
-  medicina_general: 'medicina_general',
-  medicina_interna: 'medicina_interna',
-  nefrologia: 'urologia',
-  nutricion: 'nutricion',
-  odontologia: 'odontologia',
-  oftalmologia: 'oftalmologia',
-  ortodoncia: 'odontologia',
-  otorrinolaringologia: 'otorrinolaringologia',
-  pediatria: 'pediatria',
-  psicologia: 'psicologia',
-  psiquiatria: 'psicologia',
-  reumatologia: 'traumatologia',
-  traumatologia: 'traumatologia',
-  urologia: 'urologia',
-  vacunacion: 'vacunacion',
-}
-
-/** La dirección del icono de una especialidad. */
-export function imagenDeEspecialidad(clave: ClaveDeEspecialidad): string {
-  return `/images/especialidades/${IMAGEN[clave] ?? 'general'}.webp`
-}
-
-/** Decorativo: la especialidad ya se lee al lado, en texto. */
-export function IlustracionDeEspecialidad({ clave }: { clave: ClaveDeEspecialidad }) {
+export function IlustracionDeEspecialidad({
+  clave,
+  grande = false,
+}: {
+  clave: ClaveDeEspecialidad
+  grande?: boolean
+}) {
   return (
-    <span className="directorio-ilustracion grid size-14 shrink-0 place-items-center rounded-[18px] sm:size-16">
-      <img
-        src={imagenDeEspecialidad(clave)}
-        alt=""
-        width={192}
-        height={192}
-        loading="lazy"
-        decoding="async"
-        className="size-[52px] sm:size-[60px]"
+    <span
+      aria-hidden
+      className={`directorio-ilustracion grid shrink-0 place-items-center text-white ${
+        grande ? 'size-20 rounded-[25px] sm:size-24 sm:rounded-[30px]' : 'size-[60px] rounded-[19px]'
+      }`}
+    >
+      <IconoDeEspecialidad
+        clave={clave}
+        strokeWidth={grande ? 1.5 : 1.7}
+        className={`directorio-ilustracion-glifo ${grande ? 'size-10 sm:size-12' : 'size-[30px]'}`}
       />
     </span>
   )

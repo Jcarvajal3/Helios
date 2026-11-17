@@ -45,7 +45,7 @@ export function ContadorDelMenu({
   return (
     <span
       className={`ml-auto flex h-4.5 min-w-4.5 shrink-0 items-center justify-center rounded-full px-1.25 type-label-small-emphasized ${
-        contador.urgente ? 'bg-error/18 text-panel-critico' : 'bg-panel-control text-on-surface'
+        contador.urgente ? 'bg-error text-on-error' : 'bg-primary-bright text-white'
       } ${
         plegado
           ? `lg:absolute lg:top-1.5 lg:right-1.5 lg:ml-0 lg:size-2 lg:min-w-0 lg:px-0 ${
@@ -83,7 +83,7 @@ export function EnlaceDelMenu({
       <Link
         to={item.path}
         title={plegado ? item.label : undefined}
-        className={`relative mb-2 flex h-panel-control-md items-center pointer-coarse:h-11 gap-2.5 rounded-panel-control bg-primary px-2.5 type-panel-control text-on-primary transition-colors duration-(--transition-fast) hover:bg-primary-bright ${
+        className={`relative mb-2 flex h-panel-control-md items-center pointer-coarse:h-11 gap-2.5 rounded-full bg-on-surface px-3 type-panel-control text-shell-canvas shadow-[0_10px_24px_-12px_rgb(2_11_36/0.55)] transition-colors duration-(--transition-fast) hover:bg-primary-bright hover:text-white ${
           plegado ? 'lg:justify-center lg:px-0' : ''
         }`}
       >
@@ -104,15 +104,14 @@ export function EnlaceDelMenu({
       // Plegada, el nombre solo existe aquí. Sin esto la barra a 64 px es una
       // columna de iconos que hay que adivinar.
       title={plegado ? item.label : undefined}
-      className={`relative flex h-panel-control-sm items-center gap-2.5 pointer-coarse:h-11 rounded-panel-control px-2.5 type-panel-control transition-colors duration-(--transition-fast) ${
+      className={`relative flex h-panel-control-md items-center gap-2.5 pointer-coarse:h-11 rounded-full px-3 type-panel-control transition-colors duration-(--transition-fast) ${
         plegado ? 'lg:justify-center lg:px-0' : ''
       } ${
         activo
-          ? 'bg-panel-raised text-on-surface'
-          : 'text-on-surface-variant hover:bg-panel-card hover:text-on-surface'
+          ? 'bg-on-surface text-shell-canvas shadow-[0_0_0_4px_rgb(21_126_253/0.12),0_12px_26px_-12px_rgb(4_94_243/0.55)]'
+          : 'text-on-surface-variant hover:bg-panel-control hover:text-on-surface'
       }`}
     >
-      {activo && <RayaDelActivo />}
       <Icon size={18} strokeWidth={1.75} aria-hidden className="shrink-0" />
       <span className={`min-w-0 truncate ${plegado ? 'lg:hidden' : ''}`}>{item.label}</span>
       {contador && <ContadorDelMenu contador={contador} plegado={plegado} />}

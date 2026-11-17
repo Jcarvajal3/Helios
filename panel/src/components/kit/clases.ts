@@ -14,12 +14,14 @@ export type ButtonSize = 'sm' | 'md' | 'lg'
 // El peso lo pone `type-panel-control` (600). El `font-medium` que llevaba la
 // base lo pisaba y los botones salían a 500.
 const BASE =
-  'inline-flex items-center justify-center gap-2 rounded-panel-control transition-colors duration-[var(--transition-fast)] disabled:pointer-events-none disabled:opacity-40'
+  'inline-flex items-center justify-center gap-2 rounded-full transition-[background-color,color,border-color,transform,box-shadow] duration-200 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-40'
 
-// El lima es SOLO `filled`: la acción principal de la pantalla. Un botón de
-// texto en lima se leía como enlace y como acción a la vez.
+// `filled` es la acción principal de la pantalla: en la tinta marina, como
+// «Agendar cita» en el directorio (rediseño del 2026-11-12). El azul queda
+// para los acentos: un enlace, una cifra, lo elegido.
 const VARIANTES: Record<ButtonVariant, string> = {
-  filled: 'bg-primary text-on-primary hover:bg-primary-bright',
+  filled:
+    'bg-on-surface text-shell-canvas shadow-[0_10px_24px_-12px_rgb(2_11_36/0.55)] hover:bg-primary-bright hover:text-white hover:shadow-[0_0_0_5px_rgb(21_126_253/0.14),0_14px_30px_-12px_rgb(4_94_243/0.6)]',
   tonal: 'bg-panel-control text-on-surface hover:bg-shell-inset',
   outlined:
     'border border-panel-hairline-strong text-on-surface hover:border-outline hover:bg-panel-raised',
@@ -47,7 +49,7 @@ export function claseDeBoton(variant: ButtonVariant, size: ButtonSize): string {
  * la superficie del control ya se ve dónde está el campo.
  */
 export const CLASE_CAMPO =
-  'w-full rounded-panel-control border bg-panel-control px-panel-pad-control type-panel-body text-on-surface outline-none transition-colors duration-[var(--transition-fast)] placeholder:text-placeholder'
+  'w-full rounded-full border bg-panel-control px-panel-pad-control type-panel-body text-on-surface outline-none transition-colors duration-[var(--transition-fast)] placeholder:text-placeholder'
 
 export function bordeDeCampo(error: boolean): string {
   return error ? 'border-error' : 'border-transparent focus:border-primary'

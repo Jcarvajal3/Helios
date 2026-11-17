@@ -12,12 +12,15 @@ import type { CSSProperties } from 'react'
 import {
   COMISION_PCT,
   CONSULTA,
+  INICIAL_PCT,
   IVA_PCT,
   PARA_PACIENTES,
   comision,
   cuota,
+  cuota2,
   dinero,
   dineroCorto,
+  inicial,
   iva,
   total,
 } from './datos'
@@ -28,12 +31,19 @@ import { EnlaceMas, Lienzo, Revelar, Rotulo, useEnVista } from './piezas'
  * PARA PACIENTES — lo que se paga, con todos sus números.
  *
  * El ejemplo de $100 se desarma en una barra (consulta, comisión, IVA) que
- * luego se parte en las dos cuotas. El selector cambia la moneda: la
+ * luego se parte en la inicial del 50% y las dos cuotas. El selector cambia la moneda: la
  * consulta puede ir en dólares o en euros, con las mismas cuentas, y se paga
  * en bolívares.
  */
 
 const ICONOS = [CalendarCheck2, Percent, Gauge, Banknote, Clock, IdCard]
+
+/** La inicial del día de la consulta y las dos cuotas (`desglose`). */
+const PAGOS = [
+  { cuando: `Inicial (${INICIAL_PCT}%) · el día de la consulta`, monto: inicial },
+  { cuando: 'Cuota 1 · a los 14 días', monto: cuota },
+  { cuando: 'Cuota 2 · a los 28 días', monto: cuota2 },
+]
 
 export function Desglose() {
   const [moneda, setMoneda] = useState<Moneda>('USD')
@@ -57,7 +67,7 @@ export function Desglose() {
     <div
       ref={ref}
       data-visto={visto ? '' : undefined}
-      className="portada-desglose relative rounded-[32px] border border-portada-linea bg-white p-6 shadow-[0_40px_80px_-40px_rgba(0,39,112,0.25)] sm:p-8"
+      className="portada-desglose relative rounded-[36px] bg-white p-6 shadow-[0_0_0_1px_rgba(2,11,36,0.05),0_40px_80px_-40px_rgba(10,60,160,0.35)] sm:p-8"
     >
       <div className="flex flex-wrap items-center justify-between gap-4">
         <p className="portada-etiqueta text-portada-tinta-3">
@@ -114,7 +124,7 @@ export function Desglose() {
           <span className="text-[0.97rem] font-medium text-portada-tinta">
             Total
           </span>
-          <span className="text-[1.6rem] font-medium tabular-nums tracking-[-0.03em] text-portada-tinta">
+          <span className="portada-numero portada-acento text-[2.6rem] tabular-nums">
             {dinero(total, moneda)}
           </span>
         </li>
@@ -138,23 +148,24 @@ export function Desglose() {
 
       <div className="mt-6 flex items-center gap-3">
         <span className="portada-etiqueta text-portada-tinta-3">
-          Se divide en dos
+          La mitad hoy, el resto en dos cuotas
         </span>
         <span className="h-px flex-1 bg-portada-linea" />
       </div>
 
+      {/* La inicial a lo ancho y, debajo, las dos cuotas. */}
       <div className="mt-4 grid grid-cols-2 gap-3">
-        {[14, 28].map((d, i) => (
+        {PAGOS.map((p, i) => (
           <div
-            key={d}
-            className="portada-desglose-cuota rounded-2xl bg-portada-niebla p-4"
+            key={p.cuando}
+            className={`portada-desglose-cuota rounded-2xl p-4 ${
+              i === 0 ? 'col-span-2 bg-portada-tinta text-white' : 'bg-portada-niebla'
+            }`}
             style={{ '--i': i } as CSSProperties}
           >
-            <p className="text-[0.8rem] text-portada-tinta-3">
-              Cuota {i + 1} · a los {d} días
-            </p>
-            <p className="mt-1 text-[1.35rem] font-medium tabular-nums tracking-[-0.03em] text-portada-tinta">
-              {dinero(cuota, moneda)}
+            <p className={`text-[0.82rem] ${i === 0 ? 'text-white/80' : 'text-portada-tinta-3'}`}>{p.cuando}</p>
+            <p className={`portada-numero mt-1 text-[1.9rem] tabular-nums ${i === 0 ? 'text-white' : 'text-portada-tinta'}`}>
+              {dinero(p.monto, moneda)}
             </p>
           </div>
         ))}
@@ -163,15 +174,19 @@ export function Desglose() {
       <p className="mt-5 text-[0.95rem] leading-relaxed text-portada-tinta-2">
         Pagas{' '}
         <strong className="font-medium text-portada-tinta">
+          {dinero(inicial, moneda)}
+        </strong>{' '}
+        el día de la consulta,{' '}
+        <strong className="font-medium text-portada-tinta">
           {dinero(cuota, moneda)}
         </strong>{' '}
         a los 14 días y{' '}
         <strong className="font-medium text-portada-tinta">
-          {dinero(cuota, moneda)}
+          {dinero(cuota2, moneda)}
         </strong>{' '}
-        a los 28. Hoy, nada.{' '}
+        a los 28.{' '}
         <span className="text-portada-tinta-3">
-          Cada cuota se paga en bolívares, a la tasa oficial del{' '}
+          Cada pago se hace en bolívares, a la tasa oficial del{' '}
           {moneda === 'EUR' ? 'euro' : 'dólar'} del BCV del día en que pagas.
         </span>
       </p>
@@ -184,7 +199,7 @@ export function Pacientes() {
     <section id="pacientes" className="relative overflow-hidden bg-white">
       <div
         aria-hidden
-        className="portada-aurora absolute -right-[20%] top-[10%] -z-0 size-[900px] rounded-full"
+        className="portada-sol-recibo absolute -right-[18%] top-[6%] -z-0 size-[1000px] rounded-full"
       />
       <Lienzo className="relative py-24 sm:py-36">
         <div className="grid gap-14 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1fr)] lg:items-center lg:gap-20">
@@ -195,7 +210,7 @@ export function Pacientes() {
             <Revelar retraso={80}>
               <h2 className="portada-titular mt-6 text-portada-tinta">
                 Lo que pagas,{' '}
-                <em className="portada-serif text-portada-azul">
+                <em className="portada-serif portada-acento pr-[0.06em]">
                   con todos sus números.
                 </em>
               </h2>
@@ -203,7 +218,7 @@ export function Pacientes() {
             <Revelar retraso={160}>
               <p className="portada-entrada mt-7 max-w-[44ch] text-portada-tinta-2">
                 Una sola comisión, dicha desde el principio. Antes de confirmar
-                ves el monto, la Comisión Helios y tus dos cuotas.
+                ves el monto, la Comisión Helios, la inicial y tus dos cuotas.
               </p>
               <p className="mt-5">
                 <EnlaceMas to="/pacientes">
@@ -223,16 +238,16 @@ export function Pacientes() {
             const Icono = ICONOS[i] ?? Percent
             return (
               <Revelar key={p.titulo} retraso={(i % 3) * 90}>
-                <article className="portada-regla group relative h-full overflow-hidden rounded-[24px] border border-portada-linea bg-white p-7">
+                <article className="portada-regla group relative h-full overflow-hidden rounded-[32px] border border-transparent bg-portada-niebla p-7 sm:p-8">
                   <div className="flex items-start justify-between">
-                    <span className="grid size-11 place-items-center rounded-2xl bg-portada-azul/[0.07] text-portada-azul transition-all duration-500 group-hover:bg-portada-azul group-hover:text-white">
+                    <span className="grid size-12 place-items-center rounded-full bg-white text-portada-azul shadow-[0_8px_18px_-10px_rgba(10,60,160,0.4)] transition-all duration-500 group-hover:bg-portada-azul group-hover:text-white">
                       <Icono className="size-5" strokeWidth={1.6} />
                     </span>
-                    <span className="portada-etiqueta text-portada-tinta-3/70">
-                      0{i + 1}
+                    <span aria-hidden className="portada-numero portada-acento text-[2.75rem] leading-none">
+                      {i + 1}
                     </span>
                   </div>
-                  <h3 className="mt-10 text-[1.15rem] font-medium leading-snug tracking-[-0.02em] text-portada-tinta">
+                  <h3 className="mt-10 text-[1.25rem] font-medium leading-snug tracking-[-0.03em] text-portada-tinta">
                     {p.titulo}
                   </h3>
                   <p className="mt-2.5 text-[0.95rem] leading-relaxed text-portada-tinta-2">

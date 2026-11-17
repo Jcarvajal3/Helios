@@ -1,14 +1,17 @@
 import { createFileRoute } from '@tanstack/react-router'
 
-import { CALENDARIO_DE_COBRO, GUIAS, TABLA_DE_CUOTAS } from '@/components/portada/guias'
+import { CALENDARIO_DE_COBRO, GUIAS, TABLA_DE_CUOTAS, cadaCuota } from '@/components/portada/guias'
 import {
   COMISION_PCT,
+  INICIAL_PCT,
   IVA_PCT,
   LIMITE,
   PREGUNTAS,
   cuota,
   dinero,
   dineroCorto,
+  inicial,
+  total,
 } from '@/components/portada/datos'
 import { RESPONSABLE } from '@/config/legal'
 import { NOMBRE, urlAbsoluta } from '@/config/sitio'
@@ -36,7 +39,7 @@ function texto(medicos: MedicoDelDirectorio[]) {
 
   const cuotas = TABLA_DE_CUOTAS.map(
     (f) =>
-      `| ${dineroCorto(f.monto)} | ${dinero(f.comision + f.iva)} | ${dinero(f.total)} | ${dinero(f.cuota)} |`,
+      `| ${dineroCorto(f.monto)} | ${dinero(f.comision + f.iva)} | ${dinero(f.total)} | ${dinero(f.inicial)} | ${cadaCuota(f)} |`,
   ).join('\n')
 
   const calendario = CALENDARIO_DE_COBRO.map((d) => `- ${d.termino}: ${d.valor}`).join('\n')
@@ -79,36 +82,37 @@ function texto(medicos: MedicoDelDirectorio[]) {
 
   return `# ${NOMBRE}
 
-> ${NOMBRE} permite pagar consultas y tratamientos de salud privada en Venezuela (medicina, odontología y cosmetología) en dos cuotas, a los 14 y 28 días, sin inicial. El médico o centro de salud afiliado recibe el 100% de la consulta, pague o no el paciente.
+> ${NOMBRE} permite pagar consultas y tratamientos de salud privada en Venezuela (medicina, odontología y cosmetología) en cuotas: el ${INICIAL_PCT}% el día de la consulta y el resto en dos cuotas, a los 14 y 28 días. El médico o centro de salud afiliado recibe el 100% de la consulta, pague o no el paciente sus cuotas.
 
 ## En resumen
 
-- Cuotas: 2, a los 14 y a los 28 días. Sin inicial.
-- Comisión Helios: ${COMISION_PCT}% del monto de la consulta más ${IVA_PCT}% de IVA sobre la comisión, incluida en las cuotas. Una consulta de $100 se paga en dos cuotas de ${dinero(cuota)}.
+- Inicial: ${INICIAL_PCT}% del total, el día de la consulta. El pago en cuotas queda activo cuando se aprueba la inicial; si no se paga en las 2 horas siguientes a confirmar, se anula.
+- Cuotas: 2 para el resto, a los 14 y a los 28 días.
+- Comisión Helios: ${COMISION_PCT}% del monto de la consulta más ${IVA_PCT}% de IVA sobre la comisión, incluida en la inicial y las cuotas. Una consulta de $100 se paga con ${dinero(total)}: una inicial de ${dinero(inicial)} y dos cuotas de ${dinero(cuota)}.
 - Pago: en bolívares, por Pago Móvil o transferencia, a la tasa oficial del BCV del día del pago.
 - Límite inicial: $${LIMITE} en cuotas a la vez.
 - Para el médico: recibe el 100% de la consulta (la mitad a los 8 días y la otra a los 15), sin costo de afiliación ni mensualidad.
 
 ## Para pacientes
 
-- Dos cuotas, a los 14 y a los 28 días. Sin inicial.
-- Comisión Helios: ${COMISION_PCT}% del monto de la consulta más ${IVA_PCT}% de IVA sobre la comisión, incluida en las cuotas.
-- Límite inicial de $${LIMITE}: lo máximo que se puede tener en cuotas a la vez.
+- El ${INICIAL_PCT}% el día de la consulta y el resto en dos cuotas, a los 14 y a los 28 días.
+- Comisión Helios: ${COMISION_PCT}% del monto de la consulta más ${IVA_PCT}% de IVA sobre la comisión, incluida en la inicial y las cuotas.
+- Límite inicial de $${LIMITE}: lo máximo que se puede tener en cuotas a la vez, contando la consulta entera.
 - Se paga en bolívares, por Pago Móvil o transferencia, a la tasa oficial del BCV del día del pago. La consulta puede ir en dólares o en euros.
-- Sin app ni cuenta: el médico registra al paciente con su cédula y el paciente confirma por WhatsApp.
+- Sin app ni cuenta: el médico registra al paciente con su cédula y el paciente confirma por WhatsApp y paga la inicial ese mismo día.
 - Para mayores de 18 años con cédula; un menor de edad se atiende a nombre de su representante.
 
 ### Cuánto se paga según el monto de la consulta
 
-| Consulta | Comisión Helios + IVA | Total | Cada cuota (días 14 y 28) |
-| --- | --- | --- | --- |
+| Consulta | Comisión Helios + IVA | Total | Inicial (día de la consulta) | Cada cuota (días 14 y 28) |
+| --- | --- | --- | --- | --- |
 ${cuotas}
 
-En euros, las mismas cifras en €. Cada cuota se paga en bolívares a la tasa BCV del día del pago.
+En euros, las mismas cifras en €. La inicial y cada cuota se pagan en bolívares a la tasa BCV del día del pago.
 
 ## Para médicos y centros de salud
 
-- Reciben el 100% del precio de la consulta: la mitad a los 8 días y la otra mitad a los 15, pague o no el paciente.
+- Reciben el 100% del precio de la consulta: la mitad a los 8 días y la otra mitad a los 15, pague o no el paciente sus cuotas.
 - Sin costo de afiliación ni mensualidad; la Comisión Helios la paga el paciente. Sin permanencia.
 - Registran la consulta desde la plataforma web o por WhatsApp. Sin punto de venta.
 - Afiliación: ${urlAbsoluta('/afiliacion')}

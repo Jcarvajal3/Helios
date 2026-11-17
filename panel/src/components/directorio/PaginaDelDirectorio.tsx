@@ -4,7 +4,7 @@ import { Link, useNavigate, useRouter, useSearch } from '@tanstack/react-router'
 import { ChevronRight, ChevronUp, RotateCw, Search, Tag, X } from 'lucide-react'
 
 import { HeliosLogo } from '@/components/HeliosLogo'
-import { imagenDeEspecialidad } from '@/components/directorio/IlustracionDeEspecialidad'
+import { IsologoHelios } from '@/components/directorio/IsologoHelios'
 import { TarjetaDeMedico } from '@/components/directorio/TarjetaDeMedico'
 import { Pie } from '@/components/portada'
 import { Menu } from '@/components/portada/Menu'
@@ -65,13 +65,11 @@ import { useVisitaDelDirectorio } from '@/features/directorio/visita'
  *   - las tarjetas no enlazan a la ficha y su botón pasa por el WhatsApp de
  *     Helios con «-B» en el código;
  *   - sin menú, pie, «Cómo pagas» ni «Para médicos»: todo eso enlaza a
- *     guías que dicen «sin inicial» y las fechas de las cuotas, que
+ *     guías que dicen «50% de inicial» y las fechas de las cuotas, que
  *     contradicen la oferta. Lleva una marca arriba y una línea legal abajo.
  *
  * Las dos apuntan la visita (`useVisitaDelDirectorio`) con su variante.
  */
-
-const NOCHE = '#020B24'
 
 /** El tramo de precio elegido, de la dirección. */
 function useTramoElegido(): ClaveDeTramo | undefined {
@@ -125,18 +123,13 @@ export function PaginaDelDirectorio({
   const enB = variante === 'b'
 
   return (
-    <div className="portada-raiz min-h-screen">
+    <div className="portada-raiz directorio-raiz min-h-screen">
       {enB ? <MarcaDeConsultas /> : <Menu />}
       <main>
-        <Cabecera
-          especialidades={especialidades}
-          elegida={especialidad}
-          total={medicos.length}
-          h1={h1}
-          entrada={entrada}
-          variante={variante}
-        />
+        <Cabecera elegida={especialidad} h1={h1} entrada={entrada} variante={variante} />
         <Resultados
+          especialidades={especialidades}
+          total={medicos.length}
           medicos={medicos}
           deLaEspecialidad={deLaEspecialidad}
           fallo={fallo}
@@ -210,35 +203,31 @@ export function MigasDelDirectorio({ tramos }: { tramos: Array<{ texto: string; 
 
 // ── La cabecera: el titular y las especialidades ───────────────────────────
 
+/**
+ * La cabecera, con el amanecer del sistema (2026-11-12): el titular centrado
+ * y, debajo, el sol de Helios que sale detrás de un horizonte curvo. La barra
+ * de filtros se apoya sobre ese horizonte (`Resultados`).
+ */
 function Cabecera({
-  especialidades,
   elegida,
-  total,
   h1,
   entrada,
   variante,
 }: {
-  especialidades: EspecialidadPresente[]
   elegida: ClaveDeEspecialidad | undefined
-  total: number
   h1: { antes: string; enfasis: string }
   entrada: string
   variante: VarianteDelDirectorio
 }) {
   return (
-    <section className="relative isolate overflow-clip bg-white">
-      <div
-        aria-hidden
-        className="portada-aurora absolute -right-[25%] -top-[35%] -z-10 size-[900px] rounded-full"
-      />
-      <div
-        aria-hidden
-        className="portada-aurora absolute -left-[30%] top-[40%] -z-10 size-[700px] rounded-full opacity-60"
-      />
-      <Lienzo className="pb-7 pt-28 sm:pb-10 sm:pt-36">
-        <div className="max-w-[52rem]">
+    <section className="directorio-cielo relative isolate overflow-clip">
+      <div aria-hidden className="directorio-rayos" />
+      <div aria-hidden className="directorio-sol" />
+      <div aria-hidden className="directorio-horizonte" />
+      <Lienzo className="relative pb-[clamp(13rem,22vw,19rem)] pt-32 text-center sm:pt-40">
+        <div className="mx-auto max-w-[64rem]">
           {elegida && variante === 'a' && (
-            <div className="mb-6">
+            <div className="directorio-entra mb-7 flex justify-center">
               <MigasDelDirectorio
                 tramos={[
                   { texto: 'Inicio', to: '/' },
@@ -248,16 +237,21 @@ function Cabecera({
               />
             </div>
           )}
-          <h1 className="portada-titular text-portada-tinta">
-            {h1.antes}{' '}
-            <em className="portada-serif portada-degradado pr-[0.06em]">{h1.enfasis}</em>
+          <h1 className="directorio-titular text-portada-tinta">
+            <span className="directorio-entra block" style={{ '--retraso': '80ms' } as React.CSSProperties}>
+              {h1.antes}
+            </span>{' '}
+            <span className="directorio-entra block pb-[0.08em]" style={{ '--retraso': '200ms' } as React.CSSProperties}>
+              <em className="directorio-enfasis">{h1.enfasis}</em>
+            </span>
           </h1>
-          <p className="portada-entrada mt-4 max-w-[60ch] text-portada-tinta-2 sm:mt-5">{entrada}</p>
+          <p
+            className="directorio-entra mx-auto mt-6 max-w-[40ch] text-[clamp(1.1rem,0.95rem+0.6vw,1.45rem)] leading-[1.45] tracking-[-0.012em] text-portada-tinta-2 sm:mt-9"
+            style={{ '--retraso': '340ms' } as React.CSSProperties}
+          >
+            {entrada}
+          </p>
         </div>
-
-        {especialidades.length > 1 && (
-          <Especialidades especialidades={especialidades} elegida={elegida} total={total} variante={variante} />
-        )}
       </Lienzo>
     </section>
   )
@@ -340,19 +334,17 @@ function Especialidades({
       activa={elegida === e.clave}
       destino={destino(elegida === e.clave ? undefined : e.clave)}
     >
-      {/* Con ancho y alto fijos: la medición de las fichas no depende de que cargue. */}
-      <img src={imagenDeEspecialidad(e.clave)} alt="" width={26} height={26} decoding="async" className="-ml-1 size-[26px]" />
       {e.nombre}
       <Cuenta activa={elegida === e.clave}>{e.cuantos}</Cuenta>
     </ChipDeEspecialidad>
   )
 
   return (
-    <div className="relative mt-7 sm:mt-9">
+    <div className="relative">
       <ul
         id="especialidades"
         aria-label="Especialidades"
-        className={`flex flex-wrap gap-2 ${caben === null ? 'max-h-[128px] overflow-hidden sm:max-h-[88px]' : ''}`}
+        className={`flex flex-wrap gap-2 ${caben === null ? 'max-h-[144px] overflow-hidden sm:max-h-[96px]' : ''}`}
       >
         <li>{todas}</li>
         {visibles.map((e) => (
@@ -368,11 +360,11 @@ function Especialidades({
               variante="mas"
             >
               {abierta ? 'Ver menos' : 'Ver más'}
-              <span className="grid size-7 place-items-center rounded-full bg-portada-niebla text-portada-tinta-3">
+              <span className="grid size-8 place-items-center rounded-full bg-portada-niebla text-portada-tinta-2">
                 {abierta ? (
                   <ChevronUp className="size-4" aria-hidden />
                 ) : (
-                  <span className="font-[family-name:var(--font-portada-mono)] text-[0.72rem] tabular-nums">
+                  <span className="font-semibold text-[0.72rem] tabular-nums">
                     +{sobran}
                   </span>
                 )}
@@ -397,7 +389,7 @@ function Especialidades({
           <li>
             <ChipDeEspecialidad activa={false} onClick={() => {}} variante="mas">
               Ver más
-              <span className="grid size-7 place-items-center rounded-full font-[family-name:var(--font-portada-mono)] text-[0.72rem]">
+              <span className="grid size-7 place-items-center rounded-full font-semibold text-[0.72rem]">
                 +{fichas}
               </span>
             </ChipDeEspecialidad>
@@ -429,12 +421,12 @@ function ChipDeEspecialidad({
   'aria-expanded'?: boolean
   'aria-controls'?: string
 }) {
-  const clases = `directorio-chip inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-full border pl-3.5 pr-1.5 text-[0.88rem] tracking-[-0.01em] sm:pl-4 sm:text-[0.9rem] ${
+  const clases = `directorio-chip inline-flex h-[46px] items-center gap-2.5 whitespace-nowrap rounded-full border pl-[18px] pr-[7px] text-[15px] font-medium tracking-[-0.01em] ${
     activa
-      ? 'border-portada-tinta bg-portada-tinta text-white'
+      ? 'directorio-chip-activa border-portada-tinta bg-portada-tinta text-white'
       : variante === 'mas'
-        ? 'border-dashed border-portada-tinta/25 bg-white/80 font-medium text-portada-tinta backdrop-blur hover:border-portada-tinta/45'
-        : 'border-portada-linea bg-white/80 text-portada-tinta-2 backdrop-blur hover:border-portada-tinta/25 hover:text-portada-tinta'
+        ? 'border-dashed border-portada-tinta/25 bg-white text-portada-tinta hover:border-portada-azul/50'
+        : 'border-portada-tinta/[0.07] bg-white text-portada-tinta hover:border-portada-azul/50'
   }`
   if (destino) {
     return (
@@ -459,8 +451,8 @@ function ChipDeEspecialidad({
 function Cuenta({ activa, children }: { activa: boolean; children: ReactNode }) {
   return (
     <span
-      className={`grid h-7 min-w-7 place-items-center rounded-full px-2 font-[family-name:var(--font-portada-mono)] text-[0.72rem] tabular-nums ${
-        activa ? 'bg-white/15 text-white' : 'bg-portada-niebla text-portada-tinta-3'
+      className={`grid h-8 min-w-8 place-items-center rounded-full px-2.5 text-[0.78rem] font-medium tabular-nums ${
+        activa ? 'bg-white/16 text-white' : 'bg-portada-niebla text-portada-tinta-2'
       }`}
     >
       {children}
@@ -471,6 +463,8 @@ function Cuenta({ activa, children }: { activa: boolean; children: ReactNode }) 
 // ── Los resultados ─────────────────────────────────────────────────────────
 
 function Resultados({
+  especialidades,
+  total,
   medicos,
   deLaEspecialidad,
   fallo,
@@ -478,6 +472,8 @@ function Resultados({
   especialidad,
   variante,
 }: {
+  especialidades: EspecialidadPresente[]
+  total: number
   medicos: MedicoDelDirectorio[]
   deLaEspecialidad: MedicoDelDirectorio[]
   fallo: boolean
@@ -504,8 +500,8 @@ function Resultados({
   }
 
   return (
-    <section id="medicos" className="relative bg-portada-niebla">
-      <Lienzo className="pb-16 pt-6 sm:pb-24 sm:pt-10">
+    <section id="medicos" className="relative z-[2] -mt-[4.5rem] scroll-mt-28">
+      <Lienzo className="pb-24 sm:pb-36">
         {fallo ? (
           <Aviso
             titulo="No pudimos cargar el directorio"
@@ -518,7 +514,7 @@ function Resultados({
                 setReintentando(true)
                 void router.invalidate().finally(() => setReintentando(false))
               }}
-              className="inline-flex h-12 items-center gap-2 rounded-full bg-portada-tinta px-6 text-[0.95rem] font-medium text-white transition-colors hover:bg-portada-marino disabled:opacity-60"
+              className="inline-flex h-[3.25rem] items-center gap-2 rounded-full bg-portada-tinta px-7 text-[0.98rem] font-medium text-white transition-colors hover:bg-portada-azul disabled:opacity-60"
             >
               <RotateCw className={`size-4 ${reintentando ? 'animate-spin' : ''}`} aria-hidden />
               Reintentar
@@ -531,36 +527,48 @@ function Resultados({
           />
         ) : (
           <>
-            <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
-              <p aria-live="polite" className="text-[0.98rem] tracking-[-0.015em] text-portada-tinta">
-                <span className="font-medium tabular-nums">{encontrados.length}</span>{' '}
-                {encontrados.length === 1 ? 'médico' : 'médicos'}
-                {especialidad && (
-                  <span className="text-portada-tinta-2"> en {nombreDeEspecialidad(especialidad)}</span>
-                )}
-              </p>
-              {especialidad && (
-                <Link
-                  to={todos.to}
-                  search={todos.search as never}
-                  resetScroll={false}
-                  className="inline-flex items-center gap-1.5 text-[0.9rem] font-medium text-portada-azul underline-offset-4 hover:underline"
-                >
-                  <X className="size-4" aria-hidden /> Ver todos
-                </Link>
+            {/* La barra de filtros: vidrio sobre el horizonte. Estática (Javier,
+                2026-11-12): pegada arriba quitaba demasiada pantalla. */}
+            <div className="directorio-barra relative z-20 flex flex-col gap-3 rounded-[32px] p-3">
+              {especialidades.length > 1 && (
+                <Especialidades
+                  especialidades={especialidades}
+                  elegida={especialidad}
+                  total={total}
+                  variante={variante}
+                />
               )}
+              <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 px-1.5 sm:px-2">
+                {!enB && <FiltroDePrecio medicos={deLaEspecialidad} elegido={precio} onElegir={elegirTramo} />}
+                <div className="ml-auto flex items-center gap-4">
+                  {especialidad && (
+                    <Link
+                      to={todos.to}
+                      search={todos.search as never}
+                      resetScroll={false}
+                      className="inline-flex items-center gap-1.5 text-[0.9rem] font-medium text-portada-azul underline-offset-4 hover:underline"
+                    >
+                      <X className="size-4" aria-hidden /> Ver todos
+                    </Link>
+                  )}
+                  <p aria-live="polite" className="text-[0.95rem] tracking-[-0.01em] text-portada-tinta-2">
+                    <span className="directorio-cuenta text-portada-tinta">{encontrados.length}</span>{' '}
+                    {encontrados.length === 1 ? 'médico' : 'médicos'}
+                    {especialidad && <span> en {nombreDeEspecialidad(especialidad)}</span>}
+                  </p>
+                </div>
+              </div>
             </div>
 
-            {!enB && <FiltroDePrecio medicos={deLaEspecialidad} elegido={precio} onElegir={elegirTramo} />}
             {precio && sinPrecio > 0 && (
-              <p className="mt-2.5 text-[0.85rem] text-portada-tinta-3">
+              <p className="mt-4 px-2 text-[0.85rem] text-portada-tinta-3">
                 No incluye {sinPrecio === 1 ? 'al médico que no publica' : `a los ${sinPrecio} médicos que no publican`} su
                 precio.
               </p>
             )}
 
             {encontrados.length === 0 && precio && deLaEspecialidad.length > 0 ? (
-              <div className="mt-5">
+              <div className="mt-8">
                 <Aviso
                   titulo="No hay médicos en este rango de precio"
                   texto="Prueba con otro rango o mira a todos los médicos de esta lista."
@@ -568,14 +576,14 @@ function Resultados({
                   <button
                     type="button"
                     onClick={() => elegirTramo(undefined)}
-                    className="inline-flex h-12 items-center rounded-full border border-portada-linea bg-white px-6 text-[0.95rem] font-medium tracking-[-0.01em] text-portada-tinta transition-colors hover:border-portada-tinta/25"
+                    className="inline-flex h-[3.25rem] items-center rounded-full bg-portada-tinta px-7 text-[0.98rem] font-medium tracking-[-0.01em] text-white transition-[background-color,transform] duration-300 hover:bg-portada-azul active:scale-[0.97]"
                   >
                     Ver todos los precios
                   </button>
                 </Aviso>
               </div>
             ) : encontrados.length === 0 ? (
-              <div className="mt-5">
+              <div className="mt-8">
                 <Aviso
                   titulo="No hay médicos en esta especialidad todavía"
                   texto="Prueba con otra especialidad: todos los médicos de este directorio aceptan Helios."
@@ -584,14 +592,14 @@ function Resultados({
                     to={todos.to}
                     search={(enB ? {} : undefined) as never}
                     resetScroll={false}
-                    className="inline-flex h-12 items-center rounded-full border border-portada-linea bg-white px-6 text-[0.95rem] font-medium tracking-[-0.01em] text-portada-tinta transition-colors hover:border-portada-tinta/25"
+                    className="inline-flex h-[3.25rem] items-center rounded-full bg-portada-tinta px-7 text-[0.98rem] font-medium tracking-[-0.01em] text-white transition-[background-color,transform] duration-300 hover:bg-portada-azul active:scale-[0.97]"
                   >
                     Ver todos los médicos
                   </Link>
                 </Aviso>
               </div>
             ) : (
-              <ul className="mt-4 grid gap-3 sm:mt-5 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+              <ul className="mt-8 grid gap-4 sm:mt-10 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
                 {encontrados.map((m, i) => (
                   <Revelar key={m.id} como="li" retraso={(i % 3) * 60}>
                     <TarjetaDeMedico
@@ -630,9 +638,9 @@ function FiltroDePrecio({
   if (tramos.length === 0) return null
 
   return (
-    <div className="mt-3.5 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-      <span id="filtro-de-precio" className="inline-flex items-center gap-1.5 text-[0.85rem] text-portada-tinta-2">
-        <Tag aria-hidden className="size-3.5 text-portada-tinta-3" />
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+      <span id="filtro-de-precio" className="inline-flex items-center gap-1.5 text-[0.9rem] text-portada-tinta-2">
+        <Tag aria-hidden className="size-3.5 text-portada-tinta-2" />
         Precio mínimo de la consulta
       </span>
       <div role="group" aria-labelledby="filtro-de-precio" className="directorio-precios">
@@ -658,14 +666,14 @@ function FiltroDePrecio({
 
 function Aviso({ titulo, texto, children }: { titulo: string; texto: string; children?: ReactNode }) {
   return (
-    <div className="flex flex-col items-center rounded-[32px] border border-dashed border-portada-linea bg-white px-6 py-16 text-center sm:py-20">
-      <span className="directorio-icono grid size-14 place-items-center rounded-[18px] text-portada-azul">
+    <div className="directorio-aviso flex flex-col items-center rounded-[36px] bg-white px-6 py-16 text-center sm:py-24">
+      <span className="directorio-icono grid size-16 place-items-center rounded-full text-white">
         <Search className="size-6" strokeWidth={1.75} aria-hidden />
       </span>
-      <h2 className="mt-6 max-w-[30ch] text-[1.35rem] font-medium leading-snug tracking-[-0.03em] text-portada-tinta">
+      <h2 className="mt-7 max-w-[26ch] text-[clamp(1.5rem,1.2rem+1vw,2rem)] font-medium leading-tight tracking-[-0.035em] text-portada-tinta">
         {titulo}
       </h2>
-      <p className="mt-3 max-w-[48ch] text-[0.98rem] leading-relaxed text-portada-tinta-2">{texto}</p>
+      <p className="mt-3 max-w-[46ch] text-[1.02rem] leading-relaxed text-portada-tinta-2">{texto}</p>
       {children && <div className="mt-8">{children}</div>}
     </div>
   )
@@ -680,60 +688,69 @@ const PASOS_DEL_PACIENTE = [
   },
   {
     titulo: 'Confirma por WhatsApp',
-    texto: 'El día de la consulta te llega el monto con tus dos cuotas. Lo confirmas por WhatsApp y listo: hoy no pagas nada.',
+    texto: 'El día de la consulta te llega el monto con la inicial y tus dos cuotas. Lo confirmas por WhatsApp y pagas la inicial, el 50%, ese mismo día.',
   },
   {
-    titulo: 'Paga en dos cuotas',
+    titulo: 'Paga el resto en dos cuotas',
     texto: 'A los 14 y 28 días, en bolívares, por Pago Móvil o transferencia.',
   },
 ]
 
 export function ComoPagas({ guia }: { guia: { ruta: string; texto: string } }) {
   return (
+    // Como la maqueta aprobada (2026-11-12): el titular centrado y, debajo, los
+    // pasos a la izquierda y el desglose dentro de un sol a la derecha.
     <section className="relative overflow-hidden bg-white">
-      <Lienzo className="py-24 sm:py-32">
-        <div className="grid gap-14 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.95fr)] lg:items-center lg:gap-20">
-          <div>
-            <Revelar>
-              <Rotulo>Cómo pagas</Rotulo>
-            </Revelar>
-            <Revelar retraso={80}>
-              <h2 className="portada-titular mt-6 max-w-[16ch] text-portada-tinta">
-                Te atiendes hoy,{' '}
-                <em className="portada-serif text-portada-azul">hoy no pagas nada.</em>
-              </h2>
-            </Revelar>
-            <ol className="mt-12 flex flex-col">
-              {PASOS_DEL_PACIENTE.map((p, i) => (
-                <Revelar
-                  key={p.titulo}
-                  como="li"
-                  retraso={i * 80}
-                  className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-5 border-t border-portada-linea py-6"
-                >
-                  <span className="portada-etiqueta pt-1 text-portada-tinta-3">0{i + 1}</span>
-                  <div>
-                    <h3 className="text-[1.12rem] font-medium leading-snug tracking-[-0.02em] text-portada-tinta">
-                      {p.titulo}
-                    </h3>
-                    <p className="mt-2 text-[0.97rem] leading-relaxed text-portada-tinta-2">{p.texto}</p>
-                  </div>
-                </Revelar>
-              ))}
-            </ol>
-            {/* Quien bajó a leer cómo se paga vuelve a la lista con un toque. */}
-            <Revelar retraso={240} className="mt-4 flex flex-wrap gap-3">
-              <Boton href="#medicos">Elegir mi médico</Boton>
-              {/* La guía que explica el pago en cuotas de esta especialidad. */}
-              <Boton to={guia.ruta} tono="contorno">
-                {guia.texto}
-              </Boton>
-            </Revelar>
-          </div>
-          <Revelar retraso={160}>
-            <Desglose />
+      <Lienzo className="py-24 sm:py-36">
+        <Revelar className="text-center">
+          <p className="mb-[22px] text-[14px] font-semibold uppercase tracking-[0.16em] text-[#0a4fcb]">Cómo pagas</p>
+          <h2 className="directorio-titular-2 mx-auto max-w-[15ch] text-portada-tinta">
+            Paga la mitad hoy{' '}
+            <em className="directorio-enfasis">y el resto en dos cuotas.</em>
+          </h2>
+        </Revelar>
+
+        <div className="mt-12 flex flex-wrap items-stretch gap-[18px] sm:mt-20">
+          <ol className="flex min-w-0 flex-[1_1_420px] flex-col gap-[18px]">
+            {PASOS_DEL_PACIENTE.map((p, i) => (
+              <Revelar
+                key={p.titulo}
+                como="li"
+                retraso={i * 80}
+                className="flex flex-1 items-center gap-6 rounded-[34px] bg-portada-niebla px-[30px] py-[26px]"
+              >
+                <span aria-hidden className="directorio-numeral w-14 shrink-0">
+                  {i + 1}
+                </span>
+                <div>
+                  <h3 className="text-[22px] font-medium leading-snug tracking-[-0.03em] text-portada-tinta">
+                    {p.titulo}
+                  </h3>
+                  <p className="mt-1.5 max-w-[42ch] text-[1rem] leading-relaxed text-portada-tinta-2">{p.texto}</p>
+                </div>
+              </Revelar>
+            ))}
+          </ol>
+
+          <Revelar
+            retraso={160}
+            className="directorio-sol-desglose relative min-w-0 flex-[1_1_420px] overflow-hidden rounded-[34px] p-[clamp(14px,3vw,36px)]"
+          >
+            <div aria-hidden className="directorio-sol-desglose-luz" />
+            <div className="relative">
+              <Desglose />
+            </div>
           </Revelar>
         </div>
+
+        {/* Quien bajó a leer cómo se paga vuelve a la lista con un toque. */}
+        <Revelar retraso={240} className="mt-9 flex flex-wrap justify-center gap-2.5">
+          <Boton href="#medicos">Elegir mi médico</Boton>
+          {/* La guía que explica el pago en cuotas de esta especialidad. */}
+          <Boton to={guia.ruta} tono="contorno">
+            {guia.texto}
+          </Boton>
+        </Revelar>
       </Lienzo>
     </section>
   )
@@ -744,19 +761,18 @@ export function ComoPagas({ guia }: { guia: { ruta: string; texto: string } }) {
 export function ParaMedicos() {
   return (
     <section className="relative bg-white px-2 pb-2 sm:px-4 sm:pb-4">
-      <div
-        className="relative overflow-hidden rounded-[32px] sm:rounded-[44px]"
-        style={{ backgroundColor: NOCHE }}
-      >
-        <Lienzo className="flex flex-col gap-8 py-16 sm:py-20 lg:flex-row lg:items-center lg:justify-between">
+      <div className="portada-bloque-azul relative overflow-hidden rounded-[32px] sm:rounded-[44px]">
+        <IsologoHelios aria-hidden className="portada-rueda absolute -right-36 top-1/2 size-[40rem] -translate-y-1/2 opacity-[0.16]" />
+        <Lienzo className="relative flex flex-col gap-8 py-16 sm:py-24 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <Rotulo tono="oscuro">Para médicos y centros</Rotulo>
-            <h2 className="mt-5 text-[clamp(1.7rem,1.2rem+1.8vw,2.6rem)] font-medium leading-tight tracking-[-0.04em] text-white">
+            <h2 className="mt-5 max-w-[17ch] text-[clamp(2rem,1.2rem+3vw,4.5rem)] font-medium leading-none tracking-[-0.045em] text-white">
               ¿Eres médico? Afilia tu consultorio a Helios.
             </h2>
-            <p className="mt-4 max-w-[52ch] text-[1.02rem] leading-relaxed text-white/70">
-              Tus pacientes pagan en dos cuotas y tú recibes el 100% de la consulta a los 8 y 15
-              días, pague o no el paciente. Sin costo ni permanencia.
+            <p className="mt-5 max-w-[50ch] text-[1.08rem] leading-relaxed text-white/90">
+              Tus pacientes pagan la mitad el día de la consulta y el resto en dos cuotas, y tú
+              recibes el 100% de la consulta a los 8 y 15 días, pague o no el paciente sus cuotas.
+              Sin costo ni permanencia.
             </p>
           </div>
           <div className="flex shrink-0 flex-wrap gap-3">

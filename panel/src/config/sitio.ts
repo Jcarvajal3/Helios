@@ -45,7 +45,12 @@ export const REDES = [
   { nombre: 'Instagram', url: 'https://www.instagram.com/helios.salud' },
 ] as const
 
-/** 1200 × 630: lo que enseñan WhatsApp, Facebook, X y LinkedIn al compartir. */
+/**
+ * 1200 × 630: lo que enseñan WhatsApp, Facebook, X y LinkedIn al compartir.
+ * El `alt` describe lo que dice la imagen («Págala en dos cuotas.», de antes
+ * de la inicial del 50%, docs/07): cambia junto con `public/compartir.jpg`.
+ * También sale en `/consultas`.
+ */
 export const IMAGEN_COMPARTIR = {
   ruta: '/compartir.jpg',
   ancho: 1200,
@@ -59,18 +64,18 @@ export const IMAGEN_COMPARTIR = {
  * cierto, así que se toca a mano cuando cambia el texto de la página.
  */
 export const PAGINAS_PUBLICAS = {
-  '/': { actualizada: '2026-11-06' },
-  '/pacientes': { actualizada: '2026-11-06' },
-  '/medicos': { actualizada: '2026-11-06' },
-  '/consulta-medica-en-cuotas': { actualizada: '2026-11-06' },
-  '/odontologia-en-cuotas': { actualizada: '2026-11-06' },
-  '/cosmetologia-en-cuotas': { actualizada: '2026-11-06' },
+  '/': { actualizada: '2026-11-12' },
+  '/pacientes': { actualizada: '2026-11-12' },
+  '/medicos': { actualizada: '2026-11-12' },
+  '/consulta-medica-en-cuotas': { actualizada: '2026-11-12' },
+  '/odontologia-en-cuotas': { actualizada: '2026-11-12' },
+  '/cosmetologia-en-cuotas': { actualizada: '2026-11-12' },
   // La lista de médicos cambia sola (superadmin › Directorio); la fecha es
   // la del texto y la estructura de la página.
-  '/directorio': { actualizada: '2026-11-06' },
-  '/afiliacion': { actualizada: '2026-11-05' },
+  '/directorio': { actualizada: '2026-11-12' },
+  '/afiliacion': { actualizada: '2026-11-12' },
   '/soporte': { actualizada: '2026-11-05' },
-  '/legal/terminos': { actualizada: '2026-11-06' },
+  '/legal/terminos': { actualizada: '2026-11-12' },
   '/legal/privacidad': { actualizada: '2026-10-07' },
 } as const satisfies Record<string, { actualizada: string }>
 
@@ -124,7 +129,7 @@ const ORGANIZACION = {
   legalName: RESPONSABLE.razonSocial,
   slogan: ESLOGAN,
   description:
-    'Helios permite pagar consultas y tratamientos de salud privada en Venezuela en dos cuotas, sin inicial, en consultorios y centros de medicina, odontología y cosmetología afiliados.',
+    'Helios permite pagar consultas y tratamientos de salud privada en Venezuela en cuotas: el 50% el día de la consulta y el resto en dos cuotas, en consultorios y centros de medicina, odontología y cosmetología afiliados.',
   url: urlAbsoluta('/'),
   logo: { '@type': 'ImageObject', url: urlAbsoluta('/icon-512.png'), width: 512, height: 512 },
   image: urlAbsoluta(IMAGEN_COMPARTIR.ruta),
@@ -262,7 +267,8 @@ export function cabeceraPublica({
     ],
     // Una página que no sale en Google no necesita datos estructurados. En
     // `/consultas` (docs/06) además se evita que la descripción de la
-    // organización («sin inicial») contradiga la oferta de la página.
+    // organización («el 50% el día de la consulta») contradiga la oferta de
+    // la página.
     scripts: indexar
       ? [
           jsonLd({

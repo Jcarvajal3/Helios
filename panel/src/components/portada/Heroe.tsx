@@ -8,9 +8,10 @@ import {
   cuota,
   dinero,
   dineroCorto,
+  inicial,
   iva,
 } from './datos'
-import { Boton, BotonAfiliarme, Lienzo, Rotulo } from './piezas'
+import { Boton, Lienzo, Rotulo } from './piezas'
 
 /**
  * LA PRIMERA PANTALLA — qué es Helios.
@@ -44,21 +45,24 @@ function Entra({
 }
 
 const FILAS = [
-  { cuando: 'Hoy, en la consulta', dia: 'Día 0', monto: dinero(0) },
+  { cuando: 'Inicial · en la consulta', dia: 'Día 0', monto: dinero(inicial) },
   { cuando: 'Cuota 1 · a los 14 días', dia: 'Día 14', monto: dinero(cuota) },
   { cuando: 'Cuota 2 · a los 28 días', dia: 'Día 28', monto: dinero(cuota) },
 ]
 
 function Recibo() {
   return (
-    <div className="portada-vidrio relative w-full max-w-[380px] rounded-[28px] p-6 sm:p-7">
+    <div className="relative w-full max-w-[400px]">
+      {/* El sol detrás del recibo: el vidrio deja ver su luz. */}
+      <div aria-hidden className="portada-sol-recibo absolute -inset-16 -z-10" />
+      <div className="portada-vidrio relative rounded-[34px] p-6 sm:p-8">
       <div className="flex items-center justify-between">
         <p className="portada-etiqueta text-portada-tinta-3">Ejemplo</p>
-        <span className="portada-etiqueta rounded-full bg-portada-azul/[0.08] px-2.5 py-1 text-portada-azul">
-          2 cuotas
+        <span className="portada-etiqueta rounded-full bg-portada-tinta px-3 py-1.5 text-white">
+          50% + 2 cuotas
         </span>
       </div>
-      <p className="mt-3 text-[1.35rem] font-medium tracking-[-0.03em] text-portada-tinta">
+      <p className="mt-4 text-[1.5rem] font-medium tracking-[-0.035em] text-portada-tinta">
         Una consulta de {dineroCorto(CONSULTA)}
       </p>
 
@@ -93,7 +97,7 @@ function Recibo() {
                 {f.dia}
               </span>
             </span>
-            <span className="text-[1.15rem] font-medium tabular-nums tracking-[-0.02em] text-portada-tinta">
+            <span className="portada-numero text-[1.75rem] tabular-nums">
               {f.monto}
             </span>
           </li>
@@ -101,7 +105,7 @@ function Recibo() {
       </ol>
 
       <p className="mt-4 border-t border-portada-linea pt-4 text-[0.82rem] leading-relaxed text-portada-tinta-3">
-        Las cuotas incluyen la Comisión Helios: {COMISION_PCT}% de la consulta
+        Los pagos incluyen la Comisión Helios: {COMISION_PCT}% de la consulta
         más su IVA ({dinero(comision + iva)} en este ejemplo).{' '}
         <a
           href="#pacientes"
@@ -110,6 +114,7 @@ function Recibo() {
           Ver el detalle
         </a>
       </p>
+      </div>
     </div>
   )
 }
@@ -149,9 +154,9 @@ export function Heroe() {
                 </span>{' '}
                 <span className="portada-linea">
                   <span style={{ '--retraso': '220ms' } as CSSProperties}>
-                    Págala en{' '}
-                    <em className="portada-serif portada-degradado pr-[0.06em]">
-                      dos cuotas.
+                    Paga la mitad y el resto{' '}
+                    <em className="portada-serif portada-acento pr-[0.06em]">
+                      en dos cuotas.
                     </em>
                   </span>
                 </span>
@@ -162,8 +167,8 @@ export function Heroe() {
               <p className="portada-entrada mt-7 max-w-[50ch] text-portada-tinta-2">
                 Helios es una forma de pagar consultas y tratamientos de salud
                 privada en cuotas en Venezuela: con el médico, el odontólogo o
-                el cosmetólogo. Hoy no pagas nada: pagas en dos cuotas, a los 14
-                y a los 28 días.
+                el cosmetólogo. Paga el 50% el día de la consulta y el resto en
+                2 cuotas, a los 14 y 28 días.
               </p>
             </Entra>
 
@@ -175,7 +180,7 @@ export function Heroe() {
                 {ESPECIALIDADES.map((e) => (
                   <li
                     key={e}
-                    className="rounded-full border border-portada-linea bg-white/70 px-3.5 py-1.5 text-[0.88rem] text-portada-tinta backdrop-blur"
+                    className="rounded-full border border-white bg-white/85 px-4 py-2 text-[0.92rem] font-medium text-portada-tinta shadow-[0_6px_14px_-10px_rgba(10,60,160,0.35)] backdrop-blur"
                   >
                     {e}
                   </li>
@@ -185,8 +190,12 @@ export function Heroe() {
 
             <Entra retraso={620}>
               <div className="mt-9 flex flex-wrap gap-3">
-                <Boton href="#como-funciona">Ver cómo funciona</Boton>
-                <BotonAfiliarme tono="contorno" />
+                {/* Para el paciente (2026-11-12): lo primero, buscar a su
+                    médico. Afiliarse sigue en el menú y en su franja. */}
+                <Boton to="/directorio">Encuentra tu médico</Boton>
+                <Boton href="#como-funciona" tono="contorno">
+                  Ver cómo funciona
+                </Boton>
               </div>
             </Entra>
           </div>
@@ -202,7 +211,7 @@ export function Heroe() {
           className="portada-entra grid grid-cols-3 items-end text-[0.8rem] text-portada-tinta-3"
           style={{ '--retraso': '1100ms' } as CSSProperties}
         >
-          <p>Hoy no pagas nada.</p>
+          <p>La mitad hoy, el resto en dos cuotas.</p>
           <a
             href="#cifras"
             className="pointer-events-auto flex flex-col items-center gap-2 justify-self-center"

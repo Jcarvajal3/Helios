@@ -97,7 +97,7 @@ export function Menu() {
           </Link>
           <Link
             to="/login"
-            className="inline-flex h-10 items-center rounded-full bg-portada-tinta px-5 text-[0.92rem] font-medium tracking-[-0.01em] text-white transition-colors duration-300 hover:bg-portada-marino sm:hidden"
+            className="inline-flex h-10 items-center rounded-full bg-portada-tinta px-5 text-[0.92rem] font-medium tracking-[-0.01em] text-white transition-colors duration-300 hover:bg-portada-azul sm:hidden"
           >
             Entrar
           </Link>
