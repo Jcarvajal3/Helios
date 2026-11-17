@@ -1,6 +1,13 @@
 # Estado del trabajo
 
-Actualizado el 2026-11-06.
+Actualizado el 2026-11-17.
+
+## 2026-11-17 · La inicial del 50%
+
+Plan y decisiones en docs/07. Inicial del 50% del total con comisión el día del Sí (cuota 0) y 2 cuotas a los 14 y 28 días; la orden espera la inicial (`awaiting_down_payment`) y se anula a las 2 h sin pago; el médico cobra igual (8 y 15 días). `/consultas` no cambia.
+
+- **Base:** `20261112100000_la_orden_espera_la_inicial_tipos.sql` y `20261117202000_la_inicial_del_50.sql` aplicadas. Suite `inicial_smoke` en `supabase/tests/run.sh`.
+- **Pendiente menor:** imagen para compartir nueva (`compartir.jpg` dice «Págala en dos cuotas.»).
 
 ## 2026-11-06 · Las cuotas del paciente, a los 14 y 28 días
 

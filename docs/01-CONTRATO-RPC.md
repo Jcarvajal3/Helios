@@ -2193,3 +2193,263 @@ días 8 y 15 (docs/00 §15.12). No cambia la firma de ninguna función existente
   el día real de pago (antes, el día de devengo, uno antes).
 - `terms_versions`: v3 es la vigente. Las órdenes viejas conservan su
   `terms_version_id`.
+
+## La inicial (2026-11-12, por lanzar: `supabase/por-lanzar/20261112110000_la_inicial_del_50.sql`, un solo fichero)
+
+Toda orden nueva se paga con una **inicial del 50% del total con la comisión**
+el mismo día y el resto en 2 cuotas a los 14 y 28 días (docs/07). **Nada de
+esto existe en la base hasta el lanzamiento**: el valor del enum ya está
+(20261112100000); lo demás espera en `supabase/por-lanzar/`. Los frentes B
+(webhook), C (panel de la clínica) y E (superadmin) trabajan solo contra lo que
+sigue. Para probar contra lo de por-lanzar: `POR_LANZAR=1 bash
+supabase/tests/run.sh <suite>` (la suite `inicial_smoke` recorre el ciclo).
+
+### El estado nuevo y el ciclo
+
+`charges.status` gana **`awaiting_down_payment`**: «Esperando la inicial».
+
+| Paso | Estado | Qué pasa |
+|---|---|---|
+| Registro (panel o bot) | `pending` | Como hoy: 2 h para el «Sí». La pregunta ya enseña la inicial. |
+| «Sí» (+ cédula) | `awaiting_down_payment` | Asiento y deuda (cuotas 0, 1 y 2). `down_payment_due_at` = ahora + 2 h. Sin comisión de la secretaria, comprobante ni aviso al médico. Al paciente: «paga tu inicial» con el bloque de pago. |
+| Se aprueba un pago que cubre la cuota 0 (lector, aviso del BNC, Caja) | `confirmed` | `activated_at` = `confirmed_at` = ese instante. Comisión, aviso al médico («pagó su inicial»), aviso de pago aprobado con las 2 cuotas; el comprobante por correo, cuando el pago queda aprobado entero (con el estado final de las cuotas). Si una mitad de la clínica ya debía devengarse, pasa a hoy. |
+| Pasa `down_payment_due_at` sin un pago abierto (cron cada minuto) | `reverted` | `down_payment_expired_at`, `void_reason` = «La inicial no se pagó a tiempo». Asiento contrario, cuotas borradas, cupo de vuelta. Avisos al paciente y al médico. |
+
+«Pago abierto»: un reporte `reported`/`in_review` de cualquier cuota de la
+orden; una captura o unos datos del paciente, llegados entre el registro y el
+plazo, que el lector aún lee o que esperan la referencia o el aviso del BNC; o
+lo que el lector le pasó al equipo (`para_el_equipo`/`sombra`, salvo «no es un
+comprobante»), hasta 24 h después del plazo; o cualquier imagen o documento
+que entró desde el teléfono del paciente entre el «Sí» y el plazo y que el
+lector no tomó (lector apagado, tope, teléfono de varios pacientes sin uno
+elegido): sale de `whatsapp_inbound`, sin cambios en el webhook. No cuentan la
+cédula ni lo que el lector ya decidió. También hasta 24 h después del plazo.
+**Toda lectura y todo adjunto valen como mucho hasta 24 h después del plazo**;
+un reporte `reported`/`in_review` sostiene la orden sin tope, y a las
+`alert_down_payment_stuck_hours` (6) h pasadas del plazo sale la alerta
+`inicial_atascada`. Si el pago abierto se rechaza, la orden se anula en la
+pasada siguiente. La reversa bloquea las cuotas y luego la orden (como
+`reconcile_payment`) y, con los bloqueos puestos, no anula si hay un pago
+abierto o cualquier reporte no rechazado de sus cuotas.
+
+**El monto de un pago** (`helios_receipt_tramo`: lector y datos + aviso del
+BNC). Opciones fuertes: por cada orden en espera, su inicial sola o la orden
+completa (inicial + 2 cuotas); y las cuotas de las órdenes activas por fecha
+si tocan alguna vencida o que vence ese día. Una fuerte → esa; más de una →
+`null` (la lectura va al equipo como `monto_no_cuadra` y sostiene la orden);
+ninguna → adelantar cuotas que aún no vencen si cuadra; si no, el reparto de
+siempre con las iniciales primero y al final las cuotas de las órdenes en
+espera.
+
+**Órdenes viejas**: `down_payment_pct` null o 0 → exactamente lo de hoy (2
+cuotas, `confirmed` con el «Sí», bienvenida, comprobante «sin inicial»). Se
+decide **por orden**, no por paciente.
+
+### Columnas
+
+| Columna | Tipo | Qué es |
+|---|---|---|
+| `charges.down_payment_pct` | `numeric(5,2)` | La inicial de la orden, en % del total con la comisión (50). La pone el trigger `charges_down_payment` al insertar, con la `down_payment_pct` vigente ese día. Null/0 = sin inicial. Al reabrir una vencida (`staff_resend_confirmation`) toma la de hoy. |
+| `charges.down_payment_due_at` | `timestamptz` | Hasta cuándo puede pagarla. Se pone con el «Sí». |
+| `charges.activated_at` | `timestamptz` | Cuándo se aprobó la inicial (= `confirmed_at` en esas órdenes). |
+| `charges.down_payment_expired_at` | `timestamptz` | Cuándo se anuló sola. Distingue esta reversa de la del equipo. |
+| `installments.sequence` | `0, 1, 2` | **La inicial es la cuota 0**: vence el día del «Sí». Las 1 y 2 conservan sus fechas (14 y 28 días) y su `settlement_due_date` (7 y 14; se pagan a los 8 y 15). |
+| `installments.settlement_due_date` | `date`, **ya admite null** | Null solo en la cuota 0: la inicial se queda en Helios y nunca se le paga a la clínica. |
+
+Los importes salen de `helios_installment_split` (el único sitio que los
+decide), en cada moneda por separado: inicial = round(T × 50 / 100, 2); cuota
+1 = round((T − inicial) / 2, 2); cuota 2 = el resto. Lo mismo sobre la
+consulta (`financed_usd`/`financed_cur`). $100 → 56,96 + 28,48 + 28,48
+(consulta 50 + 25 + 25). $30 → 17,09 + 8,55 + 8,54.
+
+**Límite**: sigue contando la consulta entera (`helios_credit_used_usd`) desde
+el «Sí» hasta que se pagan las 3 cuotas. La inicial no amplía lo que cabe.
+
+**La cuota 0 nunca está «vencida»**: mientras la orden la espera, el cron de
+cada minuto le pasa `due_date` a hoy si cruza la medianoche, y además no cuenta
+para `helios_in_arrears`,
+`can_take_debt`, la mora ni el cargo por atraso; Cobranza
+(`helios_collection_rows`/`helios_collection_amounts`) no mira las órdenes que
+esperan la inicial; los recordatorios ya solo miran órdenes `confirmed`, y
+`metricas.cuotas_al` solo las cuotas 1 y 2 (cobro a tiempo, impago, cohortes).
+Las liquidaciones a la clínica (`run_scheduled_settlements_batch`,
+`helios_settlement_outlook`, `admin_merchant_upcoming_settlements`) solo miran
+órdenes `confirmed`.
+
+### RPC que cambian (frentes B, C y E)
+
+Ninguna firma de entrada cambia. Solo se añaden campos; donde se listan cuotas,
+la inicial es una fila más con `sequence` 0 (la primera).
+
+**`preview_patient_charge(p_merchant_id, p_document, p_amount, p_currency)`** y
+**`bot_preview_charge(p_phone, p_document, p_amount, p_currency)`** (C, B):
+
+```jsonc
+{
+  "currency": "USD", "base_usd": 100, "base_cur": 100,
+  "down_payment_pct": 50,            // NUEVO: 0 = sin inicial
+  "down_payment_minutes": 120,       // NUEVO: plazo desde el «Sí»; null sin inicial
+  "installments": [                  // 3 filas con inicial (2 sin ella)
+    {"sequence": 0, "due_date": "2026-11-12", "amount_usd": 56.96, "financed_usd": 50,
+     "amount_cur": 56.96, "financed_cur": 50, "amount_ves": 5696.00},
+    {"sequence": 1, "due_date": "2026-11-26", "amount_usd": 28.48, "financed_usd": 25, "...": "..."},
+    {"sequence": 2, "due_date": "2026-12-10", "amount_usd": 28.48, "financed_usd": 25, "...": "..."}
+  ],
+  "cabe": true, "disponible_usd": 150    // sin cambios: cuenta la consulta entera
+}
+```
+
+**`helios_charge_for_staff(charge)`**, lo que devuelven `create_patient_charge`,
+`bot_create_charge` (en `charge`), `staff_resend_confirmation` y
+`bot_resend_confirmation` (C, B):
+
+```jsonc
+{
+  "status": "awaiting_down_payment",            // o pending / confirmed / reverted…
+  "down_payment_pct": 50,                        // NUEVO
+  "down_payment_due_at": "2026-11-12T18:30:00Z", // NUEVO (null hasta el «Sí»)
+  "activated_at": null,                          // NUEVO
+  "down_payment_expired_at": null,               // NUEVO
+  "void_reason": null,                           // NUEVO («La inicial no se pagó a tiempo»)
+  "expires_at": "…",                             // sin cambios: solo pending / expired
+  "installments": [{"sequence": 0, "due_date": "…", "amount_usd": 56.96,
+                    "amount_cur": 56.96, "amount_ves": 5696.00}, "…"],
+  "receipt": {"status": "sin_enviar"},           // mientras espera la inicial
+  "confirmation": {"status": "aceptada"}         // una orden que espera la inicial ya aceptó
+}
+```
+
+**`merchant_transactions(p_from, p_to, p_limit)`** (C, /financiamientos): dos
+columnas nuevas al final, **`down_payment_due_at timestamptz`** (solo con
+`status = 'awaiting_down_payment'`) y **`down_payment_expired_at timestamptz`**
+(no null = se anuló por no pagar la inicial). Lista también las órdenes
+`awaiting_down_payment` y las `reverted` que se anularon por la inicial (las
+reversas del equipo siguen sin salir). `cuota_1_due/run` y `cuota_2_due/run`
+solo vienen en órdenes vivas (`confirmed`, `pending`, `awaiting_down_payment`);
+en las demás (anuladas, rechazadas, vencidas) son **null**. `expires_at` no
+cambia. `receipt_status` = `sin_enviar` mientras espera.
+
+**`merchant_sales_export` y `merchant_sales_export_items`** (C, el libro de
+ventas): **excluyen** toda orden con inicial que nunca se activó
+(`down_payment_pct` > 0 y `activated_at` null), se anulara sola o la
+revirtiera el equipo: nunca fueron ventas. Las revertidas que sí fueron ventas
+siguen saliendo como «Revertido». Sin columnas nuevas.
+
+**`merchant_charge_detail(charge)`** (C): añade `down_payment_pct`,
+`down_payment_due_at`, `activated_at`, `down_payment_expired_at`.
+`installments` y `payouts` siguen siendo solo las cuotas 1 y 2 (las que tienen
+un pago a la clínica). A la clínica no se le dice si el paciente pagó: solo el
+estado de la orden.
+
+**`admin_charges(...)`** (E, la lista de órdenes): cuatro columnas nuevas al
+final: `down_payment_pct numeric`, `down_payment_due_at timestamptz`,
+`activated_at timestamptz`, `down_payment_expired_at timestamptz`.
+`installments_total` no cambia de significado (con inicial cuenta 3): con
+`down_payment_pct` > 0 la cuota 0 es «Inicial» y las demás «Cuota N de 2».
+
+**`helios_admin_payment_item`** (E, Caja; dentro de la cola de pagos): cada
+compra añade `down_payment_pct` (numeric, junto a `installments_total`); el
+`days_overdue` de la cuota 0 es siempre 0.
+
+**`helios_admin_user_detail_base`** (E, ficha del paciente): `debt.overdue_usd`
+y `debt.days_overdue` no cuentan la cuota 0, y su `installments[].days_overdue`
+es siempre 0. **`admin_user_detail.consumos`** («Sus financiamientos») añade
+`down_payment_pct` (numeric), `down_payment_due_at`, `activated_at` y
+`down_payment_expired_at` (timestamptz).
+
+**`admin_risk_alerts`** (E, Alertas): tipo nuevo **`inicial_atascada`**
+(severidad `alta`, sujeto el paciente): una orden que sigue esperando la
+inicial más de `alert_down_payment_stuck_hours` horas después de su plazo
+(porque un pago en revisión la sostiene). `detail`: `charge_id`,
+`order_number`, `business_date`, `down_payment_due_at`, `hours_late`,
+`threshold`, `merchant_id`, `merchant_name`. Sale en `counts` y en
+`thresholds.alert_down_payment_stuck_hours`; `admin_review_risk_alert` la
+admite.
+
+**`admin_charge_detail(charge)`** (E): añade los mismos cuatro campos, y el
+`days_overdue` de la cuota 0 es siempre 0. Sus
+cuotas, las de `helios_admin_user_detail_base` y las de la Caja
+(`helios_admin_payment_item`) traen la cuota 0: llamarla «Inicial».
+`admin_reverse_charge` y `admin_can_reverse_charge` aceptan también una orden
+que espera la inicial.
+
+**`bot_paciente_resumen(p_profile_id)`** (B: «Mi saldo y cuotas», «Pagar mi
+cuota»): `financiamientos` incluye las órdenes que esperan la inicial, con dos
+claves nuevas por orden:
+
+```jsonc
+{"orden": 6261,
+ "estado": "awaiting_down_payment",           // NUEVO: o "confirmed"
+ "inicial_vence_at": "2026-11-12T18:30:00Z",  // NUEVO: null en las viejas
+ "cuotas": [{"sequence": 0, "due_date": "2026-11-12", "monto": 56.96,
+             "cargo_atraso": 0, "vencida": false}, "…"],
+ "pagadas": ["…"]}                             // la inicial pagada sale aquí, sequence 0
+```
+
+La cuota 0 nunca sale `vencida`. «Pagar mi cuota» la cotiza como cualquier
+cuota (`helios_quote_installments`; `helios_receipt_tramo` la toma primero
+porque vence hoy).
+
+**`helios_patient_decision(charge, decision, phone, wamid)`** y
+**`helios_patient_id_photo(…)`** (B): con inicial, el «Sí» (o la cédula)
+devuelve `{"ok": true, "status": "awaiting_down_payment", "down_payment_due_at":
+"…", "charge_id": "…", "order_number": 6261}`; un reintento del mismo mensaje,
+`ok: true`. **La base ya le manda al paciente** el acuse de la cédula y el
+mensaje de la inicial: el webhook no debe decir «confirmado».
+
+**`helios_charge_confirmation`** (dentro de `helios_charge_for_staff`): la
+pregunta con inicial es la plantilla `confirmar_pago_con_inicial`; los
+reenvíos de las dos plantillas cuentan igual.
+
+**Asistente** (E): `asistente.estado('orden', 'awaiting_down_payment')` =
+«esperando la inicial»; `asistente.ordenes` añade `inicial_pct`,
+`inicial_vence_at`, `activada_at` y `anulada_sin_inicial_at`; `asistente.cuotas`
+incluye las órdenes que esperan la inicial (la cuota `numero` 0 nunca sale
+`vencida`).
+
+### Los mensajes que salen de la base
+
+| Cuándo | Plantilla o texto | Canal |
+|---|---|---|
+| La pregunta (orden con inicial) | `confirmar_pago_con_inicial` (nueva): consulta, comisión de servicio y su IVA, total, «💳 Inicial, hoy: $56,96» y «📅 Cuotas: $28,48 el jueves 26/11 y $28,48 el jueves 10/12» (el texto de la v3, docs/00 §15.5.4). Fuera de la ventana, la de Meta `helios_confirmar_pago_en_cuotas_v3` (docs/00 §15.5.4). Las órdenes viejas siguen con `confirmar_financiamiento` y la v2. | whatsapp |
+| Tras el «Sí» | `pagar_inicial` (nueva, en lugar de `bienvenida`): «paga tu *inicial de $56,96* antes de las 16:30 ⏰», el plan (inicial + 2 cuotas) y `helios_payment_block` de la inicial (cierra con `helios_level_reminder()`). | whatsapp / whatsapp_manual |
+| Cédula recibida | `helios_patient_decision_text(…, 'cedula_recibida')`: «Recibimos tu cédula. Ya solo falta tu inicial…». | texto libre |
+| Pago aprobado que cubre la inicial | `helios_payment_result_whatsapp`: «🎉 Tu pago en cuotas #N con la Dra. … quedó activo» + las 2 cuotas + `helios_level_up_phrase()`. | texto libre (ventana abierta) |
+| Activada | `comprobante_financiamiento` por correo: «• Inicial: $56,96, pagada el …» y las cuotas. Variables nuevas `plan_nota`/`plan_nota_html`: vacías con inicial, « (sin inicial)» en las viejas. | email |
+| Activada (al médico) | `helios_notify_staff_of_charge(…, 'activada')`: «¡Buenas noticias! Ana P. pagó su inicial y su pago en cuotas quedó activo. La orden #N por una consulta de $100 ya está confirmada ✅». Con la ventana cerrada, la plantilla `helios_paciente_acepto`. | bot del médico |
+| Anulada (al paciente) | `helios_patient_decision_text(…, 'inicial_vencida')`, con el botón «Hablar con alguien». | texto libre |
+| Anulada (al médico) | `helios_notify_staff_of_charge(…, 'inicial_vencida')`: «⌛ La orden #N de Ana P. se anuló: no pagó la inicial a tiempo…». No hay plantilla aprobada: solo sale con la ventana abierta. | bot del médico |
+
+Los textos del médico en el panel y en el bot (etiquetas, «Esperando la
+inicial», el desglose) son de los frentes B y C, con estos datos.
+
+### Funciones y crons nuevos (internos, sin permiso para la API)
+
+`helios_down_payment_pct_at(date)`, `helios_down_payment_minutes()`,
+`helios_installment_split(total, base, pct)`, `helios_activate_charge(charge)`
+(y el trigger `installments_activate_charge`), `helios_down_payment_open(charge)`,
+`helios_revert_unpaid_down_payment(charge)`, `helios_revert_unpaid_down_payments()`
+(cron `helios_revert_unpaid_down_payments`, cada minuto; también le pasa a hoy
+el `due_date` de las iniciales en espera que crucen la medianoche),
+`helios_enqueue_down_payment_request(charge, channel)`,
+`helios_receipt_tramo_en(user, día, monto, ids)`, `helios_receipt_cuadra(user,
+día, monto, ids)`, el trigger `payment_reports_activated_receipt` (el
+comprobante de la orden que activó un pago, cuando ese pago queda aprobado
+entero, con las cuotas ya pagadas como «pagada el …») y el
+trigger `settlements_not_from_down_payment` (la cuota 0 nunca genera una
+liquidación `on_collection`). Al activarse tarde, la mitad de la clínica ya
+vencida pasa a hoy y la 2.ª, como pronto, al día siguiente.
+
+### Parámetros
+
+| key | valor | catálogo |
+|---|---|---|
+| `down_payment_pct` | 50 desde el día del lanzamiento (antes, 0); `admin_set_business_parameter` solo admite 0 a 90 | «Inicial del paciente… La plantilla de Meta v3 dice «50%»», % |
+| `down_payment_minutes` | 120; al menos 1 | «Plazo para pagar la inicial. La plantilla de Meta v3 dice «2 horas»», minutos |
+| `alert_down_payment_stuck_hours` | 6 | grupo `alerta`, horas |
+
+### Condiciones
+
+`terms_versions` v4 (al final del mismo fichero): inicial del 50%, la orden se anula si no se paga
+en 2 h, y el límite se libera al pagar la inicial y las dos cuotas. Las
+órdenes viejas conservan la v3.

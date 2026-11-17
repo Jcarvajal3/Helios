@@ -1,7 +1,7 @@
 # Helios — Plan de implementación
 
 > Pagos en cuotas para consultas y tratamientos de salud privada en Venezuela (medicina, odontología y cosmetología). Solo web, sin app móvil. Operado por **Quarto Latam, C.A.**
-> 0% inicial · 2 cuotas (14 y 28 días) · comisión de servicio **12% + IVA** · límite inicial **$150** · a la clínica, **a los 8 y 15 días** · anclado al **dólar BCV**.
+> Inicial del 50% (desde el lanzamiento, docs/07) · 2 cuotas (14 y 28 días) · comisión de servicio **12% + IVA** · límite inicial **$150** · a la clínica, **a los 8 y 15 días** · anclado al **dólar BCV**.
 > Hermano de Ronda: mismo núcleo (libro contable, mora, liquidaciones, conciliación, paneles), sin nada de la app.
 
 Fecha: 2026-09-30 (actualizado el 2026-10-05: WhatsApp por la API, el "Sí" del paciente y el bot del médico, §5.1 y §15; el 2026-10-06: las reglas del negocio publicadas, §0.1; y el 2026-11-06: las cuotas a 14 y 28 días, §15.12) · Fuente: Ronda-panel @ `f3b5c6a` (2026-09-29) y Ronda-app/supabase @ `20260929140000` (354 migraciones).
@@ -96,7 +96,7 @@ El resto del documento conserva "financiamiento" como término interno del dise�
 | Vocabulario externo | "Pago en cuotas" y "comisión de servicio"; nunca "préstamo" ni "financiamiento" | Javier, 2026-10-06 |
 | Cuentas de cobro de Helios | **Configurables** desde Ajustes, como en Ronda; se llenan después | Javier, 2026-09-30 |
 | WhatsApp de Helios | **Configurable** desde Ajustes | Javier, 2026-09-30 |
-| Cuotas | 0% inicial, 2 cuotas a ~~+7 y +14 días~~ **+14 y +28 días** desde la fecha de la orden. Solo las órdenes nuevas: las ya confirmadas conservan sus fechas (§15.12) | Brief; Javier, 2026-11-06 |
+| Cuotas | ~~0% inicial~~ **Inicial del 50% del total el día del Sí** (docs/07, desde el lanzamiento) y 2 cuotas a ~~+7 y +14 días~~ **+14 y +28 días** desde la fecha de la orden. Solo las órdenes nuevas: las ya confirmadas conservan sus fechas (§15.12) | Brief; Javier, 2026-11-06 y 2026-11-12 |
 | Niveles | Motor de niveles igual que Ronda. Solo el **nivel 1** activo: ~~$350~~ **$150 desde el 2026-10-06** ("límite inicial"); los niveles 2-5 existen con `is_active = false` | Brief; Javier, 2026-10-06 |
 | Stack | El mismo de Ronda, sin la app: TanStack Start + Supabase + Vercel + Sentry | Brief |
 
@@ -988,6 +988,38 @@ La v1 y la v2 dicen "financiamiento", que desde el 2026-10-06 no se usa hacia fu
 Decidido por Javier el 2026-10-13: hacia el médico la comisión de servicio se llama **«Comisión Helios»**, y en todo desglose que ve (panel y bot) va seguida de **«(Lo paga el paciente)»**, para que ningún médico crea que se le descuenta. Hecho en el panel, la portada, `/legal/terminos` y el bot del médico.
 
 **Los mensajes al paciente no cambian**: la pregunta de WhatsApp (`confirmar_financiamiento`, y su plantilla de Meta `helios_confirmar_pago_en_cuotas`) y el comprobante por correo siguen diciendo «comisión de servicio». 20261013000900 los había cambiado y 20261013001000 los devolvió a su texto.
+
+#### 15.5.4 La v3 (2026-11-12): con la inicial del 50%
+
+La v2 (§15.8, B1) dice «*2 cuotas, sin inicial*». Para la inicial del 50% (docs/07) hace falta otra, que **crea Javier en Meta**. La base ya la deja conectada a una fila nueva, `confirmar_pago_con_inicial` (`supabase/por-lanzar/20261112110000_la_inicial_del_50.sql`), que solo usan las órdenes con inicial; las viejas siguen con `confirmar_financiamiento` y la v2. **No se lanza hasta que Meta la apruebe.**
+
+- Nombre: `helios_confirmar_pago_en_cuotas_v3` · Categoría: **Utility** · Idioma: **`es`** · Variables **numéricas** · sin encabezado ni pie.
+- Botones de respuesta rápida, en este orden: **Sí, acepto** · **No** (el payload lo fija el envío: `confirmar:<charge_id>` / `rechazar:<charge_id>`, los de siempre).
+- Cuerpo:
+
+  > 👋 ¡Hola, {{1}}! Te damos la bienvenida a Helios 💙
+  >
+  > Tu consulta con {{2}} quedó registrada para que la pagues con una *inicial del 50%* y *2 cuotas*.
+  >
+  > *Tu consulta*
+  > Consulta: {{3}}
+  > Comisión de servicio ({{4}}%): {{5}}
+  > IVA de la comisión ({{6}}%): {{7}}
+  > *Total: {{8}}*
+  >
+  > *Cómo pagas*
+  > 💳 Inicial, hoy: {{9}}
+  > 📅 Cuotas: {{10}}
+  >
+  > Pagas en bolívares, a la tasa BCV del {{11}} del día en que pagues.
+  >
+  > ¿Confirmas tu pago en cuotas? Tienes 2 horas para responder. Al confirmar, paga la inicial en las 2 horas siguientes y tu pago en cuotas quedará activo.
+
+- Variables (`wa_template_params`, ya conectadas): {{1}} `nombre`, {{2}} `medico`, {{3}} `monto_consulta`, {{4}} `servicio_pct`, {{5}} `cargo_servicio`, {{6}} `iva_pct`, {{7}} `iva_cargo_servicio`, {{8}} `total`, {{9}} `inicial`, {{10}} `cuotas_detalle`, {{11}} `moneda`. Ninguna lleva saltos de línea (las cuotas van en una sola, con su monto y su fecha).
+- Ejemplo para Meta: {{1}} `María` · {{2}} `la Dra. Nadia Khabbaze` · {{3}} `$100` · {{4}} `12` · {{5}} `$12` · {{6}} `16` · {{7}} `$1,92` · {{8}} `$113,92` · {{9}} `$56,96` · {{10}} `$28,48 el jueves 26/11 y $28,48 el jueves 10/12` · {{11}} `dólar`.
+- Sin «$» en el texto: las variables de dinero traen su símbolo (dólares o euros). Sin bolívares: van en el bloque de pago del mensaje siguiente (`pagar_inicial`).
+- Texto fijado por Javier el 2026-11-12. El «50%» y las «2 horas» (el «Sí» y la inicial) van escritos: si cambian `down_payment_pct`, `patient_confirmation_minutes` o `down_payment_minutes`, hay que mandar otra plantilla.
+- El texto libre (dentro de la ventana de 24 h, `confirmar_pago_con_inicial`) es el mismo, con «Responde Sí o No.» antes de «Tienes 2 horas para responder.», como en la v2.
 
 ### 15.6 El bot del paciente (2026-10-06)
 

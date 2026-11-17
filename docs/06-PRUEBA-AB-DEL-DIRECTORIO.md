@@ -4,7 +4,7 @@ Dos directorios conviven y se comparan en el superadmin:
 
 | Variante | Ruta | Qué ofrece | Botón de WhatsApp |
 |---|---|---|---|
-| **A** | `/directorio` (y `/directorio/<especialidad>`, `/medico/<slug>`) | El de siempre: 2 cuotas a los 14 y 28 días, sin inicial. Todos los médicos. | Directo al médico (`INTERESADOS_POR_HELIOS = false`, sin cambios). |
+| **A** | `/directorio` (y `/directorio/<especialidad>`, `/medico/<slug>`) | El de siempre: 2 cuotas a los 14 y 28 días, sin inicial (desde el lanzamiento de docs/07: 50% de inicial y 2 cuotas). Todos los médicos. | Directo al médico (`INTERESADOS_POR_HELIOS = false`, sin cambios). |
 | **B** | `/consultas` | «¡Consultas médicas por solo $15 de inicial!» y el resto en 2 cuotas quincenales. Solo médicos con consulta **de $60 o menos** (o su equivalente en euros). | Al WhatsApp de Helios con el código del médico y la marca de B (`DIR-7K2P-B`): el bot apunta al interesado y le da el contacto del médico, como entre el 2026-10-27 y el 28 (docs/04). |
 
 `/consultas` **no se enlaza** desde ninguna página (portada, menú, pie, guías),

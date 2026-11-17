@@ -26,10 +26,17 @@ docs/       plan, contrato, reglas
 
 ## El negocio, en cifras (2026-10-06)
 
-- Paciente: **2 cuotas a los 14 y 28 días**, sin inicial (órdenes desde el
-  2026-11-06; las ya confirmadas conservan sus fechas, a 7 y 14). **Comisión
+- Paciente: **inicial del 50% del total el día del Sí y 2 cuotas a los 14 y
+  28 días** (docs/07, Javier 2026-11-12; rige desde el lanzamiento, que
+  espera la plantilla v3 de Meta: hasta entonces, 2 cuotas sin inicial). La
+  inicial es la cuota `sequence = 0`; la orden queda en
+  `awaiting_down_payment` hasta que se aprueba (igual que una cuota) y se
+  anula sola a las 2 h sin pago. Se decide por orden (`charges.down_payment_pct`):
+  las viejas conservan sus condiciones. **Comisión
   Helios del 12% + IVA 16%** sobre la comisión (`consumer_fee_pct`,
-  `vat_pct`): consulta de $100 → $12 + $1,92 → 2 cuotas de $56,96.
+  `vat_pct`): consulta de $100 → $12 + $1,92 → total $113,92 → inicial
+  $56,96 + 2 cuotas de $28,48. `/consultas` (prueba A/B) no se toca: sigue
+  diciendo «$15 de inicial».
   **Límite inicial de $150** (nivel 1; los demás niveles están apagados, así
   que hacia fuera nunca se dice que el límite «crece»). **Excepción
   aprobada por Javier (2026-10-19)**: todo bloque de pago al paciente
@@ -41,7 +48,8 @@ docs/       plan, contrato, reglas
   confirmado por WhatsApp y por correo (2026-10-23,
   `helios_level_up_phrase()`); lo de los niveles se resuelve después.
 - Médico o centro: recibe el **100%** de la consulta en dos mitades, **a los
-  8 y 15 días** desde la orden, **pague o no el paciente**. Su fecha no sale
+  8 y 15 días** desde la orden, **pague o no el paciente** sus cuotas
+  (desde que la orden queda activa; la inicial no le genera pago). Su fecha no sale
   de la cuota: `installments.settlement_due_date` (orden +
   `helios_settlement_interval_days()` × secuencia) y el pago al día siguiente
   (`helios_settlement_run_for(d) = d + 1`); se paga a diario, ya no los lunes.
