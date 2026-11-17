@@ -12,6 +12,12 @@ bash supabase/tests/run.sh ledger_smoke     # solo algunas
 HELIOS_PROJECT_REF=<ref> bash supabase/tests/run.sh   # otro proyecto
 ```
 
+`POR_LANZAR=1 bash supabase/tests/run.sh` pega además, tras el `begin;` de cada
+suite, los ficheros de `supabase/por-lanzar/` (la inicial del 50%, docs/07, que
+aún no se ha lanzado) y añade `inicial_smoke`, que recorre su ciclo. Las suites
+de siempre prueban las órdenes sin inicial: `_ayudas.sql` (y `sin_mora_smoke`)
+fijan `down_payment_pct` en 0 dentro de su transacción.
+
 Van por `supabase db query --linked --project-ref …` (Management API), sin
 Docker ni contraseña. La API no devuelve los NOTICE: no hay recuento de
 asserts, una suite está en verde si no sale ningún `ERROR:`. `run.sh` se niega

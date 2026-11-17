@@ -39,6 +39,12 @@ begin
   insert into public.business_parameters (key, value, effective_from, note)
   values ('patient_confirmation_required', 0, v_today, 'pruebas (rollback)')
   on conflict (key, effective_from) do update set value = 0;
+  -- Y sin la inicial del 50% (docs/07): esta suite prueba la orden que se
+  -- confirma al instante, con su comprobante. Sin `supabase/por-lanzar/`
+  -- aplicado, la fila no la lee nadie.
+  insert into public.business_parameters (key, value, effective_from, note)
+  values ('down_payment_pct', 0, v_today, 'pruebas (rollback)')
+  on conflict (key, effective_from) do update set value = 0;
   update public.platform_maintenance set is_active = false;
   update public.platform_contact set whatsapp_number = '+584140001122';
   update public.levels set monthly_limit_usd = 150 where level = 1;

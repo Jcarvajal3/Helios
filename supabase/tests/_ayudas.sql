@@ -33,6 +33,15 @@ insert into public.business_parameters (key, value, effective_from, note)
 values ('patient_confirmation_required', 0, public.helios_business_date(now()), 'pruebas (rollback)')
 on conflict (key, effective_from) do update set value = 0;
 
+-- La inicial del 50% (docs/07, por lanzar): las suites de siempre prueban
+-- las órdenes SIN inicial (2 cuotas, confirmadas con el «Sí»), como las que
+-- existían antes del lanzamiento. La inicial la prueba `inicial_smoke`, que
+-- la vuelve a poner en 50. Sin `supabase/por-lanzar/` aplicado, esta fila no
+-- la lee nadie.
+insert into public.business_parameters (key, value, effective_from, note)
+values ('down_payment_pct', 0, public.helios_business_date(now()), 'pruebas (rollback)')
+on conflict (key, effective_from) do update set value = 0;
+
 -- Desde el 2026-10-07 no se cobran cargos por mora (`late_fee_usd` = 0), pero
 -- el motor sigue en el código para retomarlo: las suites lo siguen probando
 -- con el cargo de siempre, $2. `sin_mora_smoke` prueba el modo apagado.

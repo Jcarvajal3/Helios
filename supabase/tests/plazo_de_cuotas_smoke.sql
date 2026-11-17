@@ -187,7 +187,9 @@ begin
   v_falla := false;
   begin
     update public.installments set settlement_due_date = null where id = v_i1.id;
-  exception when not_null_violation then
+  -- Con la inicial (supabase/por-lanzar/, docs/07) la columna admite null solo
+  -- en la cuota 0: lo frena un check en vez del not null.
+  exception when not_null_violation or check_violation then
     v_falla := true;
   end;
   if not v_falla then

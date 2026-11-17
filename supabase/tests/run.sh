@@ -5,6 +5,14 @@
 #   bash supabase/tests/run.sh                 # todas las suites
 #   bash supabase/tests/run.sh ledger_smoke    # solo las que se nombren
 #   HELIOS_PROJECT_REF=<ref> bash supabase/tests/run.sh   # otro proyecto
+#   POR_LANZAR=1 bash supabase/tests/run.sh    # con supabase/por-lanzar/ aplicado
+#
+# `POR_LANZAR=1` (la inicial del 50%, docs/07): pega los ficheros de
+# `supabase/por-lanzar/`, en orden, justo después del `begin;` de cada suite.
+# Así se prueba lo que aún no se ha lanzado sin aplicarlo: el `rollback` final
+# se lo lleva con todo lo demás. Ojo: `_ayudas.sql` fija `down_payment_pct` en
+# 0 (las suites de siempre prueban las órdenes sin inicial); la inicial la
+# prueba `inicial_smoke`, que solo corre con `POR_LANZAR=1`.
 #
 # Sin Docker: cada suite va por `supabase db query --linked --project-ref`,
 # que usa la Management API (no hace falta la contraseña de la base). Por
@@ -102,14 +110,27 @@ SUITES=(
   rx_smoke
   rx_precios_smoke
   rx_catalogo_smoke
+  inicial_smoke
 )
 if [ "$#" -gt 0 ]; then SUITES=("$@"); fi
 
 run_suite() {
   local archivo="$1" tmp salida intento
   tmp="$(mktemp "${TMPDIR:-/tmp}/helios-suite-XXXXXX.sql")"
-  # `-- @ayudas` → contenido de _ayudas.sql
-  awk -v ayudas="$DIR/_ayudas.sql" '
+  # `-- @ayudas` → contenido de _ayudas.sql; con POR_LANZAR=1, tras el
+  # primer `begin;`, los ficheros de supabase/por-lanzar/ (en orden).
+  local lanzar=""
+  if [ "${POR_LANZAR:-0}" = "1" ]; then
+    lanzar="$(ls "$RAIZ"/supabase/por-lanzar/*.sql 2>/dev/null | sort | tr '\n' '|')"
+  fi
+  awk -v ayudas="$DIR/_ayudas.sql" -v lanzar="$lanzar" '
+    BEGIN { hecho = 0 }
+    /^begin;[[:space:]]*$/ && !hecho {
+      print; hecho = 1
+      n = split(lanzar, fs, "|")
+      for (k = 1; k <= n; k++) if (fs[k] != "") { while ((getline l < fs[k]) > 0) print l; close(fs[k]) }
+      next
+    }
     /^-- @ayudas[[:space:]]*$/ { while ((getline l < ayudas) > 0) print l; close(ayudas); next }
     { print }
   ' "$archivo" > "$tmp"
