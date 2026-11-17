@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CircleCheck, FilePlus2, Mail, MessageCircle, XCircle } from 'lucide-react'
+import { CircleCheck, FilePlus2, Hourglass, Mail, MessageCircle, XCircle } from 'lucide-react'
 
 import { useToast } from '@/components/Toast'
 import {
@@ -15,7 +15,14 @@ import {
   claseDeBoton,
   formatMoneda,
 } from '@/components/ui'
-import { COMPROBANTE, esperaAlPaciente, fraseDelComprobante } from '@/features/merchant/registro'
+import {
+  COMPROBANTE,
+  esperaAlPaciente,
+  esperaLaInicial,
+  fraseDelComprobante,
+  seAnuloSinInicial,
+  tieneInicial,
+} from '@/features/merchant/registro'
 import type { EstadoDelComprobante, Financiamiento } from '@/features/merchant/registro'
 import { fetchFinanciamiento, reenviarComprobante } from '@/features/merchant/registroApi'
 import { describeError } from '@/lib/supabase'
@@ -34,7 +41,9 @@ import { DesgloseDelServicio, PlanDePagos } from './PlanDePagos'
  *
  * Con la confirmación del paciente, la orden llega aquí PENDIENTE: la pantalla
  * espera su «Sí» (`ConfirmacionDelPaciente`) y vuelve a pedir el
- * orden cada pocos segundos hasta que acepta, rechaza o vence.
+ * orden cada pocos segundos hasta que acepta, rechaza o vence. Con inicial
+ * (2026-11-12), tras el «Sí» la orden queda ESPERANDO LA INICIAL y se sigue
+ * preguntando hasta que la paga (activa) o se anula sola a las 2 h.
  *
  * El foco cae en «Registrar otro», que es lo siguiente que se hace en una
  * recepción con cola.
@@ -71,6 +80,8 @@ export function PasoListo({
     refetchIntervalInBackground: true,
   })
   const f = actual.data
+  const conInicial = tieneInicial(f.cuotas)
+  const anulada = seAnuloSinInicial(f)
 
   const [comprobante, setComprobante] = useState<{
     estado: EstadoDelComprobante | null
@@ -84,11 +95,19 @@ export function PasoListo({
     if (f.status === statusAnterior.current) return
     statusAnterior.current = f.status
     setComprobante({ estado: f.receipt, correo: f.emailEnmascarado })
-    if (f.status === 'confirmed') avisar('El paciente aceptó: pago en cuotas confirmado')
+    if (f.status === 'confirmed') {
+      avisar(
+        conInicial
+          ? 'El paciente pagó su inicial: pago en cuotas confirmado'
+          : 'El paciente aceptó: pago en cuotas confirmado',
+      )
+    }
+    if (f.status === 'awaiting_down_payment') avisar('El paciente aceptó: falta que pague su inicial')
+    if (seAnuloSinInicial(f)) avisar('La orden se anuló: el paciente no pagó la inicial a tiempo')
     void queryClient.invalidateQueries({ queryKey: ['merchant-transactions'] })
     void queryClient.invalidateQueries({ queryKey: ['merchant-transactions-summary'] })
     void queryClient.invalidateQueries({ queryKey: ['comisiones'] })
-  }, [f.status, f.receipt, f.emailEnmascarado, avisar, queryClient])
+  }, [f, conInicial, avisar, queryClient])
 
   useEffect(() => {
     otroRef.current?.focus()
@@ -105,17 +124,30 @@ export function PasoListo({
 
   const estado = comprobante.estado
   const confirmado = f.status === 'confirmed'
+  const esperandoInicial = esperaLaInicial(f)
   const titulo = confirmado
-    ? `Orden #${f.orderNumber} registrada`
+    ? conInicial
+      ? `Orden #${f.orderNumber} activa`
+      : `Orden #${f.orderNumber} registrada`
     : f.status === 'pending'
       ? `Orden #${f.orderNumber} enviada al paciente`
-      : f.status === 'expired'
-        ? `Orden #${f.orderNumber} vencida`
-        : `Orden #${f.orderNumber} no confirmada`
-  const Icono = confirmado ? CircleCheck : f.status === 'pending' ? MessageCircle : XCircle
+      : esperandoInicial
+        ? `Orden #${f.orderNumber}: esperando la inicial`
+        : anulada
+          ? `Orden #${f.orderNumber} anulada`
+          : f.status === 'expired'
+            ? `Orden #${f.orderNumber} vencida`
+            : `Orden #${f.orderNumber} no confirmada`
+  const Icono = confirmado
+    ? CircleCheck
+    : f.status === 'pending'
+      ? MessageCircle
+      : esperandoInicial
+        ? Hourglass
+        : XCircle
   const colorDelIcono = confirmado
     ? 'text-success'
-    : f.status === 'pending'
+    : f.status === 'pending' || esperandoInicial
       ? 'text-on-surface-variant'
       : 'text-error'
 
@@ -160,7 +192,9 @@ export function PasoListo({
 
         {f.cuotas.length > 0 && (
           <div>
-            <DataLabel className="mb-2">Las cuotas del paciente</DataLabel>
+            <DataLabel className="mb-2">
+              {conInicial ? 'La inicial y las cuotas del paciente' : 'Las cuotas del paciente'}
+            </DataLabel>
             <PlanDePagos cuotas={f.cuotas} moneda={f.moneda} />
           </div>
         )}
@@ -172,6 +206,7 @@ export function PasoListo({
           feeVat={f.feeVatCur}
           moneda={f.moneda}
           concepto={f.concept}
+          conInicial={conInicial}
         />
 
         <ConfirmacionDelPaciente
@@ -183,7 +218,7 @@ export function PasoListo({
           <div className="flex flex-wrap items-center gap-3 rounded-panel-card bg-panel-raised p-4">
             <Mail size={20} aria-hidden className="shrink-0 text-on-surface-variant" />
             <p className="min-w-0 flex-1 basis-60 type-panel-body text-on-surface">
-              {fraseDelComprobante(estado, comprobante.correo)}
+              {fraseDelComprobante(estado, comprobante.correo, conInicial)}
             </p>
             {estado && (
               <Badge tone={COMPROBANTE[estado].tone} icono>

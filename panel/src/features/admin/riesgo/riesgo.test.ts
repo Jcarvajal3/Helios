@@ -9,7 +9,15 @@
  * estuviera entera, o un «no hay dato» que se vuelve un cero.
  */
 import type { CortesDeTramo } from '@/features/admin/tramos'
-import { alertasDeLaClinica, describirAlerta, filtrarAlertas, leerAlertas } from './alertas'
+import {
+  TIPOS,
+  alertasDeLaClinica,
+  clinicaDeLaAlerta,
+  describirAlerta,
+  filtrarAlertas,
+  leerAlertas,
+  ordenDeLaAlerta,
+} from './alertas'
 import { cosechaEnCurso, leerCosechas, leerCurvas, rangoDelMes, rotuloDeMes, seriesDeCurvas } from './cosechas'
 import {
   filaDeLaMismaClave,
@@ -526,6 +534,41 @@ console.log('── La foto de la cédula no cuadra (docs/00 §15.11) ───�
   comprueba(ambos === 'El número y el nombre de la cédula que envió no coinciden con sus datos.', 'los dos, en plural', ambos)
   comprueba(gato === 'Lo que envió para confirmar (orden #41) no parece una cédula.', 'lo que no es una cédula', gato)
   comprueba(perdida.startsWith('No se pudo descargar la foto'), 'la que no se pudo bajar', perdida)
+}
+
+console.log('── La inicial atascada (2026-11-12) ─────────────────────────')
+{
+  const a = leerAlertas({
+    counts: { inicial_atascada: { total: 1, unreviewed: 1, unreviewed_high: 1 } },
+    rows: [
+      {
+        alert_key: 'inicial_atascada:c1', kind: 'inicial_atascada', severity: 'alta',
+        subject_type: 'paciente', subject_id: 'u1', subject_name: 'Ana Pérez',
+        detail: {
+          charge_id: 'c1', order_number: 6261, business_date: '2026-11-12',
+          down_payment_due_at: '2026-11-12T18:30:00Z', hours_late: 7.4, threshold: 6,
+          merchant_id: 'm1', merchant_name: 'Dra. Ana Lara',
+        },
+      },
+      { alert_key: 'y', kind: 'otra_que_aun_no_existe', severity: 'alta', detail: {} },
+    ],
+  })
+  const inicial = a.filas.at(0)
+  const frase = inicial ? describirAlerta(inicial.detalle) : ''
+  comprueba(a.filas.length === 1 && inicial?.personaId === 'u1', 'se lee, y la de tipo desconocido se descarta', String(a.filas.length))
+  comprueba(
+    frase.startsWith('La orden #6261 de Dra. Ana Lara lleva 7 horas pasada de plazo esperando la inicial') &&
+      frase.endsWith('un pago sin resolver la sostiene. Apruébalo o recházalo.'),
+    'la frase dice la orden, la clínica y las horas',
+    frase,
+  )
+  comprueba(
+    inicial !== undefined && JSON.stringify(ordenDeLaAlerta(inicial)) === JSON.stringify({ id: 'c1', numero: 6261 }),
+    'enlaza la orden',
+  )
+  comprueba(inicial !== undefined && clinicaDeLaAlerta(inicial) === 'm1', 'y es de su clínica')
+  comprueba(a.recuentos.inicial_atascada.pendientesAltas === 1, 'el recuento del tipo nuevo')
+  comprueba(TIPOS.inicial_atascada.parametro === 'alert_down_payment_stuck_hours', 'su umbral es un parámetro')
 }
 
 console.log(fallos === 0 ? '\nTODO BIEN' : `\n${fallos} FALLOS`)

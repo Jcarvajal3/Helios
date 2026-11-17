@@ -1,4 +1,4 @@
-import { formatDay, formatPhone, formatUsd } from '@/components/ui'
+import { formatDay, formatPhone, formatTime, formatUsd } from '@/components/ui'
 import type { BadgeTone } from '@/components/ui'
 import { comoFila, comoLista, numero, numeroONulo, texto, textoONulo, textos } from '@/lib/json'
 
@@ -28,6 +28,7 @@ export type TipoAlerta =
   | 'cupo_al_limite_al_estrenar'
   | 'consultas_de_cedula_excesivas'
   | 'cedula_no_coincide'
+  | 'inicial_atascada'
 
 export type Gravedad = 'alta' | 'media'
 export const GRAVEDADES: readonly Gravedad[] = ['alta', 'media']
@@ -147,6 +148,14 @@ export const TIPOS: Record<
       'La foto de la cédula con la que confirmó su pago en cuotas no coincide con sus datos, no parece una cédula o no se pudo revisar. La orden ya quedó confirmada: hay que mirarla.',
     gravedad: 'alta',
     sujeto: 'paciente',
+  },
+  inicial_atascada: {
+    rotulo: 'Inicial atascada',
+    descripcion:
+      'Una orden sigue esperando la inicial bastante después de su plazo porque un pago sin resolver la sostiene (no se anula sola mientras haya uno abierto). Hay que aprobar o rechazar ese pago: aprobado, la orden queda activa; rechazado, se anula en la pasada siguiente.',
+    gravedad: 'alta',
+    sujeto: 'paciente',
+    parametro: 'alert_down_payment_stuck_hours',
   },
 }
 
@@ -438,9 +447,30 @@ function describirAlertaNueva(tipo: TipoAlerta, d: Record<string, unknown>): str
           return `No se pudo revisar la foto de la cédula que envió${conOrden}: mírala en su ficha.`
       }
     }
+    case 'inicial_atascada': {
+      const orden = n('order_number')
+      const horas = n('hours_late')
+      const plazo = t('down_payment_due_at')
+      const laOrden = orden !== null ? `La orden #${orden}` : 'Una orden'
+      const desde = plazo ? ` (su plazo era hasta las ${formatTime(plazo)}${dia ? ` del ${formatDay(dia)}` : ''})` : ''
+      const cuanto = horas !== null ? ` lleva ${Math.floor(horas)} ${Math.floor(horas) === 1 ? 'hora' : 'horas'} pasada de plazo` : ' sigue pasada de plazo'
+      const clinica = t('merchant_name')
+      return `${laOrden}${clinica ? ` de ${clinica}` : ''}${cuanto} esperando la inicial${desde}: un pago sin resolver la sostiene. Apruébalo o recházalo.`
+    }
     default:
       return TIPOS[tipo].descripcion
   }
+}
+
+/**
+ * La orden de la que habla una alerta, si la nombra (`charge_id` en el
+ * detalle): para enlazarla. Hoy, la de la inicial atascada.
+ */
+export function ordenDeLaAlerta(a: Alerta): { id: string; numero: number | null } | null {
+  const d = a.detalle
+  if (!('datos' in d)) return null
+  const id = textoONulo(d.datos.charge_id)
+  return id ? { id, numero: numeroONulo(d.datos.order_number) } : null
 }
 
 /**

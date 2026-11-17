@@ -1,5 +1,6 @@
 import { leerDesglose, leerHoyUsado, leerSemanaUsada } from '@/features/admin/metricas/lectura'
 import type { Desglose } from '@/features/admin/metricas/lectura'
+import { esLaInicial } from '@/features/admin/rotuloDeCuota'
 import { comoDia } from '@/lib/busqueda'
 import { booleano, comoLista, filaONula, numero, numeroONulo, texto, textos } from '@/lib/json'
 import { ESTADOS_DE_CUOTA } from './tipos'
@@ -47,6 +48,16 @@ function exigir<T>(valor: T | null | undefined, que: string): T {
 function numeroDeCuota(v: unknown): NumeroDeCuota | null {
   const n = numeroONulo(v)
   return n === 1 || n === 2 ? n : null
+}
+
+/**
+ * Si la fila no es de la inicial (cuota 0, 2026-11-12). Las cohortes miran
+ * solo las cuotas 1 y 2 y `metricas.cuotas_al` no manda la inicial; si
+ * llegara, se salta en vez de romper toda la lectura con «el número de una
+ * cuota».
+ */
+function noEsLaInicial(v: unknown): boolean {
+  return !esLaInicial(numeroONulo(filaONula(v)?.sequence))
 }
 
 function desglose(v: unknown, que: string): Desglose {
@@ -109,6 +120,7 @@ export function leerCohorte(v: unknown): Cohorte {
   const f = exigir(filaONula(v), 'una semana')
   const semana = exigir(comoDia(f.semana), 'el lunes de una semana')
   const cuotas = comoLista(f.cuotas)
+    .filter(noEsLaInicial)
     .map(leerCuota)
     .sort((a, b) => a.numero - b.numero)
 
@@ -178,6 +190,7 @@ export function leerDetalleDeCohorte(crudo: unknown): DetalleDeCohorte {
     graciaDias: numero(f.gracia_dias),
     cohorte: f.cohorte === null || f.cohorte === undefined ? null : leerCohorte(f.cohorte),
     curvas: comoLista(f.curvas)
+      .filter(noEsLaInicial)
       .map(leerCurva)
       .sort((a, b) => a.numero - b.numero),
     porLocal: comoLista(f.por_local).map(leerCohorteDeLocal),

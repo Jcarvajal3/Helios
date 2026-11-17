@@ -63,6 +63,7 @@ import type {
 } from '@/features/admin/pagosRegistrados/registrarPago'
 import { leerMonto } from '@/lib/montos'
 import { describeError } from '@/lib/supabase'
+import { esLaInicial, rotuloDeCuota } from '@/features/admin/rotuloDeCuota'
 
 /** El paciente al que se le registra: basta el id y cómo se llama. */
 export type PacienteDelPago = { userId: string; nombre: string | null }
@@ -563,7 +564,9 @@ function ListaDeCuotas({
   return (
     <div className="flex max-h-80 flex-col gap-2 overflow-y-auto">
       {cuotas.map((c) => {
-        const vencida = c.dueDate < hoy
+        // La inicial nunca está vencida: o se paga o la orden se anula sola.
+        const inicial = esLaInicial(c.sequence)
+        const vencida = c.dueDate < hoy && !inicial
         return (
           <div key={c.id} className="flex items-center gap-3 rounded-panel-control bg-panel-raised p-3">
             <div className="flex-1">
@@ -574,7 +577,7 @@ function ListaDeCuotas({
                 label={
                   <>
                     <span className="block">
-                      Cuota {c.sequence} · {c.merchantName}
+                      {rotuloDeCuota(c.sequence)} · {c.merchantName}
                       {c.orderNumber !== null && ` · #${c.orderNumber}`}
                       {c.enRevision && (
                         <Badge tone="warning" className="ml-2">
@@ -583,7 +586,15 @@ function ListaDeCuotas({
                       )}
                     </span>
                     <span className={`block type-panel-caption ${vencida ? 'text-error' : 'text-on-surface-variant'}`}>
-                      {c.dueDate === hoy ? 'Vence hoy' : vencida ? `Venció el ${formatDay(c.dueDate)}` : `Vence el ${formatDay(c.dueDate)}`}
+                      {inicial
+                        ? c.dueDate >= hoy
+                          ? 'Se paga hoy: activa la orden'
+                          : `Del ${formatDay(c.dueDate)}: activa la orden`
+                        : c.dueDate === hoy
+                          ? 'Vence hoy'
+                          : vencida
+                            ? `Venció el ${formatDay(c.dueDate)}`
+                            : `Vence el ${formatDay(c.dueDate)}`}
                       {c.lateFeesUsd > 0 && `, con ${formatUsd(c.lateFeesUsd)} de cargo por atraso`}
                     </span>
                   </>

@@ -102,7 +102,7 @@ export const metricasSemana = [
     espacio: 'metricas',
     sinonimos: ['total a cobrar', 'financiamiento más comisión', 'financiamiento + comisión', 'lo que se cobra de la semana', 'financiado más comisión'],
     destino: { to: '/admin/metricas' },
-    que: 'Lo que los pacientes pagan en sus dos cuotas por los financiamientos de la semana: el total financiado (sin comisión) más la Comisión Helios y su IVA. No es un total suelto: se enseña siempre con sus dos sumandos al lado, en la tarjeta, en la tabla y en el CSV.',
+    que: 'Lo que los pacientes pagan, en la inicial y sus dos cuotas (las órdenes de antes del 2026-11-12, solo en dos cuotas), por los financiamientos de la semana: el total financiado (sin comisión) más la Comisión Helios y su IVA. No es un total suelto: se enseña siempre con sus dos sumandos al lado, en la tarjeta, en la tabla y en el CSV.',
     rpc: 'admin_metricas_semana_resumen',
   },
   {

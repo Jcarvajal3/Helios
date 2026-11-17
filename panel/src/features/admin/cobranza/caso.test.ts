@@ -154,6 +154,33 @@ console.log('── La línea de tiempo ─────────────�
   const sinVeredicto = sucesos.find((s) => s.id === 'pagada:sin-veredicto')
   comprueba(sinVeredicto?.tipo === 'pagada' && !sinVeredicto.conAtraso, 'sin veredicto del servidor, sin marca')
   comprueba(ids.includes('cargo:f1') && ids.includes('gestion:g1'), 'salen el cargo y la gestión')
+
+  // La inicial (cuota 0, 2026-11-12) nunca se vence: o se paga o la orden se
+  // anula sola. Aunque pase la medianoche esperando un pago abierto.
+  const conInicial = lineaDeTiempo({
+    gestiones: [],
+    pagos: [],
+    cuotas: [
+      cuota({ id: 'inicial-sin-pagar', sequence: 0, dueDate: '2026-09-23' }),
+      cuota({
+        id: 'inicial-pagada',
+        sequence: 0,
+        dueDate: '2026-09-20',
+        status: 'paid',
+        paidAt: '2026-09-22T16:00:00Z',
+        paidDay: '2026-09-22',
+        onTime: false,
+      }),
+    ],
+    cargos: [],
+    hoy: HOY,
+  })
+  comprueba(!conInicial.some((s) => s.tipo === 'vencio'), 'la inicial no se vence', conInicial.map((s) => s.id).join(', '))
+  const inicialPagada = conInicial.find((s) => s.id === 'pagada:inicial-pagada')
+  comprueba(
+    inicialPagada?.tipo === 'pagada' && !inicialPagada.conAtraso,
+    'la inicial pagada sale, sin marca de atraso',
+  )
 }
 
 console.log('\n── El mensaje de WhatsApp ───────────────────────────────────')

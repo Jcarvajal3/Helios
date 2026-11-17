@@ -110,6 +110,39 @@ igual(
   'Alguna de las cuotas marcadas ya no está pendiente.',
 )
 
+// ── La inicial (cuota 0, 2026-11-12) ───────────────────────────────────────
+// Una orden de hoy con inicial: la cuota 0 vence hoy y va primero; las cuotas
+// 1 y 2, a los 14 y 28 días.
+{
+  const conInicial = [
+    cuota({ id: 'i0', chargeId: 'c9', sequence: 0, dueDate: HOY, amountUsd: 56.96, amountCur: 56.96 }),
+    cuota({ id: 'i1', chargeId: 'c9', sequence: 1, dueDate: '2026-10-29', amountUsd: 28.48, amountCur: 28.48 }),
+    cuota({ id: 'i2', chargeId: 'c9', sequence: 2, dueDate: '2026-11-12', amountUsd: 28.48, amountCur: 28.48 }),
+  ]
+  igual('la inicial sola vale', motivoDeSeleccion(new Set(['i0']), conInicial, HOY), null)
+  igual(
+    'adelantar una cuota arrastra la inicial',
+    lista(alternarCuota(new Set(), 'i1', conInicial, HOY)),
+    ['i0', 'i1'],
+  )
+  igual(
+    'adelantar sin la inicial no, y se nombra',
+    motivoDeSeleccion(new Set(['i1']), conInicial, HOY),
+    'Para adelantar una cuota hay que pagar también la inicial.',
+  )
+  igual('la inicial suma como una cuota', totalDeLaSeleccion(new Set(['i0']), conInicial).totalUsd, 56.96)
+  const armadasConInicial = armarCuotas(
+    [
+      { id: 'i2', chargeId: 'c9', orderNumber: 6261, sequence: 2, amountUsd: 28.48, dueDate: '2026-11-12', merchantName: 'M', status: 'pending', writtenOffAt: null },
+      { id: 'i0', chargeId: 'c9', orderNumber: 6261, sequence: 0, amountUsd: 56.96, dueDate: HOY, merchantName: 'M', status: 'pending', writtenOffAt: null },
+      { id: 'i1', chargeId: 'c9', orderNumber: 6261, sequence: 1, amountUsd: 28.48, dueDate: '2026-10-29', merchantName: 'M', status: 'pending', writtenOffAt: null },
+    ],
+    [],
+    new Set(),
+  )
+  igual('la inicial sale primera', armadasConInicial.cuotas.map((c) => c.id), ['i0', 'i1', 'i2'])
+}
+
 // ── Total ──────────────────────────────────────────────────────────────────
 
 igual('cuotas + sus cargos', totalDeLaSeleccion(new Set(['a1', 'b1']), pendientes), {

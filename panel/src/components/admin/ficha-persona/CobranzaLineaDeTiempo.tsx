@@ -16,6 +16,7 @@ import type { LucideIcon } from 'lucide-react'
 import { EstadoBadge } from '@/components/admin/EstadoBadge'
 import { Badge, Button, formatDateTime, formatDay, formatUsd } from '@/components/ui'
 import { textoDeDesgloseCorto } from '@/features/admin/metricas/formato'
+import { laCuota } from '@/features/admin/rotuloDeCuota'
 import { desgloseDelPago } from './desgloseDelPago'
 import type { Canal } from '@/features/admin/cobranza/gestion'
 import { ROTULO_CANAL } from '@/features/admin/cobranza/gestion'
@@ -192,7 +193,7 @@ function FilaDeSuceso({ suceso: s }: { suceso: Suceso }) {
           tono={c.paidAt ? 'warning' : 'error'}
           titulo={
             <span>
-              Venció la cuota {c.sequence} de {c.merchantName}: {formatUsd(c.amountUsd)} (
+              Venció {laCuota(c.sequence)} de {c.merchantName}: {formatUsd(c.amountUsd)} (
               {textoDeDesgloseCorto({ financedUsd: c.financedUsd, feeUsd: c.amountUsd - c.financedUsd })})
             </span>
           }
@@ -215,7 +216,7 @@ function FilaDeSuceso({ suceso: s }: { suceso: Suceso }) {
           titulo={
             <>
               <span>
-                Pagó la cuota {c.sequence} de {c.merchantName}: {formatUsd(c.amountUsd)} (
+                Pagó {laCuota(c.sequence)} de {c.merchantName}: {formatUsd(c.amountUsd)} (
                 {textoDeDesgloseCorto({ financedUsd: c.financedUsd, feeUsd: c.amountUsd - c.financedUsd })})
               </span>
               {s.conAtraso && (
@@ -257,7 +258,7 @@ function FilaDeSuceso({ suceso: s }: { suceso: Suceso }) {
         >
           {f.sequence !== null && (
             <p>
-              Sobre la cuota {f.sequence}
+              Sobre {laCuota(f.sequence)}
               {f.merchantName && ` de ${f.merchantName}`}
               {f.dueDate && `, que vencía el ${formatDay(f.dueDate)}`}
             </p>

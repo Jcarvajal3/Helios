@@ -1,6 +1,6 @@
 import { Badge } from '@/components/ui'
-import { estadoDe } from '@/features/admin/estados'
-import type { TipoEstado } from '@/features/admin/estados'
+import { estadoDe, estadoDeLaOrden } from '@/features/admin/estados'
+import type { EstadoVisual, TipoEstado } from '@/features/admin/estados'
 
 /**
  * La insignia de un estado, con la etiqueta y el tono de `estados.ts`.
@@ -22,7 +22,26 @@ export function EstadoBadge({
   valor: string
   className?: string
 }) {
-  const estado = estadoDe(tipo, valor)
+  return <Insignia estado={estadoDe(tipo, valor)} className={className} />
+}
+
+/**
+ * La insignia del estado de una orden. Igual que `<EstadoBadge tipo="consumo">`,
+ * salvo la que se anuló sola por no pagar la inicial, que sale «Anulado: sin
+ * inicial» y no «Revertido» (docs/07): quien la lee tiene que saber que nadie
+ * la revirtió a mano.
+ */
+export function EstadoDeLaOrdenBadge({
+  orden,
+  className = '',
+}: {
+  orden: { status: string; downPaymentExpiredAt?: string | null }
+  className?: string
+}) {
+  return <Insignia estado={estadoDeLaOrden(orden)} className={className} />
+}
+
+function Insignia({ estado, className }: { estado: EstadoVisual; className: string }) {
   const insignia = (
     <Badge tone={estado.tone} icono className={className}>
       {estado.label}

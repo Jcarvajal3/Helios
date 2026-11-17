@@ -46,9 +46,11 @@ export const PLANTILLAS: ReadonlyArray<{
   canal: string
   cuando: string
 }> = [
-  { clave: 'comprobante_financiamiento', rotulo: 'Comprobante del financiamiento', canal: 'Correo', cuando: 'Al confirmar el financiamiento, y al reenviarlo' },
-  { clave: 'confirmar_financiamiento', rotulo: 'Confirma tu pago en cuotas', canal: 'WhatsApp automático (plantilla de Meta)', cuando: 'Al registrar el financiamiento: el paciente acepta con Sí' },
-  { clave: 'bienvenida', rotulo: 'Bienvenida', canal: 'WhatsApp (automático si el paciente aceptó por WhatsApp)', cuando: 'Al confirmar el financiamiento' },
+  { clave: 'comprobante_financiamiento', rotulo: 'Comprobante del financiamiento', canal: 'Correo', cuando: 'Al confirmar el financiamiento (con inicial, al aprobarse la inicial), y al reenviarlo' },
+  { clave: 'confirmar_pago_con_inicial', rotulo: 'Confirma tu pago en cuotas (con inicial)', canal: 'WhatsApp automático (plantilla de Meta v3)', cuando: 'Al registrar un financiamiento con inicial: el paciente acepta con Sí' },
+  { clave: 'confirmar_financiamiento', rotulo: 'Confirma tu pago en cuotas', canal: 'WhatsApp automático (plantilla de Meta v2)', cuando: 'Al registrar un financiamiento sin inicial (los de antes del 2026-11-12): el paciente acepta con Sí' },
+  { clave: 'pagar_inicial', rotulo: 'Paga tu inicial', canal: 'WhatsApp (automático si el paciente aceptó por WhatsApp)', cuando: 'Al aceptar un financiamiento con inicial (el «Sí» y la cédula), en lugar de la bienvenida' },
+  { clave: 'bienvenida', rotulo: 'Bienvenida', canal: 'WhatsApp (automático si el paciente aceptó por WhatsApp)', cuando: 'Al confirmar un financiamiento sin inicial' },
   { clave: 'cuota_en_3_dias', rotulo: 'La cuota vence en 3 días', canal: 'WhatsApp automático y correo', cuando: 'Tres días antes del vencimiento, a las 12:00' },
   { clave: 'cuota_manana', rotulo: 'La cuota vence mañana', canal: 'WhatsApp automático y correo', cuando: 'La víspera del vencimiento, a las 19:00' },
   { clave: 'cuota_hoy', rotulo: 'La cuota vence hoy', canal: 'WhatsApp automático y correo', cuando: 'El día del vencimiento, a las 08:00' },
@@ -80,6 +82,11 @@ export const VARIABLES_DE_PLANTILLA: ReadonlyArray<{ variable: string; que: stri
   { variable: '{cargo_atraso}', que: 'El cargo por atraso, siempre en dólares: «$2»' },
   { variable: '{fecha}', que: 'El vencimiento de la cuota' },
   { variable: '{cuotas}', que: 'Las cuotas del financiamiento, con sus fechas' },
+  { variable: '{inicial}', que: 'La inicial, con su símbolo: «$56,96» (solo en las órdenes con inicial)' },
+  { variable: '{limite}', que: 'Hasta qué hora puede pagar la inicial: «las 16:30»' },
+  { variable: '{plan}', que: 'El plan de pagos: la inicial y las 2 cuotas, con sus fechas' },
+  { variable: '{bloque_de_pago}', que: 'Cómo pagar: el monto en bolívares de hoy y las cuentas de cobro' },
+  { variable: '{plan_nota}', que: 'En el comprobante: « (sin inicial)» en las órdenes de antes, vacío en las de inicial' },
   { variable: '{whatsapp_helios}', que: 'El WhatsApp de Helios (Ajustes › Contacto)' },
   { variable: '{por_whatsapp}', que: 'Dónde mandar el comprobante: «por este chat» en WhatsApp, «por WhatsApp al 0414-…» en el correo' },
   { variable: '{cuentas_de_cobro}', que: 'Las cuentas de cobro activas, Pago Móvil y transferencia (Ajustes › Cuentas de cobro)' },

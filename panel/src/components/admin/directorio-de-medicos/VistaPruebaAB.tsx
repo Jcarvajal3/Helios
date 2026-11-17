@@ -46,8 +46,8 @@ const OPCIONES_RANGO = RANGOS_DE_LA_PRUEBA.map((d) => ({ value: String(d), label
 
 const LETRA: Record<Variante, string> = { a: 'A', b: 'B' }
 const QUE_ES: Record<Variante, string> = {
-  a: 'Sin inicial; el botón de WhatsApp va directo al médico.',
-  b: 'Inicial de $15 (solo en el texto) y consultas de hasta $60; el botón va al WhatsApp de Helios con el código del médico.',
+  a: '50% de inicial y 2 cuotas (el cobro real, desde el 2026-11-12); el botón de WhatsApp va directo al médico.',
+  b: '$15 de inicial (solo en el texto) y consultas de hasta $60; el botón va al WhatsApp de Helios con el código del médico.',
 }
 
 const cuenta = (n: number) => String(Math.round(n))
@@ -58,8 +58,9 @@ const masQue = (d: number) => formatPct(d * 100, 0)
 
 /**
  * Superadmin › Directorio de médicos › Prueba A/B (docs/06): A, `/directorio`
- * (sin inicial, el botón va directo al médico), contra B, `/consultas`
- * (inicial de $15, el botón va al WhatsApp de Helios).
+ * (50% de inicial y 2 cuotas, el cobro real; el botón va directo al médico),
+ * contra B, `/consultas` ($15 de inicial, solo texto; el botón va al WhatsApp
+ * de Helios).
  *
  * Arriba el rango (7, 14, 30 o 90 días de Caracas, hoy incluido) y el
  * veredicto: una prueba z de dos proporciones sobre la tasa de clic

@@ -39,7 +39,7 @@ export const cobranza = [
     id: 'por-cobrar-por-semana',
     titulo: 'Por cobrar › Cohortes',
     descripcion:
-      'Cada cohorte (lo financiado una semana: A1, A2…), seguida hasta cobrar sus dos cuotas: total a cobrar, cobrado, vencido y por vencer (financiamiento + comisión), la cuota 1 y la 2, y quién debe de esa semana con sus señales.',
+      'Cada cohorte (lo financiado una semana: A1, A2…), seguida hasta cobrar sus cuotas 1 y 2 (la inicial no entra): total a cobrar, cobrado, vencido y por vencer (financiamiento + comisión), la cuota 1 y la 2, y quién debe de esa semana con sus señales.',
     espacio: 'cobranza',
     sinonimos: [
       'cohortes',
@@ -205,7 +205,7 @@ export const cobranza = [
     id: 'registrar-pago',
     titulo: 'Registrar un pago recibido por WhatsApp',
     descripcion:
-      'El paciente pagó y mandó la captura: elegir sus cuotas (lo vencido primero), copiar la referencia y el monto en bolívares y subir la captura. Queda en Pagos reportados para aprobarlo.',
+      'El paciente pagó y mandó la captura: elegir sus cuotas (la inicial y lo vencido primero), copiar la referencia y el monto en bolívares y subir la captura. Queda en Pagos reportados para aprobarlo.',
     espacio: 'cobranza',
     sinonimos: [
       'registrar pago',
@@ -241,9 +241,9 @@ export const cobranza = [
     tipo: 'accion',
     id: 'aprobar-pago',
     titulo: 'Aprobar un pago reportado',
-    descripcion: 'Comprobar un pago contra el banco y aplicarlo a las cuotas del paciente, o rechazarlo.',
+    descripcion: 'Comprobar un pago contra el banco y aplicarlo a las cuotas del paciente, o rechazarlo. Si cubre la inicial, la orden queda activa.',
     espacio: 'cobranza',
-    sinonimos: ['conciliar', 'validar un pago', 'rechazar un pago', 'pago duplicado'],
+    sinonimos: ['conciliar', 'validar un pago', 'rechazar un pago', 'pago duplicado', 'aprobar la inicial', 'activar la orden'],
     destino: { to: '/admin/cobros', search: { tab: 'pendientes' } },
   },
   {
@@ -486,7 +486,7 @@ export const cobranza = [
     sinonimos: ['tramo', 'bucket', 'antigüedad'],
     destino: { to: '/admin/cobranza' },
     definicion:
-      'Los días de atraso de la cuota sin pagar más antigua de un paciente se parten en cuatro tramos, con los cortes de los parámetros del negocio: hasta el intervalo de cuotas vigente (la cuota 1 vencida, cuenta congelada; en una orden con un plazo anterior más corto, la cuota 2 ya puede estar vencida también), hasta el día antes de la baja (las dos cuotas vencidas), hasta la expulsión (cuenta suspendida, y baja un nivel si tiene más de uno) y después (expulsado, la deuda se da por perdida).',
+      'Los días de atraso de la cuota sin pagar más antigua de un paciente (nunca la inicial, que no se vence) se parten en cuatro tramos, con los cortes de los parámetros del negocio: hasta el intervalo de cuotas vigente (la cuota 1 vencida, cuenta congelada; en una orden con un plazo anterior más corto, la cuota 2 ya puede estar vencida también), hasta el día antes de la baja (las dos cuotas vencidas), hasta la expulsión (cuenta suspendida, y baja un nivel si tiene más de uno) y después (expulsado, la deuda se da por perdida).',
   },
   {
     tipo: 'termino',

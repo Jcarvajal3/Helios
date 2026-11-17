@@ -13,25 +13,32 @@ import {
 } from '@/components/ui'
 import type { ChargeDetail, ChargeInstallment } from '@/features/admin/consumos'
 import { textoDeDesgloseCorto } from '@/features/admin/metricas/formato'
+import { esLaInicial, rotuloDeCuota } from '@/features/admin/rotuloDeCuota'
 
 /**
  * Todas las cuotas del consumo, cada una con su dueño.
  *
  * «1 de 2» cuenta dentro de la deuda de ESA persona, no dentro del cargo: en
  * un consumo repartido entre cuatro hay ocho cuotas y ninguna es «la 7 de 8».
+ *
+ * La inicial (`sequence` 0, 2026-11-12) sale primero y se llama «Inicial»; no
+ * cuenta en el «de 2»: el plan sigue siendo de dos cuotas.
  */
 export function Cuotas({ detail }: { detail: ChargeDetail }) {
   const porPersona = new Map<string, number>()
+  const personas = new Set<string>()
   for (const i of detail.installments) {
     const key = i.userId ?? ''
+    personas.add(key)
+    if (esLaInicial(i.sequence)) continue
     porPersona.set(key, (porPersona.get(key) ?? 0) + 1)
   }
-  const variasPersonas = porPersona.size > 1
+  const variasPersonas = personas.size > 1
 
   return (
     <Seccion
       titulo="Las cuotas"
-      info="Cada una con su dueño. «1 de 2» cuenta dentro de la deuda de ese paciente, no dentro del financiamiento."
+      info="Cada una con su dueño. «1 de 2» cuenta dentro de la deuda de ese paciente, no dentro del financiamiento. La inicial (en las órdenes desde el 2026-11-12) vence el día del «Sí», se queda en Helios y nunca cuenta como vencida: si no se paga a tiempo, la orden se anula sola."
     >
       <Table
         headers={[
@@ -60,7 +67,7 @@ export function Cuotas({ detail }: { detail: ChargeDetail }) {
               </Td>
             )}
             <Td className="whitespace-nowrap">
-              {i.sequence} de {porPersona.get(i.userId ?? '') ?? detail.installments.length}
+              {rotuloDeCuota(i.sequence, porPersona.get(i.userId ?? ''))}
             </Td>
             <Td className="whitespace-nowrap">{formatDay(i.dueDate)}</Td>
             <Td className="whitespace-nowrap tabular-nums">
@@ -106,6 +113,11 @@ function EstadoCuota({ cuota }: { cuota: ChargeInstallment }) {
         </span>
       </>
     )
+  }
+
+  // La inicial no vence: o se paga o la orden se anula sola.
+  if (esLaInicial(cuota.sequence)) {
+    return <Badge tone="warning">Por pagar</Badge>
   }
 
   if (cuota.daysOverdue > 0) {

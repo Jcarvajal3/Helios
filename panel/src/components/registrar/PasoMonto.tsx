@@ -38,7 +38,8 @@ const MONEDAS: ReadonlyArray<{ value: Moneda; label: string }> = [
  * médico, 2026-10-07), desde el mínimo de Helios y hasta lo que el paciente
  * tiene disponible (o el límite, si es nuevo). Es lo que vale la consulta y lo
  * que se le paga a la clínica: el servicio de Helios va aparte y lo paga el
- * paciente dentro de sus cuotas.
+ * paciente dentro de sus pagos (la inicial y las cuotas, desde 2026-11-12).
+ * El límite cuenta la consulta entera: la inicial no amplía lo que cabe.
  *
  * El mínimo y el máximo viven en dólares; en euros llegan ya convertidos con
  * la tasa cruzada de hoy (`limitesEnMoneda`). Sin tasa del euro, `limites` es
@@ -205,7 +206,7 @@ export function PasoMonto({
                 )}
               </>
             ) : (
-              `${rango}. Sin la Comisión Helios: esa la paga el paciente en sus cuotas.`
+              `${rango}. Sin la Comisión Helios: esa la paga el paciente repartida en sus pagos.`
             )
           }
           className="max-w-sm"

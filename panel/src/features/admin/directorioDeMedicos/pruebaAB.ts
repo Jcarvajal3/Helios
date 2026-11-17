@@ -7,8 +7,9 @@ import { booleano, comoFila, comoLista, numero, numeroONulo, texto, textoONulo }
 // ═══════════════════════════════════════════════════════════════════════════
 // Superadmin › Directorio de médicos › Prueba A/B (2026-11-09).
 //
-// A es `/directorio` (sin inicial, el botón va directo al médico); B es
-// `/consultas` (inicial de $15 en el texto, el botón va al WhatsApp de Helios
+// A es `/directorio` (50% de inicial y 2 cuotas, el cobro real desde el
+// 2026-11-12; el botón va directo al médico); B es `/consultas` ($15 de
+// inicial, solo en el texto; el botón va al WhatsApp de Helios
 // con el código del médico y la marca `-B`). Lo que decide la prueba es la
 // tasa de clic: visitantes que tocaron un botón / visitantes. Solo cuenta el
 // tráfico público; el del equipo y el de las clínicas va aparte.

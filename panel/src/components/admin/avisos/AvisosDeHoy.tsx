@@ -102,7 +102,7 @@ export function AvisosDeHoy({
         <EmptyState
           icon={<BellRing size={40} />}
           title={elDia === hoy ? 'Hoy no hay avisos' : `El ${formatDay(elDia)} no hubo avisos`}
-          description="Los generan solos los recordatorios de cada cuota (víspera, día del vencimiento, +1 y +4 días), la bienvenida y los pagos aprobados o rechazados."
+          description="Los generan solos los recordatorios de cada cuota (víspera, día del vencimiento, +1 y +4 días), la bienvenida o el aviso de la inicial y los pagos aprobados o rechazados."
         />
       )}
 

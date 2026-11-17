@@ -256,7 +256,7 @@ export const directorio = [
     tipo: 'accion',
     id: 'anular-consumo',
     titulo: 'Anular un financiamiento pendiente',
-    descripcion: 'Cancelar un financiamiento que quedó sin confirmar (solo en datos heredados).',
+    descripcion: 'Cancelar un financiamiento que espera el «Sí» del paciente.',
     espacio: 'directorio',
     sinonimos: ['anular', 'cancelar financiamiento', 'financiamiento pendiente'],
     destino: { to: '/admin/financiamientos', search: { estado: 'pending' } },
@@ -265,9 +265,9 @@ export const directorio = [
     tipo: 'accion',
     id: 'revertir-consumo',
     titulo: 'Revertir un financiamiento confirmado',
-    descripcion: 'Deshacer un financiamiento ya confirmado, con sus cuotas, desde su página.',
+    descripcion: 'Deshacer un financiamiento confirmado, o uno que espera la inicial, con sus cuotas, desde su página.',
     espacio: 'directorio',
-    sinonimos: ['revertir', 'devolución', 'reembolso', 'reversa', 'cobro equivocado'],
+    sinonimos: ['revertir', 'devolución', 'reembolso', 'reversa', 'cobro equivocado', 'anular orden que espera la inicial'],
     destino: { to: '/admin/financiamientos', search: { estado: 'confirmed' } },
     soloSuperAdmin: true,
   },
@@ -328,7 +328,7 @@ export const directorio = [
     id: 'prueba-ab-del-directorio',
     titulo: 'Prueba A/B del directorio',
     descripcion:
-      'Qué directorio funciona mejor: /directorio (sin inicial) frente a /consultas (con inicial), por visitantes, tasa de clic, interesados y pacientes.',
+      'Qué directorio funciona mejor: /directorio (50% de inicial y 2 cuotas) frente a /consultas (una inicial fija anunciada solo en el texto), por visitantes, tasa de clic, interesados y pacientes.',
     espacio: 'directorio',
     sinonimos: [
       'prueba a/b',
@@ -341,7 +341,7 @@ export const directorio = [
       'qué directorio funciona mejor',
     ],
     destino: { to: '/admin/directorio', search: { vista: 'ab' } },
-    que: 'Entre dos días (incluidos, hasta 366), las dos variantes lado a lado: A es /directorio (sus especialidades y fichas incluidas) y B es /consultas, solo médicos cuya consulta vale más que la inicial (helios_consultas_inicial_usd) y como mucho el tope (helios_consultas_tope_usd), en euros por la tasa cruzada BCV de hoy, anunciados con esa inicial (solo texto: el cobro no cambia). Por variante: visitas (tabla directory_page_views, desde el 2026-11-09), visitantes distintos (por navegador), clics al WhatsApp (directory_contact_clicks.variant), visitantes que tocaron algún botón y además visitaron esa variante, interesados que escribieron al WhatsApp de Helios (directory_leads.variant; en la práctica solo B) y cuántos de ellos ya son pacientes; la tasa de clic es visitantes que tocaron / visitantes. También la serie diaria y, por médico, su precio, si entra hoy en B y sus clics de A y de B. Solo lo público: las visitas y los clics del equipo y de las clínicas salen aparte.',
+    que: 'Entre dos días (incluidos, hasta 366), las dos variantes lado a lado: A es /directorio (sus especialidades y fichas incluidas), que anuncia el cobro real (50% de inicial y 2 cuotas desde el 2026-11-12), y B es /consultas, solo médicos cuya consulta vale más que la inicial (helios_consultas_inicial_usd) y como mucho el tope (helios_consultas_tope_usd), en euros por la tasa cruzada BCV de hoy, anunciados con esa inicial (solo texto: el cobro no cambia). Por variante: visitas (tabla directory_page_views, desde el 2026-11-09), visitantes distintos (por navegador), clics al WhatsApp (directory_contact_clicks.variant), visitantes que tocaron algún botón y además visitaron esa variante, interesados que escribieron al WhatsApp de Helios (directory_leads.variant; en la práctica solo B) y cuántos de ellos ya son pacientes; la tasa de clic es visitantes que tocaron / visitantes. También la serie diaria y, por médico, su precio, si entra hoy en B y sus clics de A y de B. Solo lo público: las visitas y los clics del equipo y de las clínicas salen aparte.',
     rpc: 'admin_directorio_ab',
   },
 ] as const satisfies ReadonlyArray<Entrada>

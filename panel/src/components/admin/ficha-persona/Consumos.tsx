@@ -1,6 +1,6 @@
 import { Link, useNavigate } from '@tanstack/react-router'
 
-import { EstadoBadge } from '@/components/admin/EstadoBadge'
+import { EstadoDeLaOrdenBadge } from '@/components/admin/EstadoBadge'
 import {
   Badge,
   Card,
@@ -11,10 +11,12 @@ import {
   formatDateTime,
   formatDay,
   formatMoneda,
+  formatTime,
   formatUsd,
 } from '@/components/ui'
 import type { ConsumoDePersona } from '@/features/admin/directorio/consumosDePersona'
 import { textoDeDesgloseCorto } from '@/features/admin/metricas/formato'
+import { cuotasDelPlan, esLaInicial, rotuloDeCuota } from '@/features/admin/rotuloDeCuota'
 import type { UserDetail } from '@/features/admin/users'
 import { CargosPorAtraso } from './CargosPorAtraso'
 
@@ -99,7 +101,13 @@ function SusConsumos({ consumos }: { consumos: Array<ConsumoDePersona> }) {
                 <ImporteDelConsumo consumo={c} />
               </Td>
               <Td>
-                <EstadoBadge tipo="consumo" valor={c.status} />
+                <EstadoDeLaOrdenBadge orden={c} />
+                {/* La que espera la inicial dice hasta cuándo: luego se anula sola. */}
+                {c.status === 'awaiting_down_payment' && c.downPaymentDueAt && (
+                  <span className="mt-1 block type-panel-caption text-on-surface-variant">
+                    Hasta las {formatTime(c.downPaymentDueAt)}
+                  </span>
+                )}
                 {c.voidReason && (
                   <span className="mt-1 block max-w-48 type-panel-caption text-on-surface-variant">
                     {c.voidReason}
@@ -148,9 +156,16 @@ function SusCuotas({
 
   // El local de cada cuota sale de sus consumos, que traen el id.
   const localDe = new Map(consumos.map((c) => [c.chargeId, c.merchantId]))
+  // El «de 2» de cada orden: sus cuotas sin la inicial.
+  const delPlan = new Map<string, number>()
+  for (const i of user.installments) {
+    if (!delPlan.has(i.chargeId)) {
+      delPlan.set(i.chargeId, cuotasDelPlan(user.installments.filter((x) => x.chargeId === i.chargeId)))
+    }
+  }
 
   return (
-    <Seccion titulo="Sus cuotas" info="Cada cuota es financiamiento + Comisión Helios: es lo que tiene que transferir. Cada fila abre la factura de su financiamiento.">
+    <Seccion titulo="Sus cuotas" info="Cada cuota es financiamiento + Comisión Helios: es lo que tiene que transferir. En las órdenes desde el 2026-11-12, la primera es la inicial (el 50% del total, el día del «Sí»), que nunca cuenta como vencida. Cada fila abre la factura de su financiamiento.">
       <Table
         headers={[
           '# Orden',
@@ -186,7 +201,9 @@ function SusCuotas({
                   <span className="text-on-surface-variant">{i.merchantName}</span>
                 )}
               </Td>
-              <Td className="text-on-surface-variant">{i.sequence} de 2</Td>
+              <Td className="whitespace-nowrap text-on-surface-variant">
+                {rotuloDeCuota(i.sequence, delPlan.get(i.chargeId) || 2)}
+              </Td>
               <Td className="tabular-nums">
                 {formatUsd(i.amountUsd)}
                 <span className="block type-panel-caption text-on-surface-variant">
@@ -221,6 +238,8 @@ function SusCuotas({
                   <Badge tone="error" icono>
                     Perdida
                   </Badge>
+                ) : esLaInicial(i.sequence) ? (
+                  <Badge tone="warning">Por pagar</Badge>
                 ) : i.daysOverdue > 0 ? (
                   <Badge tone="error" icono>
                     Vencida hace {i.daysOverdue} {i.daysOverdue === 1 ? 'día' : 'días'}

@@ -34,6 +34,14 @@ export type ConsumoDePersona = {
    * revertido, o un grupo en el que no le tocó nada).
    */
   parteUsd: number | null
+  /** La inicial de la orden en % (2026-11-12). Null o 0 = sin inicial. */
+  downPaymentPct: number | null
+  /** Hasta cuándo puede pagar la inicial (se pone con el «Sí»). */
+  downPaymentDueAt: string | null
+  /** Cuándo se aprobó la inicial y la orden quedó activa. */
+  activatedAt: string | null
+  /** Cuándo se anuló sola por no pagar la inicial (`seAnuloSinInicial`). */
+  downPaymentExpiredAt: string | null
 }
 
 /** La lista `consumos` de `admin_user_detail`, en el orden de la base. */
@@ -49,5 +57,10 @@ export function leerConsumosDePersona(raw: unknown): ConsumoDePersona[] {
     merchantName: textoONulo(c.merchant_name),
     cuentaUsd: numero(c.financed_usd),
     parteUsd: numeroONulo(c.share_financed_usd),
+    // La inicial (por lanzar): sin las claves, null = orden sin inicial.
+    downPaymentPct: numeroONulo(c.down_payment_pct),
+    downPaymentDueAt: textoONulo(c.down_payment_due_at),
+    activatedAt: textoONulo(c.activated_at),
+    downPaymentExpiredAt: textoONulo(c.down_payment_expired_at),
   }))
 }

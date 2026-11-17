@@ -10,7 +10,7 @@ import { consultaSolicitudes } from '@/features/admin/clinicas/api'
 import type { SolicitudDeAfiliacion } from '@/features/admin/clinicas/clinicas'
 import { consultaInteresados } from '@/features/admin/directorioDeMedicos/api'
 import { rotuloDelInteresado } from '@/features/admin/directorioDeMedicos/directorioDeMedicos'
-import { estadoDe } from '@/features/admin/estados'
+import { estadoDe, estadoDeLaOrden } from '@/features/admin/estados'
 import { fetchCharges } from '@/features/admin/ops'
 import { consultaCambiosPropuestos } from '@/features/admin/pacientes/api'
 import { SOLO_QUIEN_AFILIA, usePuedeAfiliar } from '@/features/admin/role'
@@ -263,7 +263,7 @@ export function OrdenesLite() {
   const filas: Fila[] = (q.data ?? [])
     .filter((c) => !c.isTest)
     .map((c) => {
-      const estado = estadoDe('consumo', c.status)
+      const estado = estadoDeLaOrden(c)
       const medico = c.doctorName ?? c.merchantName
       const orden = c.orderNumber === null ? '—' : `#${c.orderNumber}`
       return {

@@ -3,6 +3,7 @@ import type { ParteDeFrase } from '@/components/admin/metricas/kit'
 import { leerDesglose, leerHoyUsado, leerSemanaUsada } from '@/features/admin/metricas/lectura'
 import type { Desglose, SemanaUsada } from '@/features/admin/metricas/lectura'
 import type { FilaPrimeraCuota, PrimeraCuota } from '@/features/admin/riesgo/credito'
+import { esLaInicial } from '@/features/admin/rotuloDeCuota'
 import { TRAMOS, sentidoDelPaso } from '@/features/admin/riesgo/flujo'
 import type { SemanaDeFlujo } from '@/features/admin/riesgo/flujo'
 import { TRAMOS_VENCIDOS } from '@/features/admin/tramos'
@@ -338,8 +339,12 @@ export function leerCobroATiempo(raw: unknown): CobroATiempo {
     hasta: texto(d.to),
     gracia: numero(d.grace_days),
     total: leerCobroDeCuotas(d.total),
+    // Solo las cuotas 1 y 2: la inicial (cuota 0, 2026-11-12) no tiene cobro
+    // a tiempo (`metricas.cuotas_al` no la manda). Si llegara, no sale una
+    // «cuota 0» en el pie.
     cuotas: Object.values(comoFila(d.installments))
       .map((v) => ({ numero: numero(comoFila(v).sequence), ...leerCobroDeCuotas(v) }))
+      .filter((q) => !esLaInicial(q.numero))
       .sort((a, b) => a.numero - b.numero),
   }
 }

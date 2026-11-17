@@ -68,6 +68,10 @@ console.log('\n── Una cohorte ───────────────�
   // `sequence` llega como texto en algunas respuestas de PostgREST.
   const conTexto = leerCohorte({ ...SEMANA_14, cuotas: SEMANA_14.cuotas.map((q) => ({ ...q, sequence: String(q.sequence) })) })
   igual(conTexto.cuotas.map((q) => q.numero), [1, 2], 'un número de cuota en texto se lee')
+  // La inicial (cuota 0, 2026-11-12) no es de las cohortes: si llegara, se
+  // salta y la 1 y la 2 siguen siendo las de siempre.
+  const conInicial = leerCohorte({ ...SEMANA_14, cuotas: [{ ...SEMANA_14.cuotas[0], sequence: 0 }, ...SEMANA_14.cuotas] })
+  igual(conInicial.cuotas.map((q) => q.numero), [1, 2], 'una cuota 0 se salta, sin romper la lectura')
 }
 
 console.log('\n── Lo que hay que cobrar de la semana ─────────────────────────')

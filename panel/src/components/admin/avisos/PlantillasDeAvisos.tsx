@@ -14,7 +14,7 @@ export function PlantillasDeAvisos() {
   return (
     <Seccion
       titulo="Los avisos automáticos"
-      info="Los mensajes que generan solos los crons: el comprobante por correo, la bienvenida, los recordatorios de cada cuota y lo que pasa con un pago. Se ven aquí para saber qué le llega al paciente y cuándo."
+      info="Los mensajes que generan solos los crons: el comprobante por correo, la pregunta al paciente, la bienvenida o el aviso de la inicial, los recordatorios de cada cuota y lo que pasa con un pago. Se ven aquí para saber qué le llega al paciente y cuándo."
     >
       <Table headers={['Plantilla', 'Canal', 'Cuándo']}>
         {PLANTILLAS.map((p) => (

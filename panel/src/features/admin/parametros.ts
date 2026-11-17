@@ -19,6 +19,9 @@ export type ClaveParametro =
   | 'late_fee_usd'
   | 'late_fee_grace_days'
   | 'installment_interval_days'
+  // La inicial (2026-11-12, docs/07).
+  | 'down_payment_pct'
+  | 'down_payment_minutes'
   | 'mora_demotion_days'
   | 'mora_expulsion_days'
   | 'on_time_grace_days'
@@ -50,6 +53,7 @@ export type ClaveParametro =
   | 'alert_fpd_min_cases'
   | 'alert_merchant_exposure_usd'
   | 'alert_first_charge_limit_pct'
+  | 'alert_down_payment_stuck_hours'
 
 export type GrupoParametro = 'producto' | 'umbral' | 'meta' | 'capital'
 

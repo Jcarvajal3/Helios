@@ -17,7 +17,10 @@ import type { Moneda } from '@/components/ui'
 import {
   esRechazoDeLaBase,
   pasoDelError,
+  plazoEnPalabras,
   reglaDelAtraso,
+  tieneInicial,
+  tituloDelPlan,
 } from '@/features/merchant/registro'
 import type { PasoDelAlta } from '@/features/merchant/registro'
 import { fetchVistaPrevia } from '@/features/merchant/registroApi'
@@ -36,8 +39,9 @@ const IR_A: Record<PasoDelAlta, string> = {
 /**
  * PASO 4 · LA VISTA PREVIA Y EL SÍ.
  *
- * `preview_patient_charge` no crea nada: devuelve las dos cuotas con sus
- * fechas y el desglose, que es lo que la secretaria le enseña al paciente en
+ * `preview_patient_charge` no crea nada: devuelve la inicial de hoy y las dos
+ * cuotas con sus fechas (solo las dos cuotas si la orden no lleva inicial) y
+ * el desglose, que es lo que la secretaria le enseña al paciente en
  * la pantalla y le confirma de palabra (plan §2, paso 6 del diagrama).
  *
  * Solo aquí se puede confirmar, y solo con la vista previa a la vista: sin
@@ -45,7 +49,9 @@ const IR_A: Record<PasoDelAlta, string> = {
  *
  * Con la confirmación del paciente (`conConfirmacion`, contrato §1.3.1) el
  * botón ya no confirma: le envía al paciente un WhatsApp con este resumen, y
- * el pago en cuotas existe cuando responde Sí.
+ * el pago en cuotas existe cuando responde Sí. Con inicial (2026-11-12), el
+ * «Sí» la deja esperando la inicial: queda activa cuando la paga, y si no la
+ * paga en el plazo (`downPaymentMinutes`, 2 h) se anula sola.
  *
  * Todo en la moneda en la que cobra la clínica (`_cur`), con cada cuota en
  * bolívares a la tasa de hoy. El cargo por atraso es la excepción: la base lo
@@ -98,6 +104,9 @@ export function PasoConfirmar({
   })
 
   const lista = vista.data !== undefined && vista.data.cabe
+  const conInicial = vista.data !== undefined && tieneInicial(vista.data.cuotas)
+  // «2 horas»: el plazo de la inicial que manda la base, o el de la regla.
+  const plazoInicial = plazoEnPalabras(vista.data?.downPaymentMinutes ?? 120)
 
   // Con el plan en pantalla, el foco va a Confirmar: Enter y listo.
   useEffect(() => {
@@ -153,7 +162,7 @@ export function PasoConfirmar({
             </div>
 
             <div>
-              <DataLabel className="mb-2">El paciente paga en 2 cuotas</DataLabel>
+              <DataLabel className="mb-2">{tituloDelPlan(vista.data.cuotas)}</DataLabel>
               <PlanDePagos cuotas={vista.data.cuotas} moneda={vista.data.moneda} />
             </div>
 
@@ -164,18 +173,29 @@ export function PasoConfirmar({
               feeVat={vista.data.feeVatCur}
               moneda={vista.data.moneda}
               concepto={concepto}
+              conInicial={conInicial}
             />
 
             <ul className="flex flex-col gap-1.5 type-panel-body text-on-surface-variant">
               {reglaDelAtraso(vista.data, formatUsd) && (
                 <li>{reglaDelAtraso(vista.data, formatUsd)}</li>
               )}
-              <li>
-                {/* Con la confirmación, nada sale hasta que la confirma: ni el comprobante ni la bienvenida. */}
-                {conConfirmacion ? 'Cuando lo confirme, le llega el comprobante a ' : 'El comprobante con las cuotas le llega a '}
-                <strong className="text-on-surface">{correoDestino ?? 'su correo registrado'}</strong>
-                {conConfirmacion ? ' y un WhatsApp con sus cuotas.' : '.'}
-              </li>
+              {conInicial ? (
+                <li>
+                  {/* Con inicial, nada sale hasta que la paga: ni el comprobante ni el aviso de orden activa. */}
+                  {conConfirmacion
+                    ? 'Al aceptar, le llega por WhatsApp cómo pagar su inicial. Cuando la pague, le llega el comprobante a '
+                    : 'Le llega por WhatsApp cómo pagar su inicial. Cuando la pague, le llega el comprobante a '}
+                  <strong className="text-on-surface">{correoDestino ?? 'su correo registrado'}</strong>.
+                </li>
+              ) : (
+                <li>
+                  {/* Con la confirmación, nada sale hasta que la confirma: ni el comprobante ni la bienvenida. */}
+                  {conConfirmacion ? 'Cuando lo confirme, le llega el comprobante a ' : 'El comprobante con las cuotas le llega a '}
+                  <strong className="text-on-surface">{correoDestino ?? 'su correo registrado'}</strong>
+                  {conConfirmacion ? ' y un WhatsApp con sus cuotas.' : '.'}
+                </li>
+              )}
             </ul>
           </Card>
 
@@ -207,9 +227,13 @@ export function PasoConfirmar({
           )}
 
           <p className="type-panel-body text-on-surface">
-            {conConfirmacion
-              ? 'Léele al paciente las fechas y los montos de sus cuotas. Al enviar, le llega un WhatsApp con este resumen y tiene 2 horas para confirmarlo: responderá «Sí» y, si se lo pedimos, enviará una foto de su cédula. Sin su confirmación no hay pago en cuotas.'
-              : 'Léele al paciente las fechas y los montos de sus cuotas. Si está de acuerdo, confirma.'}
+            {conInicial
+              ? conConfirmacion
+                ? `Léele al paciente su inicial de hoy y las fechas y los montos de sus cuotas. Al enviar, le llega un WhatsApp con este resumen y tiene 2 horas para confirmarlo: responderá «Sí» y, si se lo pedimos, enviará una foto de su cédula. Después tiene ${plazoInicial} para pagar la inicial: la orden queda activa cuando la paga y, si no la paga, se anula sola.`
+                : `Léele al paciente su inicial de hoy y las fechas y los montos de sus cuotas. Si está de acuerdo, confirma: tendrá ${plazoInicial} para pagar la inicial; la orden queda activa cuando la paga y, si no la paga, se anula sola.`
+              : conConfirmacion
+                ? 'Léele al paciente las fechas y los montos de sus cuotas. Al enviar, le llega un WhatsApp con este resumen y tiene 2 horas para confirmarlo: responderá «Sí» y, si se lo pedimos, enviará una foto de su cédula. Sin su confirmación no hay pago en cuotas.'
+                : 'Léele al paciente las fechas y los montos de sus cuotas. Si está de acuerdo, confirma.'}
           </p>
 
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">

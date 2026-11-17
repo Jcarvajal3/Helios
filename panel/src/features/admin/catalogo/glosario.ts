@@ -62,7 +62,7 @@ export const glosario = [
     sinonimos: ['número de financiamientos', 'consultas', 'cargos', 'transacciones', 'nro. financiamientos'],
     destino: { to: '/admin/financiamientos' },
     definicion:
-      'Cuántos financiamientos confirmados hubo: cada consulta que una clínica registró y financió por Helios, por el día operativo del financiamiento. Los anulados o revertidos no cuentan, y los de prueba tampoco.',
+      'Cuántos financiamientos confirmados hubo: cada consulta que una clínica registró y financió por Helios, por el día operativo del financiamiento. Los anulados o revertidos no cuentan, los que esperan la inicial tampoco (cuentan el día en que se aprueba) y los de prueba tampoco.',
   },
   {
     tipo: 'termino',
@@ -127,7 +127,7 @@ export const glosario = [
     sinonimos: ['a cobrar', 'financiamiento + comisión', 'payable', 'deuda', 'lo que se cobra'],
     destino: { to: '/admin/metricas', search: { vista: 'cobros' } },
     definicion:
-      'La suma de las cuotas (payable) de los financiamientos de un periodo o de una semana de financiamiento: el financiado (sin comisión) más la Comisión Helios + IVA, que es lo que los pacientes tienen que transferir. Se enseña siempre con su desglose a la vista («financiado $X · Comisión Helios $Y»), nunca como un total suelto. Los cargos por atraso no entran.',
+      'La suma de las cuotas (payable) de los financiamientos de un periodo o de una semana de financiamiento: el financiado (sin comisión) más la Comisión Helios + IVA, que es lo que los pacientes tienen que transferir. En las órdenes desde el 2026-11-12 incluye la inicial; en las cohortes (Cobros), solo las cuotas 1 y 2, porque la inicial se cobra el día del «Sí» o la orden se anula. Se enseña siempre con su desglose a la vista («financiado $X · Comisión Helios $Y»), nunca como un total suelto. Los cargos por atraso no entran.',
   },
   {
     tipo: 'termino',
@@ -179,12 +179,34 @@ export const glosario = [
     tipo: 'termino',
     id: 'cuota',
     titulo: 'Cuota 1 / Cuota 2',
-    descripcion: 'Cada una de las dos partes en que un paciente paga su financiamiento, con su desglose.',
+    descripcion: 'Cada una de las dos partes en que un paciente paga su financiamiento después de la inicial, con su desglose.',
     espacio: 'cobranza',
     sinonimos: ['cuota', 'cuotas', 'plazo', 'vencimiento', 'pago en cuotas', 'primera cuota', 'segunda cuota'],
     destino: { to: '/admin/cobranza' },
     definicion:
-      'Cada financiamiento se paga en dos cuotas. La cuota 1 vence un intervalo de cuotas después del financiamiento y la cuota 2, otro intervalo después de la 1; el intervalo es un parámetro del negocio y cada orden conserva el que estaba vigente cuando se registró, así que conviven órdenes con plazos distintos. El monto de cada cuota es financiamiento + Comisión Helios (su parte de financiado más su parte de la comisión con su IVA) y se enseña con ese desglose.',
+      'Cada financiamiento se paga en dos cuotas; desde el 2026-11-12, después de una inicial (la cuota 0). La cuota 1 vence un intervalo de cuotas después del financiamiento y la cuota 2, otro intervalo después de la 1; el intervalo es un parámetro del negocio y cada orden conserva el que estaba vigente cuando se registró, así que conviven órdenes con plazos distintos. Con inicial, cada cuota es la mitad de lo que queda después de ella. El monto de cada cuota es financiamiento + Comisión Helios (su parte de financiado más su parte de la comisión con su IVA) y se enseña con ese desglose. La mora, los cargos por atraso, Cobranza y las métricas de cuotas (cobro a tiempo, impago, cohortes) miran solo las cuotas 1 y 2.',
+  },
+  {
+    tipo: 'termino',
+    id: 'inicial',
+    titulo: 'Inicial',
+    descripcion: 'El primer pago de una orden desde el 2026-11-12: el 50% del total con la comisión, el día del «Sí».',
+    espacio: 'cobranza',
+    sinonimos: ['inicial', 'cuota 0', 'pago inicial', 'cuota inicial', 'abono inicial', 'down payment', 'inicial del 50%'],
+    destino: { to: '/admin/financiamientos', search: { estado: 'awaiting_down_payment' } },
+    definicion:
+      'Desde el 2026-11-12, toda orden nueva se paga con una inicial y dos cuotas: la inicial es el porcentaje del parámetro «Inicial del paciente» (50%) sobre el total con la Comisión Helios y su IVA, y las cuotas 1 y 2 se reparten lo que queda a partes iguales, así que la comisión queda repartida en los tres pagos. Es la cuota 0: vence el día del «Sí» y se cobra como cualquier cuota (captura y lector, aviso del BNC o a mano en Caja). Hasta que se aprueba, la orden está «Esperando la inicial»; si en el plazo del parámetro «Plazo para pagar la inicial» no llegó ningún pago, se anula sola. Nunca está vencida: no cuenta para la mora, los cargos por atraso, Cobranza, los recordatorios ni las métricas de cuotas. Se queda en Helios: a la clínica se le paga igual, en sus dos mitades de siempre. Las órdenes anteriores conservan sus dos cuotas sin inicial.',
+  },
+  {
+    tipo: 'termino',
+    id: 'esperando-la-inicial',
+    titulo: 'Esperando la inicial',
+    descripcion: 'La orden que el paciente aceptó y que todavía no está activa porque no se ha aprobado su inicial.',
+    espacio: 'directorio',
+    sinonimos: ['awaiting_down_payment', 'esperando inicial', 'sin inicial', 'anulado sin inicial', 'inicial no pagada', 'orden por activar'],
+    destino: { to: '/admin/financiamientos', search: { estado: 'awaiting_down_payment' } },
+    definicion:
+      'El estado de una orden con inicial entre el «Sí» del paciente y la aprobación de su inicial. Ya tiene asiento, deuda (inicial + 2 cuotas) y ocupa el cupo, pero todavía no hay comisión de la secretaria, comprobante por correo ni aviso al médico, y no cuenta como financiamiento confirmado en las métricas. Al aprobarse un pago que cubre la inicial queda «Confirmado» (activa). Si pasa el plazo sin un pago abierto, se revierte sola: «Anulado: sin inicial», con el asiento contrario, el cupo de vuelta y un aviso al paciente y al médico. El equipo también puede revertirla a mano desde su ficha.',
   },
   {
     tipo: 'termino',
@@ -272,7 +294,7 @@ export const glosario = [
     sinonimos: ['cohortes', 'cohorte de financiamiento', 'cohorte de cuotas', 'semana de financiamiento'],
     destino: { to: '/admin/metricas', search: { vista: 'cobros' } },
     definicion:
-      'Los financiamientos cuyo día operativo cae en una misma semana, de lunes a domingo, con sus cuotas 1 y 2. Se siguen hasta el final: su total a cobrar, cuánto se cobró a tiempo, cuánto con atraso, cuánto sigue vencido y cuánto se dio por perdido. No son los pacientes que se registraron juntos: eso es una cohorte de registro.',
+      'Los financiamientos cuyo día operativo cae en una misma semana, de lunes a domingo, con sus cuotas 1 y 2 (la inicial no cuenta: se cobra el día del «Sí» o la orden se anula). Se siguen hasta el final: su total a cobrar, cuánto se cobró a tiempo, cuánto con atraso, cuánto sigue vencido y cuánto se dio por perdido. No son los pacientes que se registraron juntos: eso es una cohorte de registro.',
   },
   {
     tipo: 'termino',

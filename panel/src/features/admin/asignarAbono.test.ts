@@ -64,6 +64,19 @@ console.log('── Las cuotas ────────────────�
   comprueba(pendientes.map((c) => c.id).join() === 'a2,b1,b2', 'pendientes, de la más vieja a la más nueva', pendientes.map((c) => c.id).join())
   const n = cuotasPorConsumo(todas)
   comprueba(n.get('c1') === 2 && n.get('c2') === 2, '«de N» sale de los datos, con las pagadas')
+  // Una orden con inicial (2026-11-12): la cuota 0 vence hoy, sale primera y
+  // no cuenta en el «de N».
+  const conInicial = [
+    cuota('i0', { chargeId: 'c3', sequence: 0, dueDate: '2026-11-12', amountUsd: 56.96 }),
+    cuota('i1', { chargeId: 'c3', sequence: 1, dueDate: '2026-11-26', amountUsd: 28.48 }),
+    cuota('i2', { chargeId: 'c3', sequence: 2, dueDate: '2026-12-10', amountUsd: 28.48 }),
+  ]
+  comprueba(cuotasPorConsumo(conInicial).get('c3') === 2, 'con inicial, el plan sigue siendo «de 2»', String(cuotasPorConsumo(conInicial).get('c3')))
+  comprueba(
+    cuotasPendientes([...conInicial].reverse()).map((c) => c.id).join() === 'i0,i1,i2',
+    'la inicial sale primera entre las pendientes',
+    cuotasPendientes([...conInicial].reverse()).map((c) => c.id).join(),
+  )
 }
 
 console.log('\n── Los cargos por atraso ────────────────────────────────────')

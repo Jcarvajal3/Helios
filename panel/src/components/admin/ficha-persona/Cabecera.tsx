@@ -62,8 +62,10 @@ export function Cabecera({
         </>
       }
       datos={[
+        // Con su rótulo y delante: sin él, «V-30.566.579» junto al teléfono
+        // no se leía como la cédula (Javier, 2026-11-10).
+        user.document ? `C.I. ${formatDocument(user.document)}` : 'Sin cédula',
         user.phone ? formatPhone(user.phone) : null,
-        user.document ? formatDocument(user.document) : null,
         user.datos.registeredMerchantName ? `Registrado en ${user.datos.registeredMerchantName}` : null,
         `Alta el ${formatDateTime(user.createdAt)}`,
       ]}

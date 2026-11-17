@@ -2,6 +2,7 @@ import { diaOperativo, sumarDias } from '@/components/ui'
 import type { CollectionContact } from '@/features/admin/contacts'
 import type { LateFee } from '@/features/admin/lateFees'
 import type { UserDetail } from '@/features/admin/users'
+import { esLaInicial } from '@/features/admin/rotuloDeCuota'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // El caso de cobranza de una persona, en orden: lo último arriba.
@@ -57,8 +58,11 @@ function diaDelPago(c: Cuota): string | null {
 /**
  * Si una cuota llegó a estar vencida: pasó su día sin que se reportara su
  * pago. Una cuota reportada dentro de su día operativo no se venció nunca.
+ * La inicial (cuota 0) no se vence nunca: o se paga o la orden se anula sola
+ * (docs/07).
  */
 function seVencio(c: Cuota, hoy: string): boolean {
+  if (esLaInicial(c.sequence)) return false
   if (c.dueDate >= hoy) return false
   const pagada = diaDelPago(c)
   if (!pagada) return true
@@ -111,7 +115,7 @@ export function lineaDeTiempo(entrada: {
         cuota: c,
         // El veredicto del servidor, con los días de gracia: una cuota
         // reportada el día +2 se venció, pero se cobró a tiempo.
-        conAtraso: c.onTime === false,
+        conAtraso: c.onTime === false && !esLaInicial(c.sequence),
       })
     }
   }

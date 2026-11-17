@@ -10,6 +10,7 @@ import {
 import { supabase } from '@/lib/supabase'
 import { leerMoneda } from '@/components/ui'
 import type { Moneda } from '@/components/ui'
+import { esLaInicial } from '@/features/admin/rotuloDeCuota'
 
 /**
  * LA FACTURA DE UN CONSUMO, tal y como la lee el cliente en su teléfono.
@@ -67,6 +68,18 @@ export type ChargeDetail = {
   createdAt: string
   confirmedAt: string | null
   voidReason: string | null
+  /**
+   * La inicial de la orden, en % del total con la comisión (2026-11-12,
+   * docs/07). Null o 0 = orden vieja: 2 cuotas, sin inicial. Con ella, la
+   * inicial es la cuota `sequence` 0.
+   */
+  downPaymentPct: number | null
+  /** Hasta cuándo puede pagar la inicial. Se pone con el «Sí»; null antes y en las viejas. */
+  downPaymentDueAt: string | null
+  /** Cuándo se aprobó la inicial y la orden quedó activa (= `confirmedAt` en esas órdenes). */
+  activatedAt: string | null
+  /** Cuándo se anuló sola por no pagar la inicial. Distingue esa reversa de la del equipo. */
+  downPaymentExpiredAt: string | null
   /** Con la Comisión Helios y su IVA dentro. No se enseña como total suelto. */
   amountUsd: number
   /** El consumo en el local: lo que ocupó cupo. */
@@ -118,6 +131,12 @@ export async function fetchChargeDetail(chargeId: string): Promise<ChargeDetail>
     createdAt: texto(raw.created_at),
     confirmedAt: textoONulo(raw.confirmed_at),
     voidReason: textoONulo(raw.void_reason),
+    // Las cuatro de la inicial (por lanzar): antes del lanzamiento la base no
+    // las manda y quedan en null, que es «orden sin inicial».
+    downPaymentPct: numeroONulo(raw.down_payment_pct),
+    downPaymentDueAt: textoONulo(raw.down_payment_due_at),
+    activatedAt: textoONulo(raw.activated_at),
+    downPaymentExpiredAt: textoONulo(raw.down_payment_expired_at),
     amountUsd,
     /**
      * Sin `financed_usd` el consumo ES el total: o el cobro es anterior al
@@ -168,7 +187,9 @@ export async function fetchChargeDetail(chargeId: string): Promise<ChargeDetail>
       status: i.status === 'paid' ? 'paid' : 'pending',
       paidAt: textoONulo(i.paid_at),
       writtenOffAt: textoONulo(i.written_off_at),
-      daysOverdue: numero(i.days_overdue),
+      // La inicial nunca está vencida (docs/01 «La inicial»): la base ya la
+      // manda en 0; esto es solo defensa.
+      daysOverdue: esLaInicial(numero(i.sequence)) ? 0 : numero(i.days_overdue),
     })),
   }
 }

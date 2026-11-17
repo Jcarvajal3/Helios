@@ -9,8 +9,6 @@ import { SeccionSinLeer } from '@/components/admin/directorio/SeccionSinLeer'
 import {
   EmptyState,
   FilterBar,
-  Filtro,
-  Segmented,
   Select,
   SkeletonTable,
   diaOperativo,
@@ -138,13 +136,15 @@ function Lista({
           placeholder="Orden, teléfono, nombre, cédula o clínica"
           onBuscar={(q) => onCambiar({ q }, true)}
         />
-        <Filtro label="Estado">
-          <Segmented
-            options={FILTROS_ESTADO}
-            value={search.estado ?? ''}
-            onChange={(value) => onCambiar({ estado: value || undefined })}
-          />
-        </Filtro>
+        {/* Siete estados desde la inicial (2026-11-12): en botones no caben. */}
+        <Select
+          id="filtro-estado"
+          label="Estado"
+          value={search.estado ?? ''}
+          options={FILTROS_ESTADO}
+          onChange={(value) => onCambiar({ estado: unoDe(VALORES_ESTADO_CONSUMO, value) })}
+          className="w-52"
+        />
         <Select
           id="filtro-local"
           label="Clínica"
@@ -206,6 +206,9 @@ function Lista({
  */
 function ResumenConsumos({ filas, alTope }: { filas: Array<ChargeRow>; alTope: boolean }) {
   const confirmados = filas.filter((r) => r.status === 'confirmed' && !r.isTest)
+  // Las que esperan la inicial ya tienen deuda pero no están activas: no son
+  // financiamientos confirmados (ni suman en Inicio ni en las métricas).
+  const esperanInicial = filas.filter((r) => r.status === 'awaiting_down_payment' && !r.isTest).length
   const consumo = confirmados.reduce((s, r) => s + r.financedUsd, 0)
   const ticket = confirmados.length > 0 ? consumo / confirmados.length : null
 
@@ -215,6 +218,7 @@ function ResumenConsumos({ filas, alTope }: { filas: Array<ChargeRow>; alTope: b
       {confirmados.length} {confirmados.length === 1 ? 'financiamiento confirmado' : 'financiamientos confirmados'} ·{' '}
       {formatUsd(consumo)} financiado (sin comisión)
       {ticket !== null && ` · ticket medio (sin comisión) ${formatUsd(ticket)}`}
+      {esperanInicial > 0 && ` · ${esperanInicial} esperando la inicial`}
     </>
   )
 }

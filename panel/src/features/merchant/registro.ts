@@ -228,11 +228,17 @@ export const TOPE_CONCEPTO = 80
 
 // ── 3. Vista previa ───────────────────────────────────────────────────────
 
+/**
+ * Un pago del plan del paciente. **`sequence` 0 es la inicial** (la inicial
+ * del 50 %, 2026-11-12, docs/07): vence el día de la orden y se enseña como
+ * «Inicial», nunca como «Cuota 0». Las cuotas 1 y 2 son las de siempre, a
+ * los 14 y 28 días. Una orden vieja (sin inicial) no trae la fila 0.
+ */
 export type CuotaDelPlan = {
   sequence: number
   dueDate: string
-  /** Lo que paga el paciente en esa cuota: su mitad de la consulta más su
-   *  mitad de la Comisión Helios. En dólares: lo del libro. */
+  /** Lo que paga el paciente en ese pago: su parte de la consulta más su
+   *  parte de la Comisión Helios. En dólares: lo del libro. */
   amountUsd: number
   /** Lo mismo en la moneda de la orden: lo que se enseña. */
   amountCur: number
@@ -260,6 +266,10 @@ export type VistaPrevia = {
   feeVatCur: number
   businessDate: string | null
   cuotas: CuotaDelPlan[]
+  /** La inicial de esta orden, en % del total con la comisión (50). 0 = sin inicial. */
+  downPaymentPct: number
+  /** Minutos que tiene el paciente para pagarla desde su «Sí». Null sin inicial. */
+  downPaymentMinutes: number | null
   lateFeeUsd: number | null
   lateFeeGraceDays: number | null
   /** `false` si no cabe en el disponible del paciente conocido. */
@@ -285,12 +295,57 @@ function leerCuotas(v: unknown): CuotaDelPlan[] {
     .sort((a, b) => a.sequence - b.sequence)
 }
 
+/** La fila de la inicial (`sequence` 0). */
+export function esLaInicial(c: Pick<CuotaDelPlan, 'sequence'>): boolean {
+  return c.sequence === 0
+}
+
+/** Si el plan trae inicial: lo dicen las filas, no un porcentaje suelto. */
+export function tieneInicial(cuotas: readonly Pick<CuotaDelPlan, 'sequence'>[]): boolean {
+  return cuotas.some(esLaInicial)
+}
+
+/** La inicial del plan, o null en una orden sin inicial. */
+export function laInicial(cuotas: readonly CuotaDelPlan[]): CuotaDelPlan | null {
+  return cuotas.find(esLaInicial) ?? null
+}
+
+/** «Inicial» o «Cuota 1»: nunca «Cuota 0». */
+export function nombreDelPago(c: Pick<CuotaDelPlan, 'sequence'>): string {
+  return esLaInicial(c) ? 'Inicial' : `Cuota ${c.sequence}`
+}
+
+/**
+ * El rótulo encima del plan: «El paciente paga una inicial hoy y 2 cuotas» o,
+ * en una orden sin inicial, «El paciente paga en 2 cuotas».
+ */
+export function tituloDelPlan(cuotas: readonly Pick<CuotaDelPlan, 'sequence'>[]): string {
+  const n = cuotas.filter((c) => !esLaInicial(c)).length
+  const cuotasTexto = n === 1 ? '1 cuota' : `${n} cuotas`
+  return tieneInicial(cuotas)
+    ? `El paciente paga una inicial hoy y ${cuotasTexto}`
+    : `El paciente paga en ${cuotasTexto}`
+}
+
+/**
+ * «2 horas», «1 hora», «1 h 30 min»: el plazo de la inicial dicho para
+ * leérselo al paciente.
+ */
+export function plazoEnPalabras(minutos: number): string {
+  if (minutos > 0 && minutos % 60 === 0) {
+    const h = minutos / 60
+    return h === 1 ? '1 hora' : `${h} horas`
+  }
+  return textoDelPlazo(minutos)
+}
+
 export function leerVistaPrevia(v: unknown): VistaPrevia {
   const r = comoFila(v)
   const baseUsd = numero(r.base_usd)
   const feeUsd = numero(r.consumer_fee_usd)
   const feeVatUsd = numero(r.consumer_fee_vat_usd)
   const disponibleUsd = numeroONulo(r.disponible_usd)
+  const downPaymentPct = numeroONulo(r.down_payment_pct) ?? 0
   return {
     moneda: leerMoneda(r.currency),
     tasaBcv: numeroONulo(r.tasa_bcv),
@@ -303,6 +358,9 @@ export function leerVistaPrevia(v: unknown): VistaPrevia {
     feeVatCur: numeroONulo(r.consumer_fee_vat_cur) ?? feeVatUsd,
     businessDate: textoONulo(r.business_date),
     cuotas: leerCuotas(r.installments),
+    // Una base sin la inicial no manda el porcentaje: la orden no la lleva.
+    downPaymentPct,
+    downPaymentMinutes: downPaymentPct > 0 ? numeroONulo(r.down_payment_minutes) : null,
     lateFeeUsd: numeroONulo(r.late_fee_usd),
     lateFeeGraceDays: numeroONulo(r.late_fee_grace_days),
     // Si la base no lo dice, se asume que cabe: la vista previa ya validó el
@@ -372,7 +430,8 @@ export function diaDeLaSemana(fecha: string): string {
  *   entregado       llegó al buzón
  *   rebotado        el correo no existe o no acepta: no llegó
  *   sin_configurar  Helios todavía no tiene el envío de correos listo
- *   sin_enviar      la orden espera el «Sí» del paciente: sale al aceptar
+ *   sin_enviar      la orden espera el «Sí» del paciente (o su inicial): sale
+ *                   cuando queda activa
  */
 export type EstadoDelComprobante =
   | 'pendiente'
@@ -416,6 +475,8 @@ export const COMPROBANTE: Record<
 export function fraseDelComprobante(
   estado: EstadoDelComprobante | null,
   correo: string | null,
+  /** La orden lleva inicial: el comprobante sale al pagarla, no con el «Sí». */
+  conInicial = false,
 ): string {
   const a = correo ? ` a ${correo}` : ' al correo del paciente'
   switch (estado) {
@@ -427,7 +488,9 @@ export function fraseDelComprobante(
     case 'sin_configurar':
       return 'El envío de correos de Helios todavía no está configurado: el comprobante saldrá en cuanto lo esté.'
     case 'sin_enviar':
-      return `El comprobante sale${a} en cuanto el paciente acepte.`
+      return conInicial
+        ? `El comprobante sale${a} en cuanto el paciente pague su inicial.`
+        : `El comprobante sale${a} en cuanto el paciente acepte.`
     case 'pendiente':
     case null:
       return `Comprobante en camino${a}. Llega en uno o dos minutos.`
@@ -444,7 +507,8 @@ export function fraseDelComprobante(
  *   entregada    llegó a su teléfono
  *   leida        la abrió
  *   fallida      no se le pudo escribir (teléfono sin WhatsApp, por ejemplo)
- *   aceptada     respondió Sí: el pago en cuotas está confirmado
+ *   aceptada     respondió Sí: el pago en cuotas está confirmado (con inicial,
+ *                queda activo cuando la paga)
  *   rechazada    respondió No (o ya no podía pagar en cuotas)
  *   vencida      no respondió a tiempo
  */
@@ -505,9 +569,40 @@ export function leerConfirmacion(v: unknown): Confirmacion | null {
   }
 }
 
-/** La orden todavía espera la respuesta del paciente. */
+/**
+ * La orden todavía espera algo del paciente: su «Sí» (`pending`) o, desde la
+ * inicial del 50 %, que pague la inicial (`awaiting_down_payment`). Mientras
+ * tanto las pantallas vuelven a pedirla cada pocos segundos.
+ */
 export function esperaAlPaciente(f: Pick<Financiamiento, 'status'>): boolean {
-  return f.status === 'pending'
+  return f.status === 'pending' || f.status === 'awaiting_down_payment'
+}
+
+/** El paciente aceptó y falta que pague la inicial para que la orden quede activa. */
+export function esperaLaInicial(f: Pick<Financiamiento, 'status'>): boolean {
+  return f.status === 'awaiting_down_payment'
+}
+
+/**
+ * La orden se anuló sola porque el paciente no pagó la inicial a tiempo. Es
+ * una reversa (`reverted`) con `down_payment_expired_at`: así se distingue de
+ * la que hace el equipo de Helios.
+ */
+export function seAnuloSinInicial(
+  f: Pick<Financiamiento, 'status' | 'downPaymentExpiredAt'>,
+): boolean {
+  return f.status === 'reverted' && f.downPaymentExpiredAt !== null
+}
+
+/**
+ * La frase de la espera de la inicial, con lo que le queda. Al paciente le
+ * basta con que su pago LLEGUE dentro del plazo: si llegó y se está revisando,
+ * se espera; por eso, con el plazo cumplido, no se da la orden por anulada.
+ */
+export function fraseDeLaInicial(minutos: number): string {
+  return minutos > 0
+    ? `Tiene ${textoDelPlazo(minutos)} para pagarla. Si no la paga, la orden se anula sola. Te avisamos en cuanto quede activa.`
+    : 'El plazo terminó. Si el paciente ya envió su pago, lo estamos revisando; si no, la orden se anula en un momento.'
 }
 
 /** Minutos enteros que le quedan a la orden (0 si ya venció o no tiene plazo). */
@@ -546,10 +641,23 @@ export function fraseDeLaEspera(c: Confirmacion | null): string {
 export type Financiamiento = {
   id: string
   orderNumber: number
-  /** pending (espera al paciente) · confirmed · declined · expired · voided · reverted */
+  /**
+   * pending (espera el «Sí») · awaiting_down_payment (aceptó; espera la
+   * inicial) · confirmed (activa) · declined · expired · voided · reverted
+   */
   status: string
   /** Hasta cuándo espera la orden el «Sí». Solo en pending y expired. */
   expiresAt: string | null
+  /** La inicial de la orden, en % del total con la comisión. 0 = orden sin inicial. */
+  downPaymentPct: number
+  /** Hasta cuándo puede pagar la inicial. Se pone con el «Sí». */
+  downPaymentDueAt: string | null
+  /** Cuándo quedó activa (se aprobó la inicial). */
+  activatedAt: string | null
+  /** Cuándo se anuló sola por no pagar la inicial. */
+  downPaymentExpiredAt: string | null
+  /** Por qué se anuló o revirtió («La inicial no se pagó a tiempo»). */
+  voidReason: string | null
   channel: 'panel' | 'whatsapp'
   confirmation: Confirmacion | null
   declineReason: 'paciente' | 'no_disponible' | null
@@ -598,6 +706,11 @@ export function leerFinanciamiento(v: unknown): Financiamiento {
     orderNumber: numero(r.order_number),
     status: texto(r.status, 'confirmed'),
     expiresAt: textoONulo(r.expires_at),
+    downPaymentPct: numeroONulo(r.down_payment_pct) ?? 0,
+    downPaymentDueAt: textoONulo(r.down_payment_due_at),
+    activatedAt: textoONulo(r.activated_at),
+    downPaymentExpiredAt: textoONulo(r.down_payment_expired_at),
+    voidReason: textoONulo(r.void_reason),
     channel: r.channel === 'whatsapp' ? 'whatsapp' : 'panel',
     confirmation: leerConfirmacion(r.confirmation),
     declineReason:

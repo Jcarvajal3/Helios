@@ -264,7 +264,11 @@ const BLOQUES: ReadonlyArray<{ titulo: string; campos: ReadonlyArray<CampoEditab
  * referencia. La identidad (nombre, cédula, nacimiento) no se toca desde
  * aquí. Solo se manda lo que cambió, con el motivo (obligatorio: bitácora).
  */
-/** La orden confirmada más reciente: la del comprobante que se reenvía al corregir el correo. */
+/**
+ * La orden confirmada más reciente: la del comprobante que se reenvía al
+ * corregir el correo. Una que espera la inicial no cuenta: su comprobante
+ * sale al aprobarse la inicial (docs/07).
+ */
 function ultimaOrdenConfirmada(user: UserDetail): { id: string; orderNumber: number | null } | null {
   const confirmadas = user.charges
     .filter((c) => c.status === 'confirmed')

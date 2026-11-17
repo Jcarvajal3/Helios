@@ -16,6 +16,7 @@ import { comoMotivoSinDisponible } from '@/features/admin/directorio/cupo'
 import { leerDatosDelPaciente } from '@/features/admin/pacientes/datos'
 import type { DatosDelPaciente } from '@/features/admin/pacientes/datos'
 import type { MotivoSinDisponible } from '@/features/admin/directorio/cupo'
+import { esLaInicial } from '@/features/admin/rotuloDeCuota'
 
 /**
  * Cliente de la gestión de usuarios y de la cola de cobranza.
@@ -417,7 +418,9 @@ export async function fetchUserDetail(userId: string): Promise<UserDetail> {
       status: i.status === 'paid' ? 'paid' : 'pending',
       paidAt: textoONulo(i.paid_at),
       merchantName: texto(i.merchant_name),
-      daysOverdue: numero(i.days_overdue),
+      // La inicial (cuota 0) nunca está vencida (docs/01 «La inicial»): la
+      // base ya la manda en 0; esto es solo defensa.
+      daysOverdue: esLaInicial(numero(i.sequence)) ? 0 : numero(i.days_overdue),
       writtenOffAt: textoONulo(i.written_off_at),
       paidDay: textoONulo(i.paid_day),
       onTime: typeof i.on_time === 'boolean' ? i.on_time : null,

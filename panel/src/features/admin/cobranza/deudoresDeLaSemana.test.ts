@@ -72,6 +72,19 @@ comprueba(d.filas.length === 2 && d.filas[0].fullName === 'Ana', 'las filas, en 
 comprueba(d.filas[0].deLaSemana.payableUsd === 30 && d.filas[0].deLaSemana.feeUsd === 6, 'lo de la semana, con su desglose')
 comprueba(d.filas[0].senales.cuotasPagadas === 0 && d.filas[0].perfil === 'nunca_ha_pagado', 'las señales y el perfil')
 comprueba(d.filas[1].cuotas.length === 1, 'un estado desconocido no se inventa')
+{
+  // La inicial (cuota 0, 2026-11-12) no es de cobranza: si llegara, no se lee
+  // como una cuota 1.
+  const conInicial = leerDeudoresDeLaSemana({
+    ...crudo,
+    rows: [{ ...crudo.rows[1], de_la_semana: { payable_usd: 12, financed_usd: 10, fee_usd: 2, cuotas: [cuota(0, 'vencida', 56.96), cuota(2, 'por_vencer', 12, '2026-10-02')] } }],
+  })
+  comprueba(
+    conInicial.filas[0].cuotas.length === 1 && conInicial.filas[0].cuotas[0].numero === 2,
+    'una cuota 0 no se cuela como cuota 1',
+    JSON.stringify(conInicial.filas[0].cuotas.map((c) => c.numero)),
+  )
+}
 
 console.log('\n── El filtro de cuota ───────────────────────────────────────')
 comprueba(deLaCuota(d.filas, 'todas').length === 2, 'las dos: todos')

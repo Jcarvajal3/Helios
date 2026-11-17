@@ -108,7 +108,7 @@ function cifrasDePersona(user: UserDetail): Array<CifraDeFicha> {
       : {
           label: 'Disponible hoy',
           value: formatUsd(credit.availableNowUsd),
-          info: 'Límite del nivel menos el financiamiento (sin comisión) de sus financiamientos con alguna cuota sin pagar, o cero con una cuota vencida, la cuenta no activa o un bloqueo: lo que una clínica vería como disponible; el cupo de cada financiamiento vuelve al pagar sus dos cuotas.',
+          info: 'Límite del nivel menos el financiamiento (sin comisión) de sus financiamientos con alguna cuota sin pagar, o cero con una cuota vencida, la cuenta no activa o un bloqueo: lo que una clínica vería como disponible; el cupo de cada financiamiento vuelve al pagar sus dos cuotas (y la inicial, si la tiene). Una orden que espera la inicial ya ocupa cupo.',
           senal: motivo ? { tone: 'error', texto: 'No puede gastar' } : undefined,
           visual: (
             <Meter

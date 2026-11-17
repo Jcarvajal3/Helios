@@ -20,6 +20,7 @@ import {
   VALORES_ESTADO_PROMESA,
   estadoDe,
   estadoDeConsumo,
+  estadoDeLaOrden,
   estadoDePagoReportado,
   estadoDePersona,
   opcionesDeEstado,
@@ -67,6 +68,30 @@ comprueba(
   VALORES_ESTADO_CONSUMO.every((v) => ESTADOS_CONSUMO[v].que.length > 0),
   'todo estado de financiamiento tiene su definición (va al InfoDot)',
   'alguno sin «que»',
+)
+
+console.log('\n── La inicial (2026-11-12) ───────────────────────────────────')
+comprueba(
+  estadoDeConsumo('awaiting_down_payment').label === 'Esperando la inicial',
+  '«awaiting_down_payment» es «Esperando la inicial»',
+  estadoDeConsumo('awaiting_down_payment').label,
+)
+comprueba(estadoDeConsumo('declined').label === 'Rechazado', '«declined» ya no cae a pendiente', estadoDeConsumo('declined').label)
+comprueba(estadoDeConsumo('expired').label === 'Vencido', '«expired» ya no cae a pendiente', estadoDeConsumo('expired').label)
+comprueba(
+  estadoDeLaOrden({ status: 'reverted', downPaymentExpiredAt: '2026-11-12T18:30:00Z' }).label === 'Anulado: sin inicial',
+  'la reversa sola por no pagar la inicial se nombra (ficha)',
+  estadoDeLaOrden({ status: 'reverted', downPaymentExpiredAt: '2026-11-12T18:30:00Z' }).label,
+)
+comprueba(
+  estadoDeLaOrden({ status: 'reverted', downPaymentExpiredAt: null }).label === 'Revertido',
+  'la reversa del equipo sigue siendo «Revertido»',
+  estadoDeLaOrden({ status: 'reverted', downPaymentExpiredAt: null }).label,
+)
+comprueba(
+  estadoDeLaOrden({ status: 'confirmed', downPaymentExpiredAt: '2026-11-12T18:30:00Z' }).label === 'Confirmado',
+  'la marca solo cuenta en una revertida',
+  estadoDeLaOrden({ status: 'confirmed', downPaymentExpiredAt: '2026-11-12T18:30:00Z' }).label,
 )
 
 console.log('\n── Un estado desconocido sale crudo y en gris ────────────────')

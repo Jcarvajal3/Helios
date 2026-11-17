@@ -4,12 +4,14 @@
  *   npx tsx src/features/merchant/financiamientos.test.ts
  */
 import {
+  ESTADO_DEL_FINANCIAMIENTO,
   formatTotalesPorMoneda,
   hayOtraMoneda,
   leerDetalle,
   leerFilaDeFinanciamiento,
   leerPorPersona,
   leerResumen,
+  llevaPagoALaClinica,
 } from './financiamientos'
 import { COLUMNAS_VENTAS, leerFilaDeVentas, usdOEur } from './ventas'
 
@@ -217,6 +219,136 @@ igual(
   ],
   'las dos mitades en orden, con el pago antes del vencimiento',
 )
+
+console.log('\n── la inicial del 50% (2026-11-12) ───────────────────────────')
+// Una orden que espera la inicial: sale en la lista con su plazo, nunca como
+// confirmada; sus mitades son las de siempre (cuotas 1 y 2, días 8 y 15).
+const filaEsperando = leerFilaDeFinanciamiento({
+  charge_id: 'c10',
+  order_number: 6261,
+  business_date: '2026-11-12',
+  confirmed_at: null,
+  merchant_sale_usd: 100,
+  status: 'awaiting_down_payment',
+  receipt_status: 'sin_enviar',
+  cuota_1_due: '2026-11-26',
+  cuota_1_run: '2026-11-20',
+  cuota_2_due: '2026-12-10',
+  cuota_2_run: '2026-11-27',
+  down_payment_due_at: '2026-11-12T18:30:00Z',
+})
+igual(filaEsperando.status, 'awaiting_down_payment', 'esperando la inicial: su estado, no «confirmed»')
+igual(ESTADO_DEL_FINANCIAMIENTO[filaEsperando.status].texto, 'Esperando la inicial', 'su etiqueta')
+igual(filaEsperando.downPaymentDueAt, '2026-11-12T18:30:00Z', 'hasta cuándo puede pagarla')
+igual(
+  filaEsperando.cuotas,
+  [
+    { dueDate: '2026-11-26', paidToMerchantOn: '2026-11-20' },
+    { dueDate: '2026-12-10', paidToMerchantOn: '2026-11-27' },
+  ],
+  'las dos mitades de la clínica, las cuotas 1 y 2',
+)
+
+// La anulada por no pagar la inicial: `reverted` con `down_payment_expired_at`.
+// Sus fechas vienen en null (solo las órdenes vivas las traen).
+const filaAnulada = leerFilaDeFinanciamiento({
+  charge_id: 'c11',
+  order_number: 6262,
+  merchant_sale_usd: 100,
+  status: 'reverted',
+  cuota_1_due: null,
+  cuota_1_run: null,
+  cuota_2_due: null,
+  cuota_2_run: null,
+  down_payment_due_at: null,
+  down_payment_expired_at: '2026-11-12T18:31:00Z',
+})
+igual(filaAnulada.status, 'anulada_sin_inicial', 'reverted con down_payment_expired_at: anulada sin inicial')
+igual(ESTADO_DEL_FINANCIAMIENTO[filaAnulada.status].texto, 'Anulado: sin inicial', 'su etiqueta')
+igual(filaAnulada.downPaymentExpiredAt, '2026-11-12T18:31:00Z', 'cuándo se anuló')
+igual(filaAnulada.cuotas, [null, null], 'anulada: fechas en null, sin romperse')
+
+// Una reversa del equipo (sin down_payment_expired_at) sigue siendo «Revertido».
+const filaRevertida = leerFilaDeFinanciamiento({
+  charge_id: 'c14',
+  order_number: 6263,
+  merchant_sale_usd: 100,
+  status: 'reverted',
+  down_payment_expired_at: null,
+})
+igual(filaRevertida.status, 'reverted', 'reverted sin down_payment_expired_at: reversa del equipo')
+igual(ESTADO_DEL_FINANCIAMIENTO[filaRevertida.status].texto, 'Revertido', 'su etiqueta')
+
+// Una orden viva con las fechas aún en null (p. ej. vencida o sin plan): sin «Invalid date».
+const filaSinFechas = leerFilaDeFinanciamiento({
+  charge_id: 'c15',
+  order_number: 6264,
+  merchant_sale_usd: 100,
+  status: 'expired',
+  cuota_1_due: null,
+  cuota_1_run: null,
+  cuota_2_due: null,
+  cuota_2_run: null,
+})
+igual(filaSinFechas.cuotas, [null, null], 'vencida: fechas null, la tabla pinta «—»')
+igual(
+  leerFilaDeFinanciamiento({ charge_id: 'c16', order_number: 1, merchant_sale_usd: 1, status: 'confirmed', cuota_1_due: '2026-11-26', cuota_1_run: null }).cuotas,
+  [null, null],
+  'confirmada con una fecha a medias: sin cuota, no una fecha inválida',
+)
+
+const filaRara = leerFilaDeFinanciamiento({ charge_id: 'c12', order_number: 1, merchant_sale_usd: 1, status: 'estado_nuevo' })
+comprueba(filaRara.status !== 'confirmed', 'un estado desconocido nunca se enseña como confirmado', filaRara.status)
+igual(filaRara.cuotas, [null, null], 'ni promete fechas de pago')
+igual(leerFilaDeFinanciamiento({ charge_id: 'c13', order_number: 1, merchant_sale_usd: 1, status: 'declined', cuota_1_due: '2026-11-26', cuota_1_run: '2026-11-20' }).cuotas, [null, null], 'rechazada: sin fechas de pago')
+for (const s of ['confirmed', 'pending', 'awaiting_down_payment'] as const) {
+  comprueba(llevaPagoALaClinica(s), `${s}: lleva pago a la clínica`)
+}
+for (const s of ['declined', 'expired', 'voided', 'reverted', 'anulada_sin_inicial', 'otro'] as const) {
+  comprueba(!llevaPagoALaClinica(s), `${s}: sin pago a la clínica`)
+}
+
+// La ficha: la reversa automática se distingue por down_payment_expired_at;
+// la del equipo sigue siendo «Revertido».
+const fichaEsperando = leerDetalle({
+  charge_id: 'c10',
+  order_number: 6261,
+  status: 'awaiting_down_payment',
+  created_at: '2026-11-12T16:30:00Z',
+  merchant_sale_usd: 100,
+  consumer_fee_usd: 12,
+  consumer_fee_vat_usd: 1.92,
+  down_payment_pct: 50,
+  down_payment_due_at: '2026-11-12T18:30:00Z',
+  activated_at: null,
+  down_payment_expired_at: null,
+  installments: [
+    // La base ya no manda la inicial aquí; si llegara, no es una mitad.
+    { sequence: 0, due_date: '2026-11-12', run_date: null, paid_to_merchant_on: null },
+    { sequence: 1, due_date: '2026-11-26', run_date: '2026-11-20', paid_to_merchant_on: null },
+    { sequence: 2, due_date: '2026-12-10', run_date: '2026-11-27', paid_to_merchant_on: null },
+  ],
+  payouts: [],
+})
+igual(fichaEsperando.status, 'awaiting_down_payment', 'la ficha: esperando la inicial')
+igual([fichaEsperando.downPaymentPct, fichaEsperando.downPaymentDueAt], [50, '2026-11-12T18:30:00Z'], 'la ficha: la inicial y su plazo')
+igual(fichaEsperando.pagos.map((p) => p.sequence), [1, 2], 'la ficha: la inicial no es una mitad de la clínica')
+
+const fichaAnulada = leerDetalle({
+  charge_id: 'c11',
+  order_number: 6262,
+  status: 'reverted',
+  created_at: 'x',
+  merchant_sale_usd: 100,
+  down_payment_pct: 50,
+  down_payment_expired_at: '2026-11-12T18:31:00Z',
+  void_reason: 'La inicial no se pagó a tiempo',
+  installments: [],
+})
+igual([fichaAnulada.status, fichaAnulada.voidReason], ['anulada_sin_inicial', 'La inicial no se pagó a tiempo'], 'la ficha: anulada sin inicial')
+igual(leerDetalle({ charge_id: 'c', order_number: 1, status: 'reverted', created_at: 'x', merchant_sale_usd: 1 }).status, 'reverted', 'la ficha: la reversa del equipo sigue siendo «Revertido»')
+igual(leerDetalle({ charge_id: 'c', order_number: 1, created_at: 'x', merchant_sale_usd: 1 }).downPaymentPct, 0, 'orden vieja: sin inicial')
+comprueba(leerDetalle({ charge_id: 'c', order_number: 1, status: 'otro_estado', created_at: 'x', merchant_sale_usd: 1 }).status !== 'confirmed', 'la ficha: un estado desconocido no es confirmado')
 
 console.log('\n── el libro para contabilidad ────────────────────────────────')
 igual(usdOEur({ sale_usd: 10, sale_eur: 99 }, 'sale'), 10, 'prefiere _usd')

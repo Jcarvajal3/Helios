@@ -4,6 +4,7 @@ import { Store } from 'lucide-react'
 import { Badge, Callout, Seccion, formatDay, formatUsd } from '@/components/ui'
 import type { QueueItem } from '@/features/admin/api'
 import { sumandosDelPago } from '@/features/admin/sumandosDelPago'
+import { cuotasDelPlanDe, laCuota, rotuloDeCuota } from '@/features/admin/rotuloDeCuota'
 
 /**
  * Qué salda este pago: el consumo, la cuota y el cargo por atraso.
@@ -67,6 +68,16 @@ export function DesgloseDelPago({ item }: { item: QueueItem }) {
                 Financiamiento anulado
               </Badge>
             )}
+            {/* Aprobar un pago que cubre la inicial activa la orden: comisión
+                de la secretaria, comprobante y aviso al médico (docs/07). */}
+            {compra.chargeStatus === 'awaiting_down_payment' && (
+              <span
+                className="inline-flex"
+                title="La orden espera la inicial. Al aprobar un pago que la cubre, queda activa: sale el comprobante por correo y se avisa al médico."
+              >
+                <Badge tone="warning">Esperando la inicial</Badge>
+              </span>
+            )}
           </div>
 
           <ul className="divide-y divide-panel-hairline">
@@ -80,7 +91,12 @@ export function DesgloseDelPago({ item }: { item: QueueItem }) {
               >
                 <div className="min-w-0">
                   <p className="type-panel-body text-on-surface">
-                    Cuota {cuota.sequence} de {compra.installmentsTotal}
+                    {/* `installmentsTotal` cuenta también la inicial: el
+                        «de N» es el del plan, sin ella. */}
+                    {rotuloDeCuota(
+                      cuota.sequence,
+                      cuotasDelPlanDe(compra.installmentsTotal, compra.downPaymentPct),
+                    )}
                   </p>
                   <p className="mt-0.5 type-panel-caption text-on-surface-variant">
                     Vence el {formatDay(cuota.dueDate)}
@@ -134,7 +150,7 @@ export function DesgloseDelPago({ item }: { item: QueueItem }) {
               <li key={cargo.lateFeeId}>
                 {formatUsd(cargo.amountUsd)} por{' '}
                 {cargo.sequence !== null && cargo.orderNumber !== null
-                  ? `la cuota ${cargo.sequence} de la orden #${cargo.orderNumber}`
+                  ? `${laCuota(cargo.sequence)} de la orden #${cargo.orderNumber}`
                   : 'un atraso anterior sin cuota'}
                 , con {cargo.daysLate} {cargo.daysLate === 1 ? 'día' : 'días'} de atraso
                 {cargo.orphan && '. Es de una cuota que no va en este pago'}.

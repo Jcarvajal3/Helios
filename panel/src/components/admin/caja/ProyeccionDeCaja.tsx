@@ -27,7 +27,9 @@ import type { Desglose } from '@/features/admin/metricas/lectura'
  * A la clínica se le paga a los días 8 y 15 de cada orden, pague o no el
  * paciente y sin depender del vencimiento de su cuota, que en las órdenes
  * nuevas cae después (días 14 y 28): por eso una orden nueva saca dinero antes
- * de que entre. Con ese horizonte, todo lo que hoy está en la calle entra y
+ * de que entre. Desde el 2026-11-12 la orden nueva trae además una inicial
+ * (el 50% del total, el día del «Sí»), que entra antes de que la orden quede
+ * activa: no se proyecta, ya está en caja. Con ese horizonte, todo lo que hoy está en la calle entra y
  * sale dentro de la tabla. Lo que sale incluye las mitades que todavía no se
  * han devengado.
  *

@@ -8,6 +8,7 @@ import type { PayoutMethod } from '@/features/admin/liquidaciones'
 import { comoTitulo, leerConsultasYComisiones } from '@/features/admin/clinicas/clinicas'
 import type { ConsultasYComisiones, TituloDelMedico } from '@/features/admin/clinicas/clinicas'
 import type { LineaParaGuardar, LineaParaRegistrar } from '@/features/admin/pagoMasivo'
+import { esLaInicial } from '@/features/admin/rotuloDeCuota'
 
 /** `agenda` solo entra a superadmin › Agenda (20261022220100); `capacitador`, a la Agenda y a Clínicas (20261102130100). */
 export type PlatformRole = 'operador' | 'super_admin' | 'agenda' | 'capacitador'
@@ -98,8 +99,13 @@ export type QueuePurchase = {
   chargeStatus: string
   businessDate: string | null
   confirmedAt: string | null
-  /** Cuántas cuotas tiene la compra para ESTE usuario: el "de 2" del "1 de 2". */
+  /**
+   * Cuántas cuotas tiene la compra para ESTE usuario. Con inicial cuenta
+   * también la cuota 0: el «de 2» sale de `cuotasDelPlanDe`.
+   */
   installmentsTotal: number
+  /** La inicial de la orden, en % (null o 0 = sin inicial). */
+  downPaymentPct: number | null
   installments: QueueInstallment[]
 }
 
@@ -301,6 +307,7 @@ export function aQueueItem(raw: unknown): QueueItem {
         businessDate: textoONulo(p.business_date),
         confirmedAt: textoONulo(p.confirmed_at),
         installmentsTotal: Number(p.installments_total),
+        downPaymentPct: numeroONulo(p.down_payment_pct),
         installments: comoLista(p.installments).map((cuota) => {
           const i = comoFila(cuota)
           return {
@@ -312,7 +319,9 @@ export function aQueueItem(raw: unknown): QueueItem {
             amountUsd: Number(i.amount_usd),
             dueDate: String(i.due_date),
             status: i.status === 'paid' ? ('paid' as const) : ('pending' as const),
-            daysOverdue: Number(i.days_overdue),
+            // La inicial (cuota 0) nunca está vencida: la base ya la manda en
+            // 0 (docs/01 «La inicial»); esto es solo defensa.
+            daysOverdue: esLaInicial(Number(i.sequence)) ? 0 : Number(i.days_overdue),
             otherReports: Number(i.other_reports),
           }
         }),

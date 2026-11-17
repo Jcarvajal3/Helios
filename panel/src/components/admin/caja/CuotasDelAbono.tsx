@@ -23,6 +23,7 @@ import {
   sugerirCuotas,
 } from '@/features/admin/asignarAbono'
 import { assignDeposit } from '@/features/admin/deposits'
+import { laCuota, rotuloDeCuota } from '@/features/admin/rotuloDeCuota'
 import type { UnmatchedDeposit } from '@/features/admin/deposits'
 import { fetchUserLateFees } from '@/features/admin/lateFees'
 import { fetchUserDetail } from '@/features/admin/users'
@@ -159,7 +160,7 @@ export function CuotasDelAbono({
                 label={
                   <>
                     <span className="block">
-                      Cuota {c.sequence} de {deN.get(c.chargeId) ?? c.sequence} · {c.merchantName}
+                      {rotuloDeCuota(c.sequence, deN.get(c.chargeId))} · {c.merchantName}
                       {c.orderNumber !== null && ` · orden #${c.orderNumber}`}
                     </span>
                     <span className="block type-panel-caption text-on-surface-variant">
@@ -231,7 +232,7 @@ export function CuotasDelAbono({
                   <li key={f.id}>
                     {formatUsd(f.amountUsd)} por{' '}
                     {f.sequence !== null
-                      ? `la cuota ${f.sequence} de ${f.merchantName ?? 'una clínica'}, con vencimiento el ${formatDay(f.dueDate)}`
+                      ? `${laCuota(f.sequence)} de ${f.merchantName ?? 'una clínica'}, con vencimiento el ${formatDay(f.dueDate)}`
                       : 'un atraso anterior sin cuota'}
                   </li>
                 ))}

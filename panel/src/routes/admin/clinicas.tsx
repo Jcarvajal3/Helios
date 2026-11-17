@@ -19,6 +19,9 @@ import {
   NoSePudoLeer,
   Segmented,
   SkeletonTable,
+  Stat,
+  StatGrid,
+  estadoDeConsulta,
   claseDeBoton,
   formatUsd,
 } from '@/components/ui'
@@ -141,6 +144,16 @@ function ListaDeLocales() {
 
   return (
     <>
+      {/* El resumen de la maqueta aprobada (2026-11-12): cuatro cifras arriba.
+          El capacitador no ve dinero: solo las activas y las solicitudes. */}
+      <ResumenEnCifras
+        merchants={merchants}
+        payables={payables}
+        pendientes={pendientes}
+        solicitudes={solicitudes}
+        sinDinero={sinDinero}
+      />
+
       <FilterBar>
         <BuscadorEnUrl
           id="buscar-local"
@@ -177,22 +190,6 @@ function ListaDeLocales() {
         <ListaDeSolicitudes estado={solicitudes} filas={filasSolicitudes} onAbrir={setRevisando} />
       ) : (
         <>
-          {pendientes > 0 && (
-            <button
-              type="button"
-              onClick={() => cambiar({ estado: 'pendiente' })}
-              className="mb-shell-gap-block flex w-full items-center gap-3 rounded-panel-card border border-warning/30 bg-warning/7 px-4 py-3 text-left text-on-surface hover:bg-warning/10"
-            >
-              <Inbox size={18} aria-hidden className="shrink-0 text-warning" />
-              <span className="type-panel-body">
-                {pendientes === 1
-                  ? 'Hay 1 solicitud de afiliación pendiente de aprobar.'
-                  : `Hay ${pendientes} solicitudes de afiliación pendientes de aprobar.`}{' '}
-                <span className="underline underline-offset-2">Revisar</span>
-              </span>
-            </button>
-          )}
-
           {merchants.isPending && <SkeletonTable rows={6} columns={6} />}
 
           {merchants.isError && (
@@ -375,5 +372,70 @@ function ResumenLocales({
         'leyendo lo que se les debe…'
       )}
     </>
+  )
+}
+
+/**
+ * Las cuatro cifras de arriba: cuántas clínicas están activas, lo financiado
+ * en 30 días, lo que se les debe y las solicitudes por aprobar. Salen de las
+ * mismas consultas que la lista; las de prueba no suman.
+ */
+function ResumenEnCifras({
+  merchants,
+  payables,
+  pendientes,
+  solicitudes,
+  sinDinero,
+}: {
+  merchants: UseQueryResult<Array<MerchantRow>>
+  payables: UseQueryResult<Array<MerchantPayable>>
+  pendientes: number
+  solicitudes: UseQueryResult<Array<SolicitudDeAfiliacion>>
+  sinDinero: boolean
+}) {
+  const reales = (merchants.data ?? []).filter((m) => !m.isTest)
+  const activas = reales.filter((m) => m.status === 'active').length
+  const financiado = reales.reduce((s, m) => s + m.financed30d, 0)
+  const ids = new Set(reales.map((m) => m.id))
+  const deuda = (payables.data ?? []).filter((p) => ids.has(p.merchantId))
+  const porPagar = deuda.reduce((s, p) => s + p.totalPendingUsd, 0)
+  const atrasado = deuda.reduce((s, p) => s + p.overdueUsd, 0)
+
+  return (
+    <StatGrid cols={sinDinero ? 2 : 4} className="mb-shell-gap-block">
+      <Stat
+        label="Clínicas activas"
+        value={String(activas)}
+        hint={`de ${reales.length} ${reales.length === 1 ? 'clínica' : 'clínicas'}`}
+        estado={estadoDeConsulta(merchants)}
+        onReintentar={() => void merchants.refetch()}
+      />
+      {!sinDinero && (
+        <Stat
+          label="Financiado sin comisión · 30 días"
+          value={formatUsd(financiado)}
+          estado={estadoDeConsulta(merchants)}
+          onReintentar={() => void merchants.refetch()}
+        />
+      )}
+      {!sinDinero && (
+        <Stat
+          label="Por pagar a clínicas"
+          value={formatUsd(porPagar)}
+          senal={atrasado > 0 ? { tone: 'warning', texto: `${formatUsd(atrasado)} con atraso` } : undefined}
+          link={{ to: '/admin/pagos-clinicas' }}
+          estado={estadoDeConsulta(payables)}
+          onReintentar={() => void payables.refetch()}
+        />
+      )}
+      <Stat
+        label="Solicitudes por aprobar"
+        value={String(pendientes)}
+        senal={pendientes > 0 ? { tone: 'warning', texto: 'Revisar ahora' } : undefined}
+        link={{ to: '/admin/clinicas', search: { estado: 'pendiente' } }}
+        estado={estadoDeConsulta(solicitudes)}
+        onReintentar={() => void solicitudes.refetch()}
+      />
+    </StatGrid>
   )
 }

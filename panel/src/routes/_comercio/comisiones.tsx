@@ -169,8 +169,8 @@ function Comisiones({ staff }: { staff: StaffContext }) {
 
       <p className="mb-6 type-panel-caption leading-5 text-panel-muted">
         {deTodos
-          ? 'Helios paga cada comisión a la clínica junto con la primera mitad de la consulta (8 días después de que el paciente confirma). La clínica se las entrega a su personal.'
-          : 'Ves solo tus comisiones. Helios le paga cada una a la clínica junto con la primera mitad de la consulta (8 días después de que el paciente confirma), y la clínica te las entrega.'}
+          ? 'Helios paga cada comisión a la clínica junto con la primera mitad de la consulta (8 días después de la orden). La clínica se las entrega a su personal.'
+          : 'Ves solo tus comisiones. Helios le paga cada una a la clínica junto con la primera mitad de la consulta (8 días después de la orden), y la clínica te las entrega.'}
         {canSee(staff, 'pagos') && (
           <>
             {' '}
@@ -433,7 +433,7 @@ function DetalleDePersona({
               'Estado',
               {
                 label: 'Día de pago',
-                info: 'El de la primera mitad de la consulta, 8 días después de que el paciente confirma. Si ya se pagó, el día de la transferencia.',
+                info: 'El de la primera mitad de la consulta, 8 días después de la orden. Si ya se pagó, el día de la transferencia.',
               },
             ]}
           >

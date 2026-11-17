@@ -167,6 +167,16 @@ console.log('── Cobro a tiempo ───────────────
   const vacio = leerCobroATiempo({ total: { due_count: 0, rate_pct: null }, installments: {} })
   igual(vacio.total.pct, null, 'sin cuotas que juzgar no hay porcentaje')
   igual(pieDeCobroATiempo(vacio), 'Ninguna cuota ha cerrado su plazo todavía', 'y se dice')
+  // La inicial (cuota 0, 2026-11-12) no tiene cobro a tiempo: si llegara, no
+  // sale en el pie.
+  const conInicial = leerCobroATiempo({
+    total: { due_count: 61, on_time_count: 45, rate_pct: 73.8 },
+    installments: {
+      cuota_0: { sequence: 0, due_count: 9, on_time_count: 9, rate_pct: 100 },
+      cuota_1: { sequence: 1, due_count: 61, on_time_count: 45, rate_pct: 73.8 },
+    },
+  })
+  igual(conInicial.cuotas.map((q) => q.numero), [1], 'una cuota 0 no se cuenta')
 }
 
 console.log('── El impago de cada cuota ─────────────────────────────────────')

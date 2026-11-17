@@ -56,14 +56,10 @@ function ariaCurrent(actual: EnlaceDeNivel['actual']): 'page' | 'true' | undefin
   return undefined
 }
 
-// El brillo de la pestaña activa: de nada arriba al tinte de la banda abajo,
-// así la banda de debajo se lee como suya. Y el tinte de la banda: muy suave,
-// para que no compita con las tarjetas ni parezca un aviso.
-const BRILLO_ACTIVA =
-  'bg-[linear-gradient(to_bottom,transparent,color-mix(in_oklab,var(--area)_14%,transparent))]'
+// El tinte de la banda: muy suave, para que no compita con las tarjetas ni
+// parezca un aviso.
 const FONDO_BANDA = 'bg-[color-mix(in_oklab,var(--area)_7%,transparent)]'
 const BORDE_BANDA = 'border-[color-mix(in_oklab,var(--area)_18%,transparent)]'
-const SUBRAYADO_AL_PASAR = 'hover:border-[color-mix(in_oklab,var(--area)_45%,transparent)]'
 // La píldora activa: fondo neutro elevado, como pide la jerarquía, con un
 // aro fino del tono de su pestaña. Es lo que la separa a simple vista de la
 // opción activa de un `Segmented`, que es gris del todo.
@@ -90,23 +86,24 @@ export function PestanasConTono({
 }) {
   return (
     <nav aria-label={etiqueta} className={className}>
-      <ul className="flex flex-wrap gap-x-1 border-b border-panel-hairline sm:gap-x-1.5">
+      {/* Píldoras, como el segmentado de la maqueta (2026-11-12); la activa,
+          blanca y con el icono en el tono de su área. */}
+      <ul className="flex w-fit max-w-full flex-wrap gap-1 rounded-[24px] bg-panel-control p-1">
         {enlaces.map((e) => {
           const activa = e.actual !== null
           const Icono = e.icono
           return (
-            // `-mb-px`: el subrayado tapa la regla de abajo, como en `Tabs`.
-            <li key={e.clave} data-area={e.tono} className="-mb-px flex">
+            <li key={e.clave} data-area={e.tono} className="flex">
               <Link
                 {...e.destino}
                 // Lo activo lo decide `actual`; sin `exact`, TanStack daría
                 // por activa la pestaña Semana en todas (su búsqueda está vacía).
                 activeOptions={{ exact: true }}
                 aria-current={ariaCurrent(e.actual)}
-                className={`group inline-flex h-12 items-center gap-2 whitespace-nowrap rounded-t-panel-control border-b-2 px-3 type-panel-body sm:px-4 text-[0.9375rem] font-semibold transition-colors duration-(--transition-fast) motion-reduce:transition-none ${
+                className={`group inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-full px-3.5 type-panel-body font-medium transition-[background-color,color,box-shadow] duration-200 motion-reduce:transition-none sm:px-4 ${
                   activa
-                    ? `border-area text-on-surface ${BRILLO_ACTIVA}`
-                    : `border-transparent text-panel-muted hover:text-on-surface ${SUBRAYADO_AL_PASAR}`
+                    ? 'bg-panel-card text-on-surface shadow-[0_1px_0_rgb(255_255_255/0.9)_inset,0_4px_12px_-4px_rgb(10_60_160/0.35)]'
+                    : 'text-panel-muted hover:text-on-surface'
                 }`}
               >
                 {Icono && (

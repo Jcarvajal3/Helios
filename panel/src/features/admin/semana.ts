@@ -30,7 +30,11 @@ export const SEMANAS_ATRAS_MAX = TOPE_SEMANAS - VENTANA_SEMANAS
  */
 const TRAMO_DE_PEDIDO = 13
 
-/** Un consumo se paga en dos cuotas: un ciclo de cobro son dos intervalos. */
+/**
+ * Un consumo se paga en dos cuotas: un ciclo de cobro son dos intervalos. La
+ * inicial (cuota 0, desde el 2026-11-12) vence el día del «Sí» y no alarga el
+ * ciclo: se cobra antes de que la orden quede activa.
+ */
 const CUOTAS_POR_CONSUMO = 2
 
 // ── Calendario ─────────────────────────────────────────────────────────────

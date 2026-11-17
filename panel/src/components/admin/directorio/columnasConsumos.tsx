@@ -3,7 +3,7 @@ import { Link } from '@tanstack/react-router'
 import { ENLACE_EN_CELDA } from '@/components/DataTable'
 import type { Column } from '@/components/DataTable'
 import { AnularConsumo } from '@/components/admin/directorio/AnularConsumo'
-import { EstadoBadge } from '@/components/admin/EstadoBadge'
+import { EstadoDeLaOrdenBadge } from '@/components/admin/EstadoBadge'
 import {
   Badge,
   formatDay,
@@ -14,10 +14,12 @@ import {
 } from '@/components/ui'
 import {
   ESTADOS_CONSUMO,
+  ESTADO_ANULADO_SIN_INICIAL,
   VALORES_ESTADO_CONSUMO,
-  estadoDeConsumo,
+  estadoDeLaOrden,
 } from '@/features/admin/estados'
 import type { ChargeRow } from '@/features/admin/ops'
+import { cobradoDeLaOrden } from '@/features/admin/rotuloDeCuota'
 import { csvDinero, csvInstante } from '@/lib/csv'
 
 /**
@@ -27,6 +29,11 @@ import { csvDinero, csvInstante } from '@/lib/csv'
  * el local dice por teléfono. El importe es el consumo sin la Comisión Helios;
  * al lado, la comisión + IVA y el total que paga el paciente (2026-10-29).
  */
+/** Lo que pide `cobradoDeLaOrden` de una fila de la lista. */
+function cobradoDe(c: ChargeRow) {
+  return { pagadas: c.installmentsPaid, total: c.installmentsTotal, downPaymentPct: c.downPaymentPct }
+}
+
 export const COLUMNAS_CONSUMOS: Array<Column<ChargeRow>> = [
   {
     key: 'orden',
@@ -228,28 +235,40 @@ export const COLUMNAS_CONSUMOS: Array<Column<ChargeRow>> = [
   {
     key: 'cuotas',
     header: 'Cuotas cobradas',
-    info: 'Cuotas cobradas sobre el total de cuotas del financiamiento, de todos los pacientes que pagan en él.',
+    info: 'Cuotas cobradas sobre el total de cuotas del financiamiento, de todos los pacientes que pagan en él. En una orden con inicial (desde el 2026-11-12) la inicial va aparte: «Inicial + 1 de 2» es la inicial y la cuota 1 pagadas; «Inicial sin pagar», que todavía la espera.',
     hidden: true,
     type: 'number',
     // Por lo que queda por pagar: «1 de 2» y «1 de 6» no son lo mismo.
     sort: (c) => (c.installmentsTotal > 0 ? c.installmentsTotal - c.installmentsPaid : null),
-    csv: (c) => (c.installmentsTotal > 0 ? `${c.installmentsPaid} de ${c.installmentsTotal}` : null),
-    cell: (c) => (
-      <span className="text-on-surface-variant">
-        {c.installmentsTotal > 0 ? `${c.installmentsPaid} de ${c.installmentsTotal} cobradas` : '—'}
-      </span>
-    ),
+    csv: (c) => cobradoDeLaOrden(cobradoDe(c)),
+    cell: (c) => {
+      const cobrado = cobradoDeLaOrden(cobradoDe(c))
+      return (
+        <span className="text-on-surface-variant">
+          {cobrado === null ? '—' : c.downPaymentPct ? cobrado : `${cobrado} cobradas`}
+        </span>
+      )
+    },
   },
 
   {
     key: 'estado',
     header: 'Estado',
-    info: VALORES_ESTADO_CONSUMO.map((v) => `${ESTADOS_CONSUMO[v].label}: ${ESTADOS_CONSUMO[v].que}`).join(' '),
-    sort: (c) => estadoDeConsumo(c.status).label,
-    csv: (c) => estadoDeConsumo(c.status).label,
+    info: [
+      ...VALORES_ESTADO_CONSUMO.map((v) => `${ESTADOS_CONSUMO[v].label}: ${ESTADOS_CONSUMO[v].que}`),
+      `${ESTADO_ANULADO_SIN_INICIAL.label}: ${ESTADO_ANULADO_SIN_INICIAL.que}`,
+    ].join(' '),
+    sort: (c) => estadoDeLaOrden(c).label,
+    csv: (c) => estadoDeLaOrden(c).label,
     cell: (c) => (
       <>
-        <EstadoBadge tipo="consumo" valor={c.status} />
+        <EstadoDeLaOrdenBadge orden={c} />
+        {/* La que espera la inicial dice hasta cuándo: luego se anula sola. */}
+        {c.status === 'awaiting_down_payment' && c.downPaymentDueAt && (
+          <span className="mt-1 block type-panel-caption text-on-surface-variant">
+            Hasta las {formatTime(c.downPaymentDueAt)}
+          </span>
+        )}
         {c.voidReason && (
           <span className="mt-1 block max-w-48 type-panel-caption text-on-surface-variant">
             {c.voidReason}

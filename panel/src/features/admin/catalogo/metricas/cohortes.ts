@@ -52,7 +52,7 @@ export const metricasCohortes = [
       'cuotas por semana de financiamiento',
     ],
     destino: { to: '/admin/metricas', search: { vista: 'cobros' } },
-    que: 'Para los financiamientos de una semana (de lunes a domingo, por día operativo), cada cuota en su tarjeta: lo que se cobra en ella con su financiamiento (sin comisión) y su Comisión Helios (IVA incluido), y cuánto está cobrado a tiempo, cobrado tarde, vencido sin pagar, por vencer o dado por perdido, con los pacientes de cada estado. Las dos cuotas suman el total a cobrar de la semana.',
+    que: 'Para los financiamientos de una semana (de lunes a domingo, por día operativo), cada cuota en su tarjeta: lo que se cobra en ella con su financiamiento (sin comisión) y su Comisión Helios (IVA incluido), y cuánto está cobrado a tiempo, cobrado tarde, vencido sin pagar, por vencer o dado por perdido, con los pacientes de cada estado. Las dos cuotas suman el total a cobrar de la semana. La inicial (desde el 2026-11-12) no entra: se cobra el día del «Sí» o la orden se anula.',
     rpc: 'admin_metricas_cohorte',
   },
   {

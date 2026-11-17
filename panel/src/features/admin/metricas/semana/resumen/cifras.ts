@@ -54,7 +54,7 @@ export const AYUDAS_DEL_RESUMEN: Record<IdCifraResumen, string> = {
     'Sin la Comisión Helios: lo que se financió en las clínicas en la semana (la en curso, hasta ahora), por día operativo. Solo financiamientos confirmados y sin los de prueba.',
   fee: 'La Comisión Helios de esos financiamientos, con su IVA dentro: el total a cobrar menos el total financiado. El pie lo parte en la Comisión Helios sin IVA (el ingreso de Helios) y el IVA, que no es de Helios.',
   total:
-    'Lo que los pacientes pagan en sus dos cuotas por los financiamientos de la semana: el total financiado (sin comisión) más la Comisión Helios y su IVA. Siempre con sus dos partes a la vista.',
+    'Lo que los pacientes pagan, en la inicial y sus dos cuotas (las órdenes de antes del 2026-11-12, solo en dos cuotas), por los financiamientos de la semana: el total financiado (sin comisión) más la Comisión Helios y su IVA. Siempre con sus dos partes a la vista.',
   consumos: 'Financiamientos confirmados de la semana, sin los de prueba.',
   usuarios:
     'Los pacientes distintos con cuota en los financiamientos de la semana. Quien vino dos días o a dos clínicas cuenta una vez. El pie: cuántos se financiaban por primera vez en alguna clínica (o en la elegida).',

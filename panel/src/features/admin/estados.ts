@@ -28,48 +28,112 @@ export type EstadoVisual = {
 
 // ── Consumo ────────────────────────────────────────────────────────────────
 
-export type EstadoConsumo = 'pending' | 'confirmed' | 'voided' | 'reverted'
+export type EstadoConsumo =
+  | 'pending'
+  | 'awaiting_down_payment'
+  | 'confirmed'
+  | 'declined'
+  | 'expired'
+  | 'voided'
+  | 'reverted'
 
 /** En el orden en que se ofrecen en un filtro. Sirve también para `unoDe`. */
 export const VALORES_ESTADO_CONSUMO: ReadonlyArray<EstadoConsumo> = [
   'confirmed',
+  'awaiting_down_payment',
   'pending',
+  'declined',
+  'expired',
   'voided',
   'reverted',
 ]
 
 /**
- * Los cuatro estados de un consumo, sin ambigüedad.
+ * Los estados de un consumo, sin ambigüedad.
  *
  * Un cobro sin usuario se pintaba como «Sin reclamar» tanto si el QR seguía
  * vivo como si ya había expirado. Son dos cosas distintas: una está pendiente
  * de pasar y la otra no va a pasar nunca.
+ *
+ * `declined` y `expired` existen desde que el paciente responde por WhatsApp
+ * (2026-10-05) y `awaiting_down_payment` desde la inicial del 50% (2026-11-12,
+ * docs/07). Sin ellos aquí, la lectura los convertía en «Pendiente»: un
+ * rechazo se pintaba como si siguiera esperando.
  */
 export const ESTADOS_CONSUMO: Record<EstadoConsumo, EstadoVisual & { que: string }> = {
   pending: {
-    label: 'Pendiente',
-    plural: 'Pendientes',
+    label: 'Esperando al paciente',
+    plural: 'Esperando al paciente',
     tone: 'warning',
-    que: 'Registrado y sin confirmar. En Helios un financiamiento nace confirmado: este estado solo aparece en datos heredados.',
+    que: 'Registrado y sin el «Sí» del paciente, que tiene un plazo para aceptarlo por WhatsApp. Todavía no hay deuda ni asiento.',
+  },
+  awaiting_down_payment: {
+    label: 'Esperando la inicial',
+    plural: 'Esperando la inicial',
+    tone: 'warning',
+    que: 'El paciente dijo «Sí»: ya existen la deuda (inicial + 2 cuotas) y el asiento, pero la orden no queda activa hasta que se apruebe el pago de la inicial (lector, aviso del BNC o Caja). Si en su plazo (Ajustes › Plazo para pagar la inicial) no llegó ningún pago, se anula sola. Aún sin comisión de la secretaria, comprobante ni aviso al médico.',
   },
   confirmed: {
     label: 'Confirmado',
     plural: 'Confirmados',
     tone: 'success',
-    que: 'La clínica lo registró. Existe la deuda, las cuotas y el asiento en el libro.',
+    que: 'Activo: el paciente aceptó y, si la orden lleva inicial, se aprobó su pago. Existe la deuda, las cuotas y el asiento en el libro; a la clínica se le paga en sus dos mitades.',
+  },
+  declined: {
+    label: 'Rechazado',
+    plural: 'Rechazados',
+    tone: 'error',
+    que: 'El paciente dijo «No», o ya no podía pagar en cuotas cuando respondió. No generó deuda ni asiento.',
+  },
+  expired: {
+    label: 'Vencido',
+    plural: 'Vencidos',
+    tone: 'neutral',
+    que: 'Pasó el plazo sin la respuesta del paciente. No generó deuda ni asiento; la clínica puede reenviarle la pregunta.',
   },
   voided: {
     label: 'Anulado',
     plural: 'Anulados',
     tone: 'error',
-    que: 'Un pendiente que expiró o que alguien anuló. No generó deuda ni asiento.',
+    que: 'Un pendiente que alguien anuló. No generó deuda ni asiento.',
   },
   reverted: {
     label: 'Revertido',
     plural: 'Revertidos',
     tone: 'neutral',
-    que: 'Estuvo confirmado y se deshizo desde el panel: se escribió el asiento contrario, se borraron las cuotas y se devolvió el cupo. El asiento original sigue en el libro.',
+    que: 'Tuvo deuda y se deshizo: desde el panel o, si esperaba la inicial y no llegó su pago a tiempo, sola («Anulado: sin inicial»). Se escribió el asiento contrario, se borraron las cuotas y se devolvió el cupo. El asiento original sigue en el libro.',
   },
+}
+
+/** La reversa automática por no pagar la inicial: un «Revertido» con nombre propio. */
+export const ESTADO_ANULADO_SIN_INICIAL: EstadoVisual & { que: string } = {
+  label: 'Anulado: sin inicial',
+  plural: 'Anulados: sin inicial',
+  tone: 'neutral',
+  que: 'Esperaba la inicial y no llegó ningún pago en su plazo: la orden se anuló sola. Asiento contrario, cuotas borradas y cupo de vuelta; se avisó al paciente y al médico.',
+}
+
+type OrdenConEstado = {
+  status: string
+  /** `down_payment_expired_at`: lo traen `admin_charges` y `admin_charge_detail`. */
+  downPaymentExpiredAt?: string | null
+}
+
+/**
+ * Si la orden se anuló sola por no pagar la inicial: revertida y con
+ * `down_payment_expired_at`. Por la columna y no por el texto del motivo,
+ * que puede cambiar.
+ */
+export function seAnuloSinInicial(orden: OrdenConEstado): boolean {
+  return orden.status === 'reverted' && Boolean(orden.downPaymentExpiredAt)
+}
+
+/**
+ * El estado de una orden con lo que se sabe de ella: el de `estadoDeConsumo`,
+ * salvo la reversa por inicial no pagada, que tiene nombre propio.
+ */
+export function estadoDeLaOrden(orden: OrdenConEstado): EstadoVisual {
+  return seAnuloSinInicial(orden) ? ESTADO_ANULADO_SIN_INICIAL : estadoDeConsumo(orden.status)
 }
 
 // ── Pago reportado ─────────────────────────────────────────────────────────

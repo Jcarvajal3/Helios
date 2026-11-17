@@ -120,11 +120,19 @@ export type FilaDeFinanciamiento = {
   status: EstadoDelFinanciamiento
   /** Hasta cuándo espera la orden el Sí. Solo en pending y expired. */
   expiresAt: string | null
+  /** Hasta cuándo puede pagar el paciente la inicial. Solo en awaiting_down_payment. */
+  downPaymentDueAt: string | null
+  /** Cuándo se anuló sola por no pagar la inicial. Null en las demás. */
+  downPaymentExpiredAt: string | null
 }
 
 export function leerFilaDeFinanciamiento(v: unknown): FilaDeFinanciamiento {
   const r = comoFila(v)
   const venta = numero(r.merchant_sale_usd)
+  // Solo una `reverted` con `down_payment_expired_at` se anuló por no pagar la
+  // inicial; sin ese dato es una reversa del equipo («Revertido»).
+  const downPaymentExpiredAt = textoONulo(r.down_payment_expired_at)
+  const status = leerEstadoDelFinanciamiento(r.status, downPaymentExpiredAt !== null)
   return {
     id: texto(r.charge_id ?? r.id),
     orderNumber: numero(r.order_number),
@@ -140,9 +148,16 @@ export function leerFilaDeFinanciamiento(v: unknown): FilaDeFinanciamiento {
     registeredBy: textoONulo(r.registered_by_name) ?? textoONulo(r.staff_name),
     receipt: leerEstadoDelComprobante(r.receipt_status),
     staffCommissionUsd: numeroONulo(r.staff_commission_usd),
-    cuotas: [cuota(r.cuota_1_due, r.cuota_1_run), cuota(r.cuota_2_due, r.cuota_2_run)],
-    status: ESTADOS.find((e) => e === r.status) ?? 'confirmed',
+    // Las dos mitades de la clínica son las cuotas 1 y 2 (la inicial no tiene
+    // mitad). Sin pago a la clínica, sin fechas que prometer: la base ya las
+    // manda en null fuera de las órdenes vivas, y esto lo asegura.
+    cuotas: llevaPagoALaClinica(status)
+      ? [cuota(r.cuota_1_due, r.cuota_1_run), cuota(r.cuota_2_due, r.cuota_2_run)]
+      : [null, null],
+    status,
     expiresAt: textoONulo(r.expires_at),
+    downPaymentDueAt: textoONulo(r.down_payment_due_at),
+    downPaymentExpiredAt,
   }
 }
 
@@ -218,13 +233,27 @@ export function leerPorPersona(v: unknown): PorPersona {
 
 // ── La ficha de uno ───────────────────────────────────────────────────────
 
+/**
+ * Los estados de la orden que distingue el panel. Todos son de la base
+ * (`charges.status`) salvo dos, que son de pantalla:
+ *
+ *   · `anulada_sin_inicial`: una `reverted` que se anuló sola porque el
+ *     paciente no pagó la inicial a tiempo (`down_payment_expired_at`). Las
+ *     reversas del equipo siguen siendo `reverted`.
+ *   · `otro`: un estado que este panel todavía no conoce. NUNCA se lee como
+ *     confirmado: no cuenta, no se le reenvía el comprobante y no promete
+ *     fechas de pago.
+ */
 export type EstadoDelFinanciamiento =
   | 'pending'
+  | 'awaiting_down_payment'
   | 'confirmed'
   | 'declined'
   | 'expired'
   | 'voided'
   | 'reverted'
+  | 'anulada_sin_inicial'
+  | 'otro'
 
 /**
  * Una de las dos mitades en que Helios le paga el pago en cuotas a la
@@ -263,6 +292,14 @@ export type DetalleDeFinanciamiento = {
   businessDate: string | null
   createdAt: string
   confirmedAt: string | null
+  /** La inicial de la orden, en % del total con la comisión. 0 = sin inicial. */
+  downPaymentPct: number
+  /** Hasta cuándo puede pagar la inicial (se pone con el «Sí»). */
+  downPaymentDueAt: string | null
+  /** Cuándo quedó activa: se aprobó la inicial. */
+  activatedAt: string | null
+  /** Cuándo se anuló sola por no pagar la inicial. */
+  downPaymentExpiredAt: string | null
   voidReason: string | null
   isTest: boolean
   /** La moneda en la que se cobró; los `Cur` van en ella. */
@@ -286,14 +323,45 @@ export type DetalleDeFinanciamiento = {
   pagos: PagoALaClinica[]
 }
 
-const ESTADOS: readonly EstadoDelFinanciamiento[] = [
+const ESTADOS_DE_LA_BASE: readonly EstadoDelFinanciamiento[] = [
   'pending',
+  'awaiting_down_payment',
   'confirmed',
   'declined',
   'expired',
   'voided',
   'reverted',
 ]
+
+/**
+ * El estado de una orden como lo enseña el panel.
+ *
+ * Sin `status` (la forma de Ronda, que solo listaba confirmadas) es
+ * `confirmed`. Uno que no se conoce es `otro`, nunca `confirmed`: un estado
+ * nuevo de la base no puede colarse en la lista como una orden activa.
+ *
+ * `anuladaSinInicial`: si la reversa fue la anulación automática por no pagar
+ * la inicial: `down_payment_expired_at` no null, en la lista y en la ficha.
+ * Sin él, una `reverted` es una reversa del equipo.
+ */
+export function leerEstadoDelFinanciamiento(
+  v: unknown,
+  anuladaSinInicial: boolean,
+): EstadoDelFinanciamiento {
+  if (v === undefined || v === null) return 'confirmed'
+  const estado = ESTADOS_DE_LA_BASE.find((e) => e === v) ?? 'otro'
+  return estado === 'reverted' && anuladaSinInicial ? 'anulada_sin_inicial' : estado
+}
+
+/**
+ * Si se le pagará a la clínica (o se le pagaría, si el paciente sigue): solo
+ * entonces se enseñan las fechas de «Te pagamos». Una orden rechazada,
+ * vencida, anulada o revertida no se le paga, aunque la base aún pueda
+ * calcular sus fechas.
+ */
+export function llevaPagoALaClinica(status: EstadoDelFinanciamiento): boolean {
+  return status === 'confirmed' || status === 'pending' || status === 'awaiting_down_payment'
+}
 const ESTADOS_DEL_PAGO = ['pending', 'paid', 'partial', 'cancelled'] as const
 
 /**
@@ -342,6 +410,9 @@ export function leerDetalle(v: unknown): DetalleDeFinanciamiento {
   const origen = nueva ? filas(r.installments) : filas(r.payouts)
   const pagos = origen
     .filter((f) => f.kind === undefined || f.kind === 'installment')
+    // La inicial (cuota 0) se queda en Helios: no es una mitad de la clínica.
+    // La base ya no la manda aquí; esto es por si acaso.
+    .filter((f) => numeroONulo(f.sequence) !== 0)
     .map((f) =>
       leerPago(
         f,
@@ -359,14 +430,19 @@ export function leerDetalle(v: unknown): DetalleDeFinanciamiento {
   const base = numero(r.merchant_sale_usd)
   const fee = numeroONulo(r.consumer_fee_usd)
   const feeVat = numeroONulo(r.consumer_fee_vat_usd)
+  const downPaymentExpiredAt = textoONulo(r.down_payment_expired_at)
 
   return {
     id: texto(r.charge_id ?? r.id),
     orderNumber: numero(r.order_number),
-    status: ESTADOS.find((e) => e === r.status) ?? 'confirmed',
+    status: leerEstadoDelFinanciamiento(r.status, downPaymentExpiredAt !== null),
     businessDate: textoONulo(r.business_date),
     createdAt: texto(r.created_at),
     confirmedAt: textoONulo(r.confirmed_at),
+    downPaymentPct: numeroONulo(r.down_payment_pct) ?? 0,
+    downPaymentDueAt: textoONulo(r.down_payment_due_at),
+    activatedAt: textoONulo(r.activated_at),
+    downPaymentExpiredAt,
     voidReason: textoONulo(r.void_reason),
     isTest: booleano(r.is_test),
     moneda,
@@ -407,10 +483,13 @@ export const ESTADO_DEL_FINANCIAMIENTO: Record<
 > = {
   confirmed: { texto: 'Confirmado', tone: 'success' },
   pending: { texto: 'Esperando al paciente', tone: 'warning' },
+  awaiting_down_payment: { texto: 'Esperando la inicial', tone: 'warning' },
   declined: { texto: 'Rechazado', tone: 'error' },
   expired: { texto: 'Vencido', tone: 'neutral' },
   voided: { texto: 'Anulado', tone: 'error' },
   reverted: { texto: 'Revertido', tone: 'neutral' },
+  anulada_sin_inicial: { texto: 'Anulado: sin inicial', tone: 'error' },
+  otro: { texto: 'Sin confirmar', tone: 'neutral' },
 }
 
 /** El estado de la transferencia de una mitad a la clínica. */

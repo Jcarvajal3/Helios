@@ -15,6 +15,7 @@ import {
   TIPOS,
   clinicaDeLaAlerta,
   describirAlerta,
+  ordenDeLaAlerta,
 } from '@/features/admin/riesgo/alertas'
 import type { Alerta, TipoAlerta } from '@/features/admin/riesgo/alertas'
 import { CLAVES_RIESGO, revisarAlerta } from '@/features/admin/riesgo/consultas'
@@ -33,6 +34,7 @@ const PESTANA_PACIENTE: Partial<
   referencia_repetida: 'pagos',
   cupo_al_limite_al_estrenar: 'consumos',
   cedula_no_coincide: 'datos',
+  inicial_atascada: 'pagos',
 }
 
 /**
@@ -59,9 +61,19 @@ export function destinoDeAlerta(a: Alerta) {
 
 function QuePaso({ alerta }: { alerta: Alerta }) {
   const d = alerta.detalle
+  const orden = ordenDeLaAlerta(alerta)
   return (
     <span className="block max-w-md whitespace-normal">
       {describirAlerta(d)}
+      {/* La orden, enlazada: ahí se ve su estado, su plazo y sus cuotas. */}
+      {orden && (
+        <>
+          {' '}
+          <Link to="/admin/financiamientos/$id" params={{ id: orden.id }} className={ENLACE_EN_CELDA}>
+            {orden.numero !== null ? `Ver la orden #${orden.numero}` : 'Ver la orden'}
+          </Link>
+        </>
+      )}
       {/* La otra cuenta, enlazada: la alerta se revisa mirando las dos. */}
       {d.tipo === 'cuenta_relacionada' && (
         <>

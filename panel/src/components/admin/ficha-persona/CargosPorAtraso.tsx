@@ -19,6 +19,7 @@ import type { LateFee } from '@/features/admin/lateFees'
 import { SOLO_SUPER_ADMIN, useIsSuperAdmin } from '@/features/admin/role'
 import { describeError } from '@/lib/supabase'
 import { SeccionSinLeer } from '@/components/admin/directorio/SeccionSinLeer'
+import { rotuloDeCuota } from '@/features/admin/rotuloDeCuota'
 
 /**
  * Los cargos por atraso que pone el estado automático, y la palanca para
@@ -89,8 +90,8 @@ export function CargosPorAtraso({ userId, onDone }: { userId: string; onDone: ()
               <Tr key={f.id}>
                 <Td className="whitespace-nowrap">{formatDay(f.businessDate)}</Td>
                 <Td className="text-on-surface-variant">
-                  {f.sequence
-                    ? `Cuota ${f.sequence} · puesto a los ${f.daysLate} ${f.daysLate === 1 ? 'día' : 'días'} de atraso`
+                  {f.sequence != null
+                    ? `${rotuloDeCuota(f.sequence)} · puesto a los ${f.daysLate} ${f.daysLate === 1 ? 'día' : 'días'} de atraso`
                     : `Puesto a los ${f.daysLate} ${f.daysLate === 1 ? 'día' : 'días'} de atraso`}
                   {f.merchantName && (
                     <span className="mt-0.5 block type-panel-caption">{f.merchantName}</span>

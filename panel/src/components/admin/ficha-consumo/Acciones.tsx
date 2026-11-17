@@ -14,8 +14,9 @@ import { describeError } from '@/lib/supabase'
 
 /**
  * Lo que se le puede hacer a un consumo desde su ficha, según su estado: un
- * pendiente se anula y un confirmado se revierte. Los demás ya no admiten
- * nada.
+ * pendiente se anula; un confirmado, o uno que espera la inicial (ya tiene
+ * deuda y asiento; `admin_reverse_charge` lo acepta desde el 2026-11-12), se
+ * revierte. Los demás ya no admiten nada.
  *
  * Las dos son destructivas y van en el «⋯» de la cabecera, en rojo y con su
  * confirmación de siempre. Cuando el servidor dice que no se puede revertir,
@@ -29,12 +30,12 @@ export function useAccionesDelConsumo(
   const isSuperAdmin = useIsSuperAdmin()
   const avisar = useToast()
   const [abierto, setAbierto] = useState<'anular' | 'revertir' | null>(null)
-  const confirmado = detail.status === 'confirmed'
+  const revertible = detail.status === 'confirmed' || detail.status === 'awaiting_down_payment'
 
   const puede = useQuery({
     queryKey: ['can-reverse', detail.chargeId],
     queryFn: () => canReverseCharge(detail.chargeId),
-    enabled: confirmado,
+    enabled: revertible,
   })
 
   const revertir = useMutation({
@@ -80,7 +81,7 @@ export function useAccionesDelConsumo(
       peligro: true,
       onSelect: () => setAbierto('anular'),
     },
-    confirmado && {
+    revertible && {
       label: 'Revertir el financiamiento',
       icon: Undo2,
       peligro: true,
@@ -136,7 +137,7 @@ export function useAccionesDelConsumo(
 
   // Sin saber si se puede, el ítem sale apagado; esto deja reintentar.
   const aviso =
-    confirmado && puede.isError ? (
+    revertible && puede.isError ? (
       <Callout
         tone="warning"
         titulo="No se pudo comprobar si se puede revertir"

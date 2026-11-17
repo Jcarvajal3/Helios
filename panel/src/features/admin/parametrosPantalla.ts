@@ -43,6 +43,7 @@ export const GRUPO_POR_CLAVE: Readonly<Record<string, IdGrupoEnPantalla | undefi
   alert_fpd_min_cases: 'alertas',
   alert_merchant_exposure_usd: 'alertas',
   alert_first_charge_limit_pct: 'alertas',
+  alert_down_payment_stuck_hours: 'alertas',
 }
 
 /** Los grupos, en el orden en que se leen: primero lo que paga el paciente. */
@@ -138,6 +139,8 @@ const ROTULO_EN_PANTALLA: Record<string, string | undefined> = {
  */
 const ROTULO_SI_FALTA: Record<string, string | undefined> = {
   min_charge_usd: 'Monto mínimo por orden',
+  down_payment_pct: 'Inicial del paciente (sobre el total con la comisión)',
+  down_payment_minutes: 'Plazo para pagar la inicial',
   staff_commission_usd: 'Comisión del personal por orden',
   eligibility_lookups_per_staff_day: 'Consultas de cédula por persona y día',
   payment_four_eyes: 'Doble control de pagos',
@@ -149,6 +152,7 @@ const ROTULO_SI_FALTA: Record<string, string | undefined> = {
   alert_fpd_min_cases: 'Casos mínimos para juzgar el impago',
   alert_merchant_exposure_usd: 'Deuda viva por clínica',
   alert_first_charge_limit_pct: 'Cupo usado al estrenar',
+  alert_down_payment_stuck_hours: 'Inicial atascada pasado su plazo',
 }
 
 /** Cómo se llama un parámetro en pantalla: el rótulo del panel, el de la base o la clave. */
@@ -164,8 +168,12 @@ export const QUE_DECIDE: Record<string, string | undefined> = {
   late_fee_usd: 'Lo que se suma a la deuda por cada cuota atrasada, una sola vez por episodio.',
   late_fee_grace_days:
     'Días de atraso que se perdonan. Al pasarlos cae el cargo por atraso; una cuota pagada dentro de ellos cuenta como pagada a tiempo, y el impago de una cuota se juzga al acabarlos. Es una sola gracia para las tres cosas.',
+  down_payment_pct:
+    'Qué parte del total con la Comisión Helios y su IVA paga el paciente de inicial, el día del «Sí»; las cuotas 1 y 2 se reparten el resto ($100 con el 50% → inicial $56,96 + 2 cuotas de $28,48). Cada orden guarda la de su día de registro: un cambio vale para las órdenes nuevas, y en 0 las órdenes vuelven a ser de dos cuotas sin inicial. La orden no queda activa (comprobante, aviso al médico, comisión del personal) hasta que se aprueba la inicial. No cambia el límite (cuenta la consulta entera) ni el pago a la clínica (8 y 15 días). La pregunta al paciente, sus mensajes, la portada y los términos dicen la inicial con sus textos: si cambia, hay que revisarlos allí.',
+  down_payment_minutes:
+    'Desde el «Sí» del paciente, cuánto tiene para pagar la inicial. Si al vencer no hay ningún pago abierto (una captura que se lee, unos datos que esperan el aviso del BNC, un pago sin aprobar), la orden se anula sola y se avisa al paciente y al médico; si lo hay, se espera a que se apruebe o se rechace. El mensaje al paciente dice la hora límite.',
   installment_interval_days:
-    'De la orden a la cuota 1, y de la cuota 1 a la cuota 2, en las órdenes nuevas desde su vigencia: las ya registradas conservan sus fechas. NO mueve las fechas de pago a la clínica, que están pactadas aparte y son las mismas en todas las órdenes. También mueve los tramos de atraso. Los plazos de la portada y los términos están escritos en sus textos: si cambia, hay que cambiarlos allí.',
+    'De la orden a la cuota 1, y de la cuota 1 a la cuota 2 (la inicial vence el día del «Sí»), en las órdenes nuevas desde su vigencia: las ya registradas conservan sus fechas. NO mueve las fechas de pago a la clínica, que están pactadas aparte y son las mismas en todas las órdenes. También mueve los tramos de atraso. Los plazos de la portada y los términos están escritos en sus textos: si cambia, hay que cambiarlos allí.',
   mora_demotion_days:
     'Días de atraso que pasan la cuenta de congelada a suspendida (y le bajan un nivel, si tiene más de uno).',
   mora_expulsion_days: 'Días de atraso que cuestan la cuenta y dan la deuda por perdida.',
@@ -208,6 +216,8 @@ export const QUE_DECIDE: Record<string, string | undefined> = {
     'Salta «Exposición alta en una clínica» cuando la deuda viva de sus financiamientos pasa de este monto.',
   alert_first_charge_limit_pct:
     'Salta «Cupo casi entero en el primer financiamiento» cuando un paciente nuevo usa más de este porcentaje de su cupo en su primer financiamiento.',
+  alert_down_payment_stuck_hours:
+    'Salta «Inicial atascada» cuando una orden lleva más de estas horas esperando la inicial pasado su plazo: un pago sin resolver la sostiene y hay que aprobarlo o rechazarlo.',
 }
 
 /** Las unidades que no admiten decimales, con su nombre largo. */
@@ -215,6 +225,7 @@ const UNIDADES_ENTERAS: Record<string, string | undefined> = {
   días: 'días',
   min: 'minutos',
   minutos: 'minutos',
+  horas: 'horas',
   intentos: 'intentos',
   preguntas: 'preguntas',
   personas: 'personas',
@@ -232,6 +243,7 @@ const UNIDADES_ENTERAS: Record<string, string | undefined> = {
 const SINGULAR: Record<string, string | undefined> = {
   días: 'día',
   minutos: 'minuto',
+  horas: 'hora',
   intentos: 'intento',
   preguntas: 'pregunta',
   personas: 'persona',

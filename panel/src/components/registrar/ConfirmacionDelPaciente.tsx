@@ -1,13 +1,18 @@
 import { useEffect, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { Clock, MessageCircle, Send } from 'lucide-react'
+import { Clock, MessageCircle, Send, Wallet } from 'lucide-react'
 
 import { useToast } from '@/components/Toast'
-import { Badge, Button, Callout, ErrorBox } from '@/components/ui'
+import { Badge, Button, Callout, ErrorBox, formatMoneda, formatTime } from '@/components/ui'
 import {
   CONFIRMACION,
+  esperaAlPaciente,
+  esperaLaInicial,
   fraseDeLaEspera,
+  fraseDeLaInicial,
+  laInicial,
   minutosRestantes,
+  seAnuloSinInicial,
   textoDelPlazo,
 } from '@/features/merchant/registro'
 import type { Financiamiento } from '@/features/merchant/registro'
@@ -28,6 +33,14 @@ import { describeError } from '@/lib/supabase'
  *   · declined → dijo No, o ya no podía pagar en cuotas (con el texto neutro
  *                de siempre: la clínica nunca sabe por qué).
  *
+ * Con la inicial del 50 % (2026-11-12, docs/07), después del «Sí»:
+ *
+ *   · awaiting_down_payment → aceptó y falta que pague la inicial (2 h desde
+ *                el «Sí», `downPaymentDueAt`). Cuenta atrás, sin reenviar:
+ *                el cobro lo lleva Helios por WhatsApp.
+ *   · reverted con `downPaymentExpiredAt` → se anuló sola: no pagó la inicial
+ *                a tiempo. No hay pago en cuotas ni pago a la clínica.
+ *
  * Quien la pinta se encarga de volver a pedir la orden mientras
  * espera; aquí solo se enseña y se reenvía (`onCambio` con lo nuevo).
  */
@@ -40,7 +53,7 @@ export function ConfirmacionDelPaciente({
 }) {
   const avisar = useToast()
   const f = financiamiento
-  const ahora = useAhora(f.status === 'pending')
+  const ahora = useAhora(esperaAlPaciente(f))
 
   const reenvio = useMutation({
     mutationFn: () => reenviarConfirmacion(f.id),
@@ -89,6 +102,42 @@ export function ConfirmacionDelPaciente({
           abren otras 2 horas, con las fechas de hoy.
         </Callout>
         {errorReenvio}
+      </div>
+    )
+  }
+
+  if (seAnuloSinInicial(f)) {
+    return (
+      <Callout tone="warning" titulo="La orden se anuló: el paciente no pagó la inicial a tiempo">
+        No hay pago en cuotas ni pago a la clínica por esta orden. Si el paciente todavía
+        quiere pagar en cuotas, registra la orden otra vez.
+      </Callout>
+    )
+  }
+
+  if (esperaLaInicial(f)) {
+    const inicial = laInicial(f.cuotas)
+    const minutosInicial = minutosRestantes(f.downPaymentDueAt, ahora)
+    return (
+      <div className="flex flex-col gap-3 rounded-panel-card bg-panel-raised p-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <Wallet size={20} aria-hidden className="shrink-0 text-on-surface-variant" />
+          <p role="status" className="min-w-0 flex-1 basis-60 type-panel-body text-on-surface">
+            El paciente aceptó. Falta que pague su inicial
+            {inicial ? ` de ${formatMoneda(inicial.amountCur, f.moneda)}` : ''} para que la orden
+            quede activa: le enviamos por WhatsApp cómo pagarla.
+          </p>
+          <Badge tone="warning" icono>
+            Esperando la inicial
+          </Badge>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <Clock size={16} aria-hidden className="shrink-0 text-panel-muted" />
+          <p className="min-w-0 flex-1 type-panel-caption text-panel-muted">
+            {f.downPaymentDueAt && minutosInicial > 0 && `Hasta las ${formatTime(f.downPaymentDueAt)}. `}
+            {fraseDeLaInicial(minutosInicial)}
+          </p>
+        </div>
       </div>
     )
   }

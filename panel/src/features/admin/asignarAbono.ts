@@ -9,6 +9,8 @@
 // cuenta para avisar ANTES de que el monto no cuadre.
 // ═══════════════════════════════════════════════════════════════════════════
 
+import { esLaInicial } from '@/features/admin/rotuloDeCuota'
+
 /** Una cuota de la persona, como llega en su ficha. */
 export type CuotaDeLaPersona = {
   id: string
@@ -42,10 +44,19 @@ export type CargoDeLaPersona = {
  */
 export const TOLERANCIA_EUR = 1
 
-/** Cuántas cuotas tiene cada consumo de la persona: el N de «cuota n de N». */
-export function cuotasPorConsumo(cuotas: ReadonlyArray<Pick<CuotaDeLaPersona, 'chargeId'>>): Map<string, number> {
+/**
+ * Cuántas cuotas tiene cada consumo de la persona: el N de «cuota n de N».
+ * La inicial (`sequence` 0, 2026-11-12) no cuenta: el plan sigue siendo de
+ * dos cuotas y ella se nombra aparte («Inicial»).
+ */
+export function cuotasPorConsumo(
+  cuotas: ReadonlyArray<Pick<CuotaDeLaPersona, 'chargeId' | 'sequence'>>,
+): Map<string, number> {
   const total = new Map<string, number>()
-  for (const c of cuotas) total.set(c.chargeId, (total.get(c.chargeId) ?? 0) + 1)
+  for (const c of cuotas) {
+    if (esLaInicial(c.sequence)) continue
+    total.set(c.chargeId, (total.get(c.chargeId) ?? 0) + 1)
+  }
   return total
 }
 

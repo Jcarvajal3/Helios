@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { Receipt, Store, User } from 'lucide-react'
 
-import { EstadoBadge } from '@/components/admin/EstadoBadge'
+import { EstadoDeLaOrdenBadge } from '@/components/admin/EstadoBadge'
 import { CabeceraDeFicha } from '@/components/admin/ficha'
 import type { CifraDeFicha, HuecoDeMenu } from '@/components/admin/ficha'
 import {
@@ -18,6 +18,7 @@ import {
   formatPhone,
 } from '@/components/ui'
 import type { ChargeDetail } from '@/features/admin/consumos'
+import { cuotasDelPlan, esLaInicial } from '@/features/admin/rotuloDeCuota'
 import { redondear } from './comun'
 
 /** El nombre del consumo: su número de orden, que es lo que se dicta al teléfono. */
@@ -52,6 +53,39 @@ export function lineaDeLaMoneda(
   return partes.filter(Boolean).join(' · ')
 }
 
+/** Si la orden lleva inicial (las creadas desde el lanzamiento, 2026-11-12). */
+export function llevaInicial(detail: Pick<ChargeDetail, 'downPaymentPct'>): boolean {
+  return (detail.downPaymentPct ?? 0) > 0
+}
+
+/**
+ * Las líneas de la cabecera sobre cuándo quedó activa: «confirmado el …» en
+ * una orden sin inicial; en una con inicial, hasta cuándo puede pagarla, cuándo
+ * se aprobó (y quedó activa) o cuándo se anuló sola por no pagarla.
+ */
+export function lineasDeLaInicial(
+  detail: Pick<
+    ChargeDetail,
+    'status' | 'confirmedAt' | 'downPaymentPct' | 'downPaymentDueAt' | 'activatedAt' | 'downPaymentExpiredAt'
+  >,
+): Array<string | null> {
+  if (!llevaInicial(detail)) {
+    return [detail.confirmedAt ? `confirmado el ${formatDateTime(detail.confirmedAt)}` : null]
+  }
+  const pct = `inicial del ${(detail.downPaymentPct ?? 0).toLocaleString('es-VE')}%`
+  if (detail.downPaymentExpiredAt) {
+    return [pct, `anulado solo el ${formatDateTime(detail.downPaymentExpiredAt)}: no pagó la inicial a tiempo`]
+  }
+  if (detail.status === 'awaiting_down_payment') {
+    return [
+      pct,
+      detail.downPaymentDueAt ? `puede pagarla hasta el ${formatDateTime(detail.downPaymentDueAt)}` : null,
+    ]
+  }
+  const activa = detail.activatedAt ?? detail.confirmedAt
+  return [pct, activa ? `activo desde el ${formatDateTime(activa)} (se aprobó la inicial)` : null]
+}
+
 /**
  * Qué consumo es, de qué local y de quién. Anular o revertir va en el «⋯».
  *
@@ -70,7 +104,7 @@ export function Cabecera({ detail, menu }: { detail: ChargeDetail; menu: Readonl
       nombre={nombreDelConsumo(detail)}
       insignias={
         <>
-          <EstadoBadge tipo="consumo" valor={detail.status} />
+          <EstadoDeLaOrdenBadge orden={detail} />
           {detail.isTest && <Badge>Prueba</Badge>}
         </>
       }
@@ -79,7 +113,7 @@ export function Cabecera({ detail, menu }: { detail: ChargeDetail; menu: Readonl
         lineaDeLaMoneda(detail),
         detail.branch?.name,
         `Generado el ${formatDateTime(detail.createdAt)}`,
-        detail.confirmedAt ? `confirmado el ${formatDateTime(detail.confirmedAt)}` : null,
+        ...lineasDeLaInicial(detail),
       ]}
       menu={menu}
     >
@@ -126,6 +160,8 @@ export function Cabecera({ detail, menu }: { detail: ChargeDetail; menu: Readonl
 export function cifrasDelConsumo(detail: ChargeDetail): Array<CifraDeFicha> {
   const cuotas = detail.installments
 
+  const delPlan = cuotasDelPlan(cuotas)
+  const conInicial = cuotas.some((c) => esLaInicial(c.sequence))
   const comoSePaga: CifraDeFicha =
     cuotas.length === 0
       ? {
@@ -133,15 +169,19 @@ export function cifrasDelConsumo(detail: ChargeDetail): Array<CifraDeFicha> {
           value: 'Sin cuotas',
           hint:
             detail.status === 'reverted'
-              ? 'Sus cuotas se borraron al revertirlo'
-              : detail.status === 'confirmed'
+              ? detail.downPaymentExpiredAt
+                ? 'Sus cuotas se borraron al anularse sin la inicial'
+                : 'Sus cuotas se borraron al revertirlo'
+              : detail.status === 'confirmed' || detail.status === 'awaiting_down_payment'
                 ? undefined
                 : 'No llegó a confirmarse',
         }
       : {
           label: 'Se paga en',
-          value: `${cuotas.length} ${cuotas.length === 1 ? 'cuota' : 'cuotas'}`,
-          info: 'Cada cuota es financiamiento + Comisión Helios: lleva dentro su parte de la comisión, con su IVA; es lo que transfiere cada paciente.',
+          value: `${conInicial ? 'Inicial + ' : ''}${delPlan} ${delPlan === 1 ? 'cuota' : 'cuotas'}`,
+          info: conInicial
+            ? `La inicial (${llevaInicial(detail) ? `el ${(detail.downPaymentPct ?? 0).toLocaleString('es-VE')}%` : 'una parte'} del total con la comisión, el día del «Sí») y las cuotas 1 y 2. Cada una es financiamiento + Comisión Helios: lleva dentro su parte de la comisión, con su IVA; es lo que transfiere el paciente. La inicial se queda en Helios: a la clínica se le paga igual, a los 8 y 15 días.`
+            : 'Cada cuota es financiamiento + Comisión Helios: lleva dentro su parte de la comisión, con su IVA; es lo que transfiere cada paciente.',
           // Sin los montos de las cuotas: dos cifras con el fee dentro no van
           // sueltas, y abajo ya están con su desglose.
           hint: 'Financiamiento + comisión cada una; el detalle, en «Las cuotas»',
@@ -160,7 +200,10 @@ export function cifrasDelConsumo(detail: ChargeDetail): Array<CifraDeFicha> {
           {
             label: 'Recibe la clínica',
             value: formatUsd(detail.merchantNetUsd),
-            hint: 'La consulta entera: la mitad a los 8 días y la mitad a los 15, pague o no el paciente',
+            hint:
+              detail.status === 'awaiting_down_payment'
+                ? 'La consulta entera, a los 8 y 15 días, en cuanto se apruebe la inicial; si se anula sin ella, nada'
+                : 'La consulta entera: la mitad a los 8 días y la mitad a los 15, pague o no el paciente',
           },
         ]),
   ]

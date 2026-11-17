@@ -82,6 +82,10 @@ function consumo(cambios: Partial<ChargeRow> = {}): ChargeRow {
     financedCur: 10,
     amountCur: 12.32,
     fxUsdPerUnit: 1,
+    downPaymentPct: null,
+    downPaymentDueAt: null,
+    activatedAt: null,
+    downPaymentExpiredAt: null,
     ...cambios,
   }
 }

@@ -27,7 +27,11 @@ import {
 } from '@/components/ui'
 import { canSee } from '@/features/auth/permissions'
 import { useStaff } from '@/features/auth/session'
-import { ESTADO_DEL_FINANCIAMIENTO, ESTADO_DEL_PAGO } from '@/features/merchant/financiamientos'
+import {
+  ESTADO_DEL_FINANCIAMIENTO,
+  ESTADO_DEL_PAGO,
+  llevaPagoALaClinica,
+} from '@/features/merchant/financiamientos'
 import type { DetalleDeFinanciamiento } from '@/features/merchant/financiamientos'
 import { fetchDetalle } from '@/features/merchant/financiamientosApi'
 import {
@@ -101,10 +105,12 @@ function Ficha({ chargeId }: { chargeId: string }) {
           <Resumen f={query.data} />
           {query.data.status === 'confirmed' || query.data.status === 'reverted' ? (
             <Comprobante f={query.data} />
-          ) : (
-            <RespuestaDelPaciente chargeId={query.data.id} />
+          ) : CON_RESPUESTA_DEL_PACIENTE.includes(query.data.status) ? (
+            <RespuestaDelPaciente chargeId={query.data.id} statusDeLaFicha={query.data.status} />
+          ) : null}
+          {query.data.pagos.length > 0 && llevaPagoALaClinica(query.data.status) && (
+            <CuandoTePagamos f={query.data} />
           )}
-          {query.data.pagos.length > 0 && <CuandoTePagamos f={query.data} />}
         </div>
       )}
     </>
@@ -113,13 +119,29 @@ function Ficha({ chargeId }: { chargeId: string }) {
 
 // ── 0. La respuesta del paciente (mientras no está confirmado) ────────────
 
+/** Los estados en que la ficha enseña cómo va la respuesta del paciente. */
+const CON_RESPUESTA_DEL_PACIENTE: readonly DetalleDeFinanciamiento['status'][] = [
+  'pending',
+  'awaiting_down_payment',
+  'declined',
+  'expired',
+  'anulada_sin_inicial',
+]
+
 /**
  * Una orden que espera el Sí del paciente, que rechazó o que venció (contrato
- * §1.3.1): cómo va la pregunta por WhatsApp y «Reenviar al paciente». Se
- * vuelve a pedir cada pocos segundos mientras espera; cuando cambia, la ficha
- * entera se recarga (si aceptó, ya es un pago en cuotas con su comprobante).
+ * §1.3.1), o, con la inicial (2026-11-12), que espera la inicial o se anuló
+ * sola por no pagarla: cómo va y, si toca, «Reenviar al paciente». Se vuelve
+ * a pedir cada pocos segundos mientras espera; cuando cambia, la ficha entera
+ * se recarga (si quedó activa, ya es un pago en cuotas con su comprobante).
  */
-function RespuestaDelPaciente({ chargeId }: { chargeId: string }) {
+function RespuestaDelPaciente({
+  chargeId,
+  statusDeLaFicha,
+}: {
+  chargeId: string
+  statusDeLaFicha: DetalleDeFinanciamiento['status']
+}) {
   const queryClient = useQueryClient()
   const orden = useQuery({
     queryKey: ['financiamiento', chargeId],
@@ -127,12 +149,18 @@ function RespuestaDelPaciente({ chargeId }: { chargeId: string }) {
     refetchInterval: (q) => (q.state.data && esperaAlPaciente(q.state.data) ? 4_000 : false),
   })
 
+  // Cuando la orden ya no está en el estado que enseña la ficha (aceptó, pagó
+  // la inicial, se anuló…), la ficha se recarga. Al abrirla ya está al día y
+  // no se pide dos veces. La ficha llama `anulada_sin_inicial` a lo que la
+  // base llama `reverted`.
   const status = orden.data?.status
+  const enLaFicha = statusDeLaFicha === 'anulada_sin_inicial' ? 'reverted' : statusDeLaFicha
   useEffect(() => {
-    if (status && status !== 'pending') {
+    if (status !== undefined && status !== enLaFicha) {
       void queryClient.invalidateQueries({ queryKey: ['merchant-order', chargeId] })
+      void queryClient.invalidateQueries({ queryKey: ['merchant-transactions'] })
     }
-  }, [status, chargeId, queryClient])
+  }, [status, enLaFicha, chargeId, queryClient])
 
   if (orden.isError) {
     return <ErrorBox title="No pudimos ver la respuesta del paciente" detail={describeError(orden.error)} />
@@ -200,6 +228,7 @@ function Resumen({ f }: { f: DetalleDeFinanciamiento }) {
         feeVat={f.feeVatCur}
         moneda={f.moneda}
         concepto={f.concept}
+        conInicial={f.downPaymentPct > 0}
       />
 
       {f.staffCommissionUsd !== null && (
@@ -327,6 +356,12 @@ function CuandoTePagamos({ f }: { f: DetalleDeFinanciamiento }) {
   return (
     <section>
       <SectionTitle className="mb-3">Cuándo te pagamos</SectionTitle>
+      {f.status === 'awaiting_down_payment' && (
+        <Callout tone="warning" titulo="Cuando la orden quede activa" className="mb-3">
+          Estas fechas valen en cuanto el paciente pague su inicial. Si no la paga a tiempo, la
+          orden se anula y no hay pago por ella.
+        </Callout>
+      )}
       <Table
         apilada
         headers={

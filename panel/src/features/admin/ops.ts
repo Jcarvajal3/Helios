@@ -67,6 +67,18 @@ export type ChargeRow = {
   amountCur: number
   /** Dólares por unidad de su moneda el día del registro: la conversión que pasó la orden al libro. */
   fxUsdPerUnit: number
+  /**
+   * La inicial de la orden en % del total con la comisión (2026-11-12,
+   * docs/07). Null o 0 = orden sin inicial (2 cuotas). Con ella,
+   * `installmentsTotal` cuenta también la inicial.
+   */
+  downPaymentPct: number | null
+  /** Hasta cuándo puede pagar la inicial (se pone con el «Sí»). */
+  downPaymentDueAt: string | null
+  /** Cuándo se aprobó la inicial y la orden quedó activa. */
+  activatedAt: string | null
+  /** Cuándo se anuló sola por no pagar la inicial: distingue esa reversa de la del equipo. */
+  downPaymentExpiredAt: string | null
 }
 
 export async function fetchCharges(params: {
@@ -115,6 +127,11 @@ export async function fetchCharges(params: {
     financedCur: numeroONulo(row.financed_cur) ?? numero(row.financed_usd),
     amountCur: numeroONulo(row.amount_cur) ?? numero(row.amount_usd),
     fxUsdPerUnit: numeroONulo(row.fx_usd_per_unit) ?? 1,
+    // La inicial (por lanzar): sin las columnas, null = orden sin inicial.
+    downPaymentPct: numeroONulo(row.down_payment_pct),
+    downPaymentDueAt: textoONulo(row.down_payment_due_at),
+    activatedAt: textoONulo(row.activated_at),
+    downPaymentExpiredAt: textoONulo(row.down_payment_expired_at),
   }))
 }
 

@@ -6,6 +6,7 @@
  * Lo que se comprueba no se ve mirando la pantalla: una fila con la comisión
  * dentro parece una fila correcta, y una parte que falta se leería como cero.
  */
+import { estadoDeLaOrden } from '@/features/admin/estados'
 import { leerConsumosDePersona } from './consumosDePersona'
 
 let fallos = 0
@@ -66,6 +67,36 @@ const pendiente = filas.at(1)
 comprueba(pendiente?.parteUsd === null, 'un pendiente no tiene parte: null, no cero')
 comprueba(pendiente?.merchantName === 'Kabal', 'la clínica con su nombre')
 comprueba(leerConsumosDePersona(undefined).length === 0, 'sin la clave, ninguna fila')
+comprueba(
+  pendiente?.downPaymentPct === null && pendiente.downPaymentExpiredAt === null,
+  'sin las claves de la inicial, orden sin inicial',
+)
+{
+  // La inicial (2026-11-12): las cuatro claves nuevas de `consumos`.
+  const anulada = leerConsumosDePersona([
+    {
+      charge_id: 'sin-inicial',
+      order_number: 6261,
+      status: 'reverted',
+      created_at: '2026-11-12T14:00:00Z',
+      merchant_id: 'local-1',
+      financed_usd: 100,
+      down_payment_pct: '50.00',
+      down_payment_due_at: '2026-11-12T16:30:00Z',
+      activated_at: null,
+      down_payment_expired_at: '2026-11-12T16:31:00Z',
+    },
+  ]).at(0)
+  comprueba(
+    anulada?.downPaymentPct === 50 && anulada.downPaymentExpiredAt === '2026-11-12T16:31:00Z',
+    'lee el % de la inicial y cuándo se anuló sola',
+    JSON.stringify(anulada),
+  )
+  comprueba(
+    anulada !== undefined && estadoDeLaOrden(anulada).label === 'Anulado: sin inicial',
+    'y se rotula «Anulado: sin inicial»',
+  )
+}
 
 console.log(fallos === 0 ? '\nTodo bien.' : `\n${fallos} ${fallos === 1 ? 'fallo' : 'fallos'}.`)
 if (fallos > 0) process.exit(1)

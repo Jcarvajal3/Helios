@@ -1,3 +1,4 @@
+import { inicialesDe } from '@/lib/iniciales'
 /**
  * El logo de un local si tiene, y si no su inicial: lo mismo que ve la gente
  * en la app. Lo usan la lista de Locales y la cabecera de su ficha.
@@ -18,7 +19,7 @@ export function LogoLocal({
       <img
         src={logoUrl}
         alt=""
-        className={`${medida} shrink-0 rounded-panel-control object-cover`}
+        className={`${medida} shrink-0 rounded-full object-cover`}
       />
     )
   }
@@ -26,9 +27,9 @@ export function LogoLocal({
   return (
     <div
       aria-hidden
-      className={`flex ${medida} shrink-0 items-center justify-center rounded-panel-control bg-panel-control type-panel-control text-on-surface-variant`}
+      className={`orbe flex ${medida} shrink-0 items-center justify-center rounded-full text-[13.5px] font-semibold text-white`}
     >
-      {name.charAt(0).toUpperCase()}
+      {inicialesDe(name)}
     </div>
   )
 }

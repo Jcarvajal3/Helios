@@ -9,10 +9,19 @@ import {
   coincideConLoPedido,
   diaDeLaSemana,
   enBolivares,
+  esLaInicial,
   esRechazoDeLaBase,
   esperaAlPaciente,
+  esperaLaInicial,
   fraseDeLaEspera,
+  fraseDeLaInicial,
   fraseDelComprobante,
+  laInicial,
+  nombreDelPago,
+  plazoEnPalabras,
+  seAnuloSinInicial,
+  tieneInicial,
+  tituloDelPlan,
   leerConfirmacion,
   leerElegibilidad,
   leerEstadoDelComprobante,
@@ -513,6 +522,147 @@ comprueba(
   'si falló, lo dice',
 )
 comprueba(fraseDeLaEspera(null).startsWith('Enviando un WhatsApp al paciente'), 'sin datos, enviando')
+
+// ── La inicial del 50 % (2026-11-12, docs/07) ──────────────────────────────
+console.log('\n── la inicial del 50% ────────────────────────────────────────')
+
+// $100 → total $113,92 → inicial $56,96 hoy + 2 cuotas de $28,48.
+const vpInicial = leerVistaPrevia({
+  currency: 'USD',
+  base_usd: 100,
+  base_cur: 100,
+  consumer_fee_pct: 12,
+  consumer_fee_usd: 12,
+  consumer_fee_vat_usd: 1.92,
+  business_date: '2026-11-12',
+  down_payment_pct: 50,
+  down_payment_minutes: 120,
+  installments: [
+    { sequence: 2, due_date: '2026-12-10', amount_usd: 28.48, financed_usd: 25, amount_cur: 28.48, amount_ves: 2848 },
+    { sequence: 0, due_date: '2026-11-12', amount_usd: 56.96, financed_usd: 50, amount_cur: 56.96, amount_ves: 5696 },
+    { sequence: 1, due_date: '2026-11-26', amount_usd: 28.48, financed_usd: 25, amount_cur: 28.48, amount_ves: 2848 },
+  ],
+  cabe: true,
+  disponible_usd: 150,
+})
+igual(vpInicial.cuotas.map((p) => p.sequence), [0, 1, 2], 'la inicial va primero')
+igual(vpInicial.cuotas.map((p) => p.amountCur), [56.96, 28.48, 28.48], '$100: inicial $56,96 + 2 cuotas de $28,48')
+igual([vpInicial.downPaymentPct, vpInicial.downPaymentMinutes], [50, 120], 'el porcentaje y el plazo de la inicial')
+comprueba(tieneInicial(vpInicial.cuotas), 'con la fila 0 hay inicial')
+igual(laInicial(vpInicial.cuotas)?.amountCur, 56.96, 'la inicial del plan')
+igual(vpInicial.cuotas.map(nombreDelPago), ['Inicial', 'Cuota 1', 'Cuota 2'], 'nunca «Cuota 0»')
+igual(tituloDelPlan(vpInicial.cuotas), 'El paciente paga una inicial hoy y 2 cuotas', 'el rótulo con inicial')
+comprueba(esLaInicial({ sequence: 0 }) && !esLaInicial({ sequence: 1 }), 'la inicial es la cuota 0')
+igual(vpInicial.baseCur, 100, 'la consulta sigue siendo lo que cobra la clínica, sin la comisión')
+
+// Orden vieja (la vista previa de antes del lanzamiento): 2 cuotas, sin inicial.
+igual([vp.downPaymentPct, vp.downPaymentMinutes], [0, null], 'orden vieja: sin inicial')
+comprueba(!tieneInicial(vp.cuotas) && laInicial(vp.cuotas) === null, 'orden vieja: sin fila 0')
+igual(tituloDelPlan(vp.cuotas), 'El paciente paga en 2 cuotas', 'orden vieja: el rótulo de siempre')
+igual(vp.cuotas.map(nombreDelPago), ['Cuota 1', 'Cuota 2'], 'orden vieja: cuotas 1 y 2')
+igual(
+  leerVistaPrevia({ down_payment_pct: 0, down_payment_minutes: 120 }).downPaymentMinutes,
+  null,
+  'con 0 % no hay plazo de inicial',
+)
+
+// En euros: cada moneda por su lado. €100 → inicial €56,96 + 2 × €28,48.
+const vpInicialEur = leerVistaPrevia({
+  currency: 'EUR',
+  tasa_bcv: 214.1,
+  base_usd: 112.6,
+  base_cur: 100,
+  consumer_fee_usd: 13.51,
+  consumer_fee_vat_usd: 2.16,
+  consumer_fee_cur: 12,
+  consumer_fee_vat_cur: 1.92,
+  down_payment_pct: 50,
+  down_payment_minutes: 120,
+  installments: [
+    { sequence: 0, due_date: '2026-11-12', amount_usd: 64.14, amount_cur: 56.96, amount_ves: 12195.14 },
+    { sequence: 1, due_date: '2026-11-26', amount_usd: 32.07, amount_cur: 28.48, amount_ves: 6097.57 },
+    { sequence: 2, due_date: '2026-12-10', amount_usd: 32.06, amount_cur: 28.48, amount_ves: 6097.57 },
+  ],
+})
+igual(
+  vpInicialEur.cuotas.map((p) => [p.sequence, p.amountCur, p.amountVes]),
+  [
+    [0, 56.96, 12195.14],
+    [1, 28.48, 6097.57],
+    [2, 28.48, 6097.57],
+  ],
+  'en euros: la inicial y las cuotas en euros, con sus bolívares de hoy',
+)
+igual(vpInicialEur.moneda, 'EUR', 'en euros')
+
+igual(plazoEnPalabras(120), '2 horas', 'el plazo: 2 horas')
+igual(plazoEnPalabras(60), '1 hora', 'el plazo: 1 hora')
+igual(plazoEnPalabras(90), '1 h 30 min', 'el plazo: 1 h 30 min')
+
+// Tras el «Sí»: esperando la inicial.
+const esperandoInicial = leerFinanciamiento({
+  id: 'c-6261',
+  order_number: 6261,
+  status: 'awaiting_down_payment',
+  channel: 'panel',
+  merchant_sale_usd: 100,
+  down_payment_pct: 50,
+  down_payment_due_at: '2026-11-12T18:30:00Z',
+  activated_at: null,
+  down_payment_expired_at: null,
+  void_reason: null,
+  expires_at: null,
+  installments: [
+    { sequence: 0, due_date: '2026-11-12', amount_usd: 56.96, amount_cur: 56.96, amount_ves: 5696 },
+    { sequence: 1, due_date: '2026-11-26', amount_usd: 28.48, amount_cur: 28.48, amount_ves: 2848 },
+    { sequence: 2, due_date: '2026-12-10', amount_usd: 28.48, amount_cur: 28.48, amount_ves: 2848 },
+  ],
+  breakdown: { base_usd: 100, consumer_fee_pct: 12, consumer_fee_usd: 12, consumer_fee_vat_usd: 1.92 },
+  receipt: { status: 'sin_enviar' },
+  confirmation: { status: 'aceptada' },
+})
+comprueba(esperaAlPaciente(esperandoInicial), 'esperando la inicial: se sigue preguntando')
+comprueba(esperaLaInicial(esperandoInicial), 'esperando la inicial')
+comprueba(!esperaLaInicial(pendiente), 'pendiente del «Sí» no espera la inicial')
+igual(
+  [esperandoInicial.downPaymentPct, esperandoInicial.downPaymentDueAt],
+  [50, '2026-11-12T18:30:00Z'],
+  'lee la inicial y su plazo',
+)
+igual(esperandoInicial.confirmation?.status, 'aceptada', 'ya aceptó')
+igual(laInicial(esperandoInicial.cuotas)?.amountCur, 56.96, 'la inicial de la orden')
+igual(
+  fraseDelComprobante('sin_enviar', 'j***@gmail.com', true),
+  'El comprobante sale a j***@gmail.com en cuanto el paciente pague su inicial.',
+  'con inicial, el comprobante sale al pagarla',
+)
+comprueba(
+  fraseDeLaInicial(85).startsWith('Tiene 1 h 25 min para pagarla.'),
+  'la espera de la inicial dice lo que le queda',
+  fraseDeLaInicial(85),
+)
+comprueba(
+  fraseDeLaInicial(0).includes('lo estamos revisando'),
+  'con el plazo cumplido no se da por anulada: puede haber un pago en revisión',
+)
+
+const anuladaSinInicial = leerFinanciamiento({
+  id: 'c-6262',
+  order_number: 6262,
+  status: 'reverted',
+  merchant_sale_usd: 100,
+  down_payment_pct: 50,
+  down_payment_expired_at: '2026-11-12T18:31:00Z',
+  void_reason: 'La inicial no se pagó a tiempo',
+})
+comprueba(seAnuloSinInicial(anuladaSinInicial), 'se anuló sola por no pagar la inicial')
+comprueba(!esperaAlPaciente(anuladaSinInicial), 'anulada: ya no se pregunta')
+igual(anuladaSinInicial.voidReason, 'La inicial no se pagó a tiempo', 'el motivo')
+comprueba(
+  !seAnuloSinInicial(leerFinanciamiento({ id: 'c', order_number: 1, status: 'reverted', merchant_sale_usd: 1 })),
+  'la reversa del equipo no es «sin inicial»',
+)
+igual(creado.downPaymentPct, 0, 'orden vieja confirmada: sin inicial')
 
 console.log(fallos === 0 ? '\nTODO BIEN' : `\n${fallos} FALLOS`)
 process.exit(fallos === 0 ? 0 : 1)

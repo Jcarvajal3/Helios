@@ -67,8 +67,13 @@ function leerCuota(raw: unknown): CuotaQueSeDebe | null {
   const r = comoFila(raw)
   const estado = unoDe(ESTADOS_QUE_SE_DEBEN, r.estado)
   if (!estado) return null
+  // Solo las cuotas 1 y 2: la inicial (cuota 0, 2026-11-12) no es deuda de
+  // cobranza y `metricas.cuotas_al` no la manda. Si llegara, antes se leía
+  // como una cuota 1.
+  const n = numero(r.numero)
+  if (n !== 1 && n !== 2) return null
   return {
-    numero: numero(r.numero) === 2 ? 2 : 1,
+    numero: n,
     estado,
     vence: texto(r.vence),
     diasAtraso: numero(r.dias_atraso),

@@ -1,6 +1,7 @@
 import { formatMoneda, formatUsd, leerMoneda } from '@/components/ui'
 import type { Moneda } from '@/components/ui'
 import { comoFila, numero, numeroONulo, texto, textoONulo } from '@/lib/json'
+import { esLaInicial } from '@/features/admin/rotuloDeCuota'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Registrar un pago que llegó por WhatsApp (contrato §2.1, plan §7.1).
@@ -55,14 +56,15 @@ export type CuotaParaPagar = {
   enRevision: boolean
 }
 
-/** Las pendientes, de la que vence antes a la que vence después. */
+/** Las pendientes, de la que vence antes a la que vence después (la inicial, primero). */
 export function ordenarCuotas<T extends Pick<CuotaParaPagar, 'dueDate' | 'sequence'>>(cuotas: ReadonlyArray<T>): T[] {
   return [...cuotas].sort((a, b) => a.dueDate.localeCompare(b.dueDate) || a.sequence - b.sequence)
 }
 
 /**
  * Las que vencen hoy o antes y se pueden pagar: las que hay que llevar si se
- * adelanta cualquier otra.
+ * adelanta cualquier otra. La inicial (cuota 0, vence el día del «Sí») es una
+ * de ellas mientras no se pague.
  */
 export function cuotasExigibles(pendientes: ReadonlyArray<CuotaParaPagar>, hoy: string): CuotaParaPagar[] {
   return pendientes.filter((c) => c.dueDate <= hoy && !c.enRevision)
@@ -125,6 +127,11 @@ export function motivoDeSeleccion(
   if (!adelanta) return null
   const faltan = cuotasExigibles(pendientes, hoy).filter((c) => !seleccion.has(c.id))
   if (faltan.length === 0) return null
+  // La inicial (cuota 0) vence el día del «Sí» y también va primero, pero no
+  // está «vencida»: se nombra.
+  if (faltan.every((c) => esLaInicial(c.sequence))) {
+    return 'Para adelantar una cuota hay que pagar también la inicial.'
+  }
   return faltan.length === 1
     ? 'Para adelantar una cuota hay que pagar también la que ya venció.'
     : `Para adelantar una cuota hay que pagar también las ${faltan.length} que ya vencieron.`

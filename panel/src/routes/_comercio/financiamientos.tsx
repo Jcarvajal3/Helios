@@ -315,13 +315,13 @@ function Financiamientos({ staff }: { staff: StaffContext }) {
                   ? [
                       {
                         label: 'Comprobante',
-                        info: 'Si al paciente le llegó el correo con sus cuotas. «Rebotado» quiere decir que el correo no existe: avisa a Helios. Mientras la orden espera que el paciente la confirme, aquí se ve cómo va.',
+                        info: 'Si al paciente le llegó el correo con sus cuotas. «Rebotado» quiere decir que el correo no existe: avisa a Helios. Mientras la orden espera que el paciente la confirme o que pague su inicial, aquí se ve cómo va.',
                       } as const,
                     ]
                   : []),
                 {
                   label: 'Te pagamos',
-                  info: 'El día en que Helios le transfiere a la clínica cada mitad: a los 8 y a los 15 días de la consulta, haya pagado o no el paciente.',
+                  info: 'El día en que Helios le transfiere a la clínica cada mitad: a los 8 y a los 15 días de la consulta, haya pagado o no el paciente sus cuotas. Una orden anulada, rechazada o vencida no tiene pago.',
                 },
               ]}
             >
@@ -360,9 +360,16 @@ function Financiamientos({ staff }: { staff: StaffContext }) {
                   {conComprobante && (
                     <Td>
                       {f.status !== 'confirmed' ? (
-                        <Badge tone={ESTADO_DEL_FINANCIAMIENTO[f.status].tone} icono>
-                          {ESTADO_DEL_FINANCIAMIENTO[f.status].texto}
-                        </Badge>
+                        <>
+                          <Badge tone={ESTADO_DEL_FINANCIAMIENTO[f.status].tone} icono>
+                            {ESTADO_DEL_FINANCIAMIENTO[f.status].texto}
+                          </Badge>
+                          {f.status === 'awaiting_down_payment' && f.downPaymentDueAt && (
+                            <span className="block type-panel-caption text-panel-muted">
+                              Hasta las {formatTime(f.downPaymentDueAt)}
+                            </span>
+                          )}
+                        </>
                       ) : f.receipt ? (
                         <Badge tone={COMPROBANTE[f.receipt].tone} icono>
                           {COMPROBANTE[f.receipt].texto}
@@ -384,7 +391,8 @@ function Financiamientos({ staff }: { staff: StaffContext }) {
             <p className="mt-4 type-panel-caption leading-5 text-panel-muted">
               Pulsa un pago en cuotas para ver el detalle y reenviar el comprobante. Helios te paga
               cada mitad a los 8 y a los 15 días de la consulta,{' '}
-              <strong>haya pagado o no el paciente</strong>.
+              <strong>haya pagado o no el paciente sus cuotas</strong>. Una orden que espera la
+              inicial queda activa cuando el paciente la paga; si no la paga a tiempo, se anula.
             </p>
           )}
         </>
@@ -442,6 +450,9 @@ function TarjetasDeFinanciamientos({
               {f.status !== 'confirmed' ? (
                 <Badge tone={ESTADO_DEL_FINANCIAMIENTO[f.status].tone} icono>
                   {ESTADO_DEL_FINANCIAMIENTO[f.status].texto}
+                  {f.status === 'awaiting_down_payment' &&
+                    f.downPaymentDueAt &&
+                    ` · hasta las ${formatTime(f.downPaymentDueAt)}`}
                 </Badge>
               ) : f.receipt ? (
                 <Badge tone={COMPROBANTE[f.receipt].tone} icono>
