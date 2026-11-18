@@ -187,7 +187,11 @@ function ShellReducido({ admin }: { admin: PlatformAdmin }) {
   const session = useSession()
   const { pathname } = useLocation()
   const marco = DEL_ROL_REDUCIDO[admin.role === 'capacitador' || admin.role === 'cobranza' ? admin.role : 'agenda']
-  const permitida = marco.rutas.some((r) => pathname === r || pathname.startsWith(`${r}/`))
+  // Cobranza, además, abre la ficha de cada persona (`/admin/pacientes/$id`) para anotar la gestión;
+  // la lista de Personas no, que sigue siendo del superadmin.
+  const permitida =
+    marco.rutas.some((r) => pathname === r || pathname.startsWith(`${r}/`)) ||
+    (admin.role === 'cobranza' && pathname.startsWith('/admin/pacientes/'))
 
   return (
     <PanelShell

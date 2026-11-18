@@ -8,6 +8,7 @@ import { usePageTitle } from '@/components/layouts/PageAction'
 import { useBloqueoDeCuenta } from '@/components/UserBlockCard'
 import { SkeletonList, Tabs } from '@/components/ui'
 import { fetchLevelConfig } from '@/features/admin/ops'
+import { useRolDelEquipo } from '@/features/admin/role'
 import { fetchUserDetail } from '@/features/admin/users'
 import type { UserDetail } from '@/features/admin/users'
 import { menuDePersona } from './accionesDeCuenta'
@@ -56,6 +57,8 @@ const ROTULO: Record<PestanaPersona, string> = {
 }
 
 const PESTANAS = PESTANAS_PERSONA.map((value) => ({ value, label: ROTULO[value] }))
+/** Cobranza no lee la bitácora: sin la pestaña Historial. */
+const PESTANAS_DE_COBRANZA = PESTANAS.filter((p) => p.value !== 'historial')
 
 /**
  * La página de una persona.
@@ -139,6 +142,7 @@ function FichaPersona({
   onTab: (tab: PestanaPersona) => void
   onDone: () => void
 }) {
+  const esCobranza = useRolDelEquipo() === 'cobranza'
   const niveles = useQuery({ queryKey: ['admin-levels'], queryFn: fetchLevelConfig })
   const activos = niveles.data?.filter((l) => l.isActive)
 
@@ -171,7 +175,7 @@ function FichaPersona({
           />
         }
       >
-        <Tabs options={PESTANAS} value={tab} onChange={onTab} className="mb-0" />
+        <Tabs options={esCobranza ? PESTANAS_DE_COBRANZA : PESTANAS} value={tab} onChange={onTab} className="mb-0" />
 
         {tab === 'resumen' && <PestanaResumen user={user} niveles={activos} bloqueo={bloqueo} />}
 
@@ -183,7 +187,7 @@ function FichaPersona({
 
         {tab === 'cobranza' && <PestanaCobranza userId={userId} />}
 
-        {tab === 'historial' && <PestanaHistorial userId={userId} />}
+        {tab === 'historial' && !esCobranza && <PestanaHistorial userId={userId} />}
       </MarcoDeFicha>
 
       {cuenta.dialogo}
