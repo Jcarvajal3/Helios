@@ -223,6 +223,12 @@ export const capacitadorNavGroups: NavGroup[] = [
   { espacio: 'seguimiento', items: [itemDePantalla('agenda'), itemDePantalla('locales')] },
 ]
 
+/**
+ * El menú de cobranza: Por cobrar y nada más (20261118120100). Lo demás le
+ * diría que no.
+ */
+export const cobranzaNavGroups: NavGroup[] = [{ espacio: 'cobranza', items: [itemDePantalla('cartera-vencida')] }]
+
 /** El pie del menú del super admin. */
 export const superAdminNavPie: NavItem[] = PIE_ADMIN.map(itemDePantalla)
 

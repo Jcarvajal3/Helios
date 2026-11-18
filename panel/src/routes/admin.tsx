@@ -41,6 +41,7 @@ import type { Contador } from '@/components/layouts/contadores'
 import {
   agendaNavGroups,
   capacitadorNavGroups,
+  cobranzaNavGroups,
   superAdminNavGroups,
   superAdminNavPie,
   visibleGroups,
@@ -66,7 +67,7 @@ function SuperAdminLayoutRoute() {
   return (
     <PlatformGate>
       {(admin) =>
-        admin.role === 'agenda' || admin.role === 'capacitador' ? (
+        admin.role === 'agenda' || admin.role === 'capacitador' || admin.role === 'cobranza' ? (
           <ShellReducido admin={admin} />
         ) : (
           // El asistente solo existe con un admin confirmado: su conversación
@@ -172,18 +173,20 @@ const AGENDA = '/admin/agenda'
 const DEL_ROL_REDUCIDO = {
   agenda: { rol: 'Agenda', groups: agendaNavGroups, rutas: [AGENDA] },
   capacitador: { rol: 'Capacitador', groups: capacitadorNavGroups, rutas: [AGENDA, '/admin/clinicas'] },
+  cobranza: { rol: 'Cobranza', groups: cobranzaNavGroups, rutas: ['/admin/cobranza'] },
 } as const
 
 /**
- * El marco del rol de la agenda (la Agenda y nada más) y del capacitador (la
+ * El marco del rol de la agenda (la Agenda y nada más), del de cobranza (Por
+ * cobrar y nada más) y del capacitador (la
  * Agenda y Clínicas). Sin buscador, sin asistente y sin contadores, que leen
  * colas que la base no les enseña (`is_platform_admin()` los deja fuera).
- * Cualquier otra ruta del superadmin, Inicio incluido, los lleva a la Agenda.
+ * Cualquier otra ruta del superadmin, Inicio incluido, los lleva a la primera de las suyas.
  */
 function ShellReducido({ admin }: { admin: PlatformAdmin }) {
   const session = useSession()
   const { pathname } = useLocation()
-  const marco = DEL_ROL_REDUCIDO[admin.role === 'capacitador' ? 'capacitador' : 'agenda']
+  const marco = DEL_ROL_REDUCIDO[admin.role === 'capacitador' || admin.role === 'cobranza' ? admin.role : 'agenda']
   const permitida = marco.rutas.some((r) => pathname === r || pathname.startsWith(`${r}/`))
 
   return (
@@ -197,7 +200,7 @@ function ShellReducido({ admin }: { admin: PlatformAdmin }) {
         nombreCompleto: admin.fullName,
       }}
     >
-      {permitida ? <Outlet /> : <Navigate to={AGENDA} replace />}
+      {permitida ? <Outlet /> : <Navigate to={marco.rutas[0]} replace />}
     </PanelShell>
   )
 }

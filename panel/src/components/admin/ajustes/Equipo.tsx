@@ -37,12 +37,13 @@ import { describeError } from '@/lib/supabase'
 const ROTULO_DE_ROL: Record<RolDelPanel, string> = {
   agenda: 'Agenda',
   capacitador: 'Capacitador',
+  cobranza: 'Cobranza',
   operador: 'Operador',
   super_admin: 'Super admin',
 }
 
 /** De menos a más poder. */
-const ROLES: Array<{ value: RolDelPanel; label: string }> = (['agenda', 'capacitador', 'operador', 'super_admin'] as const).map(
+const ROLES: Array<{ value: RolDelPanel; label: string }> = (['agenda', 'capacitador', 'cobranza', 'operador', 'super_admin'] as const).map(
   (value) => ({ value, label: ROTULO_DE_ROL[value] }),
 )
 
@@ -54,6 +55,7 @@ function rotuloDeRol(rol: RolDelPanel): string {
 const LO_QUE_PUEDE: Record<RolDelPanel, string> = {
   agenda: 'solo entrará a la Agenda: apunta médicos, anota cada gestión y agenda visitas',
   capacitador: 'entrará a la Agenda y a Clínicas, verá el perfil de cada médico sin su dinero y podrá afiliar',
+  cobranza: 'solo entrará a Por cobrar: verá la cola de cobro, los morosos, las cohortes, el calendario y las promesas',
   operador: 'registrará y aprobará pagos, mandará los avisos y trabajará la cobranza',
   super_admin:
     'podrá mover dinero, cambiar la tasa, los parámetros y la cuenta de cobro, y dar, quitar o cambiar el acceso de otras personas',

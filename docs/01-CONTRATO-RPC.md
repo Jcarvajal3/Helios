@@ -1589,6 +1589,28 @@ Suite: `supabase/tests/directorio_especialidades_smoke.sql`.
 
 ---
 
+### 2.20 El rol cobranza (2026-11-18, 20261118120000 y 20261118120100)
+
+Un quinto rol del equipo, `cobranza` (enum en 20261118120000): entra solo a
+superadmin › Por cobrar (`/admin/cobranza`), en lectura.
+
+- `is_platform_admin()` lo deja fuera: no lee pagos, libro, clínicas ni
+  bitácora.
+- `helios_puede_cobrar() → boolean` (super admin, operador o cobranza, con el
+  segundo factor si se exige) sustituye a `is_platform_admin()` en la guardia
+  de las 13 RPC que lee esa pantalla: `admin_collections`,
+  `admin_collection_case`, `admin_collection_promises`,
+  `admin_collection_recovered`, `admin_collection_flow`,
+  `admin_contact_effectiveness`, `admin_receivables_by_day`,
+  `admin_deudores_de_la_semana`, `admin_perfil_de_morosos`,
+  `admin_collection_templates`, `admin_user_contacts`,
+  `admin_user_late_fees` y `admin_payment_destinations`. Los cuerpos no
+  cambian.
+- Escribir (anotar gestiones, promesas, mandar mensajes) sigue siendo del
+  superadmin y el operador.
+- Panel: marco reducido (menú con Por cobrar; cualquier otra ruta de
+  `/admin` lo lleva ahí). Se asigna en Ajustes › Equipo.
+
 ## 3. Parámetros nuevos (`business_parameters`)
 
 | key | valor inicial | uso |

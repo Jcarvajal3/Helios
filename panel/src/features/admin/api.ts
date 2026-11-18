@@ -10,8 +10,8 @@ import type { ConsultasYComisiones, TituloDelMedico } from '@/features/admin/cli
 import type { LineaParaGuardar, LineaParaRegistrar } from '@/features/admin/pagoMasivo'
 import { esLaInicial } from '@/features/admin/rotuloDeCuota'
 
-/** `agenda` solo entra a superadmin › Agenda (20261022220100); `capacitador`, a la Agenda y a Clínicas (20261102130100). */
-export type PlatformRole = 'operador' | 'super_admin' | 'agenda' | 'capacitador'
+/** `agenda` solo entra a superadmin › Agenda (20261022220100); `capacitador`, a la Agenda y a Clínicas (20261102130100); `cobranza`, a Por cobrar (20261118120100). */
+export type PlatformRole = 'operador' | 'super_admin' | 'agenda' | 'capacitador' | 'cobranza'
 
 export type PlatformAdmin = {
   userId: string
