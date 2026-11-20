@@ -7,6 +7,7 @@ import {
   codigoDelDirectorio,
   decisionDelBoton,
   decisionDelTexto,
+  esCortesia,
   extraerEventos,
   horaDelEstado,
   igualSeguro,
@@ -192,6 +193,41 @@ for (const [entra, sale] of [
 ] as const) {
   comprueba(varianteDelDirectorio(entra) === sale, `«${entra}» → ${sale}`, varianteDelDirectorio(entra))
 }
+
+console.log('\nLos ecos de la app WhatsApp Business')
+{
+  const eventos = extraerEventos({
+    object: 'whatsapp_business_account',
+    entry: [{
+      changes: [{
+        field: 'smb_message_echoes',
+        value: {
+          messaging_product: 'whatsapp',
+          message_echoes: [
+            { from: '584120000000', to: '584140009501', id: 'wamid.eco1', timestamp: '1', type: 'text', text: { body: 'Hola, te escribo yo' } },
+            { from: '584120000000', id: 'wamid.sin_to', type: 'text' },
+          ],
+        },
+      }],
+    }],
+  })
+  comprueba(eventos.length === 1, 'un eco válido (el que no trae «to» se descarta)', JSON.stringify(eventos))
+  const e = eventos[0]
+  comprueba(e?.kind === 'echo' && e.id === 'wamid.eco1' && e.to === '584140009501', 'el eco trae el chat y su wamid', JSON.stringify(e))
+}
+
+console.log('\nLa cortesía no pide respuesta')
+const texto_ = (t: string) => ({ type: 'text', texto: t, boton: null, adjunto: null })
+for (const t of ['Sí', 'si', 'Gracias', 'gracias!!', 'Ok', 'ok gracias', 'Listo, muchas gracias 🙏', 'dale perfecto', 'Muy amable', 'Amén, bendiciones', '👍', '🙏🏼🙏🏼', 'De nada', 'Entendido']) {
+  comprueba(esCortesia(texto_(t)), `«${t}» es cortesía`)
+}
+for (const t of ['Hola', 'Buenas tardes', 'no', 'Quiero pagar mi cuota', 'gracias, ¿cuánto debo?', 'ok pero no me llegó el mensaje', '12345678', 'si claro pero tengo una pregunta sobre la cuota de mañana', 'Mi saldo']) {
+  comprueba(!esCortesia(texto_(t)), `«${t}» NO es cortesía`)
+}
+comprueba(esCortesia({ type: 'reaction', texto: null }), 'una reacción es cortesía')
+comprueba(esCortesia({ type: 'sticker', texto: null }), 'un sticker es cortesía')
+comprueba(!esCortesia({ type: 'image', texto: null, adjunto: { id: 'm', mime: 'image/jpeg' } }), 'una foto no (puede ser un comprobante)')
+comprueba(!esCortesia({ type: 'interactive', texto: 'Sí', boton: 'paciente:pagar' }), 'un botón no')
 
 console.log('\nEl secreto')
 comprueba(igualSeguro('abc', 'abc') && !igualSeguro('abc', 'abd') && !igualSeguro('abc', 'abcd'), 'compara bien')

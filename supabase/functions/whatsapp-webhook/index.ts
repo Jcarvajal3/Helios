@@ -29,6 +29,10 @@
 //   4. Un número del personal        → el bot del médico (bot.ts)
 //   5. «Sí» / «No» escrito por un paciente con UNA orden esperando
 //                                    → helios_patient_decision
+//   0. Un eco de la app WhatsApp Business (smb_message_echoes: alguien del
+//      equipo escribió a mano) → helios_whatsapp_human_wrote: el bot se
+//      calla 8 h en ese chat (2026-11-20). El Inbox del superadmin hace lo
+//      mismo al enviar (admin_whatsapp_inbox_log)
 //   6. Todo lo demás                → el bot del paciente (paciente.ts); si
 //                                      se calla, lo atiende una persona desde la
 //                                      app WhatsApp Business (coexistencia).
@@ -145,9 +149,10 @@ async function mensaje(m: EventoDeMensaje): Promise<void> {
     return
   }
 
-  // 4. El personal: el bot.
+  // 4. El personal: el bot (que no interrumpe a una persona del equipo).
   if (r.staff) {
-    const res = await atenderAlPersonal({ rpc, personal: r.staff, mensaje: m })
+    const humano = await rpc<boolean>('bot_humano_atiende', { p_phone: m.from })
+    const res = await atenderAlPersonal({ rpc, personal: r.staff, mensaje: m, humano: humano === true })
     await listo('personal', res)
     return
   }
@@ -205,6 +210,9 @@ Deno.serve(async (req) => {
           p_error: e.error,
           p_at: horaDelEstado(e.timestamp),
         })
+      } else if (e.kind === 'echo') {
+        // Alguien del equipo escribió a mano desde la app: el bot se calla.
+        await rpc('helios_whatsapp_human_wrote', { p_phone: e.to, p_wa_message_id: e.id })
       } else {
         await mensaje(e)
       }

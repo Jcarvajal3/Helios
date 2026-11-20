@@ -23,7 +23,12 @@
 //     reenvíen;
 //   · una foto o un documento (un comprobante) → acuse y se calla 8 h;
 //   · alguien sin pagos en cuotas → un acuse y se calla 8 h;
-//   · un teléfono de varios pacientes → pide la cédula antes de enseñar nada.
+//   · un teléfono de varios pacientes → pide la cédula antes de enseñar nada;
+//   · «gracias», «ok», «sí» (sin orden que esperarlo), un 👍, una reacción o
+//     un sticker → nada: no piden respuesta (`esCortesia`, 2026-11-20);
+//   · una persona del equipo le escribió a mano (app WhatsApp Business o el
+//     Inbox del superadmin) → se calla 8 h, como con «Hablar con alguien»
+//     (index.ts y `helios_whatsapp_human_wrote`, 2026-11-20).
 //
 // El lector de comprobantes (docs/03), según su modo (`ctx.lector`):
 //
@@ -51,7 +56,7 @@
 import { leerCedula } from './datos.ts'
 import { faltanDatosDePago, juntarDatosDePago, leerDatosDePago, quiereEscribirLosDatos } from './datos_pago.ts'
 import type { DatosDePago } from './datos_pago.ts'
-import { decisionDelTexto, normalizar } from './logica.ts'
+import { decisionDelTexto, esCortesia, normalizar } from './logica.ts'
 import type { EventoDeMensaje } from './logica.ts'
 import {
   BOTON_PAGAR,
@@ -214,6 +219,10 @@ export async function atenderAlPaciente({
     await enviar(ctx.vencida_texto, null)
     return { paso: 'vencida' }
   }
+
+  // «Gracias», «ok», «sí», un 👍 o un sticker: no piden respuesta (2026-11-20;
+  // antes recibían el menú). Después de los «sí» que sí significan algo.
+  if (esCortesia(mensaje)) return null
 
   // ¿Quién es?
   let perfil: Perfil | null = null

@@ -270,7 +270,8 @@ async function main() {
     const r = await correr({ texto: 'si' }, contexto(), {
       bot_paciente_resumen: { ...ESPERANDO, financiamientos: [{ ...ESPERANDO.financiamientos[0], estado: 'confirmed' }] },
     })
-    comprueba(r.res?.paso === 'menu', 'sin orden esperando ni vencida: el menú, como antes', JSON.stringify(r.res))
+    // Desde el 2026-11-20 un «sí» suelto es cortesía: ya no recibe el menú.
+    comprueba(r.res === null && r.textos.length === 0, 'sin orden esperando ni vencida: nada (es cortesía)', JSON.stringify(r.res))
   }
   {
     const r = await correr({ texto: 'si' }, contexto({ perfiles: [PERFIL, { ...PERFIL, id: 'p2' }] }), { bot_paciente_resumen: ESPERANDO })
@@ -313,6 +314,28 @@ async function main() {
       'el botón: el mismo recordatorio, también con una persona atendiendo (pulsó el botón)',
       textos.join(' | '),
     )
+  }
+
+  console.log('\nLa cortesía no pide respuesta (2026-11-20)')
+  for (const texto of ['Gracias', 'ok gracias', 'Sí', '👍']) {
+    const r = await correr({ texto }, contexto())
+    comprueba(r.res === null && r.textos.length === 0, `«${texto}»: no contesta el menú`, r.textos.join(' | '))
+  }
+  {
+    const r = await correr({ type: 'reaction', texto: null }, contexto())
+    comprueba(r.res === null && r.textos.length === 0, 'una reacción: nada')
+  }
+  {
+    const r = await correr({ texto: 'gracias' }, contexto({ estado: 'cedula', perfiles: [PERFIL, { ...PERFIL, id: 'p2' }] }))
+    comprueba(r.res === null && r.textos.length === 0, 'esperando la cédula, un «gracias» no la vuelve a pedir', r.textos.join(' | '))
+  }
+  {
+    const r = await correr({ texto: 'Hola, tengo una duda' }, contexto())
+    comprueba((r.res as { paso?: string } | null)?.paso === 'menu' && r.textos.length === 1, 'una pregunta sí recibe el menú')
+  }
+  {
+    const r = await correr({ texto: 'Sí' }, contexto({ vencida_texto: 'Tu orden venció' }))
+    comprueba(r.textos[0] === 'Tu orden venció', 'un «sí» a una orden vencida sigue contestándose', r.textos.join(' | '))
   }
 
   if (fallos > 0) {

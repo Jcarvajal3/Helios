@@ -65,7 +65,7 @@ import {
   nombreDeLaMoneda,
 } from './datos.ts'
 import type { Clave, DatosDelPaciente, Lectura, Moneda } from './datos.ts'
-import { normalizar } from './logica.ts'
+import { esCortesia, normalizar } from './logica.ts'
 import type { EventoDeMensaje } from './logica.ts'
 
 /** La persona del personal dueña del número (helios_staff_whatsapp_row). */
@@ -232,10 +232,13 @@ export async function atenderAlPersonal({
   rpc,
   personal,
   mensaje,
+  humano = false,
 }: {
   rpc: Rpc
   personal: Personal
   mensaje: EventoDeMensaje
+  /** Una persona del equipo le escribió a mano hace poco (`bot_humano_atiende`): el bot no le contesta lo que no entiende. */
+  humano?: boolean
 }): Promise<unknown> {
   const tel = personal.phone_e164
 
@@ -293,6 +296,10 @@ export async function atenderAlPersonal({
     if (boton === 'orden:cancelar' || n === 'cancelar') return menu('Cancelado: no se envió nada. ¿Qué quieres hacer?')
     return menu(sesion.nueva ? saludo() : undefined)
   }
+
+  // ── «Gracias», «ok», un 👍: no piden respuesta (2026-11-20) ────────────
+  // Solo fuera de una orden a medias: dentro, cada paso lee lo suyo.
+  if (esCortesia(mensaje) && (estado === 'menu' || sesion.nueva)) return null
 
   // ── Reenviar una orden: «reenviar 1042» ───────────────────────────────
   const reenviar = /^reenviar\s*#?\s*(\d+)$/.exec(n)
@@ -777,5 +784,8 @@ export async function atenderAlPersonal({
   }
 
   // ── Cualquier otra cosa: el menú ──────────────────────────────────────
+  // Salvo que lo esté atendiendo una persona o sea de cortesía: entonces el
+  // bot no interrumpe con «No entendí» (2026-11-20).
+  if (humano || esCortesia(mensaje)) return null
   return menu(sesion.nueva ? saludo() : 'No entendí. ¿Qué quieres hacer?')
 }

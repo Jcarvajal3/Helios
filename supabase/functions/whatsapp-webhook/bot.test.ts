@@ -47,6 +47,7 @@ async function correr(
   mensaje: Partial<EventoDeMensaje>,
   sesion: { state: string; data: Record<string, unknown> },
   respuestas: Record<string, unknown> = {},
+  humano = false,
 ) {
   const llamadas: Llamada[] = []
   const rpc = async <T>(fn: string, args: Record<string, unknown>): Promise<T> => {
@@ -67,7 +68,7 @@ async function correr(
     raw: {},
     ...mensaje,
   }
-  const res = await atenderAlPersonal({ rpc, personal: PERSONAL, mensaje: m })
+  const res = await atenderAlPersonal({ rpc, personal: PERSONAL, mensaje: m, humano })
   const textos = llamadas.filter((l) => l.fn === 'helios_whatsapp_text').map((l) => String(l.args.p_text))
   const guardados = llamadas.filter((l) => l.fn === 'bot_session_save').map((l) => l.args)
   const fns = llamadas.map((l) => l.fn)
@@ -337,6 +338,24 @@ async function main() {
     const t = r.textos[0] ?? ''
     comprueba(t.includes('pagará la inicial en las 2 horas siguientes') && t.includes('se anula y también te aviso'), 'explica la inicial', t)
     comprueba(t.length <= 1024 && !PROHIBIDO.test(t), 'cabe con botones y sin vocabulario prohibido', String(t.length))
+  }
+
+  console.log('\nNo interrumpe (2026-11-20)')
+  {
+    const r = await correr({ texto: 'Gracias!' }, { state: 'menu', data: {} })
+    comprueba(r.res === null && r.textos.length === 0, '«Gracias» en el menú: nada', r.textos.join(' | '))
+  }
+  {
+    const r = await correr({ texto: 'qué tal todo' }, { state: 'menu', data: {} })
+    comprueba(r.textos[0]?.startsWith('No entendí'), 'lo que no entiende, sin persona atendiendo: «No entendí»', r.textos[0])
+  }
+  {
+    const r = await correr({ texto: 'qué tal todo' }, { state: 'menu', data: {} }, {}, true)
+    comprueba(r.res === null && r.textos.length === 0, 'con una persona atendiendo: se calla', r.textos.join(' | '))
+  }
+  {
+    const r = await correr({ boton: 'menu:ayuda', texto: 'Ayuda' }, { state: 'menu', data: {} }, {}, true)
+    comprueba(r.textos.length > 0, 'con una persona atendiendo, sus botones siguen funcionando')
   }
 
   if (fallos > 0) {

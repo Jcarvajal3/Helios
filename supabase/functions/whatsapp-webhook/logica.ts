@@ -28,7 +28,21 @@ export type EventoDeMensaje = {
   raw: Record<string, unknown>
 }
 
-export type Evento = EventoDeEstado | EventoDeMensaje
+/**
+ * Un mensaje que una PERSONA del equipo mandó desde la app WhatsApp Business
+ * (coexistencia): Meta lo avisa como eco (`smb_message_echoes`,
+ * `value.message_echoes[]`). Lo que manda la API (el bot, los recordatorios)
+ * no llega como eco; si llegara, la base lo reconoce por su wamid y lo ignora.
+ */
+export type EventoDeEco = {
+  kind: 'echo'
+  id: string
+  /** El chat: el teléfono al que le escribió el equipo. */
+  to: string
+  raw: Record<string, unknown>
+}
+
+export type Evento = EventoDeEstado | EventoDeMensaje | EventoDeEco
 
 function fila(v: unknown): Record<string, unknown> | null {
   return typeof v === 'object' && v !== null && !Array.isArray(v) ? (v as Record<string, unknown>) : null
@@ -73,6 +87,14 @@ export function extraerEventos(body: unknown): Evento[] {
         error: fila(lista(st.errors)[0]),
         timestamp: texto(st.timestamp),
       })
+    }
+
+    for (const e of lista(valor.message_echoes)) {
+      const eco = fila(e)
+      const id = texto(eco?.id)
+      const to = texto(eco?.to)
+      if (!eco || !id || !to) continue
+      eventos.push({ kind: 'echo', id, to, raw: eco })
     }
 
     for (const m of lista(valor.messages)) {
@@ -183,4 +205,36 @@ const CODIGO_CON_VARIANTE = new RegExp(`${CODIGO_DEL_DIRECTORIO.source}(\\s*-\\s
 export function varianteDelDirectorio(t: string | null | undefined): 'a' | 'b' {
   const m = CODIGO_CON_VARIANTE.exec(t ?? '')
   return m?.[2] ? 'b' : 'a'
+}
+
+// Lo que se escribe para cerrar o agradecer, que no pide respuesta. Un mensaje
+// es de cortesía si TODAS sus palabras están aquí (y son pocas): «sí»,
+// «ok gracias», «listo, muchas gracias», «dale perfecto». Los saludos
+// («hola», «buenas») no: suelen abrir una pregunta. «No» tampoco.
+const PALABRAS_DE_CORTESIA = new Set([
+  'si', 'sii', 'siii', 'sip', 'ok', 'oki', 'okey', 'okay', 'okk', 'oka', 'va', 'vale', 'dale', 'listo', 'lista',
+  'perfecto', 'perfecta', 'excelente', 'genial', 'chevere', 'fino', 'bien', 'muy', 'bueno', 'buenisimo', 'super',
+  'entendido', 'entiendo', 'claro', 'de', 'acuerdo', 'ya', 'ah', 'aja', 'gracias', 'gracia', 'muchas', 'mil',
+  'muchisimas', 'te', 'le', 'lo', 'se', 'agradezco', 'agradecido', 'agradecida', 'amable', 'nada', 'igualmente',
+  'a', 'ti', 'usted', 'ustedes', 'tambien', 'bendiciones', 'dios', 'bendiga', 'amen', 'recibido', 'anotado',
+  'thanks', 'thank', 'you', 'ty', 'jaja', 'jajaja', 'jeje',
+])
+const MAXIMO_DE_PALABRAS_DE_CORTESIA = 6
+/** Tipos que nunca piden respuesta: una reacción (👍 sobre un mensaje) o un sticker. */
+const TIPOS_DE_CORTESIA = new Set(['reaction', 'sticker'])
+
+/**
+ * ¿El mensaje no pide respuesta? Una reacción, un sticker, solo emojis o
+ * signos («👍», «🙏🏼», «!!»), o un agradecimiento o un «sí» corto
+ * (`PALABRAS_DE_CORTESIA`). El bot se calla en vez de contestar con el menú.
+ */
+export function esCortesia(m: { type: string; texto: string | null; boton?: string | null; adjunto?: unknown }): boolean {
+  if (m.boton || m.adjunto) return false
+  if (TIPOS_DE_CORTESIA.has(m.type)) return true
+  if (m.type !== 'text' || !m.texto) return false
+  const n = normalizar(m.texto)
+  // Solo emojis o signos.
+  if (n === '') return true
+  const palabras = n.split(' ')
+  return palabras.length <= MAXIMO_DE_PALABRAS_DE_CORTESIA && palabras.every((p) => PALABRAS_DE_CORTESIA.has(p))
 }
