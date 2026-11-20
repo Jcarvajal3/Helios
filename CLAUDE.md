@@ -2,186 +2,147 @@
 
 Pagos en cuotas para consultas y tratamientos de salud privada en Venezuela
 (medicina, odontología y cosmetología), **solo web**, operado por **Quarto
-Latam, C.A.** Es un fork de Ronda
-(`C:\Users\Javie\Documents\Work\Ronda`): el panel sale de `Ronda-panel/` y la
-base de `Ronda-app/supabase/`. Ante cualquier duda de comportamiento, mira
-primero cómo lo resuelve Ronda y reutilízalo.
+Latam, C.A.** Es un fork de Ronda (`C:\Users\Javie\Documents\Work\Ronda`): el
+panel sale de `Ronda-panel/` y la base de `Ronda-app/supabase/`. Ante una duda
+de comportamiento, mira primero cómo lo resuelve Ronda.
 
-- Plan maestro y decisiones: `docs/00-PLAN-DE-IMPLEMENTACION.md`.
-- Contrato de las RPC nuevas: `docs/01-CONTRATO-RPC.md`.
-- SEO del sitio público (páginas para buscadores, JSON-LD, sitemap): `docs/02-AUDITORIA-SEO.md`.
-- Datos de SEO (volúmenes, resultados de Google, IA): OpenSEO hospedado por
-  MCP (`.mcp.json`), cada consulta cuesta: `docs/05-OPENSEO.md`.
+## Dónde está cada cosa
 
-## Estructura
+| Tema | Documento |
+|---|---|
+| Reglas del negocio con fechas y por qué | `docs/REGLAS-DEL-NEGOCIO.md` |
+| Estado del trabajo y pendientes | `docs/ESTADO.md` |
+| Plan maestro y decisiones (1.400 líneas) | `docs/00-PLAN-DE-IMPLEMENTACION.md` |
+| Contrato de las RPC (2.500 líneas) | `docs/01-CONTRATO-RPC.md` |
+| SEO del sitio público | `docs/02-AUDITORIA-SEO.md` |
+| Lector de comprobantes | `docs/03-LECTOR-DE-COMPROBANTES.md` |
+| Directorio por WhatsApp y su prueba A/B | `docs/04-…`, `docs/06-…` |
+| OpenSEO por MCP (`.mcp.json`; cada consulta cuesta) | `docs/05-OPENSEO.md` |
+| La inicial del 50% | `docs/07-INICIAL-DEL-50.md` |
+| Récipes digitales (`conhelios.com/rx`) | `rx/README.md` |
+
+**docs/00 y docs/01 no se leen enteros**: busca el encabezado con
+`grep -n '^#' docs/01-CONTRATO-RPC.md` (o el nombre de la RPC) y lee solo esa
+sección.
 
 ```
 panel/      TanStack Start + React 19 + Tailwind v4 (fork de Ronda-panel)
-rx/         Récipes digitales, en prueba y sin enlaces: conhelios.com/rx, se publica con el panel (rx/README.md)
+rx/         Récipes digitales, en prueba y sin enlaces; se publica con el panel
 supabase/   config, migrations/ (1 base consolidada + migraciones de Helios), tests/, poda/
 tokens/     helios.tokens.json + build.mjs → panel/src/styles/tokens.gen.css, panel/src/theme/tokens.gen.ts
 scripts/    portar-de-ronda.mjs (transforma SQL de Ronda al vocabulario de Helios)
-docs/       plan, contrato, reglas
 ```
 
-## El negocio, en cifras (2026-10-06)
+## El negocio (detalle e historia en `docs/REGLAS-DEL-NEGOCIO.md`)
 
-- Paciente: **inicial del 50% del total el día del Sí y 2 cuotas a los 14 y
-  28 días** (docs/07, Javier 2026-11-12; rige desde el lanzamiento, que
-  espera la plantilla v3 de Meta: hasta entonces, 2 cuotas sin inicial). La
-  inicial es la cuota `sequence = 0`; la orden queda en
-  `awaiting_down_payment` hasta que se aprueba (igual que una cuota) y se
-  anula sola a las 2 h sin pago. Se decide por orden (`charges.down_payment_pct`):
-  las viejas conservan sus condiciones. **Comisión
-  Helios del 12% + IVA 16%** sobre la comisión (`consumer_fee_pct`,
-  `vat_pct`): consulta de $100 → $12 + $1,92 → total $113,92 → inicial
-  $56,96 + 2 cuotas de $28,48. `/consultas` (prueba A/B) no se toca: sigue
-  diciendo «$15 de inicial».
-  **Límite inicial de $150** (nivel 1; los demás niveles están apagados, así
-  que hacia fuera nunca se dice que el límite «crece»). **Excepción
-  aprobada por Javier (2026-10-19)**: todo bloque de pago al paciente
-  termina con «⭐ Recuerda pagar a tiempo para subir de nivel y disponer de
-  mayores beneficios.» (`helios_level_reminder()` y `FRASE_NIVEL` en el
-  bot), y «Mi saldo y cuotas» enseña el nivel y el saldo total y cierra con
-  «⭐ Si pagas a tiempo, puedes subir de nivel y aumentar tu saldo máximo.»
-  (2026-10-22, `FRASE_SUBIR_DE_NIVEL`), igual que el aviso de pago
-  confirmado por WhatsApp y por correo (2026-10-23,
-  `helios_level_up_phrase()`); lo de los niveles se resuelve después.
-- Médico o centro: recibe el **100%** de la consulta en dos mitades, **a los
-  8 y 15 días** desde la orden, **pague o no el paciente** sus cuotas
-  (desde que la orden queda activa; la inicial no le genera pago). Su fecha no sale
-  de la cuota: `installments.settlement_due_date` (orden +
-  `helios_settlement_interval_days()` × secuencia) y el pago al día siguiente
-  (`helios_settlement_run_for(d) = d + 1`); se paga a diario, ya no los lunes.
-  No le cuesta nada y no hay permanencia (cancela con aviso previo).
-  `installment_interval_days` mueve solo las cuotas del paciente.
-- Especialidades: medicina, odontología y cosmetología.
-- **Moneda de la consulta** (2026-10-07): el médico elige **dólares o euros**
-  en el paso del monto (panel y bot). Una orden en euros **queda en euros**:
-  el paciente paga cada cuota en bolívares a la tasa BCV del euro del día en
-  que paga, y a la clínica se le paga en Bs a la tasa del euro. El paciente
-  **solo paga en bolívares** (Pago Móvil o transferencia; nada de Zelle,
-  USDT ni efectivo).
-- **Sin cargos por mora** (2026-10-07): `late_fee_usd` = 0. El motor sigue en
-  el código; para retomarlo basta poner el monto en el parámetro (los textos
-  del cargo dependen de él) y reescribir el párrafo de `/legal/terminos`.
+- **Paciente**: inicial del 50% del total el día del Sí (cuota
+  `sequence = 0`, orden en `awaiting_down_payment`, se anula a las 2 h sin
+  pago) y 2 cuotas a los 14 y 28 días. Hasta el lanzamiento (plantilla v3 de
+  Meta), 2 cuotas sin inicial. Se decide por orden
+  (`charges.down_payment_pct`). `/consultas` no se toca («$15 de inicial»).
+- **Comisión Helios 12% + IVA 16%** sobre la comisión (`consumer_fee_pct`,
+  `vat_pct`): $100 → total $113,92 → inicial $56,96 + 2 × $28,48.
+- **Límite de $150** (nivel 1; los otros niveles están apagados: nunca decir
+  que el límite «crece»). Las frases de nivel son una excepción aprobada:
+  `helios_level_reminder()` / `FRASE_NIVEL`, `FRASE_SUBIR_DE_NIVEL`,
+  `helios_level_up_phrase()`.
+- **Médico**: cobra el 100% en dos mitades a los 8 y 15 días desde la orden,
+  pague o no el paciente (`installments.settlement_due_date`, pago al día
+  siguiente, a diario). La inicial no le genera pago. Sin costo ni
+  permanencia. `installment_interval_days` mueve solo las cuotas del paciente.
+- **Moneda**: el médico elige dólares o euros; una orden en euros queda en
+  euros. El paciente **solo paga en bolívares** (Pago Móvil o transferencia).
+- **Sin mora**: `late_fee_usd` = 0; el motor sigue en el código.
 
 ## Reglas no negociables (heredadas de Ronda)
 
 - **Dinero**: `numeric(18,4)` en USD (los sufijos `_usd` son literales). VES
   `numeric(18,2)`, tasa `numeric(18,6)`. Jamás `float`.
-- **Moneda del libro**: dólar BCV. El libro, el límite, el mínimo, la mora,
-  las métricas y el superadmin van en dólares. Una orden en euros se pasa a
-  dólares con la tasa cruzada del día del registro (`charges.fx_usd_per_unit`)
-  y guarda sus montos en euros en las columnas `_cur` (`amount_cur`,
-  `base_cur`, `installments.amount_cur`, `settlements.amount_cur`…). Tasas:
-  `exchange_rates` serie `BCV` (dólar) y `BCV_EUR` (euro). El VES es solo
-  presentación y liquidación.
-- **Zona horaria**: `America/Caracas` siempre. El día operativo empieza a
+- **Moneda del libro**: dólar BCV (libro, límite, mínimo, mora, métricas,
+  superadmin). Una orden en euros se pasa a dólares con la tasa cruzada del
+  día del registro (`charges.fx_usd_per_unit`) y guarda sus montos en euros en
+  las columnas `_cur` (`amount_cur`, `base_cur`, `installments.amount_cur`,
+  `settlements.amount_cur`…). Tasas: `exchange_rates` serie `BCV` y `BCV_EUR`. El VES
+  es solo presentación y liquidación.
+- **Zona horaria**: `America/Caracas`. El día operativo empieza a
   **medianoche** (`helios_business_date`), no a las 10 AM como en Ronda.
 - **Libro contable**: partida doble, append-only, `idempotency_key` en toda
   mutación de dinero. La única función que crea deuda es `helios_assign_debt`.
-- **A la clínica, ningún total incluye la Comisión Helios.** La comisión
-  (12% + IVA, parámetro `consumer_fee_pct`) aparece solo dentro de las
-  cuotas o como línea aparte en un desglose, y en todo desglose que ve el
-  médico (panel y bot) va seguida de **«(Lo paga el paciente)»** (Javier,
-  2026-10-13; `LO_PAGA_EL_PACIENTE`). La clínica ve solo montos sin
-  comisión. **Al paciente sí** se le enseña el total con la comisión
-  (decisión de Javier, 2026-10-06: es lo que paga).
-- **Al paciente se le nombra a su médico, no a la clínica** («de la consulta
-  con la Dra. Nadia Andi Khabbaze Alfaro»: `helios_doctor_ref`, con el
-  nombre del titular, `owner_name`, y su título, `merchants.doctor_title`).
-  Y los **bolívares van solo en el bloque
-  de pago** (`helios_payment_block`), junto a las cuentas, como el
-  equivalente de hoy (2026-10-19, docs/00 §15.8).
-- Los montos en los mensajes (WhatsApp, correo) van al estilo venezolano:
-  `helios_money_text` → «$100», «$1,92», «$1.250,50». Con moneda:
-  `helios_money_cur_text` («€56,96») y `helios_ves_text` («Bs 55.432,10»);
-  las variables de dinero de las plantillas ya traen su símbolo.
+- **A la clínica, ningún total incluye la Comisión Helios**: va solo dentro
+  de las cuotas o como línea aparte, y en todo desglose del médico (panel y
+  bot) seguida de **«(Lo paga el paciente)»** (`LO_PAGA_EL_PACIENTE`). **Al
+  paciente sí** se le enseña el total con la comisión.
+- **Al paciente se le nombra a su médico, no a la clínica**
+  (`helios_doctor_ref`). Los **bolívares van solo en el bloque de pago**
+  (`helios_payment_block`).
+- Montos en mensajes al estilo venezolano: `helios_money_text` («$100», «$1,92», «$1.250,50»),
+  `helios_money_cur_text` («€56,96»), `helios_ves_text` («Bs 55.432,10»); las
+  variables de dinero de las plantillas ya traen su símbolo.
 - **Seguridad en la base, no en el router**: RLS + RPC `security definer` con
   `set search_path`. El personal de la clínica **no lee** `profiles`,
   `installments` ni `payment_reports` directamente.
 - **Privacidad entre clínicas**: una clínica nunca ve la deuda, la mora ni el
   motivo de "no disponible" de un paciente.
 - Toda acción de admin escribe en `audit.admin_actions` (`audit.log`).
-- Escrituras de admin pasan por `helios_assert_super_admin()` / `is_platform_admin()` (MFA).
-  El rol `agenda` no pasa `is_platform_admin()`: solo `helios_puede_usar_la_agenda()`,
-  la guardia de las RPC de superadmin › Agenda (docs/01 §2.9). El `capacitador`
-  tampoco: la Agenda, `helios_puede_ver_clinicas()` (Clínicas sin dinero) y
-  `helios_assert_puede_afiliar()` (alta y solicitudes; docs/01 §2.14).
-  La `cobranza` tampoco: solo `helios_puede_cobrar()`, la guardia de lo que lee
-  superadmin › Por cobrar (docs/01 §2.20).
+- Escrituras de admin: `helios_assert_super_admin()` / `is_platform_admin()`
+  (MFA). Los roles internos limitados **no** pasan `is_platform_admin()`:
+  - `agenda`: `helios_puede_usar_la_agenda()` (docs/01 §2.9).
+  - `capacitador`: la Agenda, `helios_puede_ver_clinicas()` y
+    `helios_assert_puede_afiliar()` (docs/01 §2.14).
+  - `cobranza`: `helios_puede_cobrar()` (docs/01 §2.20).
 
 ## Nombres
 
-- La base **conserva los nombres de dominio de Ronda** (`profiles`, `merchants`,
-  `charges`, `installments`, `settlements`, `merchant_users`…). Solo el prefijo
-  de marca cambia: `ronda_` → `helios_`. Así los arreglos de Ronda se portan
-  con `scripts/portar-de-ronda.mjs`.
-- **La clínica se llama como su médico titular** (Javier, 2026-10-29):
-  `merchants.name` lo arma un trigger («Dra. Ana Lara», sin «Consultorio»
-  delante) y el nombre del consultorio va en `merchants.consultorio`, como
-  un dato secundario junto a la dirección. Lo que se escriba en `name` pasa
-  a `consultorio`. En tablas y filtros, el médico va primero.
-- La interfaz habla en vocabulario médico: médico, centro o clínica, sede,
-  paciente, **pago en cuotas** (u «orden» con su número), **Comisión Helios**
-  (desde el 2026-10-13; los mensajes al paciente —la pregunta de WhatsApp,
-  su plantilla de Meta y el comprobante— siguen diciendo «comisión de
+- La base **conserva los nombres de dominio de Ronda** (`profiles`,
+  `merchants`, `charges`, `installments`, `settlements`, `merchant_users`…);
+  solo cambia el prefijo `ronda_` → `helios_`, para portar arreglos con
+  `scripts/portar-de-ronda.mjs`.
+- **La clínica se llama como su médico titular**: `merchants.name` lo arma un
+  trigger («Dra. Ana Lara»); el consultorio va en `merchants.consultorio`. En
+  tablas y filtros, el médico va primero.
+- Vocabulario médico: médico, centro o clínica, sede, paciente, **pago en
+  cuotas** (u «orden»), **Comisión Helios** (al paciente: «comisión de
   servicio»), secretaria (rol `cajero`), administrador (rol `gerente`).
 - **Prohibido en todo lo externo** (portada, panel de la clínica, bot,
   WhatsApp, correos, errores que ve una clínica): «préstamo»,
-  «financiamiento», «financiar», «crédito», «fee». Tampoco se publica que
-  no se verifica la identidad del paciente, quién firma los
-  contratos ni detalles internos del equipo. El superadmin (interno) y los
-  identificadores de la base (`charges`, `comprobante_financiamiento`, rutas
-  como `/financiamientos`) conservan sus nombres.
-- Código, comentarios, migraciones y textos: **en español**, como en Ronda.
-  Migraciones con nombre descriptivo: `YYYYMMDDHHMMSS_el_paciente_no_tiene_cuenta.sql`.
+  «financiamiento», «financiar», «crédito», «fee». Tampoco se publica que no
+  se verifica la identidad del paciente, quién firma los contratos ni
+  detalles internos del equipo. El superadmin y los identificadores de la base
+  (`charges`, `comprobante_financiamiento`, `/financiamientos`) conservan sus
+  nombres.
+- Código, comentarios, migraciones y textos **en español**. Migraciones:
+  `YYYYMMDDHHMMSS_el_paciente_no_tiene_cuenta.sql`.
 
 ## Comandos
 
-**Sin Docker** (decisión del usuario, 2026-09-30). Todo se aplica y se prueba
-directamente en el proyecto remoto `Helios`, que **es producción** (ver
-Remotos), vía Management API:
+**Sin Docker.** Todo se aplica y se prueba en el proyecto remoto `Helios`, que
+**es producción**, vía Management API:
 
 ```bash
-# SQL suelto o un fichero contra Helios
 supabase db query --linked --project-ref ahyfbnfsbyzdoyjzjvfb "select 1"
 supabase db query --linked --project-ref ahyfbnfsbyzdoyjzjvfb -f ruta.sql
-
-# Aplicar migraciones pendientes (runner propio, registra la historia)
-node supabase/poda/aplicar.mjs
-
-# Suites SQL (cada una hace begin/rollback: no dejan datos)
-bash supabase/tests/run.sh
-
-# ¿Cada llamada RPC del panel existe en la base con esos parámetros?
-node scripts/verificar-contrato.mjs
-
-# Panel
-cd panel && npm run dev           # http://localhost:3000
+node supabase/poda/aplicar.mjs        # migraciones pendientes (registra la historia)
+bash supabase/tests/run.sh            # suites SQL (begin/rollback)
+node scripts/verificar-contrato.mjs   # ¿cada RPC del panel existe con esos parámetros?
+cd panel && npm run dev               # http://localhost:3000 (datos reales)
 npm run build && npm run lint && npx tsc --noEmit
 ```
 
 ## Remotos
 
-- Supabase: proyecto `Helios` (`ahyfbnfsbyzdoyjzjvfb`, org de Ronda). Desde
-  el 2026-10-08 es **PRODUCCIÓN** (decisión de Javier) y sigue siendo el
-  único proyecto: el de desarrollo llegará más adelante. Mientras tanto:
-  - Las migraciones y las suites se siguen corriendo aquí. Las suites hacen
-    `begin`/`rollback` y `_ayudas.sql` apaga dentro de su transacción la
-    configuración real (contacto, cuentas de cobro, confirmación, mora); los
-    envíos (Resend, 360dialog) solo se ejercen con dobles. Una suite nueva
-    que llame a `helios_dispatch_*` sin sustituir antes la función de HTTP
-    **manda mensajes reales**: la extensión `http` no se deshace con el
-    `rollback`.
+- **Supabase** `Helios` (`ahyfbnfsbyzdoyjzjvfb`, org de Ronda): **PRODUCCIÓN**
+  y único proyecto por ahora.
+  - Las suites hacen `begin`/`rollback` y `_ayudas.sql` apaga la
+    configuración real (contacto, cuentas de cobro, confirmación, mora). Una
+    suite nueva que llame a `helios_dispatch_*` sin sustituir antes la función
+    de HTTP **manda mensajes reales**: la extensión `http` no se deshace con
+    el `rollback`.
   - Nada de SQL suelto que escriba en tablas reales sin que lo pida Javier.
-  - `panel/.env` apunta a esta base: `npm run dev` en local trabaja con
-    datos reales.
+  - `panel/.env` apunta a esta base.
   - Nunca escribir en los proyectos de Ronda.
-- Vercel: proyecto `helios` (equipo `jcarvajal3s-projects`), raíz `panel/`.
+- **Vercel**: proyecto `helios` (`jcarvajal3s-projects`), raíz `panel/`.
   Despliega solo al pushear a `main`; nunca `vercel deploy` a mano. Dominio
   `conhelios.com`.
-- Edge Function `whatsapp-webhook`: no la despliega Vercel. Se despliega con
-  el comando de su `index.ts` (sin JWT: la protege `?token=`).
-- GitHub: `https://github.com/Jcarvajal3/Helios.git`.
+- **Edge Function** `whatsapp-webhook`: no la despliega Vercel; se despliega
+  con el comando de su `index.ts` (sin JWT: la protege `?token=`).
+- **GitHub**: `https://github.com/Jcarvajal3/Helios.git`.
