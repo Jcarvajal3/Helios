@@ -1,4 +1,4 @@
-import { CalendarDays, Contact, MessageCircle } from 'lucide-react'
+import { CalendarDays, Contact, MessageCircle, ShoppingBag } from 'lucide-react'
 
 import type { Entrada } from './tipos'
 
@@ -86,8 +86,39 @@ export const seguimiento = [
     destino: { to: '/admin/whatsapp' },
     icono: MessageCircle,
   },
+  {
+    tipo: 'pantalla',
+    id: 'compras-amazon',
+    titulo: 'Compras Amazon',
+    descripcion:
+      'Solicitudes de compra de insumos y equipos médicos en Amazon: revisión aduanal, conciliación de pagos en bolívares, seguimiento logístico, tarifas y simulador interactivo de WhatsApp.',
+    espacio: 'seguimiento',
+    sinonimos: [
+      'amazon',
+      'insumos',
+      'simulador whatsapp',
+      'procura',
+      'importacion',
+      'compras medicos',
+      'equipos medicos',
+      'cotizar amazon',
+      'aduana',
+    ],
+    destino: { to: '/admin/compras' },
+    icono: ShoppingBag,
+  },
 
   // ── Acciones ─────────────────────────────────────────────────────────────
+  {
+    tipo: 'accion',
+    id: 'simulador-compras-whatsapp',
+    titulo: 'Abrir el Simulador WhatsApp de Compras Amazon',
+    descripcion:
+      'Probar de punta a punta el flujo conversacional de búsqueda, carrusel, cotización y reporte de pago en bolívares sin enviar mensajes reales.',
+    espacio: 'seguimiento',
+    sinonimos: ['simulador amazon', 'probar bot compras', 'simulador whatsapp compras'],
+    destino: { to: '/admin/compras', search: { tab: 'simulador' } },
+  },
   {
     tipo: 'accion',
     id: 'apuntar-medico-agenda',

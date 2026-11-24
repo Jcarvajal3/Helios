@@ -47,6 +47,7 @@ import {
   visibleGroups,
 } from '@/config/navigation'
 import { consultaCartera, consultaPromesas } from '@/features/admin/cobranza/consultas'
+import { consultaConteosCompras } from '@/features/admin/compras/consultas'
 import { useSession } from '@/features/auth/session'
 import { useVersionDelAdmin } from '@/lite/version'
 import type { PlatformAdmin } from '@/features/admin/api'
@@ -302,6 +303,14 @@ function useContadores(): Partial<Record<string, Contador>> {
     ...alVolver,
     select: (d) => contadorDeCola(resumirCambiosPropuestos(d)),
   })
+  const compras = useQuery({
+    ...consultaConteosCompras(),
+    ...alVolver,
+    select: (d): Contador => ({
+      n: d.pagosPendientes + d.revisionAduanal,
+      urgente: d.revisionAduanal > 0,
+    }),
+  })
 
   return {
     // Abonos sin dueño es una pestaña de Pagos reportados: su cola suma en
@@ -313,5 +322,6 @@ function useContadores(): Partial<Record<string, Contador>> {
     // contador.
     '/admin/cobranza': sumarContadores([sinContactar.data, promesas.data]),
     '/admin/alertas': alertas.data,
+    '/admin/compras': compras.data,
   }
 }

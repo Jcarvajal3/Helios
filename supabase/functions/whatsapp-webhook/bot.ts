@@ -65,6 +65,9 @@ import {
   nombreDeLaMoneda,
 } from './datos.ts'
 import type { Clave, DatosDelPaciente, Lectura, Moneda } from './datos.ts'
+import { crearProveedorCatalogo } from './compras/catalogo_rainforest.ts'
+import { ES_ESTADO_COMPRA, atenderCompraMedico, esAtajoDeCompra } from './compras/flujo.ts'
+import type { DatosCompra, EstadoCompra, ProveedorCatalogo, TarjetaCarrusel } from './compras/tipos.ts'
 import { esCortesia, normalizar } from './logica.ts'
 import type { EventoDeMensaje } from './logica.ts'
 
@@ -81,7 +84,7 @@ export type Personal = {
 
 export type Rpc = <T>(fn: string, args: Record<string, unknown>) => Promise<T>
 
-type Estado = 'menu' | 'cedula' | 'datos' | 'moneda' | 'monto' | 'resumen'
+type Estado = 'menu' | 'cedula' | 'datos' | 'moneda' | 'monto' | 'resumen' | EstadoCompra
 
 type Datos = {
   cedula?: string
@@ -105,7 +108,7 @@ type Datos = {
   pidiendo?: Clave[]
   /** De la vista previa: el plazo de la inicial en minutos (null sin inicial). */
   minutosDeLaInicial?: number | null
-}
+} & DatosCompra
 
 type Boton = { id: string; title: string }
 
@@ -122,7 +125,7 @@ const TODO_EL_FORMULARIO: Clave[] = CAMPOS_DEL_FORMULARIO.map(([k]) => k)
 const MENU: Boton[] = [
   { id: 'menu:nuevo', title: 'Nuevo pago en cuotas' },
   { id: 'menu:mis', title: 'Mis pagos en cuotas' },
-  { id: 'menu:ayuda', title: 'Ayuda' },
+  { id: 'menu:comprar', title: 'Comprar en Amazon' },
 ]
 
 const RESUMEN: Boton[] = [
@@ -228,17 +231,26 @@ function nombreDePila(p: Personal): string {
   return n
 }
 
+function proveedorPorDefecto(): ProveedorCatalogo {
+  const deno = (globalThis as { Deno?: { env?: { get(key: string): string | undefined } } }).Deno
+  const providerName = deno?.env?.get('AMAZON_PROVIDER') ?? 'mock'
+  const apiKey = deno?.env?.get('AMAZON_API_KEY') ?? ''
+  return crearProveedorCatalogo(providerName, apiKey)
+}
+
 export async function atenderAlPersonal({
   rpc,
   personal,
   mensaje,
   humano = false,
+  proveedor,
 }: {
   rpc: Rpc
   personal: Personal
   mensaje: EventoDeMensaje
   /** Una persona del equipo le escribió a mano hace poco (`bot_humano_atiende`): el bot no le contesta lo que no entiende. */
   humano?: boolean
+  proveedor?: ProveedorCatalogo
 }): Promise<unknown> {
   const tel = personal.phone_e164
 
@@ -249,6 +261,43 @@ export async function atenderAlPersonal({
       p_staff_user_id: personal.user_id,
       p_buttons: botones,
     })
+  const enviarCarrusel = (cuerpo: string, tarjetas: TarjetaCarrusel[]) => {
+    if (tarjetas.length < 2) {
+      const t = tarjetas[0]
+      const texto = t ? `${cuerpo}\n\n${t.body}` : cuerpo
+      const botones: Boton[] = t
+        ? [
+            { id: t.button_id, title: t.button_title.slice(0, 20) },
+            { id: 'compra:buscar', title: 'Otra búsqueda' },
+            { id: 'orden:cancelar', title: 'Volver al menú' },
+          ]
+        : []
+      return enviar(texto, botones)
+    }
+    const cardsMeta = tarjetas.slice(0, 10).map((t, card_index) => ({
+      card_index,
+      type: 'button',
+      header: {
+        type: 'image',
+        image: { link: t.image_url },
+      },
+      body: { text: t.body.slice(0, 160) },
+      action: {
+        buttons: [
+          {
+            type: 'reply',
+            reply: { id: t.button_id, title: t.button_title.slice(0, 20) },
+          },
+        ],
+      },
+    }))
+    return rpc('helios_whatsapp_carousel', {
+      p_to: tel,
+      p_body: cuerpo.slice(0, 1024),
+      p_cards: cardsMeta,
+      p_staff_user_id: personal.user_id,
+    })
+  }
   const guardar = (state: Estado, data: Datos = {}) =>
     rpc('bot_session_save', { p_phone: tel, p_state: state, p_data: data })
 
@@ -273,14 +322,14 @@ export async function atenderAlPersonal({
 
   const menu = async (saludo?: string) => {
     await guardar('menu')
-    await enviar(saludo ?? '¿Qué quieres hacer?', MENU)
+    await enviar(saludo ?? '¿Qué quieres hacer? (Escribe «ayuda» si necesitas guía)', MENU)
     return { paso: 'menu' }
   }
 
   const sesion = await rpc<{ state: Estado; data: Datos; nueva: boolean }>('bot_session', { p_phone: tel })
   const saludo = () => {
     const hola = nombreDePila(personal)
-    return `Hola${hola ? `, ${hola}` : ''}. Soy el asistente de Helios para ${personal.merchant_name ?? 'tu clínica'}. ¿Qué quieres hacer?`
+    return `Hola${hola ? `, ${hola}` : ''}. Soy el asistente de Helios para ${personal.merchant_name ?? 'tu clínica'}. ¿Qué quieres hacer? (Escribe «ayuda» si necesitas guía)`
   }
   let estado: Estado = sesion.state
   const datos: Datos = sesion.data ?? {}
@@ -292,8 +341,10 @@ export async function atenderAlPersonal({
 
   // ── Volver al menú desde cualquier paso ───────────────────────────────
   // «Empezar» es el botón de la bienvenida (plantilla `helios_cuenta_activa`).
-  if (['menu', 'cancelar', 'inicio', 'salir', 'hola', 'buenas', 'buenos dias', 'buenas tardes', 'empezar'].includes(n) || boton === 'orden:cancelar') {
-    if (boton === 'orden:cancelar' || n === 'cancelar') return menu('Cancelado: no se envió nada. ¿Qué quieres hacer?')
+  if (['menu', 'cancelar', 'inicio', 'salir', 'hola', 'buenas', 'buenos dias', 'buenas tardes', 'empezar', 'volver al menu'].includes(n) || boton === 'orden:cancelar') {
+    if ((boton === 'orden:cancelar' && n !== 'volver al menu') || n === 'cancelar') {
+      return menu('Cancelado: no se envió nada. ¿Qué quieres hacer?')
+    }
     return menu(sesion.nueva ? saludo() : undefined)
   }
 
@@ -391,7 +442,7 @@ export async function atenderAlPersonal({
     return { paso: 'mis', cuantos: lineas.length }
   }
 
-  if (boton === 'menu:ayuda' || n === 'ayuda' || (estado === 'menu' && n === '3')) {
+  if (boton === 'menu:ayuda' || n === 'ayuda') {
     await guardar('menu')
     await enviar(
       'Así funciona:\n' +
@@ -402,10 +453,31 @@ export async function atenderAlPersonal({
         `5. Al paciente le llega un WhatsApp para que la acepte: ${loQueHaceElPaciente(true, plazoEnPalabras(MINUTOS_DE_LA_INICIAL))}. ` +
         `${ACTIVA_CON_LA_INICIAL}\n\n` +
         'El paciente paga siempre en bolívares, a la tasa BCV del día en que paga.\n\n' +
+        'También puedes pulsar «Comprar en Amazon» (o pegar un enlace de Amazon) para cotizar insumos y equipos médicos puestos en Venezuela.\n\n' +
         'Escribe «menú» para volver al inicio en cualquier momento. El equipo de Helios ve este chat: si algo no funciona, escríbenos aquí.',
       MENU,
     )
     return { paso: 'ayuda' }
+  }
+
+  // ── Compras en Amazon para médicos ────────────────────────────────────
+  const pidioCuotas =
+    boton === 'menu:nuevo' || ['nuevo pago en cuotas', 'nuevo pago', 'nuevo financiamiento'].includes(n)
+  const enCompra = ES_ESTADO_COMPRA(estado)
+  const botonCompra = boton === 'menu:comprar' || boton.startsWith('compra:')
+  const atajoCompraDesdeMenu = estado === 'menu' && (esAtajoDeCompra(texto, boton) || n === '3')
+  if (!pidioCuotas && (enCompra || botonCompra || atajoCompraDesdeMenu)) {
+    return atenderCompraMedico({
+      rpc,
+      personal,
+      mensaje,
+      sesion: { state: estado, data: datos as Record<string, unknown>, nueva: sesion.nueva },
+      enviar,
+      enviarCarrusel,
+      guardar: (st, d) => guardar(st, (d ?? {}) as Datos),
+      volverAlMenu: menu,
+      proveedor: proveedor ?? proveedorPorDefecto(),
+    })
   }
 
   // ── La cédula (o un atajo desde el menú) ──────────────────────────────

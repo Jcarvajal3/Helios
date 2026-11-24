@@ -108,7 +108,7 @@ console.log('\n── El menú sale del catálogo ──────────
     bloques.join(' | ') ===
       'Cobranza y riesgo: Por cobrar, Pagos reportados, Avisos, Alertas | ' +
         'Caja y contabilidad: Pagos a clínicas, Libro y cierre de mes | ' +
-        'Seguimiento: Seguimiento, WhatsApp | ' +
+        'Seguimiento: Seguimiento, WhatsApp, Compras Amazon | ' +
         'Directorio: Pacientes, Clínicas, Financiamientos, Directorio de médicos | Ajustes: Ajustes',
     'los bloques del menú, con sus pantallas en orden (CONTRATOS §1)',
     bloques.join(' | '),

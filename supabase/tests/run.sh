@@ -111,6 +111,7 @@ SUITES=(
   rx_precios_smoke
   rx_catalogo_smoke
   inicial_smoke
+  compras_amazon_smoke
 )
 if [ "$#" -gt 0 ]; then SUITES=("$@"); fi
 

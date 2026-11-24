@@ -61,6 +61,7 @@ export const PRINCIPALES: ReadonlyArray<SeccionLite> = [
       { rotulo: 'Por cobrar', to: '/admin/cobranza' },
       { rotulo: 'Pagos a médicos', to: '/admin/pagos-clinicas' },
       { rotulo: 'Contabilidad', to: '/admin/contabilidad' },
+      { rotulo: 'Compras Amazon', to: '/admin/compras' },
       { rotulo: 'Alertas', to: '/admin/alertas' },
     ],
   },

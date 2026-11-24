@@ -43,6 +43,7 @@ import { Route as AdminAvisosRouteImport } from './routes/admin/avisos'
 import { Route as AdminClinicasRouteImport } from './routes/admin/clinicas'
 import { Route as AdminCobranzaRouteImport } from './routes/admin/cobranza'
 import { Route as AdminCobrosRouteImport } from './routes/admin/cobros'
+import { Route as AdminComprasRouteImport } from './routes/admin/compras'
 import { Route as AdminContabilidadRouteImport } from './routes/admin/contabilidad'
 import { Route as AdminDirectorioRouteImport } from './routes/admin/directorio'
 import { Route as AdminFinanciamientosRouteImport } from './routes/admin/financiamientos'
@@ -60,6 +61,7 @@ import { Route as ComercioFinanciamientosIdRouteImport } from './routes/_comerci
 import { Route as AdminClinicasIdRouteImport } from './routes/admin/clinicas_.$id'
 import { Route as AdminClinicasAltaRouteImport } from './routes/admin/clinicas_.alta'
 import { Route as AdminCobrosIdRouteImport } from './routes/admin/cobros_.$id'
+import { Route as AdminComprasIdRouteImport } from './routes/admin/compras_.$id'
 import { Route as AdminFinanciamientosIdRouteImport } from './routes/admin/financiamientos_.$id'
 import { Route as AdminPacientesIdRouteImport } from './routes/admin/pacientes_.$id'
 import { Route as AdminPagosClinicasIdRouteImport } from './routes/admin/pagos-clinicas_.$id'
@@ -234,6 +236,11 @@ const AdminCobrosRoute = AdminCobrosRouteImport.update({
   path: '/cobros',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminComprasRoute = AdminComprasRouteImport.update({
+  id: '/compras',
+  path: '/compras',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminContabilidadRoute = AdminContabilidadRouteImport.update({
   id: '/contabilidad',
   path: '/contabilidad',
@@ -320,6 +327,11 @@ const AdminCobrosIdRoute = AdminCobrosIdRouteImport.update({
   path: '/cobros/$id',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminComprasIdRoute = AdminComprasIdRouteImport.update({
+  id: '/compras_/$id',
+  path: '/compras/$id',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminFinanciamientosIdRoute = AdminFinanciamientosIdRouteImport.update({
   id: '/financiamientos_/$id',
   path: '/financiamientos/$id',
@@ -375,6 +387,7 @@ export interface FileRoutesByFullPath {
   '/admin/clinicas': typeof AdminClinicasRoute
   '/admin/cobranza': typeof AdminCobranzaRoute
   '/admin/cobros': typeof AdminCobrosRoute
+  '/admin/compras': typeof AdminComprasRoute
   '/admin/contabilidad': typeof AdminContabilidadRoute
   '/admin/directorio': typeof AdminDirectorioRoute
   '/admin/financiamientos': typeof AdminFinanciamientosRoute
@@ -393,6 +406,7 @@ export interface FileRoutesByFullPath {
   '/admin/clinicas/$id': typeof AdminClinicasIdRoute
   '/admin/clinicas/alta': typeof AdminClinicasAltaRoute
   '/admin/cobros/$id': typeof AdminCobrosIdRoute
+  '/admin/compras/$id': typeof AdminComprasIdRoute
   '/admin/financiamientos/$id': typeof AdminFinanciamientosIdRoute
   '/admin/pacientes/$id': typeof AdminPacientesIdRoute
   '/admin/pagos-clinicas/$id': typeof AdminPagosClinicasIdRoute
@@ -430,6 +444,7 @@ export interface FileRoutesByTo {
   '/admin/clinicas': typeof AdminClinicasRoute
   '/admin/cobranza': typeof AdminCobranzaRoute
   '/admin/cobros': typeof AdminCobrosRoute
+  '/admin/compras': typeof AdminComprasRoute
   '/admin/contabilidad': typeof AdminContabilidadRoute
   '/admin/directorio': typeof AdminDirectorioRoute
   '/admin/financiamientos': typeof AdminFinanciamientosRoute
@@ -448,6 +463,7 @@ export interface FileRoutesByTo {
   '/admin/clinicas/$id': typeof AdminClinicasIdRoute
   '/admin/clinicas/alta': typeof AdminClinicasAltaRoute
   '/admin/cobros/$id': typeof AdminCobrosIdRoute
+  '/admin/compras/$id': typeof AdminComprasIdRoute
   '/admin/financiamientos/$id': typeof AdminFinanciamientosIdRoute
   '/admin/pacientes/$id': typeof AdminPacientesIdRoute
   '/admin/pagos-clinicas/$id': typeof AdminPagosClinicasIdRoute
@@ -488,6 +504,7 @@ export interface FileRoutesById {
   '/admin/clinicas': typeof AdminClinicasRoute
   '/admin/cobranza': typeof AdminCobranzaRoute
   '/admin/cobros': typeof AdminCobrosRoute
+  '/admin/compras': typeof AdminComprasRoute
   '/admin/contabilidad': typeof AdminContabilidadRoute
   '/admin/directorio': typeof AdminDirectorioRoute
   '/admin/financiamientos': typeof AdminFinanciamientosRoute
@@ -506,6 +523,7 @@ export interface FileRoutesById {
   '/admin/clinicas_/$id': typeof AdminClinicasIdRoute
   '/admin/clinicas_/alta': typeof AdminClinicasAltaRoute
   '/admin/cobros_/$id': typeof AdminCobrosIdRoute
+  '/admin/compras_/$id': typeof AdminComprasIdRoute
   '/admin/financiamientos_/$id': typeof AdminFinanciamientosIdRoute
   '/admin/pacientes_/$id': typeof AdminPacientesIdRoute
   '/admin/pagos-clinicas_/$id': typeof AdminPagosClinicasIdRoute
@@ -546,6 +564,7 @@ export interface FileRouteTypes {
     | '/admin/clinicas'
     | '/admin/cobranza'
     | '/admin/cobros'
+    | '/admin/compras'
     | '/admin/contabilidad'
     | '/admin/directorio'
     | '/admin/financiamientos'
@@ -564,6 +583,7 @@ export interface FileRouteTypes {
     | '/admin/clinicas/$id'
     | '/admin/clinicas/alta'
     | '/admin/cobros/$id'
+    | '/admin/compras/$id'
     | '/admin/financiamientos/$id'
     | '/admin/pacientes/$id'
     | '/admin/pagos-clinicas/$id'
@@ -601,6 +621,7 @@ export interface FileRouteTypes {
     | '/admin/clinicas'
     | '/admin/cobranza'
     | '/admin/cobros'
+    | '/admin/compras'
     | '/admin/contabilidad'
     | '/admin/directorio'
     | '/admin/financiamientos'
@@ -619,6 +640,7 @@ export interface FileRouteTypes {
     | '/admin/clinicas/$id'
     | '/admin/clinicas/alta'
     | '/admin/cobros/$id'
+    | '/admin/compras/$id'
     | '/admin/financiamientos/$id'
     | '/admin/pacientes/$id'
     | '/admin/pagos-clinicas/$id'
@@ -658,6 +680,7 @@ export interface FileRouteTypes {
     | '/admin/clinicas'
     | '/admin/cobranza'
     | '/admin/cobros'
+    | '/admin/compras'
     | '/admin/contabilidad'
     | '/admin/directorio'
     | '/admin/financiamientos'
@@ -676,6 +699,7 @@ export interface FileRouteTypes {
     | '/admin/clinicas_/$id'
     | '/admin/clinicas_/alta'
     | '/admin/cobros_/$id'
+    | '/admin/compras_/$id'
     | '/admin/financiamientos_/$id'
     | '/admin/pacientes_/$id'
     | '/admin/pagos-clinicas_/$id'
@@ -949,6 +973,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCobrosRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/compras': {
+      id: '/admin/compras'
+      path: '/compras'
+      fullPath: '/admin/compras'
+      preLoaderRoute: typeof AdminComprasRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/contabilidad': {
       id: '/admin/contabilidad'
       path: '/contabilidad'
@@ -1068,6 +1099,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCobrosIdRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/compras_/$id': {
+      id: '/admin/compras_/$id'
+      path: '/compras/$id'
+      fullPath: '/admin/compras/$id'
+      preLoaderRoute: typeof AdminComprasIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/financiamientos_/$id': {
       id: '/admin/financiamientos_/$id'
       path: '/financiamientos/$id'
@@ -1133,6 +1171,7 @@ interface AdminRouteChildren {
   AdminClinicasRoute: typeof AdminClinicasRoute
   AdminCobranzaRoute: typeof AdminCobranzaRoute
   AdminCobrosRoute: typeof AdminCobrosRoute
+  AdminComprasRoute: typeof AdminComprasRoute
   AdminContabilidadRoute: typeof AdminContabilidadRoute
   AdminDirectorioRoute: typeof AdminDirectorioRoute
   AdminFinanciamientosRoute: typeof AdminFinanciamientosRoute
@@ -1145,6 +1184,7 @@ interface AdminRouteChildren {
   AdminClinicasIdRoute: typeof AdminClinicasIdRoute
   AdminClinicasAltaRoute: typeof AdminClinicasAltaRoute
   AdminCobrosIdRoute: typeof AdminCobrosIdRoute
+  AdminComprasIdRoute: typeof AdminComprasIdRoute
   AdminFinanciamientosIdRoute: typeof AdminFinanciamientosIdRoute
   AdminPacientesIdRoute: typeof AdminPacientesIdRoute
   AdminPagosClinicasIdRoute: typeof AdminPagosClinicasIdRoute
@@ -1159,6 +1199,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminClinicasRoute: AdminClinicasRoute,
   AdminCobranzaRoute: AdminCobranzaRoute,
   AdminCobrosRoute: AdminCobrosRoute,
+  AdminComprasRoute: AdminComprasRoute,
   AdminContabilidadRoute: AdminContabilidadRoute,
   AdminDirectorioRoute: AdminDirectorioRoute,
   AdminFinanciamientosRoute: AdminFinanciamientosRoute,
@@ -1171,6 +1212,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminClinicasIdRoute: AdminClinicasIdRoute,
   AdminClinicasAltaRoute: AdminClinicasAltaRoute,
   AdminCobrosIdRoute: AdminCobrosIdRoute,
+  AdminComprasIdRoute: AdminComprasIdRoute,
   AdminFinanciamientosIdRoute: AdminFinanciamientosIdRoute,
   AdminPacientesIdRoute: AdminPacientesIdRoute,
   AdminPagosClinicasIdRoute: AdminPagosClinicasIdRoute,

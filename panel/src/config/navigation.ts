@@ -176,8 +176,9 @@ const MENU_ADMIN: ReadonlyArray<{
     pantallas: ['pagos-a-locales', 'libro-y-cierre'],
   },
   // El contacto con los médicos y su personal: a quién llamar y qué se habló
-  // (Seguimiento), y el inbox donde se les contesta (WhatsApp).
-  { espacio: 'seguimiento', titulo: 'Seguimiento', pantallas: ['seguimiento', 'whatsapp'] },
+  // (Seguimiento), el inbox donde se les contesta (WhatsApp) y las compras
+  // Amazon de insumos y equipos médicos.
+  { espacio: 'seguimiento', titulo: 'Seguimiento', pantallas: ['seguimiento', 'whatsapp', 'compras-amazon'] },
   // Lo que se busca: un directorio. Se entra con un nombre o un teléfono en
   // la cabeza, no con una tarea.
   // Al final del bloque, la página pública de médicos (`/directorio`).
