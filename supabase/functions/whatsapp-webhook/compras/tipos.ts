@@ -2,8 +2,8 @@
 // Helios — Tipos del motor de Compras en Amazon para médicos
 //
 // Contratos puros compartidos entre el catálogo (Ports & Adapters), el
-// parser médico, el cotizador en centavos y el flujo conversacional de
-// WhatsApp.
+// parser médico, el cotizador en centavos y el flujo conversacional (el de
+// WhatsApp y el del simulador del superadmin).
 // ═══════════════════════════════════════════════════════════════════════════
 
 /** Dimensiones físicas de un paquete en pulgadas (Amazon USA). */
@@ -18,6 +18,7 @@ export type ProductoResumen = {
   asin: string
   titulo: string
   precioUsd: number
+  /** Vacía si el catálogo no trae foto (no se inventa una). */
   imagenUrl: string
   url: string
   rating: number | null
@@ -44,8 +45,11 @@ export type TarifasCompra = {
   seaRatePerFt3Usd: number
   seaMinUsd: number
   fallbackWeightLb: number
+  /** Tasa BCV real del dólar; sin ella no se cotiza. */
   fxRateUsd: number
   accountsBlock: string
+  /** Horas de validez de una cotización (`quote_ttl_hours`); null si la base no lo dice. */
+  quoteTtlHours?: number | null
 }
 
 export type MetodoEnvio = 'aereo' | 'maritimo'
@@ -68,7 +72,10 @@ export type CotizacionCompra = {
   totalUsd: number
   totalVes: number
   fxRateUsd: number
+  /** Peso por unidad que se usa (el real, o el de respaldo si no hay). */
   weightLb: number
+  /** El peso real publicado por unidad, o null si Amazon no lo publica. */
+  weightRealLb: number | null
   volumetricWeightLb: number
   volumeFt3: number
   weightEstimated: boolean
@@ -85,21 +92,38 @@ export type ProveedorCatalogo = {
 /** Tarjeta de un Interactive Media Card Carousel de WhatsApp (2 a 10 cards). */
 export type TarjetaCarrusel = {
   image_url: string
+  /** ≤ 160 caracteres y ≤ 2 saltos de línea (se recorta al enviar). */
   body: string
   button_id: string
   button_title: string
 }
 
-/** Estados de la sesión de WhatsApp propios del flujo de compras en Amazon. */
+/** Una fila de una lista interactiva de WhatsApp (máx. 10 en total). */
+export type FilaLista = {
+  id: string
+  /** ≤ 24 caracteres. */
+  title: string
+  /** ≤ 72 caracteres. */
+  description: string
+}
+
+/** Estados de la sesión propios del flujo de compras en Amazon. */
 export type EstadoCompra =
   | 'compra_buscar'
   | 'compra_resultados'
   | 'compra_envio'
+  | 'compra_cantidad'
   | 'compra_confirmar'
   | 'compra_pago'
   | 'compra_pago_datos'
+  | 'compra_cancelar'
+  | 'compra_mis'
+  | 'compra_detalle'
 
-/** Estado persistido en `whatsapp_sessions.data` durante una compra. */
+/** Una fila visible de «Mis compras» (para aceptar «2» escrito). */
+export type FilaMisCompras = { id: string; numero: string }
+
+/** Estado persistido en la sesión durante una compra. */
 export type DatosCompra = {
   consulta?: string
   resultados?: ProductoResumen[]
@@ -113,10 +137,23 @@ export type DatosCompra = {
   compraNumero?: string | null
   compraTotalUsd?: number | null
   compraTotalVes?: number | null
+  /** Hasta cuándo vale la cotización de la solicitud abierta (ISO). */
+  compraVenceEn?: string | null
+  /** La base dice que la cotización de la solicitud abierta ya venció. */
+  compraVencida?: boolean
   datosPago?: {
     banco?: string
     telefono?: string
     referencia?: string
   }
   intentosDatosPago?: number
+  /** Entradas inválidas seguidas (al segundo se ofrece «persona»). */
+  invalidos?: number
+  /** «Mis compras»: lo que se ve en pantalla. */
+  filasMis?: FilaMisCompras[]
+  /** La solicitud que se mira en detalle o se pide cancelar. */
+  detalleId?: string | null
+  detalleNumero?: string | null
+  /** A qué estado se vuelve si el médico responde «No, seguir». */
+  cancelarVolverA?: EstadoCompra | null
 }

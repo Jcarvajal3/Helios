@@ -44,10 +44,13 @@ import { csvDinero, csvInstante } from '@/lib/csv'
 import { describeError } from '@/lib/supabase'
 import { EstadoSolicitudCompraBadge } from './EstadoCompraBadge'
 
+/** Sin `canal` se ven las operativas (WhatsApp): el simulador solo entra si se pide. */
+export type FiltroCanalCompra = CanalCompra | 'todos'
+
 export type FiltrosListaCompras = {
   q?: string
   estado?: EstadoSolicitudCompra
-  canal?: CanalCompra
+  canal?: FiltroCanalCompra
 }
 
 export function ListaDeCompras({
@@ -59,20 +62,25 @@ export function ListaDeCompras({
 }) {
   const navigate = useNavigate()
   const conteos = useQuery(consultaConteosCompras())
+  const canal: FiltroCanalCompra = filtros.canal ?? 'whatsapp'
   const solicitudes = useQuery(
     consultaSolicitudesCompra({
       statuses: filtros.estado ? [filtros.estado] : null,
-      channel: filtros.canal ?? null,
+      channel: canal === 'todos' ? null : canal,
       search: filtros.q ?? null,
       limit: 150,
     }),
   )
 
   const hayFiltros = Boolean(filtros.q || filtros.estado || filtros.canal)
+  const deSimulador = conteos.data?.simulador ?? 0
   const filas = solicitudes.data ?? []
   const totalUsd = filas.reduce((s, r) => s + r.totalUsd, 0)
 
-  const opcionesEstado: Array<{ value: EstadoSolicitudCompra | ''; label: string }> = [
+  const opcionesEstado: Array<{
+    value: EstadoSolicitudCompra | ''
+    label: string
+  }> = [
     { value: '', label: 'Todos los estados' },
     ...VALORES_ESTADO_SOLICITUD.map((e) => ({
       value: e,
@@ -93,7 +101,7 @@ export function ListaDeCompras({
               ? { tone: 'warning', texto: 'Requiere permiso' }
               : undefined
           }
-          hint="Insumos restringidos antes del pago"
+          hint="Insumos restringidos antes del pago (sin simulador)"
         />
         <Stat
           label="Pagos por aprobar"
@@ -116,7 +124,9 @@ export function ListaDeCompras({
         />
         <Stat
           label="En procura / tránsito"
-          value={String((conteos.data?.enProcura ?? 0) + (conteos.data?.enTransito ?? 0))}
+          value={String(
+            (conteos.data?.enProcura ?? 0) + (conteos.data?.enTransito ?? 0),
+          )}
           estado={estadoDeConsulta(conteos)}
           onReintentar={() => void conteos.refetch()}
           hint={
@@ -146,15 +156,27 @@ export function ListaDeCompras({
         <Filtro label="Canal">
           <Segmented
             options={[
-              { value: 'todos', label: 'Todos' },
-              { value: 'whatsapp', label: 'WhatsApp' },
-              { value: 'simulador', label: 'Simulador' },
+              { value: 'whatsapp', label: 'WhatsApp (operativas)' },
+              {
+                value: 'simulador',
+                label: `Solo simulador${deSimulador > 0 ? ` (${deSimulador})` : ''}`,
+              },
+              { value: 'todos', label: 'Incluir simulador' },
             ]}
-            value={filtros.canal ?? 'todos'}
-            onChange={(v) => onCambiar({ canal: v === 'todos' ? undefined : v })}
+            value={canal}
+            onChange={(v) =>
+              onCambiar({ canal: v === 'whatsapp' ? undefined : v })
+            }
           />
         </Filtro>
       </FilterBar>
+
+      {canal !== 'whatsapp' && (
+        <p className="type-panel-caption text-on-surface-variant">
+          Las solicitudes del simulador son pruebas: no entran en los números de
+          arriba ni en las colas.
+        </p>
+      )}
 
       {solicitudes.isPending && <SkeletonTable rows={6} columns={7} />}
 
@@ -168,7 +190,11 @@ export function ListaDeCompras({
       {solicitudes.data && filas.length === 0 && (
         <EmptyState
           icon={<Package size={44} />}
-          title={hayFiltros ? 'Ninguna solicitud con estos filtros' : 'Todavía no hay solicitudes de compra'}
+          title={
+            hayFiltros
+              ? 'Ninguna solicitud con estos filtros'
+              : 'Todavía no hay solicitudes de compra'
+          }
           description={
             hayFiltros
               ? 'Prueba quitando el filtro de estado, canal o búsqueda.'
@@ -179,7 +205,13 @@ export function ListaDeCompras({
               <Button
                 size="md"
                 variant="tonal"
-                onClick={() => onCambiar({ q: undefined, estado: undefined, canal: undefined })}
+                onClick={() =>
+                  onCambiar({
+                    q: undefined,
+                    estado: undefined,
+                    canal: undefined,
+                  })
+                }
               >
                 Quitar los filtros
               </Button>
@@ -247,7 +279,8 @@ const COLUMNAS: Array<Column<SolicitudCompraResumen>> = [
     key: 'medico',
     header: 'Médico',
     sort: (r) => r.merchantName,
-    csv: (r) => (r.doctorName ? `${r.merchantName} (${r.doctorName})` : r.merchantName),
+    csv: (r) =>
+      r.doctorName ? `${r.merchantName} (${r.doctorName})` : r.merchantName,
     cell: (r) => (
       <div className="min-w-0">
         <p className="font-medium text-on-surface">{r.merchantName}</p>
@@ -280,7 +313,10 @@ const COLUMNAS: Array<Column<SolicitudCompraResumen>> = [
     sort: (r) => r.shippingMethod,
     csv: (r) => etiquetaDeEnvio(r.shippingMethod),
     cell: (r) => (
-      <Badge tone="neutral" icono={r.shippingMethod === 'maritimo' ? Ship : Plane}>
+      <Badge
+        tone="neutral"
+        icono={r.shippingMethod === 'maritimo' ? Ship : Plane}
+      >
         {etiquetaDeEnvio(r.shippingMethod)}
       </Badge>
     ),
@@ -294,13 +330,13 @@ const COLUMNAS: Array<Column<SolicitudCompraResumen>> = [
     csv: (r) => csvDinero(r.totalUsd),
     cell: (r) => (
       <>
-        <span className="font-semibold text-on-surface">{formatUsd(r.totalUsd)}</span>
+        <span className="font-semibold text-on-surface">
+          {formatUsd(r.totalUsd)}
+        </span>
         <span className="mt-0.5 block type-panel-caption font-normal text-on-surface-variant">
-          {r.totalVesToday !== null
-            ? formatVes(r.totalVesToday)
-            : r.totalVesQuote !== null
-              ? formatVes(r.totalVesQuote)
-              : 'Sin tasa BCV'}
+          {r.totalVesQuote !== null
+            ? formatVes(r.totalVesQuote)
+            : 'Sin total en Bs'}
         </span>
       </>
     ),

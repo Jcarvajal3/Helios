@@ -8,6 +8,9 @@
 import { evaluarRestriccionMedica } from './amazon_parser.ts'
 import type { CotizacionCompra, MetodoEnvio, ProductoResumen, TarifasCompra } from './tipos.ts'
 
+/** Límite de unidades por solicitud (igual que `helios_purchase_calculate`). */
+export const CANTIDAD_MAXIMA = 50
+
 /** Redondeo exacto a 2 decimales (centavos), evitando deriva de coma flotante. */
 export function redondearCentavos(n: number): number {
   if (!Number.isFinite(n)) return 0
@@ -65,20 +68,24 @@ export function calcularCotizacion(
   envio: MetodoEnvio,
   cantidad = 1,
 ): CotizacionCompra {
-  const qty = Math.max(1, Math.floor(Number.isFinite(cantidad) ? cantidad : 1))
+  // Igual que `helios_purchase_calculate`: la cantidad va de 1 a 50.
+  const qty = Math.min(CANTIDAD_MAXIMA, Math.max(1, Math.floor(Number.isFinite(cantidad) ? cantidad : 1)))
   const unitPriceUsd = redondearCentavos(Math.max(0, producto.precioUsd))
   const subtotalUsd = redondearCentavos(unitPriceUsd * qty)
 
-  const weightEstimated =
-    producto.pesoLb == null || !Number.isFinite(producto.pesoLb) || producto.pesoLb <= 0
-  const weightLb = weightEstimated
-    ? redondearCentavos(tarifas.fallbackWeightLb)
-    : redondearCentavos(producto.pesoLb as number)
+  const pesoReal =
+    producto.pesoLb != null && Number.isFinite(producto.pesoLb) && producto.pesoLb > 0
+      ? redondearCentavos(producto.pesoLb)
+      : null
+  const weightLb = pesoReal ?? redondearCentavos(tarifas.fallbackWeightLb)
 
   const dims = dimensionesValidas(producto.dimensionesIn)
   const volIn3 = dims ? dims.largo * dims.ancho * dims.alto : 0
   const volumetricWeightLb = dims ? redondearCentavos(volIn3 / 139) : 0
   const volumeFt3 = dims ? redondear4(volIn3 / 1728) : 0
+
+  // Como en SQL: solo es estimado cuando faltan el peso real Y el volumétrico.
+  const weightEstimated = pesoReal == null && volumetricWeightLb === 0
 
   const taxUsaUsd = redondearCentavos(subtotalUsd * (tarifas.taxUsaPct / 100))
 
@@ -87,13 +94,13 @@ export function calcularCotizacion(
     const pesoCobrable = Math.max(weightLb, volumetricWeightLb)
     shippingUsd = Math.max(
       redondearCentavos(tarifas.airMinUsd),
-      redondearCentavos(pesoCobrable * qty * tarifas.airRatePerLbUsd),
+      redondearCentavos(Math.round(pesoCobrable * qty * 1000) / 1000 * tarifas.airRatePerLbUsd),
     )
   } else {
     const volumenCobrable = Math.max(dims ? volumeFt3 : 0.5, 0.1)
     shippingUsd = Math.max(
       redondearCentavos(tarifas.seaMinUsd),
-      redondearCentavos(volumenCobrable * qty * tarifas.seaRatePerFt3Usd),
+      redondearCentavos(redondear4(volumenCobrable * qty) * tarifas.seaRatePerFt3Usd),
     )
   }
 
@@ -114,6 +121,7 @@ export function calcularCotizacion(
     totalVes,
     fxRateUsd: tarifas.fxRateUsd,
     weightLb,
+    weightRealLb: pesoReal,
     volumetricWeightLb,
     volumeFt3,
     weightEstimated,

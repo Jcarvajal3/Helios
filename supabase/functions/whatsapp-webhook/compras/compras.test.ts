@@ -1,7 +1,8 @@
 /**
- * Pruebas unitarias e integración del motor de Compras en Amazon para médicos
- * (parser, traductor médico ES→EN, restricciones aduanales, cotizador exacto,
- * catálogo mock/Rainforest y flujo conversacional completo en `bot.ts`).
+ * Pruebas del motor de Compras en Amazon para médicos: parser, traductor,
+ * restricciones, cotizador (paridad con SQL), catálogo Rainforest, formato
+ * exacto del carrusel y la lista, y el flujo completo en `bot.ts` con una
+ * base de mentira (cada RPC responde lo que diga la prueba y se anota).
  *
  *   npx tsx supabase/functions/whatsapp-webhook/compras/compras.test.ts
  */
@@ -10,27 +11,32 @@ import { atenderAlPersonal } from '../bot.ts'
 import type { Personal } from '../bot.ts'
 import type { EventoDeMensaje } from '../logica.ts'
 import {
+  analizarEnlaceAmazon,
+  contieneEnlace,
   evaluarRestriccionMedica,
   extraerAsinDeTexto,
   normalizarBusquedaMedica,
 } from './amazon_parser.ts'
 import { CATALOGO_MEDICO_MOCK, ProveedorAmazonMock } from './catalogo_mock.ts'
 import {
+  ErrorCatalogo,
   ProveedorRainforest,
   crearProveedorCatalogo,
   parsearDimensionesAPulgadas,
   parsearPesoALibras,
 } from './catalogo_rainforest.ts'
-import { calcularCotizacion, recomendarEnvio, redondearCentavos } from './cotizador.ts'
-import type { ProveedorCatalogo, TarifasCompra } from './tipos.ts'
-
-type CardMeta = {
-  card_index: number
-  type: string
-  header: { type: string; image: { link: string } }
-  body: { text: string }
-  action: { buttons: Array<{ type: string; reply: { id: string; title: string } }> }
-}
+import { CANTIDAD_MAXIMA, calcularCotizacion, recomendarEnvio, redondearCentavos } from './cotizador.ts'
+import { resolverEnlaceCorto } from './enlaces.ts'
+import { botonObsoletoEnEstado, esIntentoDePago, normalizarTarifas } from './flujo.ts'
+import { ETIQUETA_ESTADO } from './textos.ts'
+import {
+  construirSeccionesLista,
+  construirTarjetasMeta,
+  partirMensaje,
+  crearTransporteWhatsApp,
+  cuerpoDeTarjeta,
+} from './transporte.ts'
+import type { DatosCompra, ProveedorCatalogo, TarifasCompra } from './tipos.ts'
 
 let fallos = 0
 
@@ -41,6 +47,7 @@ function comprueba(ok: boolean, titulo: string, detalle = '') {
 
 /** Vocabulario prohibido hacia médicos y externos (CLAUDE.md). */
 const PROHIBIDO = /pr[eé]stamo|financiamiento|financiar|cr[eé]dito|\bfee\b/i
+const EMOJI = /\p{Extended_Pictographic}/gu
 
 const PERSONAL: Personal = {
   id: 's1',
@@ -61,8 +68,7 @@ const TARIFAS: TarifasCompra = {
   seaMinUsd: 35,
   fallbackWeightLb: 2,
   fxRateUsd: 100,
-  accountsBlock:
-    'Pago Móvil:\nBNC (0191)\nRIF: J-50123456-7\nTel: 0412-5551234\nSolo en bolívares a la tasa BCV de hoy.',
+  accountsBlock: 'Pago Móvil:\nBNC (0191)\nRIF: J-50123456-7\nTel: 0412-5551234\nSolo en bolívares a la tasa BCV de hoy.',
 }
 
 const CONFIG_RPC = {
@@ -75,31 +81,53 @@ const CONFIG_RPC = {
   sea_rate_per_ft3_usd: 24,
   sea_min_usd: 35,
   fallback_weight_lb: 2,
+  quote_ttl_hours: 48,
   fx_rate_usd: 100,
   accounts_block: TARIFAS.accountsBlock,
 }
 
-type Llamada = { fn: string; args: Record<string, unknown> }
+const ID1 = '11111111-1111-4111-8111-111111111111'
+const ID2 = '22222222-2222-4222-8222-222222222222'
 
-const todosLosTextosEmitidos: string[] = []
+type Llamada = { fn: string; args: Record<string, unknown> }
+type Resp = unknown | ((args: Record<string, unknown>) => unknown)
+
+type Boton = { id: string; title: string }
+type Emitido = { texto: string; botones: Boton[] }
+const emitidos: Emitido[] = []
+/** Toda llamada a la base de todos los turnos, y los botones enviados frente al estado en que quedó la sesión. */
+const todasLasLlamadas: Llamada[] = []
+const parejasBotonEstado: Array<{ id: string; estado: string }> = []
+
+type Opciones = {
+  proveedorDe?: (nombre: string) => ProveedorCatalogo | null
+  humano?: boolean
+  habilitada?: boolean
+  resolverEnlace?: (u: string) => Promise<string | null>
+  ahora?: () => Date
+  almacen?: { subir(ruta: string, bytes: Uint8Array, mime: string): Promise<void> }
+  fetchFn?: typeof fetch
+}
+
+const MOCK = new ProveedorAmazonMock()
 
 async function correr(
   mensaje: Partial<EventoDeMensaje>,
   sesion: { state: string; data: Record<string, unknown>; nueva?: boolean },
-  respuestas: Record<string, unknown | ((args: Record<string, unknown>) => unknown)> = {},
-  proveedor: ProveedorCatalogo = new ProveedorAmazonMock(),
+  respuestas: Record<string, Resp> = {},
+  o: Opciones = {},
 ) {
   const llamadas: Llamada[] = []
   const rpc = async <T>(fn: string, args: Record<string, unknown>): Promise<T> => {
     llamadas.push({ fn, args })
     if (fn === 'bot_session') return { nueva: false, ...sesion } as T
+    if (fn === 'bot_compra_habilitada') return { habilitada: o.habilitada ?? true, proveedor: 'mock', piloto: false } as T
     const r = respuestas[fn]
     if (typeof r === 'function') return (await (r as (a: Record<string, unknown>) => unknown)(args)) as T
     if (r instanceof Error) throw r
     if (r === undefined && fn === 'bot_compra_config') return CONFIG_RPC as T
     return (r ?? null) as T
   }
-
   const m: EventoDeMensaje = {
     kind: 'message',
     id: 'wamid.compra.1',
@@ -111,512 +139,816 @@ async function correr(
     raw: {},
     ...mensaje,
   }
-
-  const res = await atenderAlPersonal({ rpc, personal: PERSONAL, mensaje: m, proveedor })
-  const textos = llamadas.filter((l) => l.fn === 'helios_whatsapp_text').map((l) => String(l.args.p_text))
+  const res = await atenderAlPersonal({
+    rpc,
+    personal: PERSONAL,
+    mensaje: m,
+    humano: o.humano,
+    proveedorDe: o.proveedorDe ?? ((n) => (n === 'mock' ? MOCK : null)),
+    resolverEnlace: o.resolverEnlace,
+    ahora: o.ahora,
+    almacen: o.almacen,
+    fetchFn: o.fetchFn,
+  })
+  const enviados = llamadas.filter((l) => l.fn === 'helios_whatsapp_text')
+  const textos = enviados.map((l) => String(l.args.p_text))
   const carruseles = llamadas.filter((l) => l.fn === 'helios_whatsapp_carousel').map((l) => l.args)
+  const listas = llamadas.filter((l) => l.fn === 'helios_whatsapp_list').map((l) => l.args)
   const guardados = llamadas.filter((l) => l.fn === 'bot_session_save').map((l) => l.args)
-
-  for (const t of textos) todosLosTextosEmitidos.push(t)
+  for (const l of enviados) emitidos.push({ texto: String(l.args.p_text), botones: (l.args.p_buttons as Boton[]) ?? [] })
   for (const c of carruseles) {
-    todosLosTextosEmitidos.push(String(c.p_body ?? ''))
-    for (const card of (c.p_cards as CardMeta[]) ?? []) {
-      todosLosTextosEmitidos.push(card.body.text, card.action.buttons[0]?.reply.title ?? '')
+    emitidos.push({ texto: String(c.p_body ?? ''), botones: [] })
+    for (const card of (c.p_cards as Array<{ body: { text: string }; action: { buttons: Array<{ quick_reply: Boton }> } }>) ?? []) {
+      emitidos.push({ texto: card.body.text, botones: card.action.buttons.map((b) => b.quick_reply) })
     }
   }
+  const estado = guardados.at(-1)?.p_state as string | undefined
+  todasLasLlamadas.push(...llamadas)
+  // El toque llegará con el estado en que QUEDÓ la sesión al final del turno.
+  const estadoFinal = estado ?? sesion.state
+  const idsEnviados = [
+    ...enviados.flatMap((l) => ((l.args.p_buttons as Boton[]) ?? []).map((b) => b.id)),
+    ...carruseles.flatMap((c) => ((c.p_cards as Array<{ action: { buttons: Array<{ quick_reply: Boton }> } }>) ?? []).flatMap((card) => card.action.buttons.map((b) => b.quick_reply.id))),
+  ]
+  for (const id of idsEnviados) parejasBotonEstado.push({ id, estado: estadoFinal })
+  const datos = (guardados.at(-1)?.p_data ?? {}) as DatosCompra
+  const botones = (enviados.at(-1)?.args.p_buttons ?? []) as Boton[]
+  const fns = llamadas.map((l) => l.fn)
+  return { res, llamadas, textos, carruseles, listas, guardados, estado, datos, botones, fns }
+}
 
-  return { res, llamadas, textos, carruseles, guardados }
+/** Una sesión de pago abierta. */
+function sesionPago(extra: Partial<DatosCompra> = {}): { state: string; data: Record<string, unknown> } {
+  return {
+    state: 'compra_pago',
+    data: { compraId: ID1, compraNumero: '#C-1001', compraTotalUsd: 135.7, compraVenceEn: '2099-01-01T00:00:00Z', datosPago: {}, ...extra },
+  }
+}
+
+async function sesionDeEnvio(asin = 'B00QES9K4G') {
+  const r = await correr({ texto: `https://www.amazon.com/dp/${asin}` }, { state: 'menu', data: {} })
+  return r
 }
 
 async function main() {
   console.log('1. Parser de URLs y ASIN de Amazon')
   {
-    comprueba(
-      extraerAsinDeTexto('https://www.amazon.com/3M-Littmann-Classic-III/dp/B00QES9K4G/ref=sr_1_1') === 'B00QES9K4G',
-      'URL completa /dp/ASIN',
-    )
-    comprueba(
-      extraerAsinDeTexto('https://www.amazon.com/gp/product/b0157i0q8c?th=1') === 'B0157I0Q8C',
-      'URL /gp/product/ en minúsculas → mayúsculas',
-    )
-    comprueba(
-      extraerAsinDeTexto('https://smile.amazon.com/gp/aw/d/B07PQ8WTC4') === 'B07PQ8WTC4',
-      'URL smile.amazon.com/gp/aw/d/',
-    )
-    comprueba(
-      extraerAsinDeTexto('https://amzn.com/B07S2H3XBB') === 'B07S2H3XBB',
-      'URL corta amzn.com/ASIN',
-    )
-    comprueba(
-      extraerAsinDeTexto('B00QES9K4G') === 'B00QES9K4G',
-      'ASIN puro empezando por B0',
-    )
-    comprueba(
-      extraerAsinDeTexto('asin: 1264268505') === '1264268505',
-      'ISBN-10 con prefijo asin:',
-    )
-    comprueba(
-      extraerAsinDeTexto('V12345678') === null && extraerAsinDeTexto('04141234567') === null,
-      'no confunde cédula ni teléfono venezolano con ASIN',
-    )
-    comprueba(
-      extraerAsinDeTexto('estetoscopio littmann') === null,
-      'texto normal devuelve null',
-    )
+    const e = extraerAsinDeTexto
+    comprueba(e('https://www.amazon.com/3M-Littmann-Classic-III/dp/B00QES9K4G/ref=sr_1_1') === 'B00QES9K4G', 'URL completa /dp/ASIN')
+    comprueba(e('https://www.amazon.com/gp/product/b0157i0q8c?th=1') === 'B0157I0Q8C', 'URL /gp/product/ en minúsculas → mayúsculas')
+    comprueba(e('https://smile.amazon.com/gp/aw/d/B07PQ8WTC4') === 'B07PQ8WTC4', 'URL smile.amazon.com/gp/aw/d/')
+    comprueba(e('https://amzn.com/B07S2H3XBB') === 'B07S2H3XBB', 'URL corta amzn.com/ASIN')
+    comprueba(e('https://www.amazon.com/-/es/Estetoscopio-Littmann/dp/B00QES9K4G/ref=sr_1_1?th=1') === 'B00QES9K4G', 'URL /-/es/Nombre/dp/ASIN')
+    comprueba(e('https://www.amazon.es/dp/B07PQ8WTC4') === 'B07PQ8WTC4', 'otra tienda (amazon.es) también da el ASIN')
+    comprueba(e('https://www.amazon.com.mx/gp/product/B07PQ8WTC4') === 'B07PQ8WTC4', 'amazon.com.mx')
+    comprueba(e('https://evilamazon.com/dp/B00QES9K4G') === null, 'host no anclado a Amazon: nada')
+    comprueba(e('https://example.com/amazon.com/dp/B00QES9K4G') === null, 'amazon.com en la ruta de otro sitio: nada')
+    comprueba(e('B00QES9K4G') === 'B00QES9K4G', 'ASIN puro empezando por B0')
+    comprueba(e('asin: 1264268505') === '1264268505', 'ISBN-10 con prefijo asin:')
+    comprueba(e('V12345678') === null && e('04141234567') === null, 'no confunde cédula ni teléfono venezolano con ASIN')
+    comprueba(e('estetoscopio littmann') === null, 'texto normal devuelve null')
+    const corto = analizarEnlaceAmazon('mira esto https://amzn.to/3xYzAbc gracias')
+    comprueba(corto?.corto === true && corto.asin === null && corto.url.startsWith('https://amzn.to/'), 'amzn.to es un enlace corto sin ASIN')
+    comprueba(analizarEnlaceAmazon('https://a.co/d/abc123')?.corto === true, 'a.co es corto')
+    comprueba(analizarEnlaceAmazon('https://amzn.eu/d/abc123')?.corto === true, 'amzn.eu es corto')
+    comprueba(analizarEnlaceAmazon('https://www.amazon.es/dp/B07PQ8WTC4')?.esAmazonCom === false, 'amazon.es no es la tienda .com')
+    comprueba(contieneEnlace('https://example.com/x') && !contieneEnlace('estetoscopio littmann'), 'contieneEnlace')
   }
 
   console.log('\n2. Traductor médico ES → EN')
   {
     const est = normalizarBusquedaMedica('Estetoscopio Littmann')
-    comprueba(
-      est.consultaEn.includes('stethoscope') && est.consultaEn.includes('littmann'),
-      'estetoscopio → stethoscope manteniendo marca',
-      est.consultaEn,
-    )
+    comprueba(est.consultaEn.includes('stethoscope') && est.consultaEn.includes('littmann'), 'estetoscopio → stethoscope', est.consultaEn)
     const ten = normalizarBusquedaMedica('Tensiómetro digital Omron')
-    comprueba(
-      ten.consultaEn.includes('blood pressure monitor') && ten.consultaEn.includes('omron'),
-      'tensiómetro digital → blood pressure monitor',
-      ten.consultaEn,
-    )
-    const oxi = normalizarBusquedaMedica('Oxímetro de pulso')
-    comprueba(oxi.consultaEn.includes('pulse oximeter'), 'oxímetro → pulse oximeter', oxi.consultaEn)
-
-    const lam = normalizarBusquedaMedica('Lámpara frontal quirúrgica')
-    comprueba(lam.consultaEn.includes('headlamp'), 'lámpara frontal → headlamp', lam.consultaEn)
-
-    const uni = normalizarBusquedaMedica('Uniformes médicos FIGS')
-    comprueba(uni.consultaEn.includes('scrubs') && uni.consultaEn.includes('figs'), 'uniformes → scrubs', uni.consultaEn)
-
-    const gua = normalizarBusquedaMedica('Guantes de nitrilo')
-    comprueba(gua.consultaEn.includes('nitrile') && gua.consultaEn.includes('gloves'), 'guantes de nitrilo → nitrile gloves', gua.consultaEn)
+    comprueba(ten.consultaEn.includes('blood pressure monitor') && ten.consultaEn.includes('omron'), 'tensiómetro digital', ten.consultaEn)
+    comprueba(normalizarBusquedaMedica('Oxímetro de pulso').consultaEn.includes('pulse oximeter'), 'oxímetro')
+    comprueba(normalizarBusquedaMedica('Guantes de nitrilo').consultaEn.includes('nitrile'), 'guantes de nitrilo')
   }
 
-  console.log('\n3. Detector de restricciones médicas y aduanales')
+  console.log('\n3. Restricciones médicas y aduanales')
   {
-    comprueba(
-      !evaluarRestriccionMedica('3M Littmann Classic III Monitoring Stethoscope', 'Estetoscopios').restringido,
-      'estetoscopio no está restringido',
-    )
-    comprueba(
-      !evaluarRestriccionMedica('Accu-Chek Guide Blood Glucose Meter for Diabetes Monitoring', 'Diagnóstico').restringido,
-      'glucómetro doméstico no está restringido',
-    )
-    comprueba(
-      evaluarRestriccionMedica('Sterile Absorbable Surgical Suture Vicryl 3-0 with Needle').restringido,
-      'sutura absorbible Vicryl → restringida',
-    )
-    comprueba(
-      evaluarRestriccionMedica('Rapid Diagnostic Test Kit Chemical Reagent Strips').restringido,
-      'kit reactivos / prueba rápida → restringido',
-    )
-    comprueba(
-      evaluarRestriccionMedica('Dental Local Anesthetic Cartridges Lidocaine 2% + Sterile Syringes').restringido,
-      'anestesia dental y jeringas estériles → restringido',
-    )
-    comprueba(
-      evaluarRestriccionMedica('Ácido hialurónico relleno dérmico inyectable 1mL').restringido,
-      'ácido hialurónico relleno → restringido',
-    )
-    comprueba(
-      evaluarRestriccionMedica('Toxina botulínica vial estéril').restringido,
-      'toxina botulínica → restringida',
-    )
-    comprueba(
-      evaluarRestriccionMedica('Defibrillator with high capacity lithium battery pack 200Wh').restringido,
-      'batería de litio de alta capacidad / desfibrilador → restringido',
-    )
+    comprueba(!evaluarRestriccionMedica('3M Littmann Classic III Monitoring Stethoscope', 'Estetoscopios').restringido, 'estetoscopio no restringido')
+    comprueba(evaluarRestriccionMedica('Sterile Absorbable Surgical Suture Vicryl 3-0 with Needle').restringido, 'sutura → restringida')
+    comprueba(evaluarRestriccionMedica('Dental Local Anesthetic Cartridges Lidocaine 2% + Sterile Syringes').restringido, 'anestesia dental → restringida')
+    comprueba(evaluarRestriccionMedica('Toxina botulínica vial estéril').restringido, 'toxina botulínica → restringida')
   }
 
-  console.log('\n4. Cotizador aéreo, marítimo, volumétrico y fallback')
+  console.log('\n4. Cotizador (paridad con helios_purchase_calculate)')
   {
     const littmann = CATALOGO_MEDICO_MOCK.find((p) => p.asin === 'B00QES9K4G')!
-    const cotAereo = calcularCotizacion(littmann, TARIFAS, 'aereo', 1)
-    // Peso real 1.1 lb, vol = (13*6.5*2)/139 = 1.22 lb -> 1.22 * 6.5 = 7.93 < airMin 15 -> 15
-    comprueba(cotAereo.volumetricWeightLb === 1.22, 'peso volumétrico exacto (13*6.5*2/139 = 1.22)', String(cotAereo.volumetricWeightLb))
-    comprueba(cotAereo.shippingUsd === 15, 'aéreo aplica mínimo $15 en paquete liviano', String(cotAereo.shippingUsd))
-    comprueba(cotAereo.taxUsaUsd === 7.35, 'tax USA 7% de $104,95 = $7,35', String(cotAereo.taxUsaUsd))
-    comprueba(cotAereo.serviceFeeUsd === 8.4, 'gestión Helios 8% de $104,95 = $8,40', String(cotAereo.serviceFeeUsd))
-    comprueba(
-      cotAereo.totalUsd === redondearCentavos(104.95 + 7.35 + 15 + 8.4) && cotAereo.totalUsd === 135.7,
-      'total aéreo exacto = $135,70',
-      String(cotAereo.totalUsd),
-    )
-    comprueba(cotAereo.totalVes === 13570, 'total en Bs a tasa 100 = Bs 13.570,00', String(cotAereo.totalVes))
+    const c = calcularCotizacion(littmann, TARIFAS, 'aereo', 1)
+    comprueba(c.volumetricWeightLb === 1.22 && c.shippingUsd === 15 && c.taxUsaUsd === 7.35 && c.serviceFeeUsd === 8.4, 'aéreo liviano: mínimo $15, tax y gestión exactos')
+    comprueba(c.totalUsd === 135.7 && c.totalVes === 13570, 'total $135,70 → Bs 13.570,00')
     comprueba(recomendarEnvio(littmann) === 'aereo', 'estetoscopio recomienda aéreo')
-
-    // Volumétrico > peso real y > airMinUsd
-    const cajaLivianaGrande = {
-      titulo: 'Lámpara liviana voluminosa',
-      categoria: 'Consultorio',
-      precioUsd: 100,
-      pesoLb: 4,
-      dimensionesIn: { largo: 20, ancho: 15, alto: 10 }, // 3000/139 = 21.58 lb
-    }
-    const cotVol = calcularCotizacion(cajaLivianaGrande, TARIFAS, 'aereo', 1)
-    comprueba(cotVol.volumetricWeightLb === 21.58, 'volumétrico = 21,58 lb', String(cotVol.volumetricWeightLb))
-    comprueba(cotVol.shippingUsd === redondearCentavos(21.58 * 6.5), 'aéreo cobra peso volumétrico (21,58 × $6,50)', String(cotVol.shippingUsd))
-    comprueba(recomendarEnvio(cajaLivianaGrande) === 'maritimo', 'peso volumétrico > 15 lb recomienda marítimo')
-
-    // Equipo pesado: Autoclave 18L (68.5 lb, 24.5×18.5×16.5 in = 4.3279 ft3)
+    const grande = { titulo: 'Lámpara', categoria: 'Consultorio', precioUsd: 100, pesoLb: 4, dimensionesIn: { largo: 20, ancho: 15, alto: 10 } }
+    comprueba(calcularCotizacion(grande, TARIFAS, 'aereo', 1).shippingUsd === redondearCentavos(21.58 * 6.5), 'aéreo cobra el peso volumétrico')
     const autoclave = CATALOGO_MEDICO_MOCK.find((p) => p.asin === 'B09X7T2M5W')!
-    const cotMar = calcularCotizacion(autoclave, TARIFAS, 'maritimo', 1)
-    const cotAirPesado = calcularCotizacion(autoclave, TARIFAS, 'aereo', 1)
-    comprueba(recomendarEnvio(autoclave) === 'maritimo', 'autoclave 18L recomienda marítimo')
-    comprueba(cotMar.volumeFt3 === 4.3279, 'volumen autoclave = 4,3279 ft³', String(cotMar.volumeFt3))
-    comprueba(cotMar.shippingUsd === redondearCentavos(4.3279 * 24), 'envío marítimo autoclave = $103,87', String(cotMar.shippingUsd))
-    comprueba(cotMar.totalUsd < cotAirPesado.totalUsd, 'marítimo resulta mucho más económico que aéreo en autoclave')
+    comprueba(calcularCotizacion(autoclave, TARIFAS, 'maritimo', 1).shippingUsd === redondearCentavos(4.3279 * 24), 'marítimo por ft³')
+    comprueba(recomendarEnvio(autoclave) === 'maritimo', 'autoclave recomienda marítimo')
 
-    // Producto SIN peso listado -> fallback
-    const guantes = CATALOGO_MEDICO_MOCK.find((p) => p.asin === 'B0B3K9M1Z4')!
-    const cotFallback = calcularCotizacion(guantes, TARIFAS, 'aereo', 1)
-    const cotFallbackMar = calcularCotizacion(guantes, TARIFAS, 'maritimo', 1)
-    comprueba(cotFallback.weightEstimated === true && cotFallback.weightLb === 2, 'sin peso usa fallback 2 lb y marca weightEstimated')
-    comprueba(cotFallbackMar.shippingUsd === 35, 'marítimo sin dimensiones usa 0,5 ft³ → mínimo $35', String(cotFallbackMar.shippingUsd))
+    // Paridad de cantidad: 1..50 como SQL.
+    comprueba(calcularCotizacion(littmann, TARIFAS, 'aereo', 99).quantity === CANTIDAD_MAXIMA, 'cantidad 99 → 50')
+    comprueba(calcularCotizacion(littmann, TARIFAS, 'aereo', 0).quantity === 1 && calcularCotizacion(littmann, TARIFAS, 'aereo', -3).quantity === 1, 'cantidad 0 o negativa → 1')
+    // weightEstimated: solo si faltan el peso real Y el volumétrico.
+    const sinNada = { titulo: 'x', categoria: 'y', precioUsd: 50, pesoLb: null, dimensionesIn: null }
+    const soloDims = { ...sinNada, dimensionesIn: { largo: 10, ancho: 10, alto: 10 } }
+    const soloPeso = { ...sinNada, pesoLb: 3 }
+    comprueba(calcularCotizacion(sinNada, TARIFAS, 'aereo').weightEstimated === true, 'sin peso ni dimensiones → estimado')
+    comprueba(calcularCotizacion(soloDims, TARIFAS, 'aereo').weightEstimated === false, 'con dimensiones (volumétrico) pero sin peso → NO estimado')
+    comprueba(calcularCotizacion(soloPeso, TARIFAS, 'aereo').weightEstimated === false && calcularCotizacion(soloPeso, TARIFAS, 'aereo').weightRealLb === 3, 'con peso real → no estimado')
+    comprueba(calcularCotizacion(sinNada, TARIFAS, 'maritimo').shippingUsd === 35, 'marítimo sin dimensiones: 0,5 ft³ → mínimo')
+    // Cantidad × peso: aéreo 3 u × 4 lb = 12 lb × 6,5 = 78.
+    comprueba(calcularCotizacion(soloPeso, TARIFAS, 'aereo', 3).shippingUsd === 58.5, 'aéreo multiplica el peso por la cantidad', String(calcularCotizacion(soloPeso, TARIFAS, 'aereo', 3).shippingUsd))
+    // Tarifas: sin tasa no hay cotización.
+    comprueba(normalizarTarifas({ ...CONFIG_RPC, fx_rate_usd: null }) === null, 'sin tasa BCV → no hay tarifas (nunca se inventa)')
+    comprueba(normalizarTarifas({ ...CONFIG_RPC, air_rate_per_lb_usd: undefined }) === null, 'falta una tarifa → no hay tarifas')
+    comprueba(normalizarTarifas(CONFIG_RPC)?.fxRateUsd === 100, 'tarifas completas')
   }
 
-  console.log('\n5. Catálogo Mock (24 productos) y adaptador Rainforest')
+  console.log('\n5. Catálogo: mock, Rainforest y fábrica')
   {
-    comprueba(CATALOGO_MEDICO_MOCK.length === 24, 'catálogo mock tiene exactamente 24 productos médicos', String(CATALOGO_MEDICO_MOCK.length))
-    const mock = new ProveedorAmazonMock()
-    const resEst = await mock.buscar('estetoscopio', 4)
-    comprueba(resEst.length === 3 && resEst[0].asin === 'B00QES9K4G', 'búsqueda «estetoscopio» devuelve los 3 Littmann')
-    const resUrl = await mock.buscar('https://www.amazon.com/dp/B09X7T2M5W')
-    comprueba(resUrl.length === 1 && resUrl[0].asin === 'B09X7T2M5W', 'búsqueda por URL devuelve el producto exacto')
+    comprueba(CATALOGO_MEDICO_MOCK.length === 24, 'catálogo mock con 24 productos')
+    comprueba(crearProveedorCatalogo('mock', '')?.nombre === 'mock', 'fábrica: mock')
+    comprueba(crearProveedorCatalogo('rainforest', '') === null, 'fábrica: rainforest SIN clave → null (jamás cae a mock)')
+    comprueba(crearProveedorCatalogo('rainforest', 'k')?.nombre === 'rainforest', 'fábrica: rainforest con clave')
+    comprueba(crearProveedorCatalogo('otro', 'k') === null, 'fábrica: proveedor desconocido → null')
 
-    comprueba(crearProveedorCatalogo('mock', '').nombre === 'mock', 'fábrica devuelve mock por defecto')
-    comprueba(crearProveedorCatalogo('rainforest', '').nombre === 'mock', 'rainforest sin API key cae seguro a mock')
-    comprueba(crearProveedorCatalogo('rainforest', 'test-key').nombre === 'rainforest', 'rainforest con API key instancia ProveedorRainforest')
-
-    comprueba(parsearPesoALibras('14.4 ounces') === 0.9, 'parsea onzas → libras (14.4 oz = 0.9 lb)')
-    comprueba(parsearPesoALibras('2.5 kilograms') === 5.51, 'parsea kg → libras (2.5 kg = 5.51 lb)')
+    comprueba(parsearPesoALibras('14.4 ounces') === 0.9, '14.4 oz = 0,9 lb')
+    comprueba(parsearPesoALibras('2.5 kilograms') === 5.51, '2.5 kg = 5,51 lb')
+    comprueba(parsearPesoALibras('1,200 grams') === 2.65, '«1,200 grams» es 1.200 g (separador de miles) = 2,65 lb', String(parsearPesoALibras('1,200 grams')))
+    comprueba(parsearPesoALibras('1,5 kg') === 3.31, '«1,5 kg» es coma decimal = 3,31 lb', String(parsearPesoALibras('1,5 kg')))
+    comprueba(parsearPesoALibras('1 lb 4 oz') === 1.25, '«1 lb 4 oz» = 1,25 lb', String(parsearPesoALibras('1 lb 4 oz')))
+    comprueba(parsearPesoALibras('5 pounds (2.27 kg)') === 5, 'dos medidas equivalentes: la primera', String(parsearPesoALibras('5 pounds (2.27 kg)')))
+    comprueba(parsearPesoALibras('sin peso') === null, 'sin unidad → null')
     const dimsCm = parsearDimensionesAPulgadas('25.4 x 12.7 x 5.08 cm')
-    comprueba(dimsCm?.largo === 10 && dimsCm?.ancho === 5 && dimsCm?.alto === 2, 'parsea cm → pulgadas')
+    comprueba(dimsCm?.largo === 10 && dimsCm?.ancho === 5 && dimsCm?.alto === 2, 'cm → pulgadas')
+    const dimsD = parsearDimensionesAPulgadas('1.18"D x 2.36"W x 1.57"H')
+    comprueba(dimsD?.largo === 1.18 && dimsD?.alto === 1.57, 'formato Amazon «1.18"D x 2.36"W x 1.57"H»', JSON.stringify(dimsD))
 
-    // Prueba de ProveedorRainforest con fetch simulado
-    const rf = new ProveedorRainforest('fake-key', 'amazon.com', (async (input: string | URL | Request) => {
-      const url = String(input)
-      const body = url.includes('type=search')
-        ? {
-            search_results: [
-              {
+    const respuesta = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
+    const fakeFetch = (fn: (url: string) => Response | Promise<Response>) => (async (input: string | URL | Request) => fn(String(input))) as typeof fetch
+
+    const rf = new ProveedorRainforest(
+      'clave-secreta',
+      'amazon.com',
+      fakeFetch((url) =>
+        url.includes('type=search')
+          ? respuesta({
+              request_info: { success: true },
+              search_results: [
+                { asin: 'B0TEST0001', title: 'Test Medical Otoscope LED', price: { value: 95.5 }, image: 'https://example.com/img.png', link: 'https://www.amazon.com/dp/B0TEST0001', rating: 4.8, ratings_total: 420, is_prime: true },
+                { asin: 'B0TEST0002', title: 'Sin precio', image: 'https://example.com/2.png' },
+                { asin: 'B0TEST0003', title: 'Sin foto', price: { value: 10 } },
+              ],
+            })
+          : respuesta({
+              request_info: { success: true },
+              product: {
                 asin: 'B0TEST0001',
                 title: 'Test Medical Otoscope LED',
-                price: { value: 95.5 },
-                image: 'https://example.com/img.png',
-                link: 'https://www.amazon.com/dp/B0TEST0001',
-                rating: 4.8,
-                ratings_total: 420,
-                is_prime: true,
+                buybox_winner: { price: { value: 95.5 }, is_prime: true, availability: { type: 'in_stock' } },
+                specifications: [
+                  { name: 'Weight Capacity', value: '300 pounds' },
+                  { name: 'Package Weight', value: '2 pounds' },
+                  { name: 'Item Weight', value: '16 ounces' },
+                  { name: 'Package Dimensions', value: '10 x 5 x 2 inches' },
+                ],
+                variants: [{ title: 'Negro' }, { title: 'Azul' }],
+                feature_bullets: ['Iluminación LED clínica'],
               },
-            ],
-          }
-        : {
-            product: {
-              asin: 'B0TEST0001',
-              title: 'Test Medical Otoscope LED',
-              buybox_winner: { price: { value: 95.5 }, is_prime: true, availability: { type: 'in_stock' } },
-              specifications: [
-                { name: 'Item Weight', value: '16 ounces' },
-                { name: 'Package Dimensions', value: '10 x 5 x 2 inches' },
-              ],
-              variants: [{ title: 'Negro' }, { title: 'Azul' }],
-              feature_bullets: ['Iluminación LED clínica'],
-            },
-          }
-      return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } })
-    }) as typeof fetch)
-
-    const rfBuscar = await rf.buscar('otoscopio', 4)
-    comprueba(rfBuscar.length === 1 && rfBuscar[0].asin === 'B0TEST0001', 'Rainforest buscar parsea search_results')
-    const rfDet = await rf.detalle('B0TEST0001')
-    comprueba(
-      rfDet?.pesoLb === 1 && rfDet?.dimensionesIn?.largo === 10 && rfDet?.variantes.length === 2,
-      'Rainforest detalle parsea peso, dimensiones y variantes',
+            }),
+      ),
     )
+    const buscado = await rf.buscar('otoscopio', 4)
+    comprueba(buscado.length === 2 && buscado[0].asin === 'B0TEST0001', 'buscar: descarta los resultados sin precio')
+    comprueba(buscado[1].imagenUrl === '', 'sin foto: imagenUrl vacía (no se inventa un placeholder)', buscado[1].imagenUrl)
+    const det = await rf.detalle('B0TEST0001')
+    comprueba(det?.pesoLb === 1 && det.dimensionesIn?.largo === 10 && det.variantes.length === 2, 'detalle: «Item Weight» manda sobre «Weight Capacity» y «Package Weight»', JSON.stringify(det?.pesoLb))
+    comprueba(det?.imagenUrl === '', 'detalle sin imagen: vacía, sin placeholder de terceros')
+
+    const sinPrecio = new ProveedorRainforest('k', 'amazon.com', fakeFetch(() => respuesta({ request_info: { success: true }, product: { title: 'Algo', buybox_winner: { availability: { type: 'in_stock' } } } })))
+    const dSin = await sinPrecio.detalle('B0TEST0009')
+    comprueba(dSin?.disponible === false, 'sin precio → disponible=false')
+    const pesoTop = new ProveedorRainforest('k', 'amazon.com', fakeFetch(() => respuesta({ request_info: { success: true }, product: { title: 'A', weight: '540 g', buybox_winner: { price: { value: 5 } } } })))
+    comprueba((await pesoTop.detalle('B0TEST0010'))?.pesoLb === 1.19, '`weight` de producto («540 g») = 1,19 lb')
+
+    async function falla(f: typeof fetch): Promise<ErrorCatalogo | null> {
+      try {
+        await new ProveedorRainforest('clave-secreta', 'amazon.com', f).buscar('estetoscopio')
+        return null
+      } catch (e) {
+        return e instanceof ErrorCatalogo ? e : null
+      }
+    }
+    const e429 = await falla(fakeFetch(() => respuesta({}, 429)))
+    comprueba(e429?.tipo === 'limite', '429 → error «limite» distinto', e429?.tipo)
+    const e500 = await falla(fakeFetch(() => respuesta({}, 500)))
+    comprueba(e500?.tipo === 'http', '500 → error «http»')
+    const eRechazo = await falla(fakeFetch(() => respuesta({ request_info: { success: false, message: 'x' } }, 200)))
+    comprueba(eRechazo?.tipo === 'rechazo', 'HTTP 200 con success:false → error «rechazo»', eRechazo?.tipo)
+    const eRed = await falla((async (u: string | URL | Request) => {
+      throw new TypeError(`fetch failed ${String(u)}`)
+    }) as typeof fetch)
+    comprueba(eRed?.tipo === 'red' && !/clave-secreta|api_key|http/i.test(eRed.message), 'error de red: sin URL ni clave en el mensaje', eRed?.message)
+    const eTiempo = await falla((async () => {
+      throw new DOMException('timeout', 'TimeoutError')
+    }) as typeof fetch)
+    comprueba(eTiempo?.tipo === 'timeout', 'timeout → error «timeout»')
+    let senal: AbortSignal | null | undefined
+    await new ProveedorRainforest('k', 'amazon.com', (async (_u: string | URL | Request, init?: RequestInit) => {
+      senal = init?.signal
+      return respuesta({ request_info: { success: true }, search_results: [] })
+    }) as typeof fetch).buscar('estetoscopio')
+    comprueba(senal instanceof AbortSignal, 'la consulta lleva AbortSignal.timeout')
   }
 
-  console.log('\n6. Flujo conversacional completo en bot.ts (búsqueda → carrusel → aéreo/marítimo → pago captura y datos)')
+  console.log('\n6. Formato exacto del carrusel y de la lista (Meta Cloud API)')
   {
-    // 6a. Menú principal tiene los 3 botones de Meta + mención a «ayuda»
-    const rMenu = await correr({ texto: 'hola' }, { state: 'menu', data: {}, nueva: true })
-    const botonesMenu = rMenu.llamadas.find((l) => l.fn === 'helios_whatsapp_text')?.args.p_buttons as Array<{ id: string; title: string }>
+    const tarjetas = [
+      { image_url: 'https://x.test/1.png', body: '1. Estetoscopio\nAmazon: $104,95\nPuesto en Venezuela aprox.: $135,70', button_id: 'compra:v:B00QES9K4G', button_title: 'Cotizar' },
+      { image_url: 'https://x.test/2.png', body: '2. Otro', button_id: 'compra:v:B0157I0Q8C', button_title: 'Cotizar' },
+    ]
+    const cards = construirTarjetasMeta(tarjetas)
     comprueba(
-      botonesMenu?.length === 3 &&
-        botonesMenu[0].id === 'menu:nuevo' &&
-        botonesMenu[1].id === 'menu:mis' &&
-        botonesMenu[2].id === 'menu:comprar' &&
-        botonesMenu[2].title === 'Comprar en Amazon',
-      'menú principal actualizado con 3 botones incluyendo «Comprar en Amazon»',
-      JSON.stringify(botonesMenu),
-    )
-    comprueba((rMenu.textos[0] ?? '').toLowerCase().includes('ayuda'), 'el saludo aclara que se puede escribir «ayuda»')
-
-    // 6b. Pulsar «Comprar en Amazon» → compra_buscar
-    const rIni = await correr({ boton: 'menu:comprar', texto: 'Comprar en Amazon' }, { state: 'menu', data: {} })
-    comprueba(rIni.guardados.at(-1)?.p_state === 'compra_buscar', 'menu:comprar pasa a estado compra_buscar')
-
-    // 6c. Buscar «estetoscopio» → carrusel de 3 cards (incluso si caché falla no se rompe!)
-    const rBus = await correr(
-      { texto: 'estetoscopio' },
-      { state: 'compra_buscar', data: {} },
-      {
-        bot_compra_cache_get: new Error('cache_offline'),
-        bot_compra_cache_set: new Error('cache_offline'),
-      },
-    )
-    comprueba(rBus.carruseles.length === 1, 'búsqueda con múltiples resultados llama helios_whatsapp_carousel')
-    const cards = (rBus.carruseles[0]?.p_cards as CardMeta[]) ?? []
-    comprueba(
-      cards.length === 3 &&
-        cards[0].header.image.link.startsWith('https://') &&
-        cards[0].action.buttons[0]?.reply.id === 'compra:ver:B00QES9K4G' &&
-        cards[0].body.text.includes('$104,95') &&
-        cards[0].body.text.includes('Est. VE:'),
-      'carrusel Meta muestra foto, precio base, estimado en Venezuela y botón compra:ver:<ASIN>',
+      JSON.stringify(cards[0]) ===
+        JSON.stringify({
+          card_index: 0,
+          header: { type: 'image', image: { link: 'https://x.test/1.png' } },
+          body: { text: tarjetas[0].body },
+          action: { buttons: [{ type: 'quick_reply', quick_reply: { id: 'compra:v:B00QES9K4G', title: 'Cotizar' } }] },
+        }),
+      'tarjeta: header image.link, body.text y action.buttons[quick_reply.{id,title}]',
       JSON.stringify(cards[0]),
     )
-    comprueba(rBus.guardados.at(-1)?.p_state === 'compra_resultados', 'guarda estado compra_resultados')
-
-    // 6d. Resultado único («autoclave») → fallback a helios_whatsapp_text
-    const rUno = await correr({ texto: 'autoclave' }, { state: 'compra_buscar', data: {} })
+    comprueba(!('type' in cards[0]) && cards[1].card_index === 1, 'sin `type` a nivel de tarjeta (solo se manda con cta_url); card_index consecutivo')
+    comprueba(cards.every((c) => c.action.buttons.length === cards[0].action.buttons.length && c.action.buttons[0].type === 'quick_reply'), 'todas las tarjetas con el mismo tipo y número de botones')
+    const largo = cuerpoDeTarjeta(`${'a'.repeat(100)}\n${'b'.repeat(100)}\nc\nd\ne`)
+    comprueba(largo.length <= 160 && (largo.match(/\n/g) ?? []).length <= 2, 'cuerpo de tarjeta: ≤160 caracteres y ≤2 saltos de línea', `${largo.length}`)
+    let lanzo = false
+    try {
+      construirTarjetasMeta([tarjetas[0]])
+    } catch {
+      lanzo = true
+    }
+    comprueba(lanzo, 'un carrusel de 1 tarjeta no se construye')
+    lanzo = false
+    try {
+      construirTarjetasMeta([tarjetas[0], { ...tarjetas[1], image_url: '' }])
+    } catch {
+      lanzo = true
+    }
+    comprueba(lanzo, 'una tarjeta sin foto no se construye')
+    const sec = construirSeccionesLista('Tus compras', Array.from({ length: 12 }, (_, i) => ({ id: `compra:det:${i}`, title: `#C-10${i} · ${'Producto largo '.repeat(3)}`, description: 'x'.repeat(100) })))
     comprueba(
-      rUno.carruseles.length === 0 && rUno.textos.length === 1 && rUno.textos[0].includes('Autoclave'),
-      'con 1 solo resultado, enviarCarrusel hace fallback limpio a helios_whatsapp_text',
+      sec.length === 1 && sec[0].rows.length === 10 && sec[0].rows.every((r) => r.title.length <= 24 && r.description.length <= 72),
+      'lista: ≤10 filas, título ≤24 y descripción ≤72',
     )
+    comprueba(Object.keys(sec[0].rows[0]).sort().join() === 'description,id,title', 'fila de lista: {id,title,description}')
 
-    // 6e. Pegar link directo de Amazon desde el menú → salta directo a compra_envio
-    const rLink = await correr(
-      { texto: 'https://www.amazon.com/dp/B0B3K9M1Z4' },
-      { state: 'menu', data: {} },
+    // El transporte de WhatsApp manda exactamente eso a la RPC.
+    const llamadas: Llamada[] = []
+    const t = crearTransporteWhatsApp({
+      rpc: async <T>(fn: string, args: Record<string, unknown>) => {
+        llamadas.push({ fn, args })
+        return null as T
+      },
+      personal: { phone_e164: '+584140000001', user_id: 'u1' },
+    })
+    await t.enviarCarrusel('Encontré 2 opciones', tarjetas)
+    comprueba(llamadas[0].fn === 'helios_whatsapp_carousel' && JSON.stringify(llamadas[0].args.p_cards) === JSON.stringify(cards), 'helios_whatsapp_carousel recibe las tarjetas exactas')
+    await t.enviar('x'.repeat(1500), [{ id: 'a', title: 'Un título larguísimo de botón' }])
+    comprueba(llamadas.length === 3 && (llamadas[1].args.p_buttons as Boton[]).length === 0 && (llamadas[2].args.p_buttons as Boton[])[0].title.length <= 20, 'cuerpo >1024 con botones: texto aparte y botones aparte, título ≤20')
+    await t.enviarLista('Tus compras', 'Ver compras', [{ id: 'compra:det:1', title: '#C-1', description: 'En camino' }])
+    const secs = llamadas[3].args.p_sections as Array<{ rows: Array<{ id: string; description: string }> }>
+    comprueba(llamadas[3].fn === 'helios_whatsapp_list' && llamadas[3].args.p_button === 'Ver compras' && secs[0].rows[0].id === 'compra:det:1' && secs[0].rows[0].description === 'En camino', 'WhatsApp: la lista se encola con helios_whatsapp_list', JSON.stringify(llamadas[3]))
+    const falla = crearTransporteWhatsApp({
+      rpc: async <T>(fn: string, args: Record<string, unknown>) => {
+        llamadas.push({ fn, args })
+        if (fn === 'helios_whatsapp_list') throw { code: '22023' }
+        return null as T
+      },
+      personal: { phone_e164: '+584140000001', user_id: 'u1' },
+    })
+    const antes = llamadas.length
+    const errOriginal = console.error
+    console.error = () => {}
+    await falla.enviarLista('Tus compras', 'Ver compras', [{ id: 'compra:det:1', title: '#C-1', description: 'En camino' }])
+    console.error = errOriginal
+    comprueba(llamadas[antes + 1]?.fn === 'helios_whatsapp_text' && String(llamadas[antes + 1].args.p_text).includes('1. #C-1'), 'WhatsApp: si la RPC de lista falla, sale como texto numerado')
+  }
+
+  console.log('\n7. Habilitación por número: apagado = exactamente el menú anterior')
+  {
+    const off = await correr({ texto: 'hola' }, { state: 'menu', data: {}, nueva: true }, {}, { habilitada: false })
+    comprueba(off.botones.map((b) => b.id).join() === 'menu:nuevo,menu:mis,menu:ayuda' && off.botones[2].title === 'Ayuda', 'apagado: botones Nuevo · Mis · Ayuda', JSON.stringify(off.botones))
+    comprueba(off.textos[0].endsWith('¿Qué quieres hacer?') && !off.textos[0].includes('ayuda'), 'apagado: el saludo de siempre, sin «ayuda»', off.textos[0])
+    const tres = await correr({ texto: '3' }, { state: 'menu', data: {} }, {}, { habilitada: false })
+    comprueba(tres.textos[0]?.startsWith('Así funciona') && !tres.textos[0].includes('Amazon'), 'apagado: «3» es la ayuda, sin mención a Amazon', tres.textos[0])
+    const comprar = await correr({ boton: 'menu:comprar', texto: 'Comprar en Amazon' }, { state: 'menu', data: {} }, {}, { habilitada: false })
+    comprueba(comprar.textos[0]?.startsWith('No entendí') && !comprar.fns.some((f) => f.startsWith('bot_compra_c')), 'apagado: «Comprar» no entra a compras', comprar.textos[0])
+    const link = await correr({ texto: 'https://www.amazon.com/dp/B0B3K9M1Z4' }, { state: 'menu', data: {} }, {}, { habilitada: false })
+    comprueba(link.textos[0]?.startsWith('No entendí'), 'apagado: pegar un enlace no cotiza')
+    const vieja = await correr({ texto: 'estetoscopio' }, { state: 'compra_buscar', data: {} }, {}, { habilitada: false })
+    comprueba(vieja.textos[0]?.startsWith('No entendí'), 'apagado: una sesión de compra vieja no sigue')
+    const rpcFalla = await correr({ texto: 'hola' }, { state: 'menu', data: {}, nueva: true }, { bot_compra_habilitada: new Error('boom') })
+    comprueba(rpcFalla.botones[2]?.title === 'Comprar en Amazon' || rpcFalla.botones[2]?.title === 'Ayuda', 'si la base falla no se cae (rama apagada o encendida)')
+
+    const on = await correr({ texto: 'hola' }, { state: 'menu', data: {}, nueva: true })
+    comprueba(on.botones.map((b) => b.id).join() === 'menu:nuevo,menu:mis,menu:comprar' && on.textos[0].includes('«ayuda»'), 'encendido: Comprar en Amazon y mención a «ayuda»', JSON.stringify(on.botones))
+    const ayuda = await correr({ texto: 'ayuda' }, { state: 'menu', data: {} })
+    comprueba(ayuda.textos[0].includes('Comprar en Amazon'), 'encendido: la ayuda menciona las compras')
+    const gate = ayuda.llamadas.find((l) => l.fn === 'bot_compra_habilitada')
+    comprueba(gate?.args.p_phone === '+584140000001', 'bot_compra_habilitada(p_phone)')
+  }
+
+  console.log('\n8. Búsqueda → carrusel numerado → detalle')
+  let sesionResultados: Record<string, unknown> = {}
+  {
+    const ini = await correr({ boton: 'menu:comprar', texto: 'Comprar en Amazon' }, { state: 'menu', data: {} })
+    comprueba(ini.estado === 'compra_buscar', 'menu:comprar → compra_buscar')
+
+    const r = await correr({ texto: 'estetoscopio' }, { state: 'compra_buscar', data: {} }, { bot_compra_cache_get: new Error('x'), bot_compra_cache_set: new Error('x') })
+    const c = r.carruseles[0]
+    const cards = (c?.p_cards ?? []) as ReturnType<typeof construirTarjetasMeta>
+    comprueba(r.carruseles.length === 1 && cards.length === 3, 'varios resultados → helios_whatsapp_carousel con 3 tarjetas')
+    comprueba(
+      String(c.p_body) === 'Encontré 3 opciones para «estetoscopio». Elige una para cotizarla. Si no es lo que buscas, escribe otra búsqueda.',
+      'encabezado con el conteo y la consulta',
+      String(c.p_body),
     )
     comprueba(
-      rLink.guardados.at(-1)?.p_state === 'compra_envio' &&
-        (rLink.textos[0] ?? '').includes('Peso estimado: 2 lb'),
-      'link directo desde el menú salta a compra_envio y avisa cuando el peso es estimado',
-      rLink.textos[0],
+      cards[0].body.text.startsWith('1. 3M Littmann') && cards[1].body.text.startsWith('2. ') && cards[0].body.text.includes('Puesto en Venezuela aprox.: $135,70') && cards[0].body.text.includes('Amazon: $104,95'),
+      'tarjetas numeradas «1.», «2.» con «Puesto en Venezuela aprox.»',
+      cards[0].body.text,
     )
+    comprueba(cards[0].action.buttons[0].quick_reply.title === 'Cotizar' && cards[0].action.buttons[0].quick_reply.id === 'compra:v:B00QES9K4G' && cards[0].action.buttons[0].quick_reply.id.length <= 20, 'botón «Cotizar» con id ≤20 caracteres')
+    comprueba(cards.every((x) => x.body.text.length <= 160 && (x.body.text.match(/\n/g) ?? []).length <= 2), 'cada tarjeta ≤160 caracteres y ≤2 saltos')
+    comprueba(r.estado === 'compra_resultados', 'guarda compra_resultados')
+    sesionResultados = r.datos as Record<string, unknown>
 
-    // 6f. Elegir card `compra:ver:B00QES9K4G` → compra_envio con Aéreo vs Marítimo
-    const sesionRes = rBus.guardados.at(-1)?.p_data as Record<string, unknown>
-    const rVer = await correr(
-      { boton: 'compra:ver:B00QES9K4G', texto: 'Ver y cotizar' },
-      { state: 'compra_resultados', data: sesionRes },
-    )
-    const tEnvio = rVer.textos[0] ?? ''
+    // Escribir un número válido.
+    const n2 = await correr({ texto: '2' }, { state: 'compra_resultados', data: sesionResultados })
+    comprueba(n2.estado === 'compra_envio', 'escribir «2» elige la segunda opción')
+    const n9 = await correr({ texto: '9' }, { state: 'compra_resultados', data: sesionResultados })
+    comprueba(n9.estado === undefined || n9.estado === 'compra_resultados', 'un número fuera de lo visible no elige nada')
+    comprueba((n9.textos[0] ?? '').includes('del 1 al 3'), '…y dice el rango visible', n9.textos[0])
+
+    // Sin fotos: texto numerado en WhatsApp.
+    const sinFoto: ProveedorCatalogo = {
+      nombre: 'mock',
+      buscar: async (q, l) => (await MOCK.buscar(q, l)).map((p) => ({ ...p, imagenUrl: '' })),
+      detalle: (a) => MOCK.detalle(a),
+    }
+    const sf = await correr({ texto: 'estetoscopio' }, { state: 'compra_buscar', data: {} }, {}, { proveedorDe: () => sinFoto })
+    comprueba(sf.carruseles.length === 0 && sf.textos[0]?.includes('1. 3M Littmann') && sf.textos[0].includes('Responde con el número'), 'sin fotos no hay carrusel: texto numerado', sf.textos[0])
+
+    // Un solo resultado → directo al detalle.
+    const uno = await correr({ texto: 'autoclave' }, { state: 'compra_buscar', data: {} })
+    comprueba(uno.carruseles.length === 0 && uno.estado === 'compra_envio' && uno.textos[0].includes('Autoclave'), 'un solo resultado va directo al detalle')
+
+    // Ver detalle desde una tarjeta.
+    const ver = await correr({ boton: 'compra:v:B00QES9K4G', texto: 'Cotizar' }, { state: 'compra_resultados', data: sesionResultados })
+    const t = ver.textos[0]
+    comprueba(ver.estado === 'compra_envio', 'tocar «Cotizar» → compra_envio')
+    comprueba(!t.includes('Bs') && !/bol[ií]vares/i.test(t), 'el detalle NO lleva bolívares', t)
+    comprueba(t.includes('• *Aéreo* · $135,70 · llega en 7–12 días') && t.includes('• *Marítimo* · $') && t.includes('llega en 3–5 semanas'), 'aéreo y marítimo con todo incluido y ETA', t)
+    comprueba(t.includes('Elige cómo traerlo (todo incluido):') && t.includes('Todo incluido = producto + impuesto EE. UU. + envío + gestión Helios.'), 'explica «todo incluido»', t)
+    comprueba(t.includes('Peso: 1,10 lb'), 'muestra el peso', t)
+    comprueba(ver.botones.map((b) => b.title).join() === 'Envío aéreo,Envío marítimo,Buscar otro', 'botones del detalle', JSON.stringify(ver.botones))
+
+    const auto = await correr({ texto: 'https://www.amazon.com/dp/B09X7T2M5W' }, { state: 'menu', data: {} })
+    comprueba(/Te recomiendo marítimo: ahorras \$\d+/.test(auto.textos[0]), 'recomienda marítimo y dice cuánto ahorra', auto.textos[0])
+
+    const sinPeso = await correr({ texto: 'https://www.amazon.com/dp/B0B3K9M1Z4' }, { state: 'menu', data: {} })
+    comprueba(sinPeso.textos[0].includes('Amazon no publica el peso; calculo con 2 lb y, si pesa más al llegar al almacén, te aviso antes de cobrar la diferencia.'), 'peso estimado: aviso exacto', sinPeso.textos[0])
+
+    const restr = await correr({ texto: 'https://www.amazon.com/dp/B09D4S7V2X' }, { state: 'menu', data: {} })
+    comprueba(restr.textos[0].includes('revisión aduanal (aprox. 1 día hábil) antes de poder pagarlo'), 'restringido: avisa de la revisión ANTES de confirmar', restr.textos[0])
+    const restrConf = await correr({ boton: 'compra:envio:aereo', texto: 'Envío aéreo' }, { state: 'compra_envio', data: restr.datos })
+    comprueba(restrConf.botones[0].title === 'Pedir revisión', 'restringido: el botón dice «Pedir revisión»', JSON.stringify(restrConf.botones))
+  }
+
+  console.log('\n9. Cantidad')
+  {
+    const env = await sesionDeEnvio('B00QES9K4G')
+    const x3 = await correr({ texto: 'x3' }, { state: 'compra_envio', data: env.datos })
+    comprueba(x3.estado === 'compra_envio' && x3.datos.cantidad === 3 && x3.textos[0].includes('Cantidad: 3'), '«x3» en el detalle recalcula con 3 unidades', x3.textos[0])
+    const u = await correr({ texto: '4 unidades' }, { state: 'compra_envio', data: env.datos })
+    comprueba(u.datos.cantidad === 4, '«4 unidades»')
+    const uno = await correr({ texto: '1' }, { state: 'compra_envio', data: env.datos })
+    comprueba(uno.estado === 'compra_confirmar' && uno.datos.envio === 'aereo', '«1» sigue siendo «aéreo» en el detalle')
+    const mil = await correr({ texto: 'x50' }, { state: 'compra_envio', data: env.datos })
+    comprueba(/persona/.test(mil.textos[0]) && mil.datos.cantidad === 1, 'más de 10: ofrece una persona', mil.textos[0])
+
+    const conf = await correr({ boton: 'compra:envio:aereo', texto: 'Envío aéreo' }, { state: 'compra_envio', data: env.datos })
+    const t = conf.textos[0]
     comprueba(
-      rVer.guardados.at(-1)?.p_state === 'compra_envio' &&
-        tEnvio.includes('Aéreo') &&
-        tEnvio.includes('Marítimo') &&
-        tEnvio.includes('$135,70') &&
-        tEnvio.includes('Bs 13.570,00'),
-      'compra_envio muestra comparación Aéreo vs Marítimo en USD y Bs BCV',
-      tEnvio,
+      t.includes('• Producto · $104,95') && t.includes('• Impuesto EE. UU. · $7,35') && t.includes('• Envío aéreo · $15') && t.includes('• Gestión Helios · $8,40') && t.includes('*Total: $135,70*'),
+      'confirmación itemizada: Producto · Impuesto EE. UU. · Envío aéreo · Gestión Helios · Total',
+      t,
     )
+    comprueba(t.includes('Llega en 7–12 días') && /Precio válido hasta \w{3} \d\d\/\d\d \d\d:\d\d\./.test(t), 'ETA y «Precio válido hasta» en hora de Caracas', t)
+    comprueba(!t.includes('Bs') && conf.botones.map((b) => b.title).join() === 'Confirmar compra,Cambiar envío,Cambiar cantidad', 'sin bolívares; botones Confirmar / Cambiar envío / Cambiar cantidad', JSON.stringify(conf.botones))
+    const cc = await correr({ boton: 'compra:cantidad', texto: 'Cambiar cantidad' }, { state: 'compra_confirmar', data: conf.datos })
+    comprueba(cc.estado === 'compra_cantidad' && cc.textos[0] === '¿Cuántas unidades? Escribe un número del 1 al 10.', 'compra_cantidad', cc.textos[0])
+    const cn = await correr({ texto: '3' }, { state: 'compra_cantidad', data: cc.datos })
+    comprueba(cn.estado === 'compra_confirmar' && cn.datos.cantidad === 3, 'un número en compra_cantidad vuelve a la confirmación con la cantidad nueva')
+    const cx = await correr({ texto: 'abc' }, { state: 'compra_cantidad', data: cc.datos })
+    comprueba(cx.textos[0].includes('del 1 al 10'), 'cantidad inválida se repite')
+  }
 
-    // 6g. Elegir Aéreo → compra_confirmar con desglose completo
-    const sesionEnvio = rVer.guardados.at(-1)?.p_data as Record<string, unknown>
-    const rConf = await correr(
-      { boton: 'compra:envio:aereo', texto: 'Envío aéreo' },
-      { state: 'compra_envio', data: sesionEnvio },
-    )
-    const tConf = rConf.textos[0] ?? ''
-    comprueba(
-      rConf.guardados.at(-1)?.p_state === 'compra_confirmar' &&
-        tConf.includes('Producto: $104,95') &&
-        tConf.includes('Tax USA (7%): $7,35') &&
-        tConf.includes('Envío a Venezuela: $15') &&
-        tConf.includes('Gestión Helios (8%): $8,40') &&
-        tConf.includes('*Total: $135,70*') &&
-        tConf.includes('*Bs 13.570,00*'),
-      'compra_confirmar muestra desglose completo USD y Bs BCV',
-      tConf,
-    )
-
-    // 6h. Cambiar envío → vuelve a compra_envio → elegir Marítimo
-    const sesionConf = rConf.guardados.at(-1)?.p_data as Record<string, unknown>
-    const rCamb = await correr(
-      { boton: 'compra:cambiar_envio', texto: 'Cambiar envío' },
-      { state: 'compra_confirmar', data: sesionConf },
-    )
-    comprueba(rCamb.guardados.at(-1)?.p_state === 'compra_envio', 'compra:cambiar_envio regresa a compra_envio')
-
-    const rMar = await correr(
-      { boton: 'compra:envio:maritimo', texto: 'Envío marítimo' },
-      { state: 'compra_envio', data: rCamb.guardados.at(-1)?.p_data as Record<string, unknown> },
-    )
-    comprueba(
-      rMar.guardados.at(-1)?.p_state === 'compra_confirmar' && (rMar.textos[0] ?? '').includes('Envío: *Marítimo*'),
-      'permite cambiar a envío marítimo antes de confirmar',
-    )
-
-    // 6i. Confirmar compra normal → bot_compra_crear → compra_pago con payment_block
-    const rCrear = await correr(
+  console.log('\n10. Confirmar: bot_compra_crear (idempotente), total del servidor y pago')
+  {
+    const env = await sesionDeEnvio()
+    const conf = await correr({ boton: 'compra:envio:aereo', texto: 'Envío aéreo' }, { state: 'compra_envio', data: env.datos })
+    const crear = await correr(
       { boton: 'compra:confirmar', texto: 'Confirmar compra', id: 'wamid.crear.1' },
-      { state: 'compra_confirmar', data: sesionConf },
-      {
-        bot_compra_crear: {
-          request_id: 'pur-1001',
-          request_number: 1001,
-          status: 'esperando_pago',
-          restricted_flag: false,
-          total_usd: 135.7,
-          quoted_ves: 13570,
-          payment_block: TARIFAS.accountsBlock,
-        },
-      },
+      { state: 'compra_confirmar', data: conf.datos },
+      { bot_compra_crear: { request_id: ID1, request_number: 1001, status: 'esperando_pago', restricted_flag: false, total_usd: 135.7, quoted_ves: 13570, quote_expires_at: '2099-01-01T16:30:00Z', payment_block: '💳 *Datos para pagar*\nTotal: *$135,70* · *Bs 13.570,00*\nBNC (0191)' } },
     )
-    const callCrear = rCrear.llamadas.find((l) => l.fn === 'bot_compra_crear')
+    const llamada = crear.llamadas.find((l) => l.fn === 'bot_compra_crear')
     comprueba(
-      Boolean(callCrear) &&
-        callCrear?.args.p_asin === 'B00QES9K4G' &&
-        callCrear?.args.p_product_title === '3M Littmann Classic III Monitoring Stethoscope, Black Edition (27 inch)' &&
-        callCrear?.args.p_shipping_method === 'aereo' &&
-        callCrear?.args.p_restricted_flag === false &&
-        callCrear?.args.p_channel === 'whatsapp',
-      'bot_compra_crear recibe parámetros exactos del contrato SQL',
-      JSON.stringify(callCrear?.args),
+      llamada?.args.p_asin === 'B00QES9K4G' && llamada.args.p_shipping_method === 'aereo' && llamada.args.p_channel === 'whatsapp' && llamada.args.p_idempotency_key === 'wamid.crear.1' && llamada.args.p_session_total_usd === 135.7,
+      'bot_compra_crear con p_idempotency_key = id del mensaje, p_session_total_usd y p_channel whatsapp',
+      JSON.stringify(llamada?.args),
     )
-    comprueba(
-      rCrear.guardados.at(-1)?.p_state === 'compra_pago' &&
-        (rCrear.textos[0] ?? '').includes('#C-1001') &&
-        (rCrear.textos[0] ?? '').includes('BNC (0191)'),
-      'compra aprobada pasa a compra_pago enviando el payment_block de la base',
-      rCrear.textos[0],
-    )
+    comprueba(llamada?.args.p_weight_lb === 1.1 && llamada.args.p_weight_estimated === false, 'pasa el peso real y p_weight_estimated=false')
+    comprueba(crear.estado === 'compra_pago' && crear.datos.compraId === ID1 && crear.datos.compraNumero === '#C-1001', 'compra_pago con la solicitud', JSON.stringify(crear.datos))
+    comprueba(crear.textos.join('\n').includes('Solicitud #C-1001 creada · *$135,70*') && crear.textos.join('\n').includes('BNC (0191)') && crear.textos.join('\n').includes('Precio válido hasta'), 'usa el total y el bloque de pago del servidor, con validez', crear.textos.join('\n'))
+    comprueba(crear.botones.map((b) => b.title).join() === 'Ya pagué,Escribir datos,Mis compras', 'botones de pago')
 
-    // 6j. Reportar pago por foto/PDF adjunto en compra_pago
-    const sesionPago = rCrear.guardados.at(-1)?.p_data as Record<string, unknown>
-    const rFoto = await correr(
+    const cambio = await correr(
+      { boton: 'compra:confirmar', id: 'wamid.crear.2' },
+      { state: 'compra_confirmar', data: conf.datos },
+      { bot_compra_crear: { request_id: ID1, request_number: 1001, status: 'esperando_pago', total_usd: 140, total_cambio: true, payment_block: 'BNC' } },
+    )
+    comprueba(cambio.textos.join('\n').includes('Ojo: el total final es $140'), 'total_cambio: avisa que el total del servidor es otro', cambio.textos.join('\n'))
+
+    // Las tarifas cambiaron desde la cotización: se muestra el precio nuevo y NO se crea.
+    const nuevoPrecio = await correr(
+      { boton: 'compra:confirmar', id: 'wamid.crear.3' },
+      { state: 'compra_confirmar', data: conf.datos },
+      { bot_compra_config: { ...CONFIG_RPC, fx_rate_usd: 100, air_min_usd: 30 } },
+    )
+    comprueba(!nuevoPrecio.fns.includes('bot_compra_crear') && nuevoPrecio.textos[0].includes('El precio cambió: antes $135,70, ahora $150,70') && nuevoPrecio.estado === 'compra_confirmar', 'al confirmar se vuelve a leer la configuración: si cambió el precio, se muestra y no se crea', nuevoPrecio.textos[0])
+
+    const sinTasa = await correr(
+      { boton: 'compra:confirmar', id: 'wamid.crear.4' },
+      { state: 'compra_confirmar', data: conf.datos },
+      { bot_compra_config: { ...CONFIG_RPC, fx_rate_usd: null } },
+    )
+    comprueba(!sinTasa.fns.includes('bot_compra_crear') && sinTasa.textos[0].includes('no puedo cotizar'), 'sin tasa BCV no se crea nada y se dice', sinTasa.textos[0])
+
+    const restr = await correr({ texto: 'https://www.amazon.com/dp/B09D4S7V2X' }, { state: 'menu', data: {} })
+    const restrEnv = await correr({ boton: 'compra:envio:aereo' }, { state: 'compra_envio', data: restr.datos })
+    const r2 = await correr(
+      { boton: 'compra:confirmar', id: 'wamid.restr.1' },
+      { state: 'compra_confirmar', data: restrEnv.datos },
+      { bot_compra_crear: { request_id: ID2, request_number: 1002, status: 'revision_aduanal', restricted_flag: true } },
+    )
+    comprueba(r2.textos[0].includes('#C-1002') && r2.textos[0].includes('revisión aduanal') && r2.estado !== 'compra_pago', 'restringido: queda en revisión aduanal, sin pago')
+  }
+
+  console.log('\n11. Comprobante: se baja de 360dialog y se guarda en payment-receipts')
+  {
+    const subidos: Array<{ ruta: string; bytes: number; mime: string }> = []
+    const fetchFn = (async (input: string | URL | Request) => {
+      const url = String(input)
+      if (url.endsWith('/media-999')) return new Response(JSON.stringify({ url: 'https://lookaside.fbsbx.com/whatsapp_business/attachments/?mid=1' }), { status: 200 })
+      return new Response(new Uint8Array([1, 2, 3, 4]), { status: 200 })
+    }) as typeof fetch
+    const almacen = { subir: async (ruta: string, bytes: Uint8Array, mime: string) => void subidos.push({ ruta, bytes: bytes.length, mime }) }
+    const foto = await correr(
       { type: 'image', id: 'wamid.foto.1', adjunto: { id: 'media-999', mime: 'image/jpeg' } },
-      { state: 'compra_pago', data: sesionPago },
-      { bot_compra_reportar_pago: { report_id: 'rep-1', status: 'reported' } },
+      sesionPago(),
+      { lector_config: { d360_api_key: 'K', d360_base_url: 'https://waba.360dialog.io/v1/media' }, bot_compra_reportar_pago: { report_id: 'r1' } },
+      { almacen, fetchFn },
     )
-    const callFoto = rFoto.llamadas.find((l) => l.fn === 'bot_compra_reportar_pago')
-    comprueba(
-      callFoto?.args.p_request_id === 'pur-1001' &&
-        callFoto?.args.p_method === 'pago_movil' &&
-        callFoto?.args.p_receipt_path === 'compras/pur-1001/media-999' &&
-        callFoto?.args.p_wa_message_id === 'wamid.foto.1',
-      'foto adjunta llama bot_compra_reportar_pago con p_request_id, p_receipt_path compras/... y p_wa_message_id',
-      JSON.stringify(callFoto?.args),
-    )
+    const rep = foto.llamadas.find((l) => l.fn === 'bot_compra_reportar_pago')
+    comprueba(subidos.length === 1 && subidos[0].ruta === `compras/${ID1}/media-999.jpg` && subidos[0].bytes === 4, 'sube el archivo a compras/<solicitud>/<media>.jpg', JSON.stringify(subidos))
+    comprueba(rep?.args.p_receipt_path === `compras/${ID1}/media-999.jpg` && rep.args.p_wa_message_id === 'wamid.foto.1' && rep.args.p_amount_ves === null, 'bot_compra_reportar_pago con la ruta REAL y p_wa_message_id', JSON.stringify(rep?.args))
+    comprueba(foto.textos[0] === 'Recibimos tu comprobante de #C-1001. Lo verificamos y te aviso por aquí.', 'confirmación del comprobante', foto.textos[0])
 
-    // 6k. Reportar pago escribiendo datos de Pago Móvil (reutilizando datos_pago.ts)
-    const rPedirDatos = await correr(
-      { boton: 'compra:datos_pago', texto: 'Escribir datos' },
-      { state: 'compra_pago', data: sesionPago },
-    )
-    comprueba(rPedirDatos.guardados.at(-1)?.p_state === 'compra_pago_datos', 'compra:datos_pago pasa a compra_pago_datos')
+    const ya = await correr({ type: 'image', id: 'wamid.foto.1', adjunto: { id: 'media-999', mime: 'image/jpeg' } }, sesionPago(), { lector_config: { d360_api_key: 'K', d360_base_url: 'https://waba.360dialog.io/v1/media' }, bot_compra_reportar_pago: { ya_registrado: true } }, { almacen, fetchFn })
+    comprueba(ya.textos[0].includes('ya lo habíamos recibido'), 'ya_registrado: no duplica y lo dice')
 
-    const rParcial = await correr(
-      { texto: 'Banesco\n04141234567' },
-      { state: 'compra_pago_datos', data: rPedirDatos.guardados.at(-1)?.p_data as Record<string, unknown> },
-    )
-    comprueba(
-      rParcial.guardados.at(-1)?.p_state === 'compra_pago_datos' &&
-        (rParcial.textos[0] ?? '').includes('referencia'),
-      'si falta la referencia, pide solo lo que falta',
-      rParcial.textos[0],
-    )
+    const sinAlmacen = await correr({ type: 'image', id: 'wamid.foto.2', adjunto: { id: 'media-999', mime: 'image/jpeg' } }, sesionPago(), { lector_config: { d360_api_key: 'K', d360_base_url: 'https://x' } }, { fetchFn })
+    comprueba(!sinAlmacen.fns.includes('bot_compra_reportar_pago') && sinAlmacen.textos[0].includes('No pude guardar tu comprobante'), 'si no se puede guardar, no se reporta y se pide de nuevo')
 
-    const rCompleto = await correr(
-      { texto: '123456789012', id: 'wamid.datos.2' },
-      { state: 'compra_pago_datos', data: rParcial.guardados.at(-1)?.p_data as Record<string, unknown> },
-      { bot_compra_reportar_pago: { report_id: 'rep-2', status: 'reported' } },
-    )
-    const callDatos = rCompleto.llamadas.find((l) => l.fn === 'bot_compra_reportar_pago')
-    comprueba(
-      callDatos?.args.p_request_id === 'pur-1001' &&
-        callDatos?.args.p_method === 'pago_movil' &&
-        callDatos?.args.p_bank === 'Banesco' &&
-        callDatos?.args.p_payer_phone === '04141234567' &&
-        callDatos?.args.p_reference === '123456789012',
-      'datos completos de Pago Móvil registran el pago vía bot_compra_reportar_pago',
-      JSON.stringify(callDatos?.args),
-    )
+    const datos = await correr({ texto: 'Banesco\n04141234567\n123456789012', id: 'wamid.datos.1' }, sesionPago(), { bot_compra_reportar_pago: { report_id: 'r2' } })
+    const repD = datos.llamadas.find((l) => l.fn === 'bot_compra_reportar_pago')
+    comprueba(repD?.args.p_bank === 'Banesco' && repD.args.p_payer_phone === '04141234567' && repD.args.p_wa_message_id === 'wamid.datos.1', 'datos escritos: reportar_pago con p_wa_message_id')
+    comprueba(datos.textos[0].includes('Registramos tu Pago Móvil de #C-1001') && datos.textos[0].endsWith('Si pagaste un monto distinto, dímelo.'), 'datos escritos: dice «Si pagaste un monto distinto, dímelo.»', datos.textos[0])
+
+    const vencida = await correr({ type: 'image', id: 'wamid.foto.3', adjunto: { id: 'media-999', mime: 'image/png' } }, sesionPago(), {
+      lector_config: { d360_api_key: 'K', d360_base_url: 'https://waba.360dialog.io/v1/media' },
+      bot_compra_reportar_pago: Object.assign(new Error('bot_compra_reportar_pago: cotizacion_vencida: la cotización venció'), { code: 'P0001' }),
+    }, { almacen, fetchFn })
+    comprueba(vencida.textos[0].includes('venció') && vencida.botones.map((b) => b.title).join() === 'Actualizar,Cancelar compra,Mis compras', 'cotizacion_vencida del servidor: ofrece actualizar', vencida.textos[0])
   }
 
-  console.log('\n7. Producto restringido → revisión aduanal')
+  console.log('\n12. El pago no se pierde (sesión vencida, «ayuda», «menú»)')
   {
-    const rVer = await correr(
-      { texto: 'https://www.amazon.com/dp/B09D4S7V2X' },
-      { state: 'menu', data: {} },
-    )
-    comprueba(
-      (rVer.textos[0] ?? '').includes('Revisión aduanal'),
-      'muestra advertencia aduanal en compra_envio para suturas estériles',
-      rVer.textos[0],
-    )
-    const rEnv = await correr(
-      { boton: 'compra:envio:aereo', texto: 'Envío aéreo' },
-      { state: 'compra_envio', data: rVer.guardados.at(-1)?.p_data as Record<string, unknown> },
-    )
-    const rRestr = await correr(
-      { boton: 'compra:confirmar', texto: 'Confirmar compra', id: 'wamid.restr.1' },
-      { state: 'compra_confirmar', data: rEnv.guardados.at(-1)?.p_data as Record<string, unknown> },
-      {
-        bot_compra_crear: {
-          request_id: 'pur-1002',
-          request_number: 1002,
-          status: 'revision_aduanal',
-          restricted_flag: true,
-          restricted_reason: 'Insumo médico invasivo o estéril: requiere revisión aduanal y sanitaria antes de pagar.',
-        },
+    const pend = { request_id: ID1, request_number: 1001, total_usd: 135.7, quote_expires_at: '2099-01-01T00:00:00Z', vencida: false, status: 'esperando_pago' }
+    const subidos: string[] = []
+    const fetchFn = (async (input: string | URL | Request) =>
+      String(input).endsWith('/media-7')
+        ? new Response(JSON.stringify({ url: 'https://l.test/x?mid=1' }), { status: 200 })
+        : new Response(new Uint8Array([9]), { status: 200 })) as typeof fetch
+    const almacen = { subir: async (ruta: string) => void subidos.push(ruta) }
+    const cfg = { lector_config: { d360_api_key: 'K', d360_base_url: 'https://waba.360dialog.io/v1/media' } }
+
+    const foto = await correr({ type: 'image', id: 'wamid.f9', adjunto: { id: 'media-7', mime: 'image/jpeg' } }, { state: 'menu', data: {}, nueva: true }, { bot_compra_pendiente_de_pago: pend, bot_compra_reportar_pago: { report_id: 'r' }, ...cfg }, { almacen, fetchFn })
+    comprueba(foto.fns.includes('bot_compra_pendiente_de_pago') && foto.llamadas.find((l) => l.fn === 'bot_compra_reportar_pago')?.args.p_request_id === ID1, 'sesión vencida (menú nuevo): un comprobante recupera la solicitud y la reporta')
+    const botonYa = await correr({ boton: 'compra:ya_pague', texto: 'Ya pagué' }, { state: 'menu', data: {} }, { bot_compra_pendiente_de_pago: pend })
+    comprueba(botonYa.estado === 'compra_pago' && botonYa.textos[0].includes('foto o el PDF'), '«Ya pagué» fuera de compra_pago: retoma el pago', botonYa.textos[0])
+    const enBuscar = await correr({ boton: 'compra:datos_pago', texto: 'Escribir datos' }, { state: 'compra_buscar', data: {} }, { bot_compra_pendiente_de_pago: pend })
+    comprueba(enBuscar.estado === 'compra_pago_datos', '«Escribir datos» desde otro paso de compra también recupera', enBuscar.estado)
+    const datosTxt = await correr({ texto: 'datos' }, { state: 'menu', data: {} }, { bot_compra_pendiente_de_pago: pend })
+    comprueba(datosTxt.estado === 'compra_pago_datos', '«datos» escrito en el menú retoma el pago')
+    const ninguna = await correr({ boton: 'compra:ya_pague' }, { state: 'menu', data: {} }, { bot_compra_pendiente_de_pago: null })
+    comprueba(ninguna.textos[0].includes('No tengo una compra esperando tu pago'), 'sin solicitud abierta: lo dice', ninguna.textos[0])
+    const adjuntoSuelto = await correr({ type: 'image', adjunto: { id: 'm', mime: 'image/jpeg' } }, { state: 'menu', data: {} }, { bot_compra_pendiente_de_pago: null })
+    comprueba(adjuntoSuelto.textos[0].startsWith('No entendí'), 'un adjunto sin compra abierta: «No entendí» como siempre')
+    comprueba(esIntentoDePago({ texto: null, boton: null, adjunto: { id: 'x' } }) && esIntentoDePago({ texto: 'Ya pagué', boton: null, adjunto: null }) && !esIntentoDePago({ texto: 'estetoscopio', boton: null, adjunto: null }), 'esIntentoDePago')
+
+    // «ayuda» desde el pago: no se pierde (se recupera luego).
+    const ayuda = await correr({ texto: 'ayuda' }, sesionPago())
+    comprueba(ayuda.estado === 'menu', '«ayuda» lleva al menú (la solicitud sigue abierta en la base)')
+  }
+
+  console.log('\n13. Menú, cancelar y cancelación real')
+  {
+    const antes = await correr({ boton: 'compra:menu', texto: 'Volver al menú' }, { state: 'compra_envio', data: {} })
+    comprueba(antes.estado === 'menu' && antes.textos[0].includes('¿Qué quieres hacer?'), '«Volver al menú» antes de la solicitud: menú')
+    const cancelarAntes = await correr({ texto: 'cancelar' }, { state: 'compra_confirmar', data: {} })
+    comprueba(cancelarAntes.textos[0].startsWith('Listo, no se registró nada.') && !cancelarAntes.fns.includes('bot_compra_cancelar'), '«Cancelar» antes de la solicitud: «Listo, no se registró nada.»', cancelarAntes.textos[0])
+    const menuPago = await correr({ boton: 'compra:menu', texto: 'Volver al menú' }, sesionPago({ compraVenceEn: '2026-11-26T20:30:00Z' }))
+    comprueba(menuPago.textos[0].includes('Tu solicitud #C-1001 sigue abierta hasta el jue 26/11 16:30. La retomas desde «Mis compras».') && !menuPago.fns.includes('bot_compra_cancelar'), '«Volver al menú» con solicitud: sigue abierta, sin cancelar', menuPago.textos[0])
+    const cancelarPago = await correr({ texto: 'cancelar' }, sesionPago())
+    comprueba(cancelarPago.textos[0].includes('sigue abierta') && !cancelarPago.fns.includes('bot_compra_cancelar'), '«cancelar» en el pago no descarta la solicitud', cancelarPago.textos[0])
+    const pedir = await correr({ texto: 'cancelar compra' }, sesionPago())
+    comprueba(pedir.estado === 'compra_cancelar' && pedir.textos[0] === '¿Cancelo la solicitud #C-1001? Aún no has pagado.' && pedir.botones.map((b) => b.title).join() === 'Sí, cancelar,No, seguir', '«cancelar compra» pide confirmar', pedir.textos[0])
+    const si = await correr({ boton: 'compra:cancelar_si', texto: 'Sí, cancelar' }, { state: 'compra_cancelar', data: pedir.datos }, { bot_compra_cancelar: { request_number: 1001, status: 'cancelado' } })
+    const llam = si.llamadas.find((l) => l.fn === 'bot_compra_cancelar')
+    comprueba(llam?.args.p_request_id === ID1 && llam.args.p_phone === '+584140000001' && si.textos[0].includes('cancelé la solicitud #C-1001'), 'bot_compra_cancelar(p_phone, p_request_id)', JSON.stringify(llam?.args))
+    const no = await correr({ boton: 'compra:cancelar_no', texto: 'No, seguir' }, { state: 'compra_cancelar', data: pedir.datos })
+    comprueba(no.estado === 'compra_pago' && !no.fns.includes('bot_compra_cancelar'), '«No, seguir» vuelve al pago')
+    const err = await correr({ boton: 'compra:cancelar_si' }, { state: 'compra_cancelar', data: pedir.datos }, { bot_compra_cancelar: Object.assign(new Error('bot_compra_cancelar: Ya no se puede cancelar'), { code: '22023' }) })
+    comprueba(err.textos[0] === 'No pudimos completarlo en este momento. Inténtalo de nuevo en unos minutos.' && !err.textos[0].includes('Ya no se puede'), 'un error de la base que no se reconoce NO se muestra crudo (queda en el log)', err.textos[0])
+  }
+
+  console.log('\n14. Cotización vencida y recotizar')
+  {
+    const pasada = sesionPago({ compraVenceEn: '2020-01-01T00:00:00Z' })
+    const v = await correr({ boton: 'compra:ya_pague', texto: 'Ya pagué' }, pasada)
+    comprueba(v.textos[0].startsWith('La cotización de #C-1001 venció. ¿La actualizo con el precio de hoy?') && v.botones.map((b) => b.title).join() === 'Actualizar,Cancelar compra,Mis compras', 'compra_pago vencida: ofrece actualizar', v.textos[0])
+    const rc = await correr({ boton: 'compra:recotizar', texto: 'Actualizar' }, pasada, { bot_compra_recotizar: { request_id: ID1, request_number: 1001, total_usd: 150, total_anterior_usd: 135.7, quote_expires_at: '2099-01-02T00:00:00Z', payment_block: 'BNC (0191)' } })
+    const llam = rc.llamadas.find((l) => l.fn === 'bot_compra_recotizar')
+    comprueba(llam?.args.p_request_id === ID1 && rc.textos[0].includes('pasó de $135,70 a $150') && rc.textos[0].includes('BNC (0191)') && rc.estado === 'compra_pago', 'recotizar: muestra el cambio y el bloque de pago nuevo', rc.textos[0])
+    const stale = await correr({ boton: 'compra:recotizar' }, { state: 'compra_envio', data: {} })
+    comprueba(stale.textos[0].startsWith('Esa opción ya no está activa.'), '«Actualizar» fuera de su estado es obsoleto')
+  }
+
+  console.log('\n15. Después de un rechazo: compra:reenviar:<id>')
+  {
+    const r = await correr({ boton: `compra:reenviar:${ID1}`, texto: 'Enviar comprobante' }, { state: 'menu', data: {} }, { bot_compra_detalle: { request_id: ID1, request_number: 1001, status: 'esperando_pago', total_usd: 135.7, quote_expires_at: '2099-01-01T00:00:00Z', vencida: false } })
+    comprueba(r.estado === 'compra_pago' && r.datos.compraId === ID1 && r.textos[0].includes('nuevo comprobante') && r.llamadas.some((l) => l.fn === 'bot_compra_detalle'), 'reenviar deja la sesión en compra_pago y pide otro comprobante', r.textos[0])
+    const mala = await correr({ boton: 'compra:reenviar:xyz' }, { state: 'menu', data: {} })
+    comprueba(mala.textos[0].startsWith('Esa opción ya no está activa'), 'id inválido: obsoleto')
+  }
+
+  console.log('\n16. Botones viejos: cada compra:* solo vale en su estado')
+  {
+    const env = await sesionDeEnvio()
+    const casos: Array<[string, string, Record<string, unknown>, string]> = [
+      ['compra:v:B00QES9K4G', 'compra_envio', env.datos as Record<string, unknown>, 'compra_envio'],
+      ['compra:confirmar', 'compra_envio', env.datos as Record<string, unknown>, 'compra_envio'],
+      ['compra:envio:aereo', 'compra_buscar', {}, 'compra_buscar'],
+      ['compra:cambiar_envio', 'compra_pago', sesionPago().data, 'compra_pago'],
+      ['compra:cantidad', 'compra_envio', env.datos as Record<string, unknown>, 'compra_envio'],
+      ['compra:cancelar_si', 'compra_pago', sesionPago().data, 'compra_pago'],
+      ['compra:pagar', 'compra_pago', sesionPago().data, 'compra_pago'],
+      ['compra:recotizar', 'compra_buscar', {}, 'compra_buscar'],
+      ['compra:v:B00QES9K4G', 'compra_pago', sesionPago().data, 'compra_pago'],
+      ['compra:inventado', 'compra_buscar', {}, 'compra_buscar'],
+    ]
+    for (const [boton, state, data] of casos) {
+      const r = await correr({ boton, texto: 'x' }, { state, data })
+      comprueba(
+        r.textos[0]?.startsWith('Esa opción ya no está activa.') && !r.fns.some((f) => f === 'bot_compra_crear' || f === 'bot_compra_cancelar' || f === 'bot_compra_recotizar'),
+        `${boton} en ${state}: obsoleto, no ejecuta nada`,
+        r.textos[0],
+      )
+    }
+    const conSolicitud = await correr({ boton: 'compra:confirmar' }, sesionPago())
+    comprueba(conSolicitud.textos[0].includes('Seguimos con tu compra #C-1001.') && conSolicitud.textos.length === 2, 'obsoleto con solicitud abierta: nombra la compra y repite el paso', conSolicitud.textos.join(' | '))
+    const reenvia = await correr({ boton: 'compra:v:B00QES9K4G' }, { state: 'compra_envio', data: env.datos })
+    comprueba(reenvia.textos.length === 2 && reenvia.textos[1].includes('Elige cómo traerlo'), 'obsoleto: re-envía el paso actual', reenvia.textos.join(' | '))
+  }
+
+  console.log('\n17. Búsquedas que no deben costar dinero')
+  {
+    let llamadas = 0
+    const contador: ProveedorCatalogo = { nombre: 'mock', buscar: async (q, l) => (llamadas++, MOCK.buscar(q, l)), detalle: async (a) => (llamadas++, MOCK.detalle(a)) }
+    const o = { proveedorDe: () => contador }
+    const gracias = await correr({ texto: 'gracias' }, { state: 'compra_buscar', data: {} }, {}, o)
+    comprueba(gracias.res === null && gracias.textos.length === 0 && llamadas === 0, '«gracias» no busca ni contesta')
+    const corto = await correr({ texto: 'ab' }, { state: 'compra_buscar', data: {} }, {}, o)
+    comprueba(corto.textos[0].includes('entre 3 y 80') && llamadas === 0, 'menos de 3 caracteres: no busca')
+    const largo = await correr({ texto: 'a'.repeat(120) }, { state: 'compra_buscar', data: {} }, {}, o)
+    comprueba(largo.textos[0].includes('entre 3 y 80') && llamadas === 0, 'más de 80 caracteres: no busca')
+    const foto = await correr({ type: 'image', texto: 'estetoscopio littmann', adjunto: { id: 'm', mime: 'image/jpeg' } }, { state: 'compra_buscar', data: {} }, { bot_compra_pendiente_de_pago: null }, o)
+    comprueba(llamadas === 0 && !foto.fns.includes('bot_compra_config'), 'el pie de una foto nunca se usa como búsqueda')
+    const humano = await correr({ texto: 'te mando la foto ahora mismo' }, { state: 'compra_buscar', data: {} }, {}, { ...o, humano: true })
+    comprueba(humano.res === null && humano.textos.length === 0 && llamadas === 0, 'con una persona atendiendo: el texto libre no busca ni contesta')
+    const humanoLink = await correr({ texto: 'https://www.amazon.com/dp/B00QES9K4G' }, { state: 'compra_buscar', data: {} }, {}, { ...o, humano: true })
+    comprueba(humanoLink.estado === 'compra_envio', 'con una persona atendiendo, un enlace sí se cotiza')
+    const cortesiaEnvio = await correr({ texto: 'ok gracias' }, { state: 'compra_envio', data: humanoLink.datos }, {}, o)
+    comprueba(cortesiaEnvio.res === null && cortesiaEnvio.textos.length === 0, 'una cortesía en un paso no recibe respuesta')
+    const largoClave = await correr({ texto: 'estetoscopio '.repeat(6).trim() }, { state: 'compra_buscar', data: {} }, {}, o)
+    const clave = String(largoClave.llamadas.find((l) => l.fn === 'bot_compra_cache_get')?.args.p_key ?? '')
+    comprueba(clave.length > 0 && clave.length <= 100, 'la clave de caché tiene largo acotado', String(clave.length))
+  }
+
+  console.log('\n18. Entradas inválidas seguidas → «persona»')
+  {
+    const env = await sesionDeEnvio()
+    const a = await correr({ texto: 'no sé' }, { state: 'compra_envio', data: env.datos })
+    comprueba(!a.textos[0].includes('escribe «persona»') && !!a.guardados.at(-1)?.p_data && (a.datos.invalidos ?? 0) === 1, 'primer intento inválido: se repite', a.textos[0])
+    const b = await correr({ texto: 'no sé' }, { state: 'compra_envio', data: a.datos })
+    comprueba(b.textos[0].endsWith('Si prefieres, escribe «persona» y te ayudamos.'), 'segundo intento seguido: ofrece «persona»', b.textos[0])
+    const p = await correr({ texto: 'persona' }, { state: 'compra_envio', data: b.datos }, { bot_compra_pedir_persona: null })
+    const llam = p.llamadas.find((l) => l.fn === 'bot_compra_pedir_persona')
+    comprueba(llam?.args.p_phone === '+584140000001' && p.textos[0] === 'Listo, avisé al equipo de Helios. Te escriben por aquí en horario de atención.', 'bot_compra_pedir_persona + mensaje', JSON.stringify(llam?.args))
+    const bt = await correr({ boton: 'compra:persona', texto: 'Hablar con alguien' }, sesionPago(), { bot_compra_pedir_persona: null })
+    comprueba(bt.llamadas.find((l) => l.fn === 'bot_compra_pedir_persona')?.args.p_request_id === ID1, 'con solicitud abierta, la persona recibe su id')
+    for (const t of ['asesor', 'hablar con alguien']) {
+      const x = await correr({ texto: t }, { state: 'menu', data: {} }, { bot_compra_pedir_persona: null })
+      comprueba(x.fns.includes('bot_compra_pedir_persona'), `«${t}» pide una persona`)
+    }
+  }
+
+  console.log('\n19. Fallas del catálogo y de la configuración')
+  {
+    const falla = (tipo: 'timeout' | 'limite' | 'red'): ProveedorCatalogo => ({
+      nombre: 'rainforest',
+      buscar: async () => {
+        throw new ErrorCatalogo(tipo, 'rainforest: x')
       },
-    )
-    const tRestr = rRestr.textos[0] ?? ''
-    comprueba(
-      tRestr.includes('#C-1002') &&
-        tRestr.includes('revisión aduanal') &&
-        rRestr.guardados.at(-1)?.p_state !== 'compra_pago',
-      'producto restringido queda en revision_aduanal sin pasar a pago todavía',
-      tRestr,
-    )
-  }
-
-  console.log('\n8. Mis compras')
-  {
-    const rMis = await correr(
-      { texto: 'mis compras' },
-      { state: 'menu', data: {} },
-      {
-        bot_compra_mis_solicitudes: [
-          {
-            request_number: 1001,
-            product_title: '3M Littmann Classic III Monitoring Stethoscope',
-            total_usd: 135.7,
-            status: 'esperando_pago',
-          },
-          {
-            request_number: 1002,
-            product_title: 'Sterile Absorbable Surgical Suture Vicryl 3-0',
-            total_usd: 88.6,
-            status: 'revision_aduanal',
-          },
-        ],
+      detalle: async () => {
+        throw new ErrorCatalogo(tipo, 'rainforest: x')
       },
-    )
-    const tMis = rMis.textos[0] ?? ''
-    comprueba(
-      tMis.includes('#C-1001') &&
-        tMis.includes('$135,70') &&
-        tMis.includes('Esperando pago') &&
-        tMis.includes('#C-1002') &&
-        tMis.includes('En revisión aduanal'),
-      'mis compras lista #C-1001, producto, monto y estado legible en español',
-      tMis,
-    )
+    })
+    const cfgRf = { bot_compra_config: { ...CONFIG_RPC, catalog_provider: 'rainforest' } }
+    for (const tipo of ['timeout', 'red'] as const) {
+      const r = await correr({ texto: 'estetoscopio' }, { state: 'compra_buscar', data: {} }, cfgRf, { proveedorDe: () => falla(tipo) })
+      comprueba(r.textos[0].startsWith('Amazon no me responde') && r.botones.some((b) => b.title === 'Hablar con alguien'), `catálogo ${tipo}: mensaje amable con «Hablar con alguien»`, r.textos[0])
+    }
+    const lim = await correr({ texto: 'estetoscopio' }, { state: 'compra_buscar', data: {} }, cfgRf, { proveedorDe: () => falla('limite') })
+    comprueba(lim.textos[0].startsWith('Amazon recibe muchas consultas'), 'límite (429): mensaje distinto')
+    const sinClave = await correr({ texto: 'estetoscopio' }, { state: 'compra_buscar', data: {} }, cfgRf, { proveedorDe: (n) => crearProveedorCatalogo(n, '') })
+    comprueba(sinClave.textos[0].startsWith('Las compras en Amazon no están disponibles en este momento') && !sinClave.carruseles.length, 'rainforest sin clave: «no disponibles», jamás mock', sinClave.textos[0])
+    const sinTasa = await correr({ texto: 'estetoscopio' }, { state: 'compra_buscar', data: {} }, { bot_compra_config: { ...CONFIG_RPC, fx_rate_usd: null } })
+    comprueba(sinTasa.textos[0].includes('no puedo cotizar') && sinTasa.carruseles.length === 0, 'sin tasa BCV: se niega a cotizar')
+    const cfgCae = await correr({ texto: 'estetoscopio' }, { state: 'compra_buscar', data: {} }, { bot_compra_config: new Error('boom') })
+    comprueba(cfgCae.textos[0].includes('no puedo cotizar'), 'si la configuración no carga: se niega, sin tarifas de respaldo')
+    const todo = emitidos.map((e) => e.texto).join('\n')
+    comprueba(!/api_key|clave-secreta|rainforestapi\.com/i.test(todo), 'ningún mensaje filtra la clave ni la URL del proveedor')
   }
 
-  console.log('\n9. Cero palabras prohibidas (CLAUDE.md)')
+  console.log('\n20. Enlaces cortos y otras tiendas')
   {
-    const infractores = todosLosTextosEmitidos.filter((t) => PROHIBIDO.test(t))
-    comprueba(
-      infractores.length === 0,
-      `cero vocabulario prohibido en ${todosLosTextosEmitidos.length} mensajes/tarjetas emitidos`,
-      infractores.join(' | '),
-    )
+    const ok = await correr({ texto: 'mira https://amzn.to/3xYzAbc' }, { state: 'menu', data: {} }, {}, { resolverEnlace: async () => 'https://www.amazon.com/-/es/Estetoscopio/dp/B00QES9K4G?th=1' })
+    comprueba(ok.estado === 'compra_envio' && ok.textos[0].includes('3M Littmann'), 'amzn.to se resuelve y cotiza el producto')
+    const mal = await correr({ texto: 'https://amzn.to/3xYzAbc' }, { state: 'compra_buscar', data: {} }, {}, { resolverEnlace: async () => null })
+    comprueba(mal.textos[0] === 'Ese enlace corto no me deja ver el producto. Ábrelo y copia el enlace largo, o escríbeme el nombre.' && !mal.fns.includes('bot_compra_cache_get') && mal.carruseles.length === 0, 'enlace corto que no se resuelve: mensaje exacto y NO se busca la URL como texto', mal.textos[0])
+    const otra = await correr({ texto: 'https://www.amazon.es/dp/B00QES9K4G' }, { state: 'menu', data: {} })
+    comprueba(otra.textos[0].startsWith('Compramos en Amazon EE. UU. (amazon.com); busco ese producto allá.') && otra.estado === 'compra_envio', 'tienda que no es .com: avisa y prueba el ASIN en .com', otra.textos[0])
+    const ajeno = await correr({ texto: 'https://example.com/estetoscopio-barato' }, { state: 'compra_buscar', data: {} })
+    comprueba(ajeno.textos[0].startsWith('Ese enlace no es de Amazon') && ajeno.carruseles.length === 0, 'un enlace de otro sitio no se busca como texto')
+
+    // El resolvedor real: sigue redirecciones manuales, solo a hosts de Amazon, con tiempo.
+    const visitados: string[] = []
+    const f = (async (u: string | URL | Request, init?: RequestInit) => {
+      visitados.push(String(u))
+      comprueba(init?.redirect === 'manual' && init.signal instanceof AbortSignal, 'resolver: redirect manual y AbortSignal')
+      if (String(u).includes('amzn.to')) return new Response(null, { status: 301, headers: { location: 'https://www.amazon.com/dp/B00QES9K4G?tag=x' } })
+      return new Response(null, { status: 200 })
+    }) as typeof fetch
+    comprueba((await resolverEnlaceCorto('https://amzn.to/abc', f)) === 'https://www.amazon.com/dp/B00QES9K4G?tag=x', 'resolverEnlaceCorto devuelve la URL con ASIN')
+    const evil = (async (u: string | URL | Request) => {
+      visitados.push(String(u))
+      return new Response(null, { status: 302, headers: { location: 'https://evil.example.com/x' } })
+    }) as typeof fetch
+    comprueba((await resolverEnlaceCorto('https://amzn.to/abc', evil)) === null && !visitados.some((v) => v.includes('evil')), 'resolver: no sigue una redirección fuera de Amazon')
+    comprueba((await resolverEnlaceCorto('https://example.com/x', f)) === null, 'resolver: no pide a hosts que no son de Amazon')
+    const cae = (async () => {
+      throw new DOMException('t', 'TimeoutError')
+    }) as typeof fetch
+    comprueba((await resolverEnlaceCorto('https://amzn.to/abc', cae)) === null, 'resolver: timeout → null')
+  }
+
+  console.log('\n21. Mis compras (lista) y detalle')
+  {
+    const filas = [
+      { request_id: ID1, request_number: 1024, product_title: '3M Littmann Classic III Monitoring Stethoscope', quantity: 1, status: 'esperando_pago', total_usd: 135.7, created_at: '2026-11-24T15:00:00Z' },
+      { request_id: ID2, request_number: 1025, product_title: 'Sterile Absorbable Surgical Suture', quantity: 2, status: 'en_transito', total_usd: 88.6, created_at: '2026-11-20T15:00:00Z' },
+    ]
+    const mis = await correr({ boton: 'compra:mis', texto: 'Mis compras' }, { state: 'compra_buscar', data: {} }, { bot_compra_mis_solicitudes: filas })
+    const filasLista = (mis.listas[0]?.p_sections as Array<{ rows: Array<{ id: string; title: string; description: string }> }> | undefined)?.[0]?.rows ?? []
+    const t = JSON.stringify(filasLista)
+    comprueba(mis.listas.length === 1 && filasLista.length === 2 && filasLista[0].title.startsWith('#C-1024 · 3M Littmann') && filasLista[0].description.includes('Esperando tu pago · $135,70 · mar 24/11') && filasLista[1].title.startsWith('#C-1025') && filasLista[1].description.includes('En camino a Venezuela') && filasLista.every((r) => r.title.length <= 24 && r.description.length <= 72), 'lista interactiva con «#C-1024 · producto» y «estado · monto · fecha» (helios_whatsapp_list)', t)
+    comprueba(mis.estado === 'compra_mis' && (mis.datos.filasMis ?? []).length === 2, 'guarda las filas visibles')
+    comprueba(mis.llamadas.find((l) => l.fn === 'bot_compra_mis_solicitudes')?.args.p_limit === 10, 'pide hasta 10')
+    const vacio = await correr({ texto: 'mis compras' }, { state: 'menu', data: {} }, { bot_compra_mis_solicitudes: [] })
+    comprueba(vacio.textos[0].includes('Todavía no tienes compras'), 'sin compras: lo dice')
+
+    const detalle = {
+      request_id: ID1, request_number: 1024, product_title: '3M Littmann Classic III Monitoring Stethoscope', quantity: 1, status: 'esperando_pago', shipping_method: 'aereo', total_usd: 135.7,
+      quote_expires_at: '2099-01-01T20:30:00Z', vencida: false, us_tracking_number: null, payment_block: 'BNC (0191)',
+    }
+    const d = await correr({ boton: `compra:det:${ID1}`, texto: '#C-1024' }, { state: 'compra_mis', data: mis.datos }, { bot_compra_detalle: detalle })
+    comprueba(d.textos[0].includes('Estado: *Esperando tu pago*') && d.textos[0].includes('BNC (0191)') && d.botones.map((b) => b.title).join() === 'Pagar,Cancelar compra,Hablar con alguien', 'detalle esperando_pago: estado, bloque y botones Pagar / Cancelar / Hablar', d.textos[0] + JSON.stringify(d.botones))
+    const dn = await correr({ texto: '2' }, { state: 'compra_mis', data: mis.datos }, { bot_compra_detalle: { ...detalle, request_id: ID2, request_number: 1025, status: 'en_transito', us_tracking_number: '1Z999' } })
+    comprueba(dn.llamadas.find((l) => l.fn === 'bot_compra_detalle')?.args.p_request_id === ID2 && dn.textos[0].includes('Seguimiento en EE. UU.: 1Z999') && dn.textos[0].includes('Tiempo estimado de llegada: 7–12 días'), 'escribir «2» abre la fila 2; muestra tracking y ETA', dn.textos[0])
+    const venc = await correr({ boton: `compra:det:${ID1}` }, { state: 'compra_mis', data: mis.datos }, { bot_compra_detalle: { ...detalle, vencida: true } })
+    comprueba(venc.botones[0].title === 'Actualizar', 'detalle vencido: «Actualizar» en lugar de «Pagar»')
+    const pagar = await correr({ boton: 'compra:pagar', texto: 'Pagar' }, { state: 'compra_detalle', data: d.datos }, { bot_compra_detalle: detalle })
+    comprueba(pagar.estado === 'compra_pago' && pagar.textos[0].includes('BNC (0191)'), '«Pagar» abre el paso de pago con el bloque', pagar.textos[0])
+    const cancelar = await correr({ boton: 'compra:cancelar_pedir', texto: 'Cancelar compra' }, { state: 'compra_detalle', data: d.datos })
+    comprueba(cancelar.estado === 'compra_cancelar', '«Cancelar compra» desde el detalle pide confirmar')
+    const etiquetas = ['Esperando tu pago', 'Verificando tu pago', 'Pago confirmado', 'Comprado en Amazon', 'En nuestro almacén en EE. UU.', 'En camino a Venezuela', 'En aduana', 'Listo para entrega', 'Entregado', 'Cancelada', 'En revisión aduanal']
+    comprueba(etiquetas.every((e) => Object.values(ETIQUETA_ESTADO).includes(e)) && Object.keys(ETIQUETA_ESTADO).join() === 'revision_aduanal,esperando_pago,pago_reportado,pagado,comprado_amazon,en_almacen_usa,en_transito,en_aduana,listo_entrega,entregado,cancelado', 'etiquetas amistosas y solo estados reales de SQL')
+  }
+
+  console.log('\n22. Límites de botones y vocabulario (todo lo emitido)')
+  {
+    const malos = emitidos.filter((e) => e.botones.length > 3 || e.botones.some((b) => b.title.length > 20 || b.title.length === 0))
+    comprueba(malos.length === 0, `≤3 botones y títulos ≤20 caracteres en ${emitidos.length} mensajes`, malos.map((m) => m.botones.map((b) => b.title).join('|')).join(' ; '))
+    const largos = emitidos.filter((e) => e.botones.length > 0 && e.texto.length > 1024)
+    comprueba(largos.length === 0, 'cuerpo con botones ≤1024')
+    const infractores = emitidos.filter((e) => PROHIBIDO.test(e.texto))
+    comprueba(infractores.length === 0, 'cero vocabulario prohibido', infractores.map((i) => i.texto).join(' | '))
+    const emojis = emitidos.filter((e) => (e.texto.match(EMOJI) ?? []).length > 1)
+    comprueba(emojis.length === 0, '≤1 emoji por mensaje', emojis.map((i) => i.texto).join(' | '))
+    const conBs = emitidos.filter((e) => /\bBs\b|bolívares/i.test(e.texto) && !/Datos para pagar|BNC|Así funciona|Solo en bolívares/.test(e.texto))
+    comprueba(conBs.length === 0, 'bolívares solo dentro del bloque de pago', conBs.map((i) => i.texto.slice(0, 80)).join(' | '))
+  }
+
+  console.log('\n23. Canal, botones vs. estado, carrusel caído y errores amistosos (revisión final)')
+  {
+    const SEIS = ['bot_compra_pendiente_de_pago', 'bot_compra_mis_solicitudes', 'bot_compra_detalle', 'bot_compra_cancelar', 'bot_compra_recotizar', 'bot_compra_reportar_pago']
+    const seis = todasLasLlamadas.filter((l) => SEIS.includes(l.fn))
+    comprueba(seis.length > 10 && seis.every((l) => l.args.p_channel === 'whatsapp'), `las seis RPC reciben p_channel='whatsapp' en TODOS los sitios de llamada (${seis.length} llamadas)`, JSON.stringify(seis.filter((l) => l.args.p_channel !== 'whatsapp').map((l) => l.fn)))
+    comprueba(new Set(seis.map((l) => l.fn)).size === SEIS.length, 'las seis RPC se ejercitaron en las pruebas', [...new Set(seis.map((l) => l.fn))].join())
+
+    // Botón enviado -> estado en el que queda la sesión: tiene que aceptarlo.
+    const malas = parejasBotonEstado.filter((p) => botonObsoletoEnEstado(p.id, p.estado))
+    comprueba(parejasBotonEstado.length > 50 && malas.length === 0, `cada botón enviado vale en el estado en que queda la sesión (${parejasBotonEstado.length} envíos)`, malas.map((m) => `${m.id}@${m.estado}`).join(' '))
+
+    // Sitios de envío conflictivos, uno por uno (sitio -> estado -> id aceptado).
+    const venc = Object.assign(new Error('bot_compra_reportar_pago: cotizacion_vencida: la cotización venció'), { code: 'P0001' })
+    const envio = await sesionDeEnvio()
+    const sitios: Array<[string, Awaited<ReturnType<typeof correr>>]> = [
+      ['datos escritos en compra_pago_datos con cotización vencida', await correr({ texto: 'Banesco\n04141234567\n123456789012' }, { state: 'compra_pago_datos', data: sesionPago().data }, { bot_compra_reportar_pago: venc })],
+      ['comprobante en compra_pago con cotización vencida', await correr({ type: 'image', id: 'wamid.v1', adjunto: { id: 'm1', mime: 'image/jpeg' } }, sesionPago(), { lector_config: { d360_api_key: 'K', d360_base_url: 'https://waba.360dialog.io/v1/media' }, bot_compra_reportar_pago: venc }, { almacen: { async subir() {} }, fetchFn: (async (input: string | URL | Request) => (String(input).endsWith('/m1') ? new Response(JSON.stringify({ url: 'https://lookaside.fbsbx.com/x' }), { status: 200 }) : new Response(new Uint8Array([1, 2, 3]), { status: 200 }))) as typeof fetch })],
+      ['cantidad inválida en compra_confirmar', await correr({ texto: 'x99' }, { state: 'compra_confirmar', data: { ...envio.datos, envio: 'aereo', cantidad: 1 } })],
+      ['cantidad inválida en compra_envio', await correr({ texto: 'x99' }, { state: 'compra_envio', data: envio.datos })],
+    ]
+    for (const [nombre, r] of sitios) {
+      const ids = r.botones.map((b) => b.id)
+      comprueba(r.botones.length > 0 && ids.every((id) => !botonObsoletoEnEstado(id, r.estado ?? '')), `${nombre}: [${ids.join(', ')}] aceptados en ${r.estado}`, JSON.stringify(r.botones))
+    }
+
+    // El primer toque de «Actualizar» tras la cotización vencida cuenta, venga de donde venga.
+    const desdeDatos = sitios[0][1]
+    comprueba(desdeDatos.estado === 'compra_pago' && desdeDatos.datos.compraVencida === true && desdeDatos.botones.some((b) => b.id === 'compra:recotizar'), 'tras cotizacion_vencida la sesión queda en compra_pago, vencida, con «Actualizar»', JSON.stringify([desdeDatos.estado, desdeDatos.datos]))
+    const recot = { bot_compra_recotizar: { request_id: ID1, request_number: 1001, total_usd: 140, total_anterior_usd: 135.7, quote_expires_at: '2099-01-02T00:00:00Z', payment_block: 'BNC' } }
+    const toque = await correr({ boton: 'compra:recotizar', texto: 'Actualizar' }, { state: desdeDatos.estado ?? 'compra_pago', data: desdeDatos.datos as Record<string, unknown> }, recot)
+    comprueba(toque.fns.includes('bot_compra_recotizar') && !toque.textos[0].startsWith('Esa opción ya no está activa'), 'el primer toque de «Actualizar» recotiza', toque.textos[0])
+    const desdePagoDatos = await correr({ boton: 'compra:recotizar', texto: 'Actualizar' }, { state: 'compra_pago_datos', data: sesionPago({ compraVencida: true }).data }, recot)
+    comprueba(desdePagoDatos.fns.includes('bot_compra_recotizar'), '«Actualizar» también vale si la sesión sigue en compra_pago_datos')
+
+    // El carrusel que falla (22023) no tumba el turno ni repite la búsqueda.
+    const caido = await correr({ texto: 'estetoscopio' }, { state: 'compra_buscar', data: {} }, { helios_whatsapp_carousel: Object.assign(new Error('helios_whatsapp_carousel: Mensaje de carrusel incompleto'), { code: '22023' }) })
+    comprueba(caido.fns.includes('helios_whatsapp_carousel') && caido.estado === 'compra_resultados' && caido.textos.some((t) => t.includes('Responde con el número de la opción.')), 'carrusel caído (22023): el turno sigue y los resultados salen en texto numerado', caido.textos.join(' | ').slice(0, 200))
+    comprueba(caido.llamadas.filter((l) => l.fn === 'helios_whatsapp_carousel').length === 1, 'el carrusel se intenta una sola vez')
+
+    // Errores de la base en palabras del médico.
+    const cancelar = (msg: string) => correr({ boton: 'compra:cancelar_si' }, { state: 'compra_cancelar', data: sesionPago().data }, { bot_compra_cancelar: Object.assign(new Error('bot_compra_cancelar: ' + msg), { code: '22023' }) })
+    const e1 = await cancelar('Solo se puede cancelar una solicitud que aún no tiene pago (estado actual: pago_reportado)')
+    comprueba(e1.textos[0].includes('Verificando tu pago') && !/pago_reportado|estado actual/.test(e1.textos[0]), 'el estado crudo (pago_reportado) se traduce a su etiqueta', e1.textos[0])
+    const e2 = await cancelar('Esta solicitud tiene un pago reportado en revisión: no se puede cancelar')
+    comprueba(e2.textos[0].startsWith('Tienes un pago en revisión'), 'un error conocido sale con texto de médico', e2.textos[0])
+    const e3 = await cancelar('relation "purchase_requests" does not exist')
+    comprueba(!/relation|purchase_requests/.test(e3.textos[0]), 'un texto SQL desconocido jamás llega al médico', e3.textos[0])
+
+    // Un cuerpo largo con botones se parte igual en cualquier transporte.
+    const largo = 'x'.repeat(1500)
+    const partes = partirMensaje(largo, [{ id: 'compra:mis', title: 'Mis compras' }])
+    comprueba(partes.length === 2 && partes[0].botones.length === 0 && partes[1].texto === 'Elige una opción:' && partes[1].botones.length === 1, 'partirMensaje: cuerpo >1024 con botones = texto + «Elige una opción:»')
+    comprueba(partirMensaje(largo).length === 1 && partirMensaje('hola', [{ id: 'a', title: 'b' }]).length === 1, 'partirMensaje: sin botones o corto no se parte')
   }
 
   if (fallos > 0) {

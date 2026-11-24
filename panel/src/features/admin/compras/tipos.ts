@@ -1,6 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // Tipos estrictos del módulo Compras Amazon de Médicos.
-// Alineados al contrato SQL en `20261124120000_compras_amazon_para_medicos.sql`.
+// Alineados al JSON real de `20261124120000_compras_amazon_para_medicos.sql`
+// y a las correcciones de `20261124180000_compras_amazon_correcciones.sql`.
 // ═══════════════════════════════════════════════════════════════════════════
 
 export type EstadoSolicitudCompra =
@@ -17,11 +18,7 @@ export type EstadoSolicitudCompra =
   | 'cancelado'
 
 export type EstadoPagoCompra =
-  | 'reported'
-  | 'in_review'
-  | 'reconciled'
-  | 'rejected'
-  | 'duplicate'
+  'reported' | 'in_review' | 'reconciled' | 'rejected' | 'duplicate'
 
 export type CanalCompra = 'whatsapp' | 'simulador'
 
@@ -29,11 +26,12 @@ export type MetodoEnvioCompra = 'aereo' | 'maritimo'
 
 export type MetodoPagoCompra = 'pago_movil' | 'transferencia'
 
-export type ProveedorCatalogoCompra = 'mock' | 'rainforest' | 'oxylabs' | 'rapidapi'
+export type ProveedorCatalogoCompra = 'mock' | 'rainforest'
 
 export type SolicitudCompraResumen = {
   id: string
   requestNumber: number
+  /** `#C-0012`: armado con el número real de la solicitud. */
   code: string
   merchantId: string
   merchantName: string
@@ -55,10 +53,9 @@ export type SolicitudCompraResumen = {
   shippingUsd: number
   serviceFeeUsd: number
   totalUsd: number
+  /** Tasa y total en bolívares congelados al aprobar; solo lo que mandó el servidor. */
   bcvRateQuote: number | null
   totalVesQuote: number | null
-  bcvRateToday: number | null
-  totalVesToday: number | null
   weightLb: number | null
   volumetricWeightLb: number | null
   volumeFt3: number | null
@@ -68,7 +65,8 @@ export type SolicitudCompraResumen = {
   amazonOrderId: string | null
   usTrackingNumber: string | null
   quoteExpiresAt: string | null
-  paymentBlock: string | null
+  /** `null` si el servidor no lo manda. */
+  vencida: boolean | null
   createdAt: string
   updatedAt: string
 }
@@ -76,14 +74,14 @@ export type SolicitudCompraResumen = {
 export type PagoCompraReporte = {
   id: string
   requestId: string
-  requestNumber: number | null
-  requestCode: string | null
-  merchantId: string | null
-  merchantName: string | null
+  requestNumber: number
+  requestCode: string
+  merchantId: string
+  merchantName: string
   doctorName: string | null
-  phone: string | null
-  productTitle: string | null
-  channel: CanalCompra | null
+  phone: string
+  productTitle: string
+  channel: CanalCompra
   method: MetodoPagoCompra
   bank: string | null
   reference: string | null
@@ -92,7 +90,15 @@ export type PagoCompraReporte = {
   amountUsd: number
   fxRate: number | null
   expectedVes: number | null
-  amountVes: number
+  /** `null` cuando el médico no declaró el monto: hay que verificarlo en el banco. */
+  amountVes: number | null
+  montoDeclarado: boolean
+  /** Declarado − esperado, calculado por el servidor. */
+  diferenciaVes: number | null
+  /** Veredicto del servidor contra el margen; `null` si no hay monto o tasa. */
+  montoCuadra: boolean | null
+  /** `true` si el reporte llegó con la cotización vencida; `null` si el servidor no lo manda. */
+  cotizacionVencida: boolean | null
   receiptPath: string | null
   status: EstadoPagoCompra
   rejectionNote: string | null
@@ -110,15 +116,12 @@ export type PagoCompraReporte = {
 
 export type EventoSolicitudCompra = {
   id: string
-  requestId: string
   eventType: string
   title: string
   fromStatus: string | null
   toStatus: string | null
   actorName: string | null
-  actorRole: string | null
   note: string | null
-  payload: Record<string, unknown> | null
   createdAt: string
 }
 
@@ -126,6 +129,7 @@ export type DetalleSolicitudCompra = {
   request: SolicitudCompraResumen
   payments: PagoCompraReporte[]
   events: EventoSolicitudCompra[]
+  /** Bloque de pago en bolívares armado por el servidor (solo esperando pago o aduana). */
   paymentBlock: string | null
   bcvRateToday: number | null
 }
@@ -138,14 +142,16 @@ export type ConteosCompras = {
   enTransito: number
   listoEntrega: number
   totalActivas: number
+  /** Solicitudes del canal simulador (no entran en los demás números). */
+  simulador: number
 }
 
 export type PrevisionPagoCompra = {
   requestId: string
   paidOn: string
   amountUsd: number
-  fxRate: number | null
-  expectedVes: number | null
+  fxRate: number
+  expectedVes: number
 }
 
 export type AjustesComprasConfig = {
@@ -159,6 +165,8 @@ export type AjustesComprasConfig = {
   quoteTtlHours: number
   catalogProvider: ProveedorCatalogoCompra
   isEnabled: boolean
+  /** Teléfonos E.164 que ven la opción aunque `isEnabled` sea falso. */
+  pilotPhones: string[]
   bcvRateToday: number | null
   updatedAt: string | null
 }
@@ -170,39 +178,62 @@ export type MedicoSimulador = {
   doctorName: string | null
   role: string | null
   phone: string
+  userId: string
 }
 
 export type DireccionSimMensaje = 'in' | 'out'
 
-export type TipoSimMensaje = 'text' | 'buttons' | 'carousel' | 'list' | 'image'
+export type BotonSimulador = { id: string; title: string }
 
-export type BotonSimulador = {
+export type TarjetaSimulador = {
+  imageUrl: string
+  body: string
+  button: BotonSimulador
+}
+
+export type FilaListaSimulador = {
   id: string
   title: string
+  description: string | null
 }
 
-export type TarjetaCarruselSimulador = {
-  asin: string
+export type SeccionListaSimulador = {
   title: string
-  imageUrl: string | null
-  rating: number
-  reviewCount: number
-  priceUsd: number
-  estimatedDeliveredUsd: number
-  estimatedDeliveredVes: number | null
-  shippingHint: string
-  restricted: boolean
-  weightEstimated: boolean
-  actionId: string
-  actionLabel: string
+  rows: FilaListaSimulador[]
 }
 
+/** Mensaje del simulador ya leído en una de las formas canónicas del contrato. */
 export type MensajeSimulador = {
   id: string
   phone: string
   direction: DireccionSimMensaje
-  kind: TipoSimMensaje
   body: string
-  payload: Record<string, unknown> | null
   createdAt: string
+  contenido:
+    | { kind: 'text' }
+    | { kind: 'buttons'; buttons: BotonSimulador[] }
+    | { kind: 'carousel'; cards: TarjetaSimulador[] }
+    | { kind: 'list'; button: string; sections: SeccionListaSimulador[] }
+    | { kind: 'image'; receiptPath: string }
 }
+
+export type DiagnosticoSimulador = {
+  proveedor: ProveedorCatalogoCompra
+  proveedorListo: boolean
+}
+
+export type ResultadoTurnoSimulador = DiagnosticoSimulador & {
+  estado: string | null
+}
+
+/** Cuerpo de `compras-simulador` (contrato §4). */
+export type PeticionSimulador =
+  | { accion: 'diagnostico' }
+  | {
+      accion: 'turno'
+      phone: string
+      texto?: string
+      respuesta?: { id: string; title: string }
+      adjunto?: { receipt_path: string }
+    }
+  | { accion: 'reiniciar'; phone: string }

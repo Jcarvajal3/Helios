@@ -9,33 +9,117 @@
 import { normalizar } from '../logica.ts'
 import type { RestriccionMedica } from './tipos.ts'
 
-/** Patrones de URLs de Amazon que transportan un ASIN o ISBN-10. */
-const PATRONES_URL_AMAZON: ReadonlyArray<RegExp> = [
-  /(?:https?:\/\/)?(?:(?:www|smile|m)\.)?amazon\.[a-z.]{2,6}\/(?:[^\s/?#]*\/)?dp\/([A-Z0-9]{10})(?=[/?#\s]|$)/i,
-  /(?:https?:\/\/)?(?:(?:www|smile|m)\.)?amazon\.[a-z.]{2,6}\/gp\/(?:product|aw\/d)\/([A-Z0-9]{10})(?=[/?#\s]|$)/i,
-  /(?:https?:\/\/)?(?:(?:www|smile|m)\.)?amazon\.[a-z.]{2,6}\/exec\/obidos\/ASIN\/([A-Z0-9]{10})(?=[/?#\s]|$)/i,
-  /(?:https?:\/\/)?(?:www\.)?amzn\.com\/(?:dp\/)?([A-Z0-9]{10})(?=[/?#\s]|$)/i,
-]
-
 /** Prefijo explícito «asin: B00QES9K4G» o «asin: 1264268505» (ISBN-10). */
 const PATRON_ASIN_PREFIJO = /\basin\s*:\s*([A-Z0-9]{10})\b/i
 
 /** ASIN estándar de Amazon de 10 caracteres alfanuméricos que inicia en B0. */
 const PATRON_ASIN_B0 = /(?<![A-Z0-9])(B0[A-Z0-9]{8})(?![A-Z0-9])/i
 
+/** Tiendas de Amazon: el host termina en amazon.<tld> (anclado: «evilamazon.com» no vale). */
+const HOST_AMAZON = /(^|\.)amazon\.([a-z]{2,3}|co\.[a-z]{2}|com\.[a-z]{2})$/i
+/** amzn.com es un acortador con el ASIN en la ruta. */
+const HOST_AMZN_COM = /(^|\.)amzn\.com$/i
+/** Acortadores que hay que seguir para ver el producto. */
+const HOST_CORTO = /^(?:www\.)?(amzn\.to|a\.co|amzn\.eu|amzn\.asia)$/i
+
+const PATRONES_RUTA: ReadonlyArray<RegExp> = [
+  /(?:^|\/)dp\/([A-Z0-9]{10})(?=[/?#]|$)/i,
+  /\/gp\/(?:product|aw\/d|offer-listing)\/([A-Z0-9]{10})(?=[/?#]|$)/i,
+  /\/exec\/obidos\/ASIN\/([A-Z0-9]{10})(?=[/?#]|$)/i,
+  /\/(?:product|product-reviews)\/([A-Z0-9]{10})(?=[/?#]|$)/i,
+]
+
+/** Un enlace de Amazon (o de un acortador de Amazon) dentro de un texto. */
+export type EnlaceAmazon = {
+  /** El ASIN si el enlace lo trae; null en un acortador sin resolver. */
+  asin: string | null
+  /** El host en minúsculas («www.amazon.es»). */
+  host: string
+  /** true si es un acortador (amzn.to, a.co, amzn.eu, amzn.com sin ASIN). */
+  corto: boolean
+  /** true si la tienda es amazon.com (o un acortador). */
+  esAmazonCom: boolean
+  /** El enlace completo, con https. */
+  url: string
+}
+
+function aUrl(token: string): URL | null {
+  const limpio = token.replace(/^[<(\[«"']+|[>)\]»"'.,;!?]+$/g, '')
+  if (limpio === '') return null
+  const conEsquema = /^https?:\/\//i.test(limpio)
+    ? limpio
+    : /^(?:www\.)?(?:[a-z0-9-]+\.)+[a-z]{2,}(?:[/?#]|$)/i.test(limpio)
+      ? `https://${limpio}`
+      : null
+  if (!conEsquema) return null
+  try {
+    return new URL(conEsquema)
+  } catch {
+    return null
+  }
+}
+
+/** Todas las URL de un texto (con o sin «https://»). */
+function urlsDe(texto: string): URL[] {
+  const salida: URL[] = []
+  for (const token of texto.split(/\s+/)) {
+    const u = aUrl(token)
+    if (u) salida.push(u)
+  }
+  return salida
+}
+
+/** ¿El texto trae algún enlace (de cualquier sitio)? */
+export function contieneEnlace(texto: string | null | undefined): boolean {
+  return !!texto && urlsDe(texto).length > 0
+}
+
+/** El primer enlace de Amazon del texto, o null (solo hosts anclados a Amazon). */
+export function analizarEnlaceAmazon(texto: string | null | undefined): EnlaceAmazon | null {
+  if (!texto) return null
+  for (const u of urlsDe(texto)) {
+    const host = u.hostname.toLowerCase()
+    let ruta = u.pathname
+    try {
+      ruta = decodeURIComponent(u.pathname)
+    } catch {
+      // se queda la ruta tal cual
+    }
+    if (HOST_CORTO.test(host)) {
+      return { asin: null, host, corto: true, esAmazonCom: true, url: u.toString() }
+    }
+    if (HOST_AMZN_COM.test(host)) {
+      const m = /^\/(?:dp\/)?([A-Z0-9]{10})\/?$/i.exec(ruta)
+      if (m) return { asin: m[1].toUpperCase(), host, corto: false, esAmazonCom: true, url: u.toString() }
+      return { asin: null, host, corto: true, esAmazonCom: true, url: u.toString() }
+    }
+    if (HOST_AMAZON.test(host)) {
+      let asin: string | null = null
+      for (const p of PATRONES_RUTA) {
+        const m = p.exec(ruta)
+        if (m?.[1]) {
+          asin = m[1].toUpperCase()
+          break
+        }
+      }
+      return { asin, host, corto: false, esAmazonCom: /(^|\.)amazon\.com$/i.test(host), url: u.toString() }
+    }
+  }
+  return null
+}
+
 /**
- * Extrae un ASIN de una URL de Amazon, de un prefijo «asin:» (admite ISBN-10)
- * o de un ASIN puro que empiece por «B0». Devuelve el código en mayúsculas o null.
+ * Extrae un ASIN de una URL de Amazon (cualquier tienda, hosts anclados), de
+ * un prefijo «asin:» (admite ISBN-10) o de un ASIN puro que empiece por «B0».
+ * Un enlace de otro sitio no se mira. Devuelve el código en mayúsculas o null.
  */
 export function extraerAsinDeTexto(texto: string | null | undefined): string | null {
   if (!texto) return null
   const crudo = texto.trim()
   if (crudo === '') return null
 
-  for (const patron of PATRONES_URL_AMAZON) {
-    const m = patron.exec(crudo)
-    if (m?.[1]) return m[1].toUpperCase()
-  }
+  const enlace = analizarEnlaceAmazon(crudo)
+  if (enlace) return enlace.asin
 
   const prefijo = PATRON_ASIN_PREFIJO.exec(crudo)
   if (prefijo?.[1]) {
@@ -45,7 +129,12 @@ export function extraerAsinDeTexto(texto: string | null | undefined): string | n
     }
   }
 
-  const suelto = PATRON_ASIN_B0.exec(crudo)
+  // Sin enlaces de otros sitios por en medio.
+  const sinEnlaces = crudo
+    .split(/\s+/)
+    .filter((t) => aUrl(t) === null)
+    .join(' ')
+  const suelto = PATRON_ASIN_B0.exec(sinEnlaces)
   if (suelto?.[1]) return suelto[1].toUpperCase()
 
   return null

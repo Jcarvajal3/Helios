@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Save } from 'lucide-react'
+import { Plus, Save, X } from 'lucide-react'
 
 import { useToast } from '@/components/Toast'
 import {
+  Badge,
   Button,
   Callout,
   Card,
@@ -16,66 +17,169 @@ import {
   formatDateTime,
 } from '@/components/ui'
 import { guardarAjustesCompras } from '@/features/admin/compras/api'
-import { CLAVE_COMPRAS, consultaAjustesCompras } from '@/features/admin/compras/consultas'
-import type { AjustesComprasConfig, ProveedorCatalogoCompra } from '@/features/admin/compras/tipos'
+import {
+  CLAVE_COMPRAS,
+  consultaAjustesCompras,
+  consultaDiagnosticoSimulador,
+} from '@/features/admin/compras/consultas'
+import { rotuloDelProveedor } from '@/features/admin/compras/estados'
+import type {
+  AjustesComprasConfig,
+  ProveedorCatalogoCompra,
+} from '@/features/admin/compras/tipos'
 import { SOLO_SUPER_ADMIN, useIsSuperAdmin } from '@/features/admin/role'
 import { formatoMontoEditable, leerMonto } from '@/lib/montos'
 import { describeError } from '@/lib/supabase'
 
-type BorradorAjustes = {
-  taxUsaPct: string
-  serviceFeePct: string
-  airRatePerLbUsd: string
-  airMinUsd: string
-  seaRatePerFt3Usd: string
-  seaMinUsd: string
-  fallbackWeightLb: string
-  quoteTtlHours: string
+type ClaveNumerica =
+  | 'taxUsaPct'
+  | 'serviceFeePct'
+  | 'airRatePerLbUsd'
+  | 'airMinUsd'
+  | 'seaRatePerFt3Usd'
+  | 'seaMinUsd'
+  | 'fallbackWeightLb'
+  | 'quoteTtlHours'
+
+/** Los mismos topes que valida la base: así el botón se apaga antes de que falle. */
+const CAMPOS: ReadonlyArray<{
+  clave: ClaveNumerica
+  label: string
+  hint?: string
+  min: number
+  max?: number
+  entero?: boolean
+  mayorQueMin?: boolean
+}> = [
+  {
+    clave: 'taxUsaPct',
+    label: 'Tax USA (%)',
+    min: 0,
+    max: 30,
+    hint: 'Impuesto aplicado sobre el subtotal Amazon.',
+  },
+  {
+    clave: 'serviceFeePct',
+    label: 'Tarifa de gestión Helios (%)',
+    min: 0,
+    max: 50,
+    hint: 'Porcentaje sobre el subtotal del producto.',
+  },
+  {
+    clave: 'airRatePerLbUsd',
+    label: 'Flete aéreo por libra (USD / lb)',
+    min: 0,
+  },
+  { clave: 'airMinUsd', label: 'Mínimo flete aéreo (USD)', min: 0 },
+  {
+    clave: 'seaRatePerFt3Usd',
+    label: 'Flete marítimo por pie cúbico (USD / ft³)',
+    min: 0,
+  },
+  { clave: 'seaMinUsd', label: 'Mínimo flete marítimo (USD)', min: 0 },
+  {
+    clave: 'fallbackWeightLb',
+    label: 'Peso de respaldo sin listar (lb)',
+    min: 0,
+    mayorQueMin: true,
+    hint: 'Peso usado cuando Amazon no publica el peso.',
+  },
+  {
+    clave: 'quoteTtlHours',
+    label: 'Vigencia de cotización (horas)',
+    min: 1,
+    max: 168,
+    entero: true,
+  },
+]
+
+const E164 = /^\+[1-9]\d{7,14}$/
+
+type Borrador = {
+  numeros: Record<ClaveNumerica, string>
   catalogProvider: ProveedorCatalogoCompra
   isEnabled: boolean
+  pilotPhones: string[]
 }
 
-function aBorrador(c: AjustesComprasConfig): BorradorAjustes {
+function aBorrador(c: AjustesComprasConfig): Borrador {
+  const numeros = Object.fromEntries(
+    CAMPOS.map((f) => [f.clave, formatoMontoEditable(c[f.clave])]),
+  ) as Record<ClaveNumerica, string>
   return {
-    taxUsaPct: formatoMontoEditable(c.taxUsaPct),
-    serviceFeePct: formatoMontoEditable(c.serviceFeePct),
-    airRatePerLbUsd: formatoMontoEditable(c.airRatePerLbUsd),
-    airMinUsd: formatoMontoEditable(c.airMinUsd),
-    seaRatePerFt3Usd: formatoMontoEditable(c.seaRatePerFt3Usd),
-    seaMinUsd: formatoMontoEditable(c.seaMinUsd),
-    fallbackWeightLb: formatoMontoEditable(c.fallbackWeightLb),
-    quoteTtlHours: formatoMontoEditable(c.quoteTtlHours),
+    numeros,
     catalogProvider: c.catalogProvider,
     isEnabled: c.isEnabled,
+    pilotPhones: c.pilotPhones,
   }
 }
 
+function leerCampo(f: (typeof CAMPOS)[number], texto: string): number | null {
+  const n = leerMonto(texto)
+  if (n === null) return null
+  if (f.mayorQueMin ? n <= f.min : n < f.min) return null
+  if (f.max !== undefined && n > f.max) return null
+  if (f.entero && !Number.isInteger(n)) return null
+  return n
+}
+
 export function AjustesCompras() {
+  const query = useQuery(consultaAjustesCompras())
+
+  if (query.isPending) return <SkeletonCard />
+  if (query.isError) {
+    return (
+      <ErrorBox
+        title="No se pudieron cargar los ajustes de compras"
+        detail={describeError(query.error)}
+      />
+    )
+  }
+  return <FormularioAjustes ajustes={query.data} />
+}
+
+function FormularioAjustes({ ajustes }: { ajustes: AjustesComprasConfig }) {
   const esSuperAdmin = useIsSuperAdmin()
   const queryClient = useQueryClient()
   const avisar = useToast()
-  const query = useQuery(consultaAjustesCompras())
+  const diagnostico = useQuery(consultaDiagnosticoSimulador())
 
-  const [form, setForm] = useState<BorradorAjustes | null>(null)
+  const [form, setForm] = useState<Borrador>(() => aBorrador(ajustes))
+  const [telefonoNuevo, setTelefonoNuevo] = useState('')
 
-  useEffect(() => {
-    if (query.data && form === null) {
-      setForm(aBorrador(query.data))
-    }
-  }, [query.data, form])
+  const telefono = telefonoNuevo.trim()
+  const telefonoError =
+    telefono === ''
+      ? null
+      : !E164.test(telefono)
+        ? 'Formato internacional con +, por ejemplo +584141234567.'
+        : form.pilotPhones.includes(telefono)
+          ? 'Ese teléfono ya está en la lista.'
+          : null
+
+  const valores = CAMPOS.map((f) => leerCampo(f, form.numeros[f.clave]))
+  const hayInvalidos = valores.some((v) => v === null)
+  const abiertoConMock = form.isEnabled && form.catalogProvider === 'mock'
+  const motivoApagado = !esSuperAdmin
+    ? SOLO_SUPER_ADMIN
+    : abiertoConMock
+      ? 'Un catálogo de prueba no se abre a todos los médicos: elige Rainforest o deja solo el piloto.'
+      : hayInvalidos
+        ? 'Revisa los campos marcados: los valores tienen que ser números dentro de su rango.'
+        : undefined
 
   const guardar = useMutation({
     mutationFn: () => {
-      if (!form) throw new Error('Sin datos de configuración.')
-      const taxUsaPct = leerMonto(form.taxUsaPct)
-      const serviceFeePct = leerMonto(form.serviceFeePct)
-      const airRatePerLbUsd = leerMonto(form.airRatePerLbUsd)
-      const airMinUsd = leerMonto(form.airMinUsd)
-      const seaRatePerFt3Usd = leerMonto(form.seaRatePerFt3Usd)
-      const seaMinUsd = leerMonto(form.seaMinUsd)
-      const fallbackWeightLb = leerMonto(form.fallbackWeightLb)
-      const quoteTtlHours = leerMonto(form.quoteTtlHours)
-
+      const [
+        taxUsaPct,
+        serviceFeePct,
+        airRatePerLbUsd,
+        airMinUsd,
+        seaRatePerFt3Usd,
+        seaMinUsd,
+        fallbackWeightLb,
+        quoteTtlHours,
+      ] = valores
       if (
         taxUsaPct === null ||
         serviceFeePct === null ||
@@ -88,7 +192,6 @@ export function AjustesCompras() {
       ) {
         throw new Error('Revisa los valores numéricos antes de guardar.')
       }
-
       return guardarAjustesCompras({
         taxUsaPct,
         serviceFeePct,
@@ -97,132 +200,169 @@ export function AjustesCompras() {
         seaRatePerFt3Usd,
         seaMinUsd,
         fallbackWeightLb,
-        quoteTtlHours: Math.max(1, Math.round(quoteTtlHours)),
+        quoteTtlHours,
         catalogProvider: form.catalogProvider,
         isEnabled: form.isEnabled,
+        pilotPhones: form.pilotPhones,
       })
     },
     onSuccess: (actualizado) => {
       setForm(aBorrador(actualizado))
       void queryClient.invalidateQueries({ queryKey: CLAVE_COMPRAS })
-      avisar('Tarifas y parámetros de Compras Amazon actualizados.')
+      avisar('Ajustes de Compras Amazon actualizados.')
     },
   })
 
-  if (query.isPending || !form) {
-    return <SkeletonCard />
+  function agregarTelefono() {
+    if (telefono === '' || telefonoError) return
+    setForm((f) => ({ ...f, pilotPhones: [...f.pilotPhones, telefono] }))
+    setTelefonoNuevo('')
   }
-
-  if (query.isError) {
-    return (
-      <ErrorBox
-        title="No se pudieron cargar los ajustes de compras"
-        detail={describeError(query.error)}
-      />
-    )
-  }
-
-  const valoresInvalidos =
-    leerMonto(form.taxUsaPct) === null ||
-    leerMonto(form.serviceFeePct) === null ||
-    leerMonto(form.airRatePerLbUsd) === null ||
-    leerMonto(form.airMinUsd) === null ||
-    leerMonto(form.seaRatePerFt3Usd) === null ||
-    leerMonto(form.seaMinUsd) === null ||
-    leerMonto(form.fallbackWeightLb) === null ||
-    leerMonto(form.quoteTtlHours) === null
 
   return (
     <div className="flex max-w-4xl flex-col gap-shell-gap-block">
-      <Seccion titulo="Tarifas y motor de cotización">
+      <Seccion titulo="Disponibilidad y proveedor">
         <Card className="flex flex-col gap-5">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-panel-hairline pb-4">
+          <div className="flex flex-col gap-2">
             <Switch
               id="compras-habilitado"
-              label="Módulo Compras Amazon activo en WhatsApp"
+              label="Habilitado para todos los médicos"
               checked={form.isEnabled}
               disabled={!esSuperAdmin}
-              onChange={(v) => setForm((f) => (f ? { ...f, isEnabled: v } : f))}
+              onChange={(v) => setForm((f) => ({ ...f, isEnabled: v }))}
             />
-            {query.data.updatedAt && (
+            <p className="type-panel-caption text-on-surface-variant">
+              Apagado: solo los teléfonos piloto ven la opción de comprar en
+              WhatsApp. Encendido: la ven todos los médicos. Un catálogo de
+              prueba nunca se puede abrir a todos.
+            </p>
+            {ajustes.updatedAt && (
               <p className="type-panel-caption text-panel-muted">
-                Último cambio: {formatDateTime(query.data.updatedAt)}
+                Último cambio: {formatDateTime(ajustes.updatedAt)}
               </p>
             )}
           </div>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <Input
-              id="compras-tax-usa"
-              label="Tax USA (%)"
-              value={form.taxUsaPct}
-              onChange={(v) => setForm((f) => (f ? { ...f, taxUsaPct: v } : f))}
-              inputMode="decimal"
-              hint="Impuesto estatal de Florida/casillero aplicado sobre el subtotal Amazon."
-            />
-            <Input
-              id="compras-tarifa-gestion"
-              label="Tarifa de gestión Helios (%)"
-              value={form.serviceFeePct}
-              onChange={(v) => setForm((f) => (f ? { ...f, serviceFeePct: v } : f))}
-              inputMode="decimal"
-              hint="Porcentaje de gestión aplicado sobre el subtotal del producto en Amazon."
-            />
-            <Input
-              id="compras-air-rate"
-              label="Flete aéreo por libra (USD / lb)"
-              value={form.airRatePerLbUsd}
-              onChange={(v) => setForm((f) => (f ? { ...f, airRatePerLbUsd: v } : f))}
-              inputMode="decimal"
-            />
-            <Input
-              id="compras-air-min"
-              label="Mínimo flete aéreo (USD)"
-              value={form.airMinUsd}
-              onChange={(v) => setForm((f) => (f ? { ...f, airMinUsd: v } : f))}
-              inputMode="decimal"
-            />
-            <Input
-              id="compras-sea-rate"
-              label="Flete marítimo por pie cúbico (USD / ft³)"
-              value={form.seaRatePerFt3Usd}
-              onChange={(v) => setForm((f) => (f ? { ...f, seaRatePerFt3Usd: v } : f))}
-              inputMode="decimal"
-            />
-            <Input
-              id="compras-sea-min"
-              label="Mínimo flete marítimo (USD)"
-              value={form.seaMinUsd}
-              onChange={(v) => setForm((f) => (f ? { ...f, seaMinUsd: v } : f))}
-              inputMode="decimal"
-            />
-            <Input
-              id="compras-fallback-weight"
-              label="Peso de respaldo sin listar (lb)"
-              value={form.fallbackWeightLb}
-              onChange={(v) => setForm((f) => (f ? { ...f, fallbackWeightLb: v } : f))}
-              inputMode="decimal"
-              hint="Peso usado cuando Amazon no publica el peso del artículo."
-            />
-            <Input
-              id="compras-quote-ttl"
-              label="Vigencia de cotización (horas)"
-              value={form.quoteTtlHours}
-              onChange={(v) => setForm((f) => (f ? { ...f, quoteTtlHours: v } : f))}
-              inputMode="numeric"
-            />
+          <div className="flex flex-col gap-2 border-t border-panel-hairline pt-4">
             <Select
               id="compras-provider"
               label="Proveedor de catálogo Amazon"
               value={form.catalogProvider}
               options={[
-                { value: 'mock', label: 'Catálogo Mock local (pruebas y simulador)' },
-                { value: 'rainforest', label: 'Rainforest API (Amazon en vivo)' },
-                { value: 'oxylabs', label: 'Oxylabs API (Amazon en vivo)' },
-                { value: 'rapidapi', label: 'RapidAPI Amazon (Amazon en vivo)' },
+                { value: 'mock', label: 'Catálogo de prueba' },
+                { value: 'rainforest', label: 'Rainforest API (Amazon real)' },
               ]}
-              onChange={(v) => setForm((f) => (f ? { ...f, catalogProvider: v } : f))}
+              onChange={(v) => setForm((f) => ({ ...f, catalogProvider: v }))}
+              className="max-w-sm"
             />
+            <div className="flex flex-wrap items-center gap-2 type-panel-caption text-on-surface-variant">
+              Estado del proveedor guardado:
+              {diagnostico.data && (
+                <Badge
+                  tone={diagnostico.data.proveedorListo ? 'success' : 'error'}
+                  icono
+                >
+                  {rotuloDelProveedor(diagnostico.data)}
+                </Badge>
+              )}
+              {diagnostico.isPending && <span>consultando…</span>}
+              {diagnostico.isError && (
+                <span className="text-error">
+                  {describeError(diagnostico.error)}
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2 border-t border-panel-hairline pt-4">
+            <p className="type-panel-body font-semibold text-on-surface">
+              Teléfonos piloto
+            </p>
+            <ul className="flex flex-wrap gap-2" aria-label="Teléfonos piloto">
+              {form.pilotPhones.length === 0 && (
+                <li className="type-panel-caption text-on-surface-variant">
+                  Ninguno todavía.
+                </li>
+              )}
+              {form.pilotPhones.map((t) => (
+                <li key={t}>
+                  <Badge tone="neutral">
+                    <span className="tabular-nums">{t}</span>
+                    <button
+                      type="button"
+                      aria-label={`Quitar ${t}`}
+                      disabled={!esSuperAdmin}
+                      onClick={() =>
+                        setForm((f) => ({
+                          ...f,
+                          pilotPhones: f.pilotPhones.filter((p) => p !== t),
+                        }))
+                      }
+                    >
+                      <X size={12} aria-hidden />
+                    </button>
+                  </Badge>
+                </li>
+              ))}
+            </ul>
+            <div className="flex items-start gap-2">
+              <Input
+                id="compras-piloto-nuevo"
+                label="Agregar teléfono"
+                value={telefonoNuevo}
+                onChange={setTelefonoNuevo}
+                inputMode="tel"
+                placeholder="+584141234567"
+                error={telefonoError !== null}
+                hint={telefonoError ?? undefined}
+                className="max-w-xs"
+              />
+              <div className="pt-6">
+                <Button
+                  size="md"
+                  variant="tonal"
+                  disabled={
+                    !esSuperAdmin || telefono === '' || telefonoError !== null
+                  }
+                  motivoApagado={
+                    !esSuperAdmin
+                      ? SOLO_SUPER_ADMIN
+                      : (telefonoError ?? undefined)
+                  }
+                  onClick={agregarTelefono}
+                >
+                  <Plus size={14} aria-hidden /> Agregar
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Card>
+      </Seccion>
+
+      <Seccion titulo="Tarifas y motor de cotización">
+        <Card className="flex flex-col gap-5">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {CAMPOS.map((f, i) => (
+              <Input
+                key={f.clave}
+                id={`compras-${f.clave}`}
+                label={f.label}
+                value={form.numeros[f.clave]}
+                onChange={(v) =>
+                  setForm((b) => ({
+                    ...b,
+                    numeros: { ...b.numeros, [f.clave]: v },
+                  }))
+                }
+                inputMode={f.entero ? 'numeric' : 'decimal'}
+                error={valores[i] === null}
+                hint={
+                  valores[i] === null
+                    ? `Valor inválido${f.max !== undefined ? ` (de ${f.min} a ${f.max})` : ''}.`
+                    : f.hint
+                }
+              />
+            ))}
           </div>
 
           {guardar.isError && (
@@ -235,30 +375,23 @@ export function AjustesCompras() {
           <div className="flex flex-wrap items-start gap-3 border-t border-panel-hairline pt-4">
             <Button
               size="md"
-              disabled={!esSuperAdmin || valoresInvalidos || guardar.isPending}
-              motivoApagado={
-                !esSuperAdmin
-                  ? SOLO_SUPER_ADMIN
-                  : valoresInvalidos
-                    ? 'Completa todos los campos con números válidos.'
-                    : undefined
-              }
+              disabled={motivoApagado !== undefined || guardar.isPending}
+              motivoApagado={motivoApagado}
               onClick={() => guardar.mutate()}
             >
               <Save size={15} aria-hidden />
-              {guardar.isPending ? 'Guardando…' : 'Guardar tarifas'}
+              {guardar.isPending ? 'Guardando…' : 'Guardar ajustes'}
             </Button>
           </div>
         </Card>
       </Seccion>
 
-      <Callout tone="info" titulo="Cómo activar el catálogo de Amazon en vivo">
-        Mientras no se contrate la API externa, el módulo trabaja con el catálogo médico de pruebas
-        y el Simulador WhatsApp. Para conectar precios e inventario reales de Amazon en la función
-        de WhatsApp, configura los secretos de Supabase Edge Functions:{' '}
-        <span className="font-mono">AMAZON_PROVIDER=rainforest</span> y{' '}
-        <span className="font-mono">AMAZON_API_KEY=&lt;tu_clave&gt;</span>, y selecciona
-        «Rainforest API» en el desplegable superior.
+      <Callout tone="info" titulo="Cómo activar el catálogo de Amazon real">
+        Guarda la clave de Rainforest como secreto de Edge Functions con el
+        nombre <span className="font-mono">RAINFOREST_API_KEY</span>, elige
+        «Rainforest API» arriba y revisa que el estado diga «listo». Sin la
+        clave, el bot responde que las compras no están disponibles; nunca cae
+        al catálogo de prueba.
       </Callout>
     </div>
   )

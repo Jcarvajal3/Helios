@@ -444,3 +444,9 @@ verify_jwt = true
 # comprueba el JWT, y la base (`rx_preparar_envio`) decide si puede enviar.
 [functions.rx-enviar]
 verify_jwt = true
+
+# El simulador de compras Amazon del superadmin: lo llama el panel con la sesión
+# de quien lo usa. Se comprueba el JWT, y la función llama a
+# `admin_purchase_sim_autorizar` (solo `is_platform_admin`, con el segundo factor).
+[functions.compras-simulador]
+verify_jwt = true

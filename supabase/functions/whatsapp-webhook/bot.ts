@@ -65,9 +65,12 @@ import {
   nombreDeLaMoneda,
 } from './datos.ts'
 import type { Clave, DatosDelPaciente, Lectura, Moneda } from './datos.ts'
+import type { AlmacenComprobantes } from './compras/adjuntos.ts'
 import { crearProveedorCatalogo } from './compras/catalogo_rainforest.ts'
-import { ES_ESTADO_COMPRA, atenderCompraMedico, esAtajoDeCompra } from './compras/flujo.ts'
-import type { DatosCompra, EstadoCompra, ProveedorCatalogo, TarjetaCarrusel } from './compras/tipos.ts'
+import type { ResolverEnlace } from './compras/enlaces.ts'
+import { ES_ESTADO_COMPRA, atenderCompraMedico, esAtajoDeCompra, esIntentoDePago } from './compras/flujo.ts'
+import { crearTransporteWhatsApp } from './compras/transporte.ts'
+import type { DatosCompra, EstadoCompra, ProveedorCatalogo } from './compras/tipos.ts'
 import { esCortesia, normalizar } from './logica.ts'
 import type { EventoDeMensaje } from './logica.ts'
 
@@ -122,7 +125,15 @@ const CORREGIR =
 /** Todas las preguntas del formulario, en orden. */
 const TODO_EL_FORMULARIO: Clave[] = CAMPOS_DEL_FORMULARIO.map(([k]) => k)
 
-const MENU: Boton[] = [
+/** El menú de siempre (compras en Amazon apagadas o sin piloto para ese número). */
+const MENU_BASE: Boton[] = [
+  { id: 'menu:nuevo', title: 'Nuevo pago en cuotas' },
+  { id: 'menu:mis', title: 'Mis pagos en cuotas' },
+  { id: 'menu:ayuda', title: 'Ayuda' },
+]
+
+/** El menú con «Comprar en Amazon» (la ayuda se pide escribiendo «ayuda»). */
+const MENU_COMPRAS: Boton[] = [
   { id: 'menu:nuevo', title: 'Nuevo pago en cuotas' },
   { id: 'menu:mis', title: 'Mis pagos en cuotas' },
   { id: 'menu:comprar', title: 'Comprar en Amazon' },
@@ -231,11 +242,10 @@ function nombreDePila(p: Personal): string {
   return n
 }
 
-function proveedorPorDefecto(): ProveedorCatalogo {
+/** El catálogo que fija la base (`catalog_provider`); la clave va en el secreto `RAINFOREST_API_KEY`. Sin clave: null (jamás mock en silencio). */
+function proveedorPorDefecto(nombre: string): ProveedorCatalogo | null {
   const deno = (globalThis as { Deno?: { env?: { get(key: string): string | undefined } } }).Deno
-  const providerName = deno?.env?.get('AMAZON_PROVIDER') ?? 'mock'
-  const apiKey = deno?.env?.get('AMAZON_API_KEY') ?? ''
-  return crearProveedorCatalogo(providerName, apiKey)
+  return crearProveedorCatalogo(nombre, deno?.env?.get('RAINFOREST_API_KEY') ?? '')
 }
 
 export async function atenderAlPersonal({
@@ -243,17 +253,30 @@ export async function atenderAlPersonal({
   personal,
   mensaje,
   humano = false,
-  proveedor,
+  proveedorDe = proveedorPorDefecto,
+  almacen,
+  resolverEnlace,
+  ahora,
+  fetchFn,
 }: {
   rpc: Rpc
   personal: Personal
   mensaje: EventoDeMensaje
   /** Una persona del equipo le escribió a mano hace poco (`bot_humano_atiende`): el bot no le contesta lo que no entiende. */
   humano?: boolean
-  proveedor?: ProveedorCatalogo
+  /** El catálogo de un proveedor, o null si no se puede armar (para pruebas). */
+  proveedorDe?: (nombre: string) => ProveedorCatalogo | null
+  /** Dónde se guardan los comprobantes de las compras (el bucket `payment-receipts`). */
+  almacen?: AlmacenComprobantes
+  resolverEnlace?: ResolverEnlace
+  ahora?: () => Date
+  /** Para bajar adjuntos de 360dialog (pruebas). */
+  fetchFn?: typeof fetch
 }): Promise<unknown> {
   const tel = personal.phone_e164
+  const transporte = crearTransporteWhatsApp({ rpc, personal, almacen, fetchFn })
 
+  // Los pasos de pago en cuotas envían exactamente como antes (el texto con botones se recorta a 1024).
   const enviar = (texto: string, botones: Boton[] = []) =>
     rpc('helios_whatsapp_text', {
       p_to: tel,
@@ -261,45 +284,24 @@ export async function atenderAlPersonal({
       p_staff_user_id: personal.user_id,
       p_buttons: botones,
     })
-  const enviarCarrusel = (cuerpo: string, tarjetas: TarjetaCarrusel[]) => {
-    if (tarjetas.length < 2) {
-      const t = tarjetas[0]
-      const texto = t ? `${cuerpo}\n\n${t.body}` : cuerpo
-      const botones: Boton[] = t
-        ? [
-            { id: t.button_id, title: t.button_title.slice(0, 20) },
-            { id: 'compra:buscar', title: 'Otra búsqueda' },
-            { id: 'orden:cancelar', title: 'Volver al menú' },
-          ]
-        : []
-      return enviar(texto, botones)
+  const guardar = (state: Estado, data: Datos = {}) => transporte.guardarSesion(state, data as Record<string, unknown>)
+
+  /**
+   * ¿Las compras en Amazon están abiertas para este número (habilitadas para
+   * todos o en su piloto)? Si la base no contesta, para este médico están
+   * cerradas: el menú sale como siempre.
+   */
+  const comprasAbiertas = await (async () => {
+    try {
+      const r = await rpc<{ habilitada?: boolean } | null>('bot_compra_habilitada', { p_phone: tel })
+      return r?.habilitada === true
+    } catch (err) {
+      console.error('bot', 'bot_compra_habilitada', (err as { code?: unknown } | null)?.code)
+      return false
     }
-    const cardsMeta = tarjetas.slice(0, 10).map((t, card_index) => ({
-      card_index,
-      type: 'button',
-      header: {
-        type: 'image',
-        image: { link: t.image_url },
-      },
-      body: { text: t.body.slice(0, 160) },
-      action: {
-        buttons: [
-          {
-            type: 'reply',
-            reply: { id: t.button_id, title: t.button_title.slice(0, 20) },
-          },
-        ],
-      },
-    }))
-    return rpc('helios_whatsapp_carousel', {
-      p_to: tel,
-      p_body: cuerpo.slice(0, 1024),
-      p_cards: cardsMeta,
-      p_staff_user_id: personal.user_id,
-    })
-  }
-  const guardar = (state: Estado, data: Datos = {}) =>
-    rpc('bot_session_save', { p_phone: tel, p_state: state, p_data: data })
+  })()
+  const MENU = comprasAbiertas ? MENU_COMPRAS : MENU_BASE
+  const PREGUNTA_DEL_MENU = comprasAbiertas ? '¿Qué quieres hacer? (Escribe «ayuda» si necesitas guía)' : '¿Qué quieres hacer?'
 
   /**
    * Una RPC cuyo error de negocio se le enseña al médico tal cual (lo escribe
@@ -322,16 +324,17 @@ export async function atenderAlPersonal({
 
   const menu = async (saludo?: string) => {
     await guardar('menu')
-    await enviar(saludo ?? '¿Qué quieres hacer? (Escribe «ayuda» si necesitas guía)', MENU)
+    await enviar(saludo ?? PREGUNTA_DEL_MENU, MENU)
     return { paso: 'menu' }
   }
 
-  const sesion = await rpc<{ state: Estado; data: Datos; nueva: boolean }>('bot_session', { p_phone: tel })
+  const sesion = (await transporte.obtenerSesion()) as { state: Estado; data: Datos; nueva: boolean }
   const saludo = () => {
     const hola = nombreDePila(personal)
-    return `Hola${hola ? `, ${hola}` : ''}. Soy el asistente de Helios para ${personal.merchant_name ?? 'tu clínica'}. ¿Qué quieres hacer? (Escribe «ayuda» si necesitas guía)`
+    return `Hola${hola ? `, ${hola}` : ''}. Soy el asistente de Helios para ${personal.merchant_name ?? 'tu clínica'}. ${PREGUNTA_DEL_MENU}`
   }
-  let estado: Estado = sesion.state
+  // Una compra a medias de cuando las compras estaban abiertas no sigue si ya no lo están.
+  let estado: Estado = !comprasAbiertas && ES_ESTADO_COMPRA(sesion.state) ? 'menu' : sesion.state
   const datos: Datos = sesion.data ?? {}
   const texto = (mensaje.texto ?? '').trim()
   const boton = mensaje.boton ?? ''
@@ -339,10 +342,32 @@ export async function atenderAlPersonal({
   /** La moneda pedida con un botón («moneda:EUR») o escrita sola («euros», «$»). */
   const monedaPedida: Moneda | null = boton.startsWith('moneda:') ? monedaDe(boton.slice('moneda:'.length)) : leerMoneda(texto)
 
+  /** El flujo de compras (el mismo que usa el simulador del superadmin). */
+  const atenderCompras = () =>
+    atenderCompraMedico({
+      rpc,
+      personal,
+      mensaje,
+      humano,
+      sesion: { state: estado, data: datos as Record<string, unknown>, nueva: sesion.nueva },
+      transporte,
+      volverAlMenu: menu,
+      proveedorDe,
+      resolverEnlace,
+      ahora,
+    })
+
+  // ── Dentro de una compra, «menú» y «cancelar» los lee el flujo de compras ──
+  // (no se pierde una solicitud abierta: se queda esperando su pago).
+  const palabrasDeMenu = ['menu', 'cancelar', 'inicio', 'salir', 'hola', 'buenas', 'buenos dias', 'buenas tardes', 'empezar']
+  if (comprasAbiertas && ES_ESTADO_COMPRA(estado) && (palabrasDeMenu.includes(n) || n === 'volver al menu' || boton === 'orden:cancelar')) {
+    return atenderCompras()
+  }
+
   // ── Volver al menú desde cualquier paso ───────────────────────────────
   // «Empezar» es el botón de la bienvenida (plantilla `helios_cuenta_activa`).
-  if (['menu', 'cancelar', 'inicio', 'salir', 'hola', 'buenas', 'buenos dias', 'buenas tardes', 'empezar', 'volver al menu'].includes(n) || boton === 'orden:cancelar') {
-    if ((boton === 'orden:cancelar' && n !== 'volver al menu') || n === 'cancelar') {
+  if (palabrasDeMenu.includes(n) || (comprasAbiertas && n === 'volver al menu') || boton === 'orden:cancelar') {
+    if (comprasAbiertas ? (boton === 'orden:cancelar' && n !== 'volver al menu') || n === 'cancelar' : boton === 'orden:cancelar' || n === 'cancelar') {
       return menu('Cancelado: no se envió nada. ¿Qué quieres hacer?')
     }
     return menu(sesion.nueva ? saludo() : undefined)
@@ -442,7 +467,8 @@ export async function atenderAlPersonal({
     return { paso: 'mis', cuantos: lineas.length }
   }
 
-  if (boton === 'menu:ayuda' || n === 'ayuda') {
+  // Con las compras cerradas, «3» sigue siendo la ayuda, como siempre.
+  if (boton === 'menu:ayuda' || n === 'ayuda' || (!comprasAbiertas && estado === 'menu' && n === '3')) {
     await guardar('menu')
     await enviar(
       'Así funciona:\n' +
@@ -453,7 +479,9 @@ export async function atenderAlPersonal({
         `5. Al paciente le llega un WhatsApp para que la acepte: ${loQueHaceElPaciente(true, plazoEnPalabras(MINUTOS_DE_LA_INICIAL))}. ` +
         `${ACTIVA_CON_LA_INICIAL}\n\n` +
         'El paciente paga siempre en bolívares, a la tasa BCV del día en que paga.\n\n' +
-        'También puedes pulsar «Comprar en Amazon» (o pegar un enlace de Amazon) para cotizar insumos y equipos médicos puestos en Venezuela.\n\n' +
+        (comprasAbiertas
+          ? 'También puedes pulsar «Comprar en Amazon» (o pegar un enlace de Amazon) para cotizar insumos y equipos médicos puestos en Venezuela.\n\n'
+          : '') +
         'Escribe «menú» para volver al inicio en cualquier momento. El equipo de Helios ve este chat: si algo no funciona, escríbenos aquí.',
       MENU,
     )
@@ -465,19 +493,9 @@ export async function atenderAlPersonal({
     boton === 'menu:nuevo' || ['nuevo pago en cuotas', 'nuevo pago', 'nuevo financiamiento'].includes(n)
   const enCompra = ES_ESTADO_COMPRA(estado)
   const botonCompra = boton === 'menu:comprar' || boton.startsWith('compra:')
-  const atajoCompraDesdeMenu = estado === 'menu' && (esAtajoDeCompra(texto, boton) || n === '3')
-  if (!pidioCuotas && (enCompra || botonCompra || atajoCompraDesdeMenu)) {
-    return atenderCompraMedico({
-      rpc,
-      personal,
-      mensaje,
-      sesion: { state: estado, data: datos as Record<string, unknown>, nueva: sesion.nueva },
-      enviar,
-      enviarCarrusel,
-      guardar: (st, d) => guardar(st, (d ?? {}) as Datos),
-      volverAlMenu: menu,
-      proveedor: proveedor ?? proveedorPorDefecto(),
-    })
+  const atajoCompraDesdeMenu = estado === 'menu' && (esAtajoDeCompra(texto, boton) || n === '3' || esIntentoDePago(mensaje))
+  if (comprasAbiertas && !pidioCuotas && (enCompra || botonCompra || atajoCompraDesdeMenu)) {
+    return atenderCompras()
   }
 
   // ── La cédula (o un atajo desde el menú) ──────────────────────────────

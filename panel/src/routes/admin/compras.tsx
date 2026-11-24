@@ -4,12 +4,18 @@ import { useQuery } from '@tanstack/react-query'
 import { AjustesCompras } from '@/components/admin/compras/AjustesCompras'
 import { ColaPagosCompras } from '@/components/admin/compras/ColaPagosCompras'
 import { ListaDeCompras } from '@/components/admin/compras/ListaDeCompras'
+import type { FiltroCanalCompra } from '@/components/admin/compras/ListaDeCompras'
 import { SimuladorWhatsAppCompras } from '@/components/admin/compras/SimuladorWhatsAppCompras'
 import { Tabs } from '@/components/ui'
 import { consultaConteosCompras } from '@/features/admin/compras/consultas'
-import { VALORES_CANAL_COMPRA, VALORES_ESTADO_SOLICITUD } from '@/features/admin/compras/estados'
-import type { CanalCompra, EstadoSolicitudCompra } from '@/features/admin/compras/tipos'
+import {
+  VALORES_CANAL_COMPRA,
+  VALORES_ESTADO_SOLICITUD,
+} from '@/features/admin/compras/estados'
+import type { EstadoSolicitudCompra } from '@/features/admin/compras/tipos'
 import { comoTexto, unoDe } from '@/lib/busqueda'
+
+const VALORES_FILTRO_CANAL = [...VALORES_CANAL_COMPRA, 'todos'] as const
 
 const TABS_COMPRAS = ['solicitudes', 'pagos', 'simulador', 'ajustes'] as const
 type TabCompras = (typeof TABS_COMPRAS)[number]
@@ -18,7 +24,7 @@ type ComprasSearch = {
   tab?: TabCompras
   q?: string
   estado?: EstadoSolicitudCompra
-  canal?: CanalCompra
+  canal?: FiltroCanalCompra
 }
 
 export const Route = createFileRoute('/admin/compras')({
@@ -28,7 +34,7 @@ export const Route = createFileRoute('/admin/compras')({
     tab: unoDe(TABS_COMPRAS, search.tab),
     q: comoTexto(search.q),
     estado: unoDe(VALORES_ESTADO_SOLICITUD, search.estado),
-    canal: unoDe(VALORES_CANAL_COMPRA, search.canal),
+    canal: unoDe(VALORES_FILTRO_CANAL, search.canal),
   }),
 })
 
@@ -39,7 +45,10 @@ function ComprasPage() {
   const conteos = useQuery(consultaConteosCompras())
 
   function cambiar(patch: Partial<ComprasSearch>, reemplazar = false) {
-    void navigate({ search: (prev) => ({ ...prev, ...patch }), replace: reemplazar })
+    void navigate({
+      search: (prev) => ({ ...prev, ...patch }),
+      replace: reemplazar,
+    })
   }
 
   return (

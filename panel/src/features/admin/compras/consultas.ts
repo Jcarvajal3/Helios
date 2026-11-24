@@ -5,13 +5,17 @@ import {
   listarMedicosSimulador,
   listarMensajesSimulador,
   listarSolicitudesCompra,
-  listarSolicitudesSimulador,
   obtenerAjustesCompras,
   obtenerConteosCompras,
   obtenerDetalleCompra,
   preverPagoCompra,
 } from './api'
-import type { CanalCompra, EstadoPagoCompra, EstadoSolicitudCompra } from './tipos'
+import { diagnosticarSimulador } from './simulador'
+import type {
+  CanalCompra,
+  EstadoPagoCompra,
+  EstadoSolicitudCompra,
+} from './tipos'
 
 export const CLAVE_COMPRAS = ['admin-compras'] as const
 
@@ -24,12 +28,14 @@ export function consultaConteosCompras() {
   })
 }
 
-export function consultaSolicitudesCompra(params: {
-  statuses?: EstadoSolicitudCompra[] | null
-  channel?: CanalCompra | null
-  search?: string | null
-  limit?: number
-} = {}) {
+export function consultaSolicitudesCompra(
+  params: {
+    statuses?: EstadoSolicitudCompra[] | null
+    channel?: CanalCompra | null
+    search?: string | null
+    limit?: number
+  } = {},
+) {
   return queryOptions({
     queryKey: [
       ...CLAVE_COMPRAS,
@@ -53,9 +59,9 @@ export function consultaDetalleCompra(requestId: string) {
   })
 }
 
-export function consultaColaPagosCompra(statuses: EstadoPagoCompra[] | null) {
+export function consultaColaPagosCompra(statuses: EstadoPagoCompra[]) {
   return queryOptions({
-    queryKey: [...CLAVE_COMPRAS, 'pagos', statuses ?? 'todos'],
+    queryKey: [...CLAVE_COMPRAS, 'pagos', statuses],
     queryFn: ({ signal }) => listarColaPagosCompra(statuses, signal),
     refetchInterval: 30_000,
     refetchOnWindowFocus: true,
@@ -85,20 +91,25 @@ export function consultaMedicosSimulador() {
   })
 }
 
+/** Cada 4 s mientras la pestaña esté visible y haya un teléfono elegido. */
+export const CADA_MS_MENSAJES_SIMULADOR = 4_000
+
 export function consultaMensajesSimulador(phone: string) {
   return queryOptions({
     queryKey: [...CLAVE_COMPRAS, 'sim', 'mensajes', phone],
     queryFn: ({ signal }) => listarMensajesSimulador(phone, signal),
     enabled: phone.trim().length > 0,
+    refetchInterval: CADA_MS_MENSAJES_SIMULADOR,
+    refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
   })
 }
 
-export function consultaSolicitudesSimulador(phone: string) {
+export function consultaDiagnosticoSimulador() {
   return queryOptions({
-    queryKey: [...CLAVE_COMPRAS, 'sim', 'solicitudes', phone],
-    queryFn: ({ signal }) => listarSolicitudesSimulador(phone, signal),
-    enabled: phone.trim().length > 0,
-    refetchOnWindowFocus: true,
+    queryKey: [...CLAVE_COMPRAS, 'sim', 'diagnostico'],
+    queryFn: () => diagnosticarSimulador(),
+    staleTime: 30_000,
+    retry: false,
   })
 }

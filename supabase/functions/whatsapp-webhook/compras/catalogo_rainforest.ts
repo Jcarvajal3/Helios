@@ -1,9 +1,19 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // Helios — Adaptador Rainforest API para catálogo real de Amazon
 //
-// Implementa `ProveedorCatalogo` contra `https://api.rainforestapi.com/request`.
-// Se activa mediante `AMAZON_PROVIDER=rainforest` y `AMAZON_API_KEY`; sin
-// credenciales, `crearProveedorCatalogo` entrega `ProveedorAmazonMock`.
+// Implementa `ProveedorCatalogo` contra `https://api.rainforestapi.com/request`
+// (campos verificados en docs.trajectdata.com/rainforestapi: `weight` de texto,
+// `specifications[{name,value}]`, `buybox_winner.price.value`,
+// `main_image.link`, `request_info.success`).
+//
+// El proveedor lo fija la base (`purchase_settings.catalog_provider`); la clave
+// va en el secreto `RAINFOREST_API_KEY`. Aquí NO hay respaldo silencioso a mock:
+// sin clave, `crearProveedorCatalogo` devuelve null y el bot dice que las
+// compras no están disponibles.
+//
+// Seguridad: la clave viaja en la URL de la consulta; por eso ningún error
+// sale de aquí con la URL ni con el mensaje original de `fetch` (podría
+// incluirla). Todo falla como `ErrorCatalogo` con un texto fijo.
 // ═══════════════════════════════════════════════════════════════════════════
 
 import { extraerAsinDeTexto, normalizarBusquedaMedica } from './amazon_parser.ts'
@@ -12,16 +22,49 @@ import { redondearCentavos } from './cotizador.ts'
 import type { DimensionesIn, ProductoDetalle, ProductoResumen, ProveedorCatalogo } from './tipos.ts'
 
 const RAINFOREST_ENDPOINT = 'https://api.rainforestapi.com/request'
+export const TIEMPO_RAINFOREST_MS = 8000
+
+/** Por qué falló el catálogo (sin URL ni clave en el mensaje). */
+export type TipoErrorCatalogo = 'timeout' | 'limite' | 'red' | 'http' | 'rechazo' | 'formato'
+
+export class ErrorCatalogo extends Error {
+  constructor(
+    readonly tipo: TipoErrorCatalogo,
+    mensaje: string,
+    readonly estado?: number,
+  ) {
+    super(mensaje)
+    this.name = 'ErrorCatalogo'
+  }
+}
+
+/** «1,200» es mil doscientos; «1,5» es uno y medio; «1.4» es uno coma cuatro. */
+function numeroDeTexto(s: string): number {
+  if (/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(s)) return Number(s.replace(/,/g, ''))
+  return Number(s.replace(',', '.'))
+}
+
+const NUM = String.raw`(\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:[.,]\d+)?)`
 
 /**
  * Convierte textos reales de peso de Amazon/Rainforest («1.4 pounds»,
- * «14.4 ounces», «500 grams», «2.5 kg») a libras redondeadas a 2 decimales.
+ * «14.4 ounces», «1,200 grams», «2.5 kg», «1 lb 4 oz») a libras redondeadas a
+ * 2 decimales. Con dos medidas equivalentes («5 pounds (2.27 kg)») toma la primera.
  */
 export function parsearPesoALibras(texto: string | null | undefined): number | null {
   if (!texto) return null
-  const m = /(\d+(?:[.,]\d+)?)\s*(pounds?|lbs?|ounces?|oz|kilograms?|kgs?|grams?|g)\b/i.exec(texto)
+
+  // «1 lb 4 oz», «1 pound 4 ounces»
+  const compuesto = new RegExp(`${NUM}\\s*(?:pounds?|lbs?)\\.?\\s*(?:and\\s+|,\\s*)?${NUM}\\s*(?:ounces?|oz)\\b`, 'i').exec(texto)
+  if (compuesto) {
+    const lb = numeroDeTexto(compuesto[1])
+    const oz = numeroDeTexto(compuesto[2])
+    if (Number.isFinite(lb) && Number.isFinite(oz) && lb + oz > 0) return redondearCentavos(lb + oz / 16)
+  }
+
+  const m = new RegExp(`${NUM}\\s*(pounds?|lbs?|ounces?|oz|kilograms?|kgs?|grams?|g)\\b`, 'i').exec(texto)
   if (!m) return null
-  const valor = Number(m[1].replace(',', '.'))
+  const valor = numeroDeTexto(m[1])
   if (!Number.isFinite(valor) || valor <= 0) return null
   const unidad = m[2].toLowerCase()
   if (unidad.startsWith('lb') || unidad.startsWith('pound')) return redondearCentavos(valor)
@@ -33,18 +76,18 @@ export function parsearPesoALibras(texto: string | null | undefined): number | n
 
 /**
  * Convierte dimensiones de Amazon/Rainforest («13 x 6.5 x 2 inches»,
- * «30 x 20 x 10 cm», «13"L x 6.5"W x 2"H») a pulgadas.
+ * «30 x 20 x 10 cm», «13"L x 6.5"W x 2"H», «1.18"D x 2.36"W x 1.57"H») a pulgadas.
  */
 export function parsearDimensionesAPulgadas(texto: string | null | undefined): DimensionesIn | null {
   if (!texto) return null
   const m =
-    /(\d+(?:[.,]\d+)?)\s*(?:"|in(?:ches)?|cm|mm)?\s*[lwh]?\s*[x×]\s*(\d+(?:[.,]\d+)?)\s*(?:"|in(?:ches)?|cm|mm)?\s*[lwh]?\s*[x×]\s*(\d+(?:[.,]\d+)?)\s*(?:"|in(?:ches)?|cm|mm)?\s*[lwh]?(?:\s*(inches|in|cm|mm))?/i.exec(
+    /(\d+(?:[.,]\d+)?)\s*(?:"|in(?:ches)?|cm|mm)?\s*[lwhd]?\s*[x×]\s*(\d+(?:[.,]\d+)?)\s*(?:"|in(?:ches)?|cm|mm)?\s*[lwhd]?\s*[x×]\s*(\d+(?:[.,]\d+)?)\s*(?:"|in(?:ches)?|cm|mm)?\s*[lwhd]?(?:\s*(inches|in|cm|mm))?/i.exec(
       texto,
     )
   if (!m) return null
-  const a = Number(m[1].replace(',', '.'))
-  const b = Number(m[2].replace(',', '.'))
-  const c = Number(m[3].replace(',', '.'))
+  const a = numeroDeTexto(m[1])
+  const b = numeroDeTexto(m[2])
+  const c = numeroDeTexto(m[3])
   if (![a, b, c].every((n) => Number.isFinite(n) && n > 0)) return null
 
   const sufijo = (m[4] ?? texto).toLowerCase()
@@ -63,7 +106,7 @@ function objeto(v: unknown): Record<string, unknown> | null {
   return typeof v === 'object' && v !== null && !Array.isArray(v) ? (v as Record<string, unknown>) : null
 }
 
-function numeroPositivo(v: unknown): number | null {
+export function numeroPositivo(v: unknown): number | null {
   const n = Number(v)
   return v != null && Number.isFinite(n) && n > 0 ? n : null
 }
@@ -72,16 +115,31 @@ function textoLimpio(v: unknown): string {
   return typeof v === 'string' ? v.trim() : ''
 }
 
-function buscarEnEspecificaciones(specs: unknown, claves: RegExp): string | null {
+/** El valor de la primera especificación cuyo nombre cumple, probando los patrones en orden de prioridad. */
+function buscarEnEspecificaciones(specs: unknown, prioridad: RegExp[]): string | null {
   if (!Array.isArray(specs)) return null
-  for (const item of specs) {
-    const fila = objeto(item)
-    const nombre = textoLimpio(fila?.name)
-    const valor = textoLimpio(fila?.value)
-    if (nombre && valor && claves.test(nombre)) return valor
+  const filas = specs
+    .map((item) => objeto(item))
+    .map((f) => ({ nombre: textoLimpio(f?.name), valor: textoLimpio(f?.value) }))
+    .filter((f) => f.nombre && f.valor)
+  for (const patron of prioridad) {
+    const hallada = filas.find((f) => patron.test(f.nombre))
+    if (hallada) return hallada.valor
   }
   return null
 }
+
+const PESO_PRIORIDAD: RegExp[] = [
+  /^item weight$/i,
+  /^package weight$/i,
+  /^product weight$/i,
+  /^(?!.*(capacity|limit|max|maximum|per|unit count)).*\bweight\b/i,
+]
+const DIMENSIONES_PRIORIDAD: RegExp[] = [
+  /^package dimensions/i,
+  /^(item|product) dimensions/i,
+  /dimensions/i,
+]
 
 function extraerVariantes(rawVariants: unknown): string[] {
   if (!Array.isArray(rawVariants)) return []
@@ -109,6 +167,7 @@ export class ProveedorRainforest implements ProveedorCatalogo {
     private readonly apiKey: string,
     private readonly amazonDomain = 'amazon.com',
     private readonly fetchFn: typeof fetch = fetch,
+    private readonly tiempoMs: number = TIEMPO_RAINFOREST_MS,
   ) {}
 
   private async solicitar(params: Record<string, string>): Promise<Record<string, unknown>> {
@@ -119,14 +178,34 @@ export class ProveedorRainforest implements ProveedorCatalogo {
       url.searchParams.set(k, v)
     }
 
-    const res = await this.fetchFn(url.toString(), {
-      method: 'GET',
-      headers: { Accept: 'application/json' },
-    })
-    if (!res.ok) {
-      throw new Error(`rainforest: HTTP ${res.status}`)
+    let res: Response
+    try {
+      res = await this.fetchFn(url.toString(), {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+        signal: AbortSignal.timeout(this.tiempoMs),
+      })
+    } catch (err) {
+      // Jamás se propaga `err`: su mensaje puede traer la URL con la clave.
+      const nombre = (err as { name?: unknown } | null)?.name
+      if (nombre === 'TimeoutError' || nombre === 'AbortError') {
+        throw new ErrorCatalogo('timeout', 'rainforest: tiempo de espera agotado')
+      }
+      throw new ErrorCatalogo('red', 'rainforest: sin conexión')
     }
-    const json = (await res.json()) as Record<string, unknown>
+    if (res.status === 429) throw new ErrorCatalogo('limite', 'rainforest: límite de consultas', 429)
+    if (!res.ok) throw new ErrorCatalogo('http', `rainforest: HTTP ${res.status}`, res.status)
+
+    let json: Record<string, unknown>
+    try {
+      json = (await res.json()) as Record<string, unknown>
+    } catch {
+      throw new ErrorCatalogo('formato', 'rainforest: respuesta que no es JSON')
+    }
+    // Rainforest puede contestar 200 con `request_info.success: false`.
+    if (objeto(json.request_info)?.success === false) {
+      throw new ErrorCatalogo('rechazo', 'rainforest: la consulta no tuvo éxito')
+    }
     return json
   }
 
@@ -135,7 +214,7 @@ export class ProveedorRainforest implements ProveedorCatalogo {
     const asinDirecto = extraerAsinDeTexto(query)
     if (asinDirecto) {
       const det = await this.detalle(asinDirecto)
-      return det ? [det] : []
+      return det && det.disponible ? [det] : []
     }
 
     const { consultaEn } = normalizarBusquedaMedica(query)
@@ -155,8 +234,7 @@ export class ProveedorRainforest implements ProveedorCatalogo {
       if (!r) continue
       const asin = textoLimpio(r.asin).toUpperCase()
       const titulo = textoLimpio(r.title)
-      const precioObj = objeto(r.price)
-      const precioUsd = numeroPositivo(precioObj?.value)
+      const precioUsd = numeroPositivo(objeto(r.price)?.value) ?? numeroPositivo(objeto((Array.isArray(r.prices) ? r.prices : [])[0])?.value)
       if (!asin || !titulo || precioUsd == null) continue
 
       const categorias = Array.isArray(r.categories) ? r.categories : []
@@ -166,7 +244,7 @@ export class ProveedorRainforest implements ProveedorCatalogo {
         asin,
         titulo,
         precioUsd: redondearCentavos(precioUsd),
-        imagenUrl: textoLimpio(r.image) || `https://placehold.co/600x600/0f766e/ffffff.png?text=${encodeURIComponent(asin)}`,
+        imagenUrl: textoLimpio(r.image),
         url: textoLimpio(r.link) || `https://www.amazon.com/dp/${asin}`,
         rating: numeroPositivo(r.rating),
         resenas: numeroPositivo(r.ratings_total),
@@ -197,32 +275,25 @@ export class ProveedorRainforest implements ProveedorCatalogo {
     if (!titulo) return null
 
     const buybox = objeto(prod.buybox_winner)
-    const precioUsd =
-      numeroPositivo(objeto(buybox?.price)?.value) ??
-      numeroPositivo(objeto(prod.price)?.value) ??
-      0
+    const precioUsd = numeroPositivo(objeto(buybox?.price)?.value) ?? numeroPositivo(objeto(prod.price)?.value)
 
     const specs = prod.specifications
-    const pesoTexto =
-      textoLimpio(prod.weight) ||
-      buscarEnEspecificaciones(specs, /weight|peso/i) ||
-      textoLimpio(objeto(prod.dimensions)?.weight)
-    const dimTexto =
-      textoLimpio(prod.dimensions) ||
-      buscarEnEspecificaciones(specs, /package dimensions|product dimensions|item dimensions|dimension/i)
+    const pesoTexto = textoLimpio(prod.weight) || buscarEnEspecificaciones(specs, PESO_PRIORIDAD) || ''
+    // `dimensions` no es un campo de producto en la documentación; si viniera como texto, vale.
+    const dimTexto = textoLimpio(prod.dimensions) || buscarEnEspecificaciones(specs, DIMENSIONES_PRIORIDAD) || ''
 
     const categorias = Array.isArray(prod.categories) ? prod.categories : []
     const categoria = textoLimpio(objeto(categorias[categorias.length - 1])?.name) || 'Amazon'
 
-    const imagen =
-      textoLimpio(objeto(prod.main_image)?.link) ||
-      textoLimpio(prod.image) ||
-      `https://placehold.co/600x600/0f766e/ffffff.png?text=${encodeURIComponent(limpio)}`
+    const primeraImagen = Array.isArray(prod.images) ? textoLimpio(objeto(prod.images[0])?.link) : ''
+    const imagen = textoLimpio(objeto(prod.main_image)?.link) || primeraImagen || textoLimpio(prod.image)
 
     const disponibilidad = objeto(buybox?.availability)
     const dispTipo = textoLimpio(disponibilidad?.type).toLowerCase()
     const dispRaw = textoLimpio(disponibilidad?.raw).toLowerCase()
-    const disponible = dispTipo !== 'out_of_stock' && !/currently unavailable|out of stock/.test(dispRaw)
+    // Sin precio no hay nada que cotizar: no disponible.
+    const disponible =
+      precioUsd != null && dispTipo !== 'out_of_stock' && !/currently unavailable|out of stock/.test(dispRaw)
 
     const bullets = Array.isArray(prod.feature_bullets)
       ? prod.feature_bullets.map((b) => textoLimpio(b)).filter(Boolean)
@@ -232,7 +303,7 @@ export class ProveedorRainforest implements ProveedorCatalogo {
     return {
       asin: limpio,
       titulo,
-      precioUsd: redondearCentavos(precioUsd),
+      precioUsd: redondearCentavos(precioUsd ?? 0),
       imagenUrl: imagen,
       url: textoLimpio(prod.link) || `https://www.amazon.com/dp/${limpio}`,
       rating: numeroPositivo(prod.rating),
@@ -249,13 +320,13 @@ export class ProveedorRainforest implements ProveedorCatalogo {
 }
 
 /**
- * Fábrica de adaptador de catálogo según variables de entorno:
- * usa `ProveedorRainforest` solo cuando `providerName === 'rainforest'` y hay
- * `apiKey`; en cualquier otro caso entrega `ProveedorAmazonMock`.
+ * Fábrica del catálogo según lo que dice la base (`purchase_settings.catalog_provider`):
+ * `mock` → el catálogo de prueba; `rainforest` → Rainforest con su clave
+ * (`RAINFOREST_API_KEY`). Rainforest sin clave devuelve null: NUNCA cae a mock.
  */
-export function crearProveedorCatalogo(providerName?: string, apiKey?: string): ProveedorCatalogo {
-  if ((providerName ?? '').trim().toLowerCase() === 'rainforest' && (apiKey ?? '').trim() !== '') {
-    return new ProveedorRainforest(apiKey!.trim())
-  }
-  return new ProveedorAmazonMock()
+export function crearProveedorCatalogo(providerName?: string, apiKey?: string): ProveedorCatalogo | null {
+  const nombre = (providerName ?? '').trim().toLowerCase()
+  if (nombre === 'mock') return new ProveedorAmazonMock()
+  if (nombre === 'rainforest' && (apiKey ?? '').trim() !== '') return new ProveedorRainforest(apiKey!.trim())
+  return null
 }

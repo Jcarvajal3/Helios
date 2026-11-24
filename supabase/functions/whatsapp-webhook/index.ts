@@ -55,6 +55,8 @@ import { atenderAlPersonal } from './bot.ts'
 import { atenderAlInteresado } from './directorio.ts'
 import { atenderAlPaciente, esUnSiRepetido, recordarLaInicial } from './paciente.ts'
 import type { Personal } from './bot.ts'
+import type { AlmacenComprobantes } from './compras/adjuntos.ts'
+import { BUCKET_COMPROBANTES } from './compras/adjuntos.ts'
 import {
   codigoDelDirectorio,
   decisionDelBoton,
@@ -85,6 +87,20 @@ async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<T> {
     throw Object.assign(new Error(`${fn}: ${error.message}`), { code: error.code })
   }
   return data as T
+}
+
+/** Los comprobantes de las compras van al bucket privado `payment-receipts` (compras/<solicitud>/<media>.<ext>). */
+const almacenDeComprobantes: AlmacenComprobantes = {
+  async subir(ruta, bytes, mime) {
+    const { error } = await db.storage.from(BUCKET_COMPROBANTES).upload(ruta, bytes, { contentType: mime, upsert: true })
+    if (error) throw new Error(`No se pudo guardar el comprobante: ${error.message}`)
+  },
+}
+
+/** Un error listo para el log: sin claves en la URL (`api_key=…`) ni tokens. */
+function paraElLog(err: unknown): string {
+  const m = err instanceof Error ? err.message : String(err)
+  return m.replace(/(api_key|token|apikey)=[^&\s"']+/gi, '$1=***')
 }
 
 type Recibido = {
@@ -152,7 +168,7 @@ async function mensaje(m: EventoDeMensaje): Promise<void> {
   // 4. El personal: el bot (que no interrumpe a una persona del equipo).
   if (r.staff) {
     const humano = await rpc<boolean>('bot_humano_atiende', { p_phone: m.from })
-    const res = await atenderAlPersonal({ rpc, personal: r.staff, mensaje: m, humano: humano === true })
+    const res = await atenderAlPersonal({ rpc, personal: r.staff, mensaje: m, humano: humano === true, almacen: almacenDeComprobantes })
     await listo('personal', res)
     return
   }
@@ -218,7 +234,7 @@ Deno.serve(async (req) => {
       }
     }
   } catch (err) {
-    console.error('whatsapp-webhook', err)
+    console.error('whatsapp-webhook', paraElLog(err))
     return new Response('Error', { status: 500 })
   }
 

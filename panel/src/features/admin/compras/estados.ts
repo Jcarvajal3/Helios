@@ -24,6 +24,7 @@ import type {
   EstadoSolicitudCompra,
   MetodoEnvioCompra,
   MetodoPagoCompra,
+  ProveedorCatalogoCompra,
 } from './tipos'
 
 export type EstadoVisualCompra = {
@@ -48,7 +49,10 @@ export const VALORES_ESTADO_SOLICITUD: ReadonlyArray<EstadoSolicitudCompra> = [
   'cancelado',
 ]
 
-export const ESTADOS_SOLICITUD_COMPRA: Record<EstadoSolicitudCompra, EstadoVisualCompra> = {
+export const ESTADOS_SOLICITUD_COMPRA: Record<
+  EstadoSolicitudCompra,
+  EstadoVisualCompra
+> = {
   revision_aduanal: {
     label: 'Revisión aduanal',
     plural: 'En revisión aduanal',
@@ -136,45 +140,49 @@ export const VALORES_ESTADO_PAGO_COMPRA: ReadonlyArray<EstadoPagoCompra> = [
   'duplicate',
 ]
 
-export const ESTADOS_PAGO_COMPRA: Record<EstadoPagoCompra, EstadoVisualCompra> = {
-  reported: {
-    label: 'Pendiente',
-    plural: 'Pendientes',
-    tone: 'warning',
-    icon: Clock,
-    que: 'Pago recién reportado, pendiente de conciliación bancaria.',
-  },
-  in_review: {
-    label: 'En revisión',
-    plural: 'En revisión',
-    tone: 'warning',
-    icon: AlertTriangle,
-    que: 'Apartado por el equipo para verificar datos con el banco o el médico.',
-  },
-  reconciled: {
-    label: 'Aprobado',
-    plural: 'Aprobados',
-    tone: 'success',
-    icon: CheckCircle2,
-    que: 'Pago conciliado y confirmado.',
-  },
-  rejected: {
-    label: 'Rechazado',
-    plural: 'Rechazados',
-    tone: 'error',
-    icon: XCircle,
-    que: 'Pago rechazado con motivo enviado al médico.',
-  },
-  duplicate: {
-    label: 'Duplicado',
-    plural: 'Duplicados',
-    tone: 'error',
-    icon: CopyX,
-    que: 'Cerrado como duplicado sin enviar aviso de rechazo al médico.',
-  },
-}
+export const ESTADOS_PAGO_COMPRA: Record<EstadoPagoCompra, EstadoVisualCompra> =
+  {
+    reported: {
+      label: 'Pendiente',
+      plural: 'Pendientes',
+      tone: 'warning',
+      icon: Clock,
+      que: 'Pago recién reportado, pendiente de conciliación bancaria.',
+    },
+    in_review: {
+      label: 'En revisión',
+      plural: 'En revisión',
+      tone: 'warning',
+      icon: AlertTriangle,
+      que: 'Apartado por el equipo para verificar datos con el banco o el médico.',
+    },
+    reconciled: {
+      label: 'Aprobado',
+      plural: 'Aprobados',
+      tone: 'success',
+      icon: CheckCircle2,
+      que: 'Pago conciliado y confirmado.',
+    },
+    rejected: {
+      label: 'Rechazado',
+      plural: 'Rechazados',
+      tone: 'error',
+      icon: XCircle,
+      que: 'Pago rechazado con motivo enviado al médico.',
+    },
+    duplicate: {
+      label: 'Duplicado',
+      plural: 'Duplicados',
+      tone: 'error',
+      icon: CopyX,
+      que: 'Cerrado como duplicado sin enviar aviso de rechazo al médico.',
+    },
+  }
 
-export const VALORES_CANAL_COMPRA: ReadonlyArray<CanalCompra> = ['whatsapp', 'simulador']
+export const VALORES_CANAL_COMPRA: ReadonlyArray<CanalCompra> = [
+  'whatsapp',
+  'simulador',
+]
 
 export function etiquetaDeCanal(canal: CanalCompra | null): string {
   if (canal === 'simulador') return 'Simulador'
@@ -190,17 +198,29 @@ export function etiquetaDeMetodoPago(metodo: MetodoPagoCompra): string {
   return metodo === 'transferencia' ? 'Transferencia' : 'Pago Móvil'
 }
 
-export const METODOS_PAGO_COMPRA: Array<{ value: MetodoPagoCompra; label: string }> = [
+export const METODOS_PAGO_COMPRA: Array<{
+  value: MetodoPagoCompra
+  label: string
+}> = [
   { value: 'pago_movil', label: 'Pago Móvil' },
   { value: 'transferencia', label: 'Transferencia' },
 ]
 
-export function leerEstadoSolicitud(valor: string): EstadoSolicitudCompra {
-  return VALORES_ESTADO_SOLICITUD.find((e) => e === valor) ?? 'esperando_pago'
+/** Un estado que la base manda y el panel no conoce es un error de contrato, no un valor por defecto. */
+export function leerEstadoSolicitud(valor: unknown): EstadoSolicitudCompra {
+  const e = VALORES_ESTADO_SOLICITUD.find((x) => x === valor)
+  if (!e)
+    throw new Error(
+      `Estado de solicitud de compra desconocido: ${String(valor)}`,
+    )
+  return e
 }
 
-export function leerEstadoPagoCompra(valor: string): EstadoPagoCompra {
-  return VALORES_ESTADO_PAGO_COMPRA.find((e) => e === valor) ?? 'reported'
+export function leerEstadoPagoCompra(valor: unknown): EstadoPagoCompra {
+  const e = VALORES_ESTADO_PAGO_COMPRA.find((x) => x === valor)
+  if (!e)
+    throw new Error(`Estado de pago de compra desconocido: ${String(valor)}`)
+  return e
 }
 
 export function visualSolicitudCompra(valor: string): EstadoVisualCompra {
@@ -243,14 +263,20 @@ export const SIGUIENTES_ESTADOS_LOGISTICA: Partial<
   >
 > = {
   pagado: [
-    { status: 'comprado_amazon', label: 'Marcar comprado en Amazon', requiereAmazonOrderId: true },
+    {
+      status: 'comprado_amazon',
+      label: 'Marcar comprado en Amazon',
+      requiereAmazonOrderId: true,
+    },
   ],
   comprado_amazon: [
-    { status: 'en_almacen_usa', label: 'Recibido en almacén USA', requiereUsTracking: true },
+    {
+      status: 'en_almacen_usa',
+      label: 'Recibido en almacén USA',
+      requiereUsTracking: true,
+    },
   ],
-  en_almacen_usa: [
-    { status: 'en_transito', label: 'Despachar en tránsito' },
-  ],
+  en_almacen_usa: [{ status: 'en_transito', label: 'Despachar en tránsito' }],
   en_transito: [
     { status: 'en_aduana', label: 'Ingresó en aduana' },
     { status: 'listo_entrega', label: 'Listo para entrega' },
@@ -258,13 +284,13 @@ export const SIGUIENTES_ESTADOS_LOGISTICA: Partial<
   en_aduana: [
     { status: 'listo_entrega', label: 'Liberado · Listo para entrega' },
   ],
-  listo_entrega: [
-    { status: 'entregado', label: 'Marcar como entregado' },
-  ],
+  listo_entrega: [{ status: 'entregado', label: 'Marcar como entregado' }],
 }
 
 /** Si la solicitud todavía se puede cancelar manualmente desde el carril. */
-export function sePuedeCancelarSolicitud(status: EstadoSolicitudCompra): boolean {
+export function sePuedeCancelarSolicitud(
+  status: EstadoSolicitudCompra,
+): boolean {
   return status !== 'entregado' && status !== 'cancelado'
 }
 
@@ -275,15 +301,26 @@ export function etiquetaDeEventoCompra(eventType: string): string {
     customs_approved: 'Aduana aprobada',
     customs_rejected: 'Rechazada por aduana',
     payment_reported: 'Pago reportado',
-    payment_registered: 'Pago registrado',
-    payment_in_review: 'Pago en revisión',
+    payment_flagged: 'Pago en revisión',
     payment_reconciled: 'Pago aprobado',
-    payment_approved: 'Pago aprobado',
     payment_rejected: 'Pago rechazado',
     payment_duplicate: 'Pago marcado como duplicado',
     status_changed: 'Cambio de estado logístico',
     cancelled: 'Solicitud cancelada',
     delivered: 'Pedido entregado',
   }
-  return Object.hasOwn(mapa, eventType) ? mapa[eventType] : eventType.replaceAll('_', ' ')
+  return Object.hasOwn(mapa, eventType)
+    ? mapa[eventType]
+    : eventType.replaceAll('_', ' ')
+}
+
+/** «Proveedor: Rainforest · listo», «Rainforest · falta RAINFOREST_API_KEY» o «Catálogo de prueba». */
+export function rotuloDelProveedor(d: {
+  proveedor: ProveedorCatalogoCompra
+  proveedorListo: boolean
+}): string {
+  if (d.proveedor === 'mock') return 'Catálogo de prueba'
+  return d.proveedorListo
+    ? 'Proveedor: Rainforest · listo'
+    : 'Rainforest · falta RAINFOREST_API_KEY'
 }

@@ -46,22 +46,45 @@ Todo se administra desde el Superadmin en **`/admin/compras`** (Solicitudes, Pag
 
 ---
 
-## 3. Cómo activar la API real de Amazon (3 pasos)
+## 3. Cómo activar Rainforest API y probar
 
-Cuando contraten el proveedor (por ejemplo, **Rainforest API**):
+El proveedor lo decide **la base** (`purchase_settings.catalog_provider`, en
+Superadmin › Compras Amazon › Ajustes) y la clave vive **solo** en el secreto de
+Edge Functions `RAINFOREST_API_KEY`. Nunca en `panel/.env`, en el repo ni en la
+base. Si el proveedor es Rainforest y falta la clave, el bot dice «no disponible»:
+jamás cae al catálogo de prueba.
 
-1. **Configurar secretos de la Edge Function en Supabase:**
+**Encendido y piloto.** `is_enabled = false` (por defecto) significa que solo los
+**teléfonos piloto** (`pilot_phones`, E.164) ven «Comprar en Amazon»; para el
+resto de los médicos el menú queda exactamente como antes. No se puede encender
+para todos con el catálogo de prueba (lo impide un CHECK).
+
+1. **Aplicar la migración** `20261124180100_compras_amazon_correcciones.sql`
+   (`node supabase/poda/aplicar.mjs`) y correr
+   `bash supabase/tests/run.sh compras_amazon_smoke`.
+2. **Guardar la clave** (Dashboard › Edge Functions › Secrets, o):
    ```bash
-   supabase secrets set AMAZON_PROVIDER=rainforest AMAZON_API_KEY=<TU_API_KEY> --project-ref ahyfbnfsbyzdoyjzjvfb
+   supabase secrets set RAINFOREST_API_KEY=<la clave> --project-ref ahyfbnfsbyzdoyjzjvfb
    ```
-2. **Cambiar el proveedor en Superadmin › Compras Amazon › Ajustes:**
-   - Seleccionar `Rainforest API` y guardar (requiere rol `super_admin`).
-3. **Desplegar `whatsapp-webhook`:**
+3. **Desplegar las dos funciones:**
    ```bash
+   supabase functions deploy compras-simulador --use-api --project-ref ahyfbnfsbyzdoyjzjvfb
    supabase functions deploy whatsapp-webhook --no-verify-jwt --use-api --project-ref ahyfbnfsbyzdoyjzjvfb
    ```
+   `compras-simulador` va **con** verificación JWT (`config.toml`); el webhook sin
+   ella (lo protege `?token=`).
+4. **Ajustes** (rol `super_admin`): proveedor «Rainforest API (Amazon real)»,
+   añadir los teléfonos piloto y dejar «Encendido» apagado. Ajustes muestra si la
+   clave está lista (`diagnostico` de `compras-simulador`).
+5. **Probar** en Superadmin › Compras Amazon › Simulador (corre el bot real con
+   Rainforest real; las solicitudes quedan con `channel = 'simulador'` y no se
+   mezclan con las de WhatsApp) y luego desde un teléfono piloto por WhatsApp.
 
-*(Si eligen otro proveedor como Oxylabs o Decodo, basta crear `compras/catalogo_<proveedor>.ts` implementando `ProveedorCatalogo` y registrarlo en `crearProveedorCatalogo` dentro de `catalogo_rainforest.ts`.)*
+Cada búsqueda y cada ficha consumen créditos de Rainforest; la caché
+(`amazon_catalog_cache`) guarda búsquedas 45 min y fichas 120 min.
+
+*(Otro proveedor: implementar `ProveedorCatalogo` en `compras/catalogo_<proveedor>.ts`,
+registrarlo en `crearProveedorCatalogo` y añadirlo al CHECK de `catalog_provider`.)*
 
 ---
 
