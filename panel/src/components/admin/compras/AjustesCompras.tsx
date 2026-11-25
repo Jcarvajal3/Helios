@@ -27,6 +27,10 @@ import type {
   AjustesComprasConfig,
   ProveedorCatalogoCompra,
 } from '@/features/admin/compras/tipos'
+import {
+  explicarErrorDePilotos,
+  normalizarTelefonoPiloto,
+} from '@/features/admin/compras/telefonosPiloto'
 import { SOLO_SUPER_ADMIN, useIsSuperAdmin } from '@/features/admin/role'
 import { formatoMontoEditable, leerMonto } from '@/lib/montos'
 import { describeError } from '@/lib/supabase'
@@ -93,8 +97,6 @@ const CAMPOS: ReadonlyArray<{
   },
 ]
 
-const E164 = /^\+[1-9]\d{7,14}$/
-
 type Borrador = {
   numeros: Record<ClaveNumerica, string>
   catalogProvider: ProveedorCatalogoCompra
@@ -147,15 +149,18 @@ function FormularioAjustes({ ajustes }: { ajustes: AjustesComprasConfig }) {
   const [form, setForm] = useState<Borrador>(() => aBorrador(ajustes))
   const [telefonoNuevo, setTelefonoNuevo] = useState('')
 
-  const telefono = telefonoNuevo.trim()
+  const textoTelefono = telefonoNuevo.trim()
+  const telefono = textoTelefono === '' ? null : normalizarTelefonoPiloto(textoTelefono)
   const telefonoError =
-    telefono === ''
+    textoTelefono === ''
       ? null
-      : !E164.test(telefono)
-        ? 'Formato internacional con +, por ejemplo +584141234567.'
+      : telefono === null
+        ? 'No parece un teléfono venezolano. Ejemplos: 0414 123 4567 o +58 414 123 4567.'
         : form.pilotPhones.includes(telefono)
           ? 'Ese teléfono ya está en la lista.'
           : null
+  const estadoDe = (t: string) =>
+    ajustes.pilotStatus.find((e) => e.phone === t) ?? null
 
   const valores = CAMPOS.map((f) => leerCampo(f, form.numeros[f.clave]))
   const hayInvalidos = valores.some((v) => v === null)
@@ -214,7 +219,7 @@ function FormularioAjustes({ ajustes }: { ajustes: AjustesComprasConfig }) {
   })
 
   function agregarTelefono() {
-    if (telefono === '' || telefonoError) return
+    if (telefono === null || telefonoError) return
     setForm((f) => ({ ...f, pilotPhones: [...f.pilotPhones, telefono] }))
     setTelefonoNuevo('')
   }
@@ -278,14 +283,20 @@ function FormularioAjustes({ ajustes }: { ajustes: AjustesComprasConfig }) {
             <p className="type-panel-body font-semibold text-on-surface">
               Teléfonos piloto
             </p>
-            <ul className="flex flex-wrap gap-2" aria-label="Teléfonos piloto">
+            <p className="type-panel-caption text-on-surface-variant">
+              Formato: 0414 123 4567 o +58 414 123 4567. Debe ser el número
+              registrado como personal de la clínica.
+            </p>
+            <ul className="flex flex-col gap-2" aria-label="Teléfonos piloto">
               {form.pilotPhones.length === 0 && (
                 <li className="type-panel-caption text-on-surface-variant">
                   Ninguno todavía.
                 </li>
               )}
-              {form.pilotPhones.map((t) => (
-                <li key={t}>
+              {form.pilotPhones.map((t) => {
+                const est = estadoDe(t)
+                return (
+                <li key={t} className="flex flex-wrap items-center gap-2">
                   <Badge tone="neutral">
                     <span className="tabular-nums">{t}</span>
                     <button
@@ -302,8 +313,23 @@ function FormularioAjustes({ ajustes }: { ajustes: AjustesComprasConfig }) {
                       <X size={12} aria-hidden />
                     </button>
                   </Badge>
+                  {est === null ? (
+                    <span className="type-panel-caption text-on-surface-variant">
+                      Se verifica al guardar
+                    </span>
+                  ) : est.registrado ? (
+                    <span className="type-panel-caption text-on-surface-variant">
+                      {est.nombre ?? 'Personal registrado'}
+                    </span>
+                  ) : (
+                    <span className="type-panel-caption text-error">
+                      No está registrado como personal de ninguna clínica: el
+                      bot lo tratará como paciente
+                    </span>
+                  )}
                 </li>
-              ))}
+                )
+              })}
             </ul>
             <div className="flex items-start gap-2">
               <Input
@@ -312,7 +338,7 @@ function FormularioAjustes({ ajustes }: { ajustes: AjustesComprasConfig }) {
                 value={telefonoNuevo}
                 onChange={setTelefonoNuevo}
                 inputMode="tel"
-                placeholder="+584141234567"
+                placeholder="0414 123 4567"
                 error={telefonoError !== null}
                 hint={telefonoError ?? undefined}
                 className="max-w-xs"
@@ -322,7 +348,7 @@ function FormularioAjustes({ ajustes }: { ajustes: AjustesComprasConfig }) {
                   size="md"
                   variant="tonal"
                   disabled={
-                    !esSuperAdmin || telefono === '' || telefonoError !== null
+                    !esSuperAdmin || telefono === null || telefonoError !== null
                   }
                   motivoApagado={
                     !esSuperAdmin
@@ -368,7 +394,7 @@ function FormularioAjustes({ ajustes }: { ajustes: AjustesComprasConfig }) {
           {guardar.isError && (
             <ErrorBox
               title="No se pudieron guardar los ajustes"
-              detail={describeError(guardar.error)}
+              detail={explicarErrorDePilotos(guardar.error)}
             />
           )}
 

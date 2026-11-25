@@ -154,6 +154,12 @@ export type PrevisionPagoCompra = {
   expectedVes: number
 }
 
+export type EstadoPilotoCompra = {
+  phone: string
+  registrado: boolean
+  nombre: string | null
+}
+
 export type AjustesComprasConfig = {
   taxUsaPct: number
   serviceFeePct: number
@@ -167,6 +173,8 @@ export type AjustesComprasConfig = {
   isEnabled: boolean
   /** Teléfonos E.164 que ven la opción aunque `isEnabled` sea falso. */
   pilotPhones: string[]
+  /** Por cada piloto guardado: si es personal registrado de alguna clínica. */
+  pilotStatus: EstadoPilotoCompra[]
   bcvRateToday: number | null
   updatedAt: string | null
 }

@@ -87,10 +87,15 @@ function consultarUnaVez(sql, { projectRef = ref } = {}) {
   const tmp = path.join(os.tmpdir(), `helios-q-${process.pid}-${Date.now()}.sql`);
   fs.writeFileSync(tmp, sql);
   try {
+    // En Windows `supabase` es un shim `.cmd` de npm: solo corre con shell, y
+    // con shell los argumentos se unen sin comillas, así que se entrecomilla la ruta.
+    const enWindows = process.platform === 'win32';
+    // `--yes`: este script es la herramienta para aplicar migraciones; el CLI en
+    // modo agente se niega a mutar un proyecto alojado sin confirmación.
     const out = execFileSync(
       'supabase',
-      ['db', 'query', '--linked', '--project-ref', projectRef, '-f', tmp, '-o', 'json'],
-      { cwd: RAIZ, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 64 * 1024 * 1024 },
+      ['db', 'query', '--linked', '--project-ref', projectRef, '-f', enWindows ? `"${tmp}"` : tmp, '-o', 'json', '--yes'],
+      { cwd: RAIZ, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 64 * 1024 * 1024, shell: enWindows },
     );
     const ini = out.indexOf('{');
     if (ini === -1) return [];

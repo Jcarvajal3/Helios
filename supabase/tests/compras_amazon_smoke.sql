@@ -16,8 +16,8 @@
 --      pagado) escriben en purchase_simulator_messages y JAMÁS en outbound_messages.
 --   7. Avance logístico completo hasta entregado, transiciones inválidas y
 --      protección append-only de purchase_request_events.
---   8. WhatsApp Cloud API: helios_whatsapp_carousel y helios_whatsapp_payload
---      para carousel, list, text y button.
+--   8. WhatsApp Cloud API: helios_whatsapp_payload para list, text y button
+--      (el carrusel se retiró en 20261125120000).
 --   9. Configuración purchase_settings solo editable por super_admin + audit.log.
 -- ============================================================================
 
@@ -55,7 +55,6 @@ declare
   v_msg_row   public.outbound_messages%rowtype;
   v_payload   jsonb;
   v_block     text;
-  v_cards     jsonb;
   v_detail    jsonb;
   v_counts    jsonb;
 begin
@@ -497,44 +496,7 @@ begin
   exception when sqlstate '42501' then null;
   end;
 
-  -- ── 8. WhatsApp Cloud API: carousel, list y retrocompatibilidad ──────────
-  -- Las tarjetas se validan por su estructura (imagen, texto <= 160, acción);
-  -- el literal de `type` lo fija el bot, no la base.
-  v_cards := jsonb_build_array(
-    jsonb_build_object('card_index', 0, 'type', 'cta_url',
-      'header', jsonb_build_object('type', 'image', 'image', jsonb_build_object('link', 'https://example.com/1.jpg')),
-      'body', jsonb_build_object('text', 'Oxímetro de pulso · $60'),
-      'action', jsonb_build_object('name', 'cta_url', 'parameters', jsonb_build_object('display_text', 'Ver', 'url', 'https://example.com/1'))),
-    jsonb_build_object('card_index', 1, 'type', 'cta_url',
-      'header', jsonb_build_object('type', 'image', 'image', jsonb_build_object('link', 'https://example.com/2.jpg')),
-      'body', jsonb_build_object('text', 'Estetoscopio · $100'),
-      'action', jsonb_build_object('name', 'cta_url', 'parameters', jsonb_build_object('display_text', 'Ver', 'url', 'https://example.com/2')))
-  );
-
-  -- 1 sola tarjeta debe fallar
-  begin
-    perform public.helios_whatsapp_carousel(v_phone, 'Resultados', jsonb_build_array(v_cards->0), v_doc);
-    raise exception 'Carrusel con 1 tarjeta debía fallar';
-  exception when sqlstate '22023' then null;
-  end;
-
-  -- Ventana cerrada debe fallar
-  begin
-    perform public.helios_whatsapp_carousel('+584140009988', 'Resultados', v_cards, v_doc);
-    raise exception 'Carrusel con ventana cerrada debía fallar';
-  exception when sqlstate '22023' then null;
-  end;
-
-  -- Carrusel válido
-  v_msg_id := public.helios_whatsapp_carousel(v_phone, 'Elige un producto de Amazon:', v_cards, v_doc);
-  select * into v_msg_row from public.outbound_messages where id = v_msg_id;
-  v_payload := public.helios_whatsapp_payload(v_msg_row);
-  if v_payload->>'type' <> 'interactive'
-     or v_payload->'interactive'->>'type' <> 'carousel'
-     or jsonb_array_length(v_payload->'interactive'->'action'->'cards') <> 2 then
-    raise exception 'Payload de carousel incorrecto: %', v_payload;
-  end if;
-
+  -- ── 8. WhatsApp Cloud API: list y retrocompatibilidad ───────────────────
   -- Lista interactiva
   insert into public.outbound_messages (
     channel, template_key, recipient_staff_id, recipient,
@@ -889,33 +851,6 @@ begin
     raise exception 'admin_purchase_sim_autorizar debía devolver el uid del admin';
   end if;
 
-  -- ── 10h. Forma del carrusel ──────────────────────────────────────────────
-  begin
-    perform public.helios_whatsapp_carousel(v_phone, 'Resultados', jsonb_build_array(
-      jsonb_build_object('header', jsonb_build_object('image', jsonb_build_object('link', '')), 'action', '{}'::jsonb),
-      jsonb_build_object('header', jsonb_build_object('image', jsonb_build_object('link', 'https://e.com/2.jpg')), 'action', '{}'::jsonb)
-    ), v_doc);
-    raise exception 'Una tarjeta sin imagen debía rechazarse';
-  exception when sqlstate '22023' then null;
-  end;
-  begin
-    perform public.helios_whatsapp_carousel(v_phone, 'Resultados', jsonb_build_array(
-      jsonb_build_object('header', jsonb_build_object('image', jsonb_build_object('link', 'https://e.com/1.jpg')),
-                         'body', jsonb_build_object('text', repeat('x', 161)), 'action', '{}'::jsonb),
-      jsonb_build_object('header', jsonb_build_object('image', jsonb_build_object('link', 'https://e.com/2.jpg')), 'action', '{}'::jsonb)
-    ), v_doc);
-    raise exception 'Una tarjeta con texto de más de 160 caracteres debía rechazarse';
-  exception when sqlstate '22023' then null;
-  end;
-  begin
-    perform public.helios_whatsapp_carousel(v_phone, 'Resultados', jsonb_build_array(
-      jsonb_build_object('header', jsonb_build_object('image', jsonb_build_object('link', 'https://e.com/1.jpg'))),
-      jsonb_build_object('header', jsonb_build_object('image', jsonb_build_object('link', 'https://e.com/2.jpg')))
-    ), v_doc);
-    raise exception 'Una tarjeta sin acción debía rechazarse';
-  exception when sqlstate '22023' then null;
-  end;
-
   -- ── 10i. Cancelar por el bot ─────────────────────────────────────────────
   v_res := public.bot_compra_crear(p_phone => v_phone, p_asin => 'B00CANCEL01', p_product_title => 'Cancelable', p_weight_lb => 1, p_unit_price_usd => 20);
   v_s := (v_res->>'request_id')::uuid;
@@ -1066,8 +1001,8 @@ begin
   end if;
   perform public.sim_compra_mensaje(v_phone, 'out', 'buttons', 'Elige', '{"buttons":[{"id":"a","title":"A"}]}'::jsonb);
   begin
-    perform public.sim_compra_mensaje(v_phone, 'out', 'carousel', 'Una sola', '{"cards":[{}]}'::jsonb);
-    raise exception 'Un carrusel de una tarjeta debía rechazarse';
+    perform public.sim_compra_mensaje(v_phone, 'out', 'carousel', 'Ya no existe', '{"cards":[{},{}]}'::jsonb);
+    raise exception 'El simulador ya no acepta carruseles';
   exception when sqlstate '22023' then null;
   end;
   perform public.sim_compra_sesion_guardar(v_phone, 'x', '{}'::jsonb);
@@ -1175,6 +1110,157 @@ begin
       raise exception 'El simulador debía poder cancelar su solicitud: %', v_chan_res;
     end if;
   end;
+end $$;
+
+-- ============================================================================
+-- 11. Limpieza (20261125120000): «la más reciente» determinista, piloto
+--     normalizado y sin carrusel. Tampoco llama a helios_dispatch_* ni http.
+-- ============================================================================
+do $$
+declare
+  v_super    uuid := pg_temp.prueba_admin();
+  v_doc      uuid := gen_random_uuid();
+  v_merchant uuid;
+  v_branch   uuid;
+  v_phone    text := '+584147770001';
+  v_phone2   text := '+584147770002';
+  v_res      jsonb;
+  v_r1       uuid;
+  v_r2       uuid;
+  v_n1       integer;
+  v_n2       integer;
+  v_msg      text;
+  v_row      public.outbound_messages%rowtype;
+  v_payload  jsonb;
+begin
+  insert into auth.users (id, instance_id, aud, role, email, email_confirmed_at, created_at, updated_at)
+  values (v_doc, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
+          'amz3-' || v_doc || '@prueba.helios.test', now(), now(), now());
+  insert into public.merchants (name) values ('Clínica Amazon Limpieza') returning id into v_merchant;
+  select id into v_branch from public.merchant_branches where merchant_id = v_merchant and is_default;
+  insert into public.merchant_users (user_id, merchant_id, branch_id, role) values (v_doc, v_merchant, v_branch, 'gerente');
+  insert into public.staff_whatsapp_numbers (phone_e164, user_id, merchant_id, created_by)
+  values (v_phone, v_doc, v_merchant, v_super);
+  insert into public.whatsapp_contacts (phone_e164, last_inbound_at) values (v_phone, now())
+  on conflict (phone_e164) do update set last_inbound_at = excluded.last_inbound_at;
+
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', v_super::text, 'role', 'authenticated', 'aal', 'aal2')::text, true);
+
+  -- ── 11a. Piloto: cualquier forma del mismo teléfono guarda el mismo número ──
+  if public.helios_purchase_pilot_phone('+5804149783031') is distinct from '+584149783031'
+     or public.helios_purchase_pilot_phone('04149783031') is distinct from '+584149783031'
+     or public.helios_purchase_pilot_phone('0414-978-3031') is distinct from '+584149783031'
+     or public.helios_purchase_pilot_phone('+584149783031') is distinct from '+584149783031'
+     or public.helios_purchase_pilot_phone('abc') is not null then
+    raise exception 'La normalización del teléfono del piloto falló';
+  end if;
+
+  v_res := public.admin_purchase_settings_set(8, 12, 7, 18, 30, 40, 2, 48, 'mock', false,
+    array['+5804147770001', '04147770001', '0414-777-0001', '+584147770001']);
+  if jsonb_array_length(v_res->'pilot_phones') <> 1 or v_res->'pilot_phones'->>0 <> v_phone then
+    raise exception 'El piloto debía guardarse normalizado y sin duplicados: %', v_res->'pilot_phones';
+  end if;
+  begin
+    perform public.admin_purchase_settings_set(8, 12, 7, 18, 30, 40, 2, 48, 'mock', false, array[v_phone, 'abc']);
+    raise exception 'Un teléfono basura del piloto debía fallar';
+  exception when sqlstate '22023' then
+    get stacked diagnostics v_msg = message_text;
+    if v_msg <> 'telefono_piloto_invalido: abc' then
+      raise exception 'Mensaje inesperado para el teléfono inválido: %', v_msg;
+    end if;
+  end;
+  if (select pilot_phones from public.purchase_settings where id) <> array[v_phone] then
+    raise exception 'Un guardado rechazado no debía cambiar el piloto';
+  end if;
+
+  -- El bot compara con el teléfono normalizado
+  if not (public.bot_compra_habilitada('0414-777-0001')->>'piloto')::boolean
+     or not (public.bot_compra_habilitada(v_phone)->>'piloto')::boolean then
+    raise exception 'bot_compra_habilitada debía reconocer el piloto sin importar el formato';
+  end if;
+
+  -- pilot_status: registrado y nombre
+  v_res := public.admin_purchase_settings_set(8, 12, 7, 18, 30, 40, 2, 48, 'mock', false, array[v_phone, v_phone2]);
+  if jsonb_array_length(v_res->'pilot_status') <> 2
+     or not (v_res->'pilot_status'->0->>'registrado')::boolean
+     or v_res->'pilot_status'->0->>'phone' <> v_phone
+     or (v_res->'pilot_status'->0->>'nombre') is distinct from public.helios_staff_name(v_doc)
+     or (v_res->'pilot_status'->1->>'registrado')::boolean
+     or v_res->'pilot_status'->1->>'phone' <> v_phone2
+     or (v_res->'pilot_status'->1->'nombre') <> 'null'::jsonb then
+    raise exception 'pilot_status incorrecto: %', v_res->'pilot_status';
+  end if;
+  if public.admin_purchase_settings_get() -> 'pilot_status' <> v_res -> 'pilot_status' then
+    raise exception 'admin_purchase_settings_get debía traer el mismo pilot_status';
+  end if;
+  -- Un número revocado ya no cuenta como registrado
+  update public.staff_whatsapp_numbers
+     set revoked_at = now(), revoked_by = v_super, revoke_reason = 'prueba'
+   where phone_e164 = v_phone and revoked_at is null;
+  if (public.admin_purchase_settings_get()->'pilot_status'->0->>'registrado')::boolean then
+    raise exception 'Un número revocado no debía figurar como registrado';
+  end if;
+  update public.staff_whatsapp_numbers set revoked_at = null, revoked_by = null, revoke_reason = null
+   where phone_e164 = v_phone;
+
+  -- ── 11b. «La más reciente» con el mismo created_at ───────────────────────
+  perform public.admin_purchase_settings_set(8, 12, 7, 18, 30, 40, 2, 48, 'rainforest', true, array[]::text[]);
+  v_res := public.bot_compra_crear(p_phone => v_phone, p_asin => 'B00DETER001', p_product_title => 'Primera',
+    p_weight_lb => 1, p_unit_price_usd => 10);
+  v_r1 := (v_res->>'request_id')::uuid;
+  v_res := public.bot_compra_crear(p_phone => v_phone, p_asin => 'B00DETER002', p_product_title => 'Segunda',
+    p_weight_lb => 1, p_unit_price_usd => 10);
+  v_r2 := (v_res->>'request_id')::uuid;
+  update public.purchase_requests set created_at = now() where id in (v_r1, v_r2);
+  select request_number into v_n1 from public.purchase_requests where id = v_r1;
+  select request_number into v_n2 from public.purchase_requests where id = v_r2;
+  if v_n2 <= v_n1 then
+    raise exception 'La segunda solicitud debía tener el número mayor (% / %)', v_n1, v_n2;
+  end if;
+  if (select count(distinct created_at) from public.purchase_requests where id in (v_r1, v_r2)) <> 1 then
+    raise exception 'La prueba necesita dos solicitudes con el mismo created_at';
+  end if;
+  if (public.bot_compra_pendiente_de_pago(v_phone)->>'request_id')::uuid <> v_r2 then
+    raise exception 'pendiente_de_pago debía devolver la de mayor request_number';
+  end if;
+  if (public.bot_compra_mis_solicitudes(v_phone, 5)->0->>'request_id')::uuid <> v_r2
+     or (public.bot_compra_mis_solicitudes(v_phone, 5)->1->>'request_id')::uuid <> v_r1 then
+    raise exception 'mis_solicitudes debía listar primero la de mayor request_number';
+  end if;
+  if (public.admin_purchase_list(null, 'whatsapp', 'B00DETER', 10)->0->>'id')::uuid <> v_r2 then
+    raise exception 'admin_purchase_list debía listar primero la de mayor request_number';
+  end if;
+
+  -- ── 11c. Sin carrusel ────────────────────────────────────────────────────
+  if to_regprocedure('public.helios_whatsapp_carousel(text,text,jsonb,uuid)') is not null then
+    raise exception 'helios_whatsapp_carousel debía haberse eliminado';
+  end if;
+  begin
+    insert into public.purchase_simulator_messages (phone_e164, direction, kind) values (v_phone, 'out', 'carousel');
+    raise exception 'La restricción del simulador debía rechazar carousel';
+  exception when check_violation then null;
+  end;
+  begin
+    perform public.admin_purchase_sim_append(v_phone, 'out', 'carousel', 'x');
+    raise exception 'admin_purchase_sim_append no debía aceptar carousel';
+  exception when sqlstate '22023' then null;
+  end;
+  -- Una fila vieja de tipo carousel ya no tiene rama propia: sale como el
+  -- texto de siempre (ventana abierta y sin botones), nunca como interactive.
+  insert into public.outbound_messages (
+    channel, template_key, recipient_staff_id, recipient,
+    subject, rendered_text, status, next_attempt_at, wa_template
+  ) values (
+    'whatsapp', 'bot_respuesta', v_doc, v_phone,
+    'Helios', 'Elige un producto', 'pendiente', now(),
+    jsonb_build_object('kind', 'carousel', 'cards', jsonb_build_array('{}'::jsonb, '{}'::jsonb))
+  )
+  returning * into v_row;
+  v_payload := public.helios_whatsapp_payload(v_row);
+  if v_payload->>'type' <> 'text' or v_payload->'text'->>'body' <> 'Elige un producto' then
+    raise exception 'Un carousel viejo debía caer en la rama de texto: %', v_payload;
+  end if;
 end $$;
 
 set constraints all immediate;

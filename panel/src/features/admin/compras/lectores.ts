@@ -251,6 +251,12 @@ export function leerAjustes(raw: unknown): AjustesComprasConfig {
   const d = 'los ajustes de compras'
   const r = comoFila(raw)
   if (!Array.isArray(r.pilot_phones)) falla(d, 'pilot_phones')
+  if (!Array.isArray(r.pilot_status)) falla(d, 'pilot_status')
+  const pilotStatus = filas(r.pilot_status).map((e) => ({
+    phone: reqTexto(e, 'phone', d),
+    registrado: reqBool(e, 'registrado', d),
+    nombre: textoONulo(e.nombre),
+  }))
   return {
     taxUsaPct: reqNumero(r, 'tax_usa_pct', d),
     serviceFeePct: reqNumero(r, 'service_fee_pct', d),
@@ -263,6 +269,7 @@ export function leerAjustes(raw: unknown): AjustesComprasConfig {
     catalogProvider: leerProveedor(r.catalog_provider, d),
     isEnabled: reqBool(r, 'is_enabled', d),
     pilotPhones: textos(r.pilot_phones),
+    pilotStatus,
     bcvRateToday: numeroONulo(r.fx_rate_usd),
     updatedAt: textoONulo(r.updated_at),
   }
@@ -321,8 +328,6 @@ export function leerMensajeSim(raw: unknown): MensajeSimulador {
       ...base,
       contenido: { kind: 'buttons', buttons: leerBotones(p.buttons) },
     }
-  // Los carruseles que el simulador guardó antes de pasar a la lista se leen como texto.
-  if (kind === 'carousel') return { ...base, contenido: { kind: 'text' } }
   if (kind === 'list') {
     const sections = filas(p.sections).map((s) => ({
       title: textoONulo(s.title) ?? '',

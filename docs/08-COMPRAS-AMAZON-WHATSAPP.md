@@ -17,8 +17,8 @@ Todo se administra desde el Superadmin en **`/admin/compras`** (Solicitudes, Pag
 ### 2.1 Base de datos (`supabase/migrations/20261124120000_compras_amazon_para_medicos.sql`)
 - **100% aditiva:** no altera ninguna tabla ni flujo de pacientes o liquidaciones a clínicas (`charges`, `installments`, `payment_reports`, `ledger`).
 - **WhatsApp Cloud API (`360dialog`):**
-  - `helios_whatsapp_payload(public.outbound_messages)` extendida de forma retrocompatible para soportar `interactive` tipo `carousel` (2..10 Media Cards) y `list` dentro de la ventana de 24 horas.
-  - `helios_whatsapp_carousel(p_to, p_body, p_cards, p_staff_user_id)` para encolar carruseles de resultados.
+  - `helios_whatsapp_payload(public.outbound_messages)` extendida de forma retrocompatible para soportar `interactive` tipo `list` dentro de la ventana de 24 horas.
+  - Los resultados de búsqueda salen como **lista interactiva**, no como carrusel: el carrusel fuera de plantilla de Meta solo admite botones de URL, y aquí hace falta responder dentro del bot.
 - **Tablas nuevas (RLS habilitado, sin acceso directo a `anon`/`authenticated`):**
   - `public.purchase_settings`: tarifas configurables (`tax_usa_pct`, `service_fee_pct`, `air_rate_per_lb_usd`, `air_min_usd`, `sea_rate_per_ft3_usd`, `sea_min_usd`, `fallback_weight_lb`, `quote_ttl_hours`, `catalog_provider`, `is_enabled`).
   - `public.amazon_catalog_cache`: caché temporal de búsquedas y fichas ASIN (`cache_key`, `kind`, `provider`, `payload`, `expires_at`).
@@ -40,7 +40,7 @@ Todo se administra desde el Superadmin en **`/admin/compras`** (Solicitudes, Pag
 - `/admin/compras` (`panel/src/routes/admin/compras.tsx`):
   - **Solicitudes:** KPIs, filtros por estado/canal/búsqueda, exportación CSV y acceso a fichas.
   - **Pagos por aprobar:** cola de `purchase_payment_reports` con verificación BCV, margen de cuadre y `VerCaptura`.
-  - **Simulador WhatsApp:** pruebas end-to-end sin Telegram ni 360dialog (selector de médico real, carrusel horizontal de Media Cards, botones interactivos, subida real de captura a `payment-receipts` o PNG de prueba, recepción en vivo de avisos al conciliar desde el panel).
+  - **Simulador WhatsApp:** pruebas end-to-end sin Telegram ni 360dialog (selector de médico real, lista interactiva de resultados, botones interactivos, subida real de captura a `payment-receipts` o PNG de prueba, recepción en vivo de avisos al conciliar desde el panel).
   - **Ajustes:** edición de tarifas por `super_admin` con registro en `audit.admin_actions`.
 - `/admin/compras/$id` (`panel/src/routes/admin/compras_.$id.tsx`): ficha operativa (`MarcoDeFicha carrilFijo`) con revisión aduanal, registro manual de pago con preview BCV, conciliación (`Aprobar` / `Rechazar` / `En revisión` / `Duplicado`), avance logístico (`comprado_amazon` → `en_almacen_usa` → `en_transito` → `en_aduana` → `listo_entrega` → `entregado`) y timeline.
 
@@ -58,6 +58,14 @@ jamás cae al catálogo de prueba.
 **teléfonos piloto** (`pilot_phones`, E.164) ven «Comprar en Amazon»; para el
 resto de los médicos el menú queda exactamente como antes. No se puede encender
 para todos con el catálogo de prueba (lo impide un CHECK).
+
+**Formato de los pilotos.** Ajustes normaliza al escribir: `0414 123 4567`,
+`+58 414 123 4567`, `+58 0414…` y `584141234567` quedan como `+584141234567`;
+cualquier otra cosa se rechaza (la base lanza `22023 telefono_piloto_invalido`).
+Junto a cada piloto, Ajustes muestra el nombre del personal o avisa «No está
+registrado como personal de ninguna clínica». Ese requisito es real: el número
+debe estar registrado como personal de una clínica; si no, el bot lo trata como
+paciente y la función parece apagada.
 
 1. **Aplicar la migración** `20261124180100_compras_amazon_correcciones.sql`
    (`node supabase/poda/aplicar.mjs`) y correr
@@ -88,7 +96,19 @@ registrarlo en `crearProveedorCatalogo` y añadirlo al CHECK de `catalog_provide
 
 ---
 
-## 4. Comandos de verificación
+## 4. Si algo falla
+
+- **«No entendí» al escribir «comprar»:** el número no es piloto o no está
+  registrado como personal. Revisa Ajustes (aviso rojo junto al piloto).
+- **«Amazon no me responde»:** mira los logs de `whatsapp-webhook` y busca
+  `compras: catálogo <tipo> <estado>`. `http 401` = el secreto
+  `RAINFOREST_API_KEY` está mal.
+- **Los resultados no llegan:** revisa `outbound_messages` / «Avisos de hoy»
+  por un error 400 de 360dialog.
+
+---
+
+## 5. Comandos de verificación
 
 ```bash
 # Pruebas SQL (en transacción con rollback)

@@ -114,7 +114,7 @@ export const seguimiento = [
     id: 'simulador-compras-whatsapp',
     titulo: 'Abrir el Simulador WhatsApp de Compras Amazon',
     descripcion:
-      'Probar de punta a punta el flujo conversacional de búsqueda, carrusel, cotización y reporte de pago en bolívares sin enviar mensajes reales.',
+      'Probar de punta a punta el flujo conversacional de búsqueda, lista de resultados, cotización y reporte de pago en bolívares sin enviar mensajes reales.',
     espacio: 'seguimiento',
     sinonimos: ['simulador amazon', 'probar bot compras', 'simulador whatsapp compras'],
     destino: { to: '/admin/compras', search: { tab: 'simulador' } },
