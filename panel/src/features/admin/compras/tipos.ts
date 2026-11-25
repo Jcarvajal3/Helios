@@ -185,12 +185,6 @@ export type DireccionSimMensaje = 'in' | 'out'
 
 export type BotonSimulador = { id: string; title: string }
 
-export type TarjetaSimulador = {
-  imageUrl: string
-  body: string
-  button: BotonSimulador
-}
-
 export type FilaListaSimulador = {
   id: string
   title: string
@@ -212,7 +206,6 @@ export type MensajeSimulador = {
   contenido:
     | { kind: 'text' }
     | { kind: 'buttons'; buttons: BotonSimulador[] }
-    | { kind: 'carousel'; cards: TarjetaSimulador[] }
     | { kind: 'list'; button: string; sections: SeccionListaSimulador[] }
     | { kind: 'image'; receiptPath: string }
 }

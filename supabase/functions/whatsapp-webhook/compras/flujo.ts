@@ -6,7 +6,7 @@
 //
 // Estados (se guardan en la sesión, 30 min):
 //   compra_buscar     texto, enlace o ASIN
-//   compra_resultados carrusel (o lista numerada) de 2–4 opciones
+//   compra_resultados lista (o texto numerado) de 2–4 opciones
 //   compra_envio      detalle + aéreo vs. marítimo
 //   compra_cantidad   «¿Cuántas unidades?»
 //   compra_confirmar  desglose + confirmación (`bot_compra_crear`)
@@ -84,7 +84,6 @@ import type {
   ProductoResumen,
   ProveedorCatalogo,
   TarifasCompra,
-  TarjetaCarrusel,
 } from './tipos.ts'
 
 export type { BotonCompra } from './transporte.ts'
@@ -448,53 +447,36 @@ function estimadoEnVenezuela(p: ProductoResumen, tarifas: TarifasCompra): number
   return calcularCotizacion(p, tarifas, recomendarEnvio(p), 1).totalUsd
 }
 
-function tarjetaDe(p: ProductoResumen, i: number, tarifas: TarifasCompra): TarjetaCarrusel {
-  const resto = `\nAmazon: ${dinero(p.precioUsd)}\nPuesto en Venezuela aprox.: ${dinero(estimadoEnVenezuela(p, tarifas))}`
-  const cabeza = `${i + 1}. `
-  const titulo = truncar(p.titulo, Math.max(20, 158 - resto.length - cabeza.length))
-  return {
-    image_url: p.imagenUrl,
-    body: `${cabeza}${titulo}${resto}`,
-    // ≤ 20 caracteres: el límite del id de botón de una tarjeta.
-    button_id: `compra:v:${p.asin}`,
-    button_title: 'Cotizar',
+const LIMITE_CUERPO_RESULTADOS = 1024
+
+/** Un resultado en el cuerpo de la lista: «1. Título», salto y «Amazon: $16,99 · Puesto en Venezuela aprox.: $34,88». */
+function resumenDe(p: ProductoResumen, i: number, tarifas: TarifasCompra, largoTitulo: number): string {
+  return `${i + 1}. ${truncar(p.titulo, largoTitulo)}\nAmazon: ${dinero(p.precioUsd)} · Puesto en Venezuela aprox.: ${dinero(estimadoEnVenezuela(p, tarifas))}`
+}
+
+/** El encabezado y el resumen numerado de todos los resultados, sin pasar de 1024 caracteres. */
+function cuerpoDeResultados(encabezado: string, resultados: ProductoResumen[], tarifas: TarifasCompra): string {
+  let cuerpo = ''
+  for (let largo = 70; largo >= 10; largo -= 10) {
+    cuerpo = `${encabezado}\n\n${resultados.map((p, i) => resumenDe(p, i, tarifas, largo)).join('\n\n')}`
+    if (cuerpo.length <= LIMITE_CUERPO_RESULTADOS) return cuerpo
   }
+  return cuerpo.slice(0, LIMITE_CUERPO_RESULTADOS)
 }
 
 async function mostrarResultados(s: S, consulta: string, resultados: ProductoResumen[], tarifas: TarifasCompra) {
   await guardar(s, 'compra_resultados', { consulta, resultados })
   const n = resultados.length
   const encabezado = `Encontré ${n} opciones para «${truncar(consulta, 50)}». Elige una para cotizarla. Si no es lo que buscas, escribe otra búsqueda.`
-  const conFoto = n >= 2 && resultados.every((p) => p.imagenUrl.startsWith('https://'))
-  // Sin carrusel (sin fotos, o si Meta/la RPC lo rechaza): lista en el simulador, texto numerado en WhatsApp.
-  const sinCarrusel = async () => {
-    if (s.ctx.transporte.canal === 'simulador') {
-      const filas: FilaLista[] = resultados.map((p, i) => ({
-        id: `compra:v:${p.asin}`,
-        title: `${i + 1}. ${p.titulo}`,
-        description: `Amazon ${dinero(p.precioUsd)} · Venezuela aprox. ${dinero(estimadoEnVenezuela(p, tarifas))}`,
-      }))
-      await s.ctx.transporte.enviarLista(encabezado, 'Ver opciones', filas)
-    } else {
-      const lineas = resultados.map(
-        (p, i) =>
-          `${i + 1}. ${truncar(p.titulo, 90)}\n   Amazon: ${dinero(p.precioUsd)} · Puesto en Venezuela aprox.: ${dinero(estimadoEnVenezuela(p, tarifas))}`,
-      )
-      await enviar(s, `${encabezado}\n\n${lineas.join('\n')}\n\nResponde con el número de la opción.`)
-    }
-  }
-  if (conFoto) {
-    // La sesión ya está guardada: si el carrusel falla (p. ej. 22023) NO se deja caer el turno
-    // (el webhook reintentaría y repetiría la búsqueda de pago); se registra solo el código.
-    try {
-      await s.ctx.transporte.enviarCarrusel(encabezado, resultados.map((p, i) => tarjetaDe(p, i, tarifas)))
-    } catch (err) {
-      console.error('compras: el carrusel falló; los resultados salen sin tarjetas', (err as { code?: unknown } | null)?.code)
-      await sinCarrusel()
-    }
-  } else {
-    await sinCarrusel()
-  }
+  const cuerpo = cuerpoDeResultados(encabezado, resultados, tarifas)
+  const filas: FilaLista[] = resultados.map((p, i) => ({
+    id: `compra:v:${p.asin}`,
+    title: truncar(`${i + 1}. ${p.titulo}`, 24),
+    description: truncar(`Amazon ${dinero(p.precioUsd)} · Venezuela aprox. ${dinero(estimadoEnVenezuela(p, tarifas))}`, 72),
+  }))
+  // La sesión ya está guardada. Si la lista falla, el transporte manda el mismo cuerpo (ya trae
+  // los títulos completos) como texto numerado y el médico responde con el número.
+  await s.ctx.transporte.enviarLista(cuerpo, 'Ver opciones', filas, `${cuerpo}\n\nResponde con el número de la opción.`)
   return { paso: 'compra_resultados', cuantos: n }
 }
 
@@ -1154,7 +1136,7 @@ async function hResultados(s: S) {
     return invalida(s, 'No pude cargar el detalle de ese producto. Escribe otra búsqueda o pega el enlace de Amazon.', BOTONES_BUSCAR)
   }
   if (s.mensaje.adjunto || !s.texto) {
-    return invalida(s, `Toca «Cotizar» en una opción, escribe un número del 1 al ${resultados.length} o escribe otra búsqueda.`, BOTONES_BUSCAR)
+    return invalida(s, `Elige una opción de la lista, escribe un número del 1 al ${resultados.length} o escribe otra búsqueda.`, BOTONES_BUSCAR)
   }
   return hBuscar(s)
 }

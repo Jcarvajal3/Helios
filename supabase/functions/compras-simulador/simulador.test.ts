@@ -99,13 +99,17 @@ async function main() {
     comprueba(botones.map((b) => b.id).join() === 'menu:comprar,compra:mis', 'menú: Comprar en Amazon · Mis compras', JSON.stringify(botones))
 
     const busca = await turno(base, { texto: 'estetoscopio' }, 't2')
-    comprueba(busca.ultimo?.p_kind === 'carousel' && busca.estado === 'compra_resultados', 'texto libre en el menú = búsqueda → carrusel')
-    const cards = (busca.ultimo?.p_payload as { cards: Array<{ image_url: string; body: string; button: { id: string; title: string } }> }).cards
-    comprueba(cards.length === 3 && cards[0].button.id === 'compra:v:B00QES9K4G' && cards[0].button.title === 'Cotizar' && cards[0].image_url.startsWith('https://') && cards[0].body.startsWith('1. '), 'payload canónico del carrusel {cards:[{image_url,body,button:{id,title}}]}', JSON.stringify(cards[0]))
+    comprueba(busca.ultimo?.p_kind === 'list' && busca.estado === 'compra_resultados', 'texto libre en el menú = búsqueda → lista')
+    const lista = busca.ultimo?.p_payload as { button: string; sections: Array<{ title: string; rows: Array<{ id: string; title: string; description: string }> }> }
+    const rows = lista.sections[0].rows
+    comprueba(lista.button === 'Ver opciones' && rows.length === 3 && rows[0].id === 'compra:v:B00QES9K4G' && rows[0].title.startsWith('1. ') && rows[0].description.startsWith('Amazon $'), 'payload canónico de la lista {button,sections:[{title,rows:[{id,title,description}]}]}', JSON.stringify(rows[0]))
+    comprueba(rows.every((r) => r.title.length <= 24 && r.description.length <= 72) && lista.sections[0].title.length <= 24, 'la lista respeta ≤24 / ≤72')
+    comprueba(String(busca.ultimo?.p_body).length <= 1024 && String(busca.ultimo?.p_body).includes('1. 3M Littmann') && String(busca.ultimo?.p_body).includes('Puesto en Venezuela aprox.'), 'el cuerpo trae el resumen numerado con los títulos completos y ≤1024')
+    comprueba(!base.llamadas.some((l) => l.fn === 'sim_compra_mensaje' && l.args.p_kind === 'carousel'), 'el simulador ya no produce carruseles')
     comprueba(base.llamadas.some((l) => l.fn === 'sim_compra_mensaje' && l.args.p_direction === 'in' && l.args.p_kind === 'text' && l.args.p_body === 'estetoscopio'), 'registra el mensaje entrante')
 
     const toca = await turno(base, { respuesta: { id: 'compra:v:B00QES9K4G', title: 'Cotizar' } }, 't3')
-    comprueba(toca.estado === 'compra_envio' && toca.ultimo?.p_kind === 'buttons', 'tocar una tarjeta cotiza')
+    comprueba(toca.estado === 'compra_envio' && toca.ultimo?.p_kind === 'buttons', 'tocar una fila de la lista cotiza')
     comprueba(base.llamadas.some((l) => l.fn === 'sim_compra_mensaje' && l.args.p_direction === 'in' && JSON.stringify(l.args.p_payload) === JSON.stringify({ reply_id: 'compra:v:B00QES9K4G' })), 'el toque entra como texto con {reply_id}')
     await turno(base, { respuesta: { id: 'compra:envio:aereo', title: 'Envío aéreo' } }, 't4')
 

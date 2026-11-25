@@ -89,15 +89,6 @@ export type ProveedorCatalogo = {
   detalle(asin: string): Promise<ProductoDetalle | null>
 }
 
-/** Tarjeta de un Interactive Media Card Carousel de WhatsApp (2 a 10 cards). */
-export type TarjetaCarrusel = {
-  image_url: string
-  /** ≤ 160 caracteres y ≤ 2 saltos de línea (se recorta al enviar). */
-  body: string
-  button_id: string
-  button_title: string
-}
-
 /** Una fila de una lista interactiva de WhatsApp (máx. 10 en total). */
 export type FilaLista = {
   id: string

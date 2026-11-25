@@ -9,7 +9,6 @@ import type {
   MensajeSimulador,
   SeccionListaSimulador,
 } from '@/features/admin/compras/tipos'
-import { Carrusel } from './Carrusel'
 
 export type Respuesta = { id: string; title: string }
 
@@ -67,14 +66,6 @@ export function Burbuja({
           {delMedico && <CheckCheck size={12} aria-label="Enviado" />}
         </p>
       </div>
-
-      {c.kind === 'carousel' && (
-        <Carrusel
-          tarjetas={c.cards}
-          ocupado={ocupado}
-          onResponder={onResponder}
-        />
-      )}
 
       {botones.map((b) => (
         <button

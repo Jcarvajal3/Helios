@@ -7,11 +7,11 @@
 // `helios_whatsapp_*` ni 360dialog.
 // ═══════════════════════════════════════════════════════════════════════════
 
-import { construirSeccionesLista, partirMensaje, cortar, cuerpoDeTarjeta, LIMITE_TITULO_BOTON } from './transporte.ts'
+import { construirSeccionesLista, partirMensaje, cortar } from './transporte.ts'
 import type { RpcTransporte, SesionCompra, TransporteCompras } from './transporte.ts'
 
 export function crearTransporteSimulador({ rpc, phone }: { rpc: RpcTransporte; phone: string }): TransporteCompras {
-  const saliente = (kind: 'text' | 'buttons' | 'carousel' | 'list', body: string, payload: Record<string, unknown> = {}) =>
+  const saliente = (kind: 'text' | 'buttons' | 'list', body: string, payload: Record<string, unknown> = {}) =>
     rpc('sim_compra_mensaje', {
       p_phone: phone,
       p_direction: 'out',
@@ -32,16 +32,6 @@ export function crearTransporteSimulador({ rpc, phone }: { rpc: RpcTransporte; p
             : await saliente('buttons', parte.texto, { buttons: parte.botones })
       }
       return ultimo
-    },
-    async enviarCarrusel(cuerpo, tarjetas) {
-      if (tarjetas.length < 2 || tarjetas.length > 10) throw new Error('El carrusel necesita entre 2 y 10 tarjetas')
-      return saliente('carousel', cuerpo.slice(0, 1024), {
-        cards: tarjetas.map((t) => ({
-          image_url: t.image_url,
-          body: cuerpoDeTarjeta(t.body),
-          button: { id: t.button_id, title: cortar(t.button_title, LIMITE_TITULO_BOTON) },
-        })),
-      })
     },
     async enviarLista(cuerpo, boton, filas) {
       return saliente('list', cuerpo.slice(0, 1024), {

@@ -1,7 +1,7 @@
 /**
  * Pruebas del motor de Compras en Amazon para médicos: parser, traductor,
  * restricciones, cotizador (paridad con SQL), catálogo Rainforest, formato
- * exacto del carrusel y la lista, y el flujo completo en `bot.ts` con una
+ * exacto de la lista, y el flujo completo en `bot.ts` con una
  * base de mentira (cada RPC responde lo que diga la prueba y se anota).
  *
  *   npx tsx supabase/functions/whatsapp-webhook/compras/compras.test.ts
@@ -31,10 +31,8 @@ import { botonObsoletoEnEstado, esIntentoDePago, normalizarTarifas } from './flu
 import { ETIQUETA_ESTADO } from './textos.ts'
 import {
   construirSeccionesLista,
-  construirTarjetasMeta,
   partirMensaje,
   crearTransporteWhatsApp,
-  cuerpoDeTarjeta,
 } from './transporte.ts'
 import type { DatosCompra, ProveedorCatalogo, TarifasCompra } from './tipos.ts'
 
@@ -152,29 +150,23 @@ async function correr(
   })
   const enviados = llamadas.filter((l) => l.fn === 'helios_whatsapp_text')
   const textos = enviados.map((l) => String(l.args.p_text))
-  const carruseles = llamadas.filter((l) => l.fn === 'helios_whatsapp_carousel').map((l) => l.args)
   const listas = llamadas.filter((l) => l.fn === 'helios_whatsapp_list').map((l) => l.args)
   const guardados = llamadas.filter((l) => l.fn === 'bot_session_save').map((l) => l.args)
   for (const l of enviados) emitidos.push({ texto: String(l.args.p_text), botones: (l.args.p_buttons as Boton[]) ?? [] })
-  for (const c of carruseles) {
-    emitidos.push({ texto: String(c.p_body ?? ''), botones: [] })
-    for (const card of (c.p_cards as Array<{ body: { text: string }; action: { buttons: Array<{ quick_reply: Boton }> } }>) ?? []) {
-      emitidos.push({ texto: card.body.text, botones: card.action.buttons.map((b) => b.quick_reply) })
-    }
-  }
+  for (const l of listas) emitidos.push({ texto: String(l.p_body ?? ''), botones: [] })
   const estado = guardados.at(-1)?.p_state as string | undefined
   todasLasLlamadas.push(...llamadas)
   // El toque llegará con el estado en que QUEDÓ la sesión al final del turno.
   const estadoFinal = estado ?? sesion.state
   const idsEnviados = [
     ...enviados.flatMap((l) => ((l.args.p_buttons as Boton[]) ?? []).map((b) => b.id)),
-    ...carruseles.flatMap((c) => ((c.p_cards as Array<{ action: { buttons: Array<{ quick_reply: Boton }> } }>) ?? []).flatMap((card) => card.action.buttons.map((b) => b.quick_reply.id))),
+    ...listas.flatMap((l) => ((l.p_sections as Array<{ rows: Array<{ id: string }> }>) ?? []).flatMap((sec) => sec.rows.map((f) => f.id))),
   ]
   for (const id of idsEnviados) parejasBotonEstado.push({ id, estado: estadoFinal })
   const datos = (guardados.at(-1)?.p_data ?? {}) as DatosCompra
   const botones = (enviados.at(-1)?.args.p_buttons ?? []) as Boton[]
   const fns = llamadas.map((l) => l.fn)
-  return { res, llamadas, textos, carruseles, listas, guardados, estado, datos, botones, fns }
+  return { res, llamadas, textos, listas, guardados, estado, datos, botones, fns }
 }
 
 /** Una sesión de pago abierta. */
@@ -362,42 +354,8 @@ async function main() {
     comprueba(senal instanceof AbortSignal, 'la consulta lleva AbortSignal.timeout')
   }
 
-  console.log('\n6. Formato exacto del carrusel y de la lista (Meta Cloud API)')
+  console.log('\n6. Formato exacto de la lista (Meta Cloud API)')
   {
-    const tarjetas = [
-      { image_url: 'https://x.test/1.png', body: '1. Estetoscopio\nAmazon: $104,95\nPuesto en Venezuela aprox.: $135,70', button_id: 'compra:v:B00QES9K4G', button_title: 'Cotizar' },
-      { image_url: 'https://x.test/2.png', body: '2. Otro', button_id: 'compra:v:B0157I0Q8C', button_title: 'Cotizar' },
-    ]
-    const cards = construirTarjetasMeta(tarjetas)
-    comprueba(
-      JSON.stringify(cards[0]) ===
-        JSON.stringify({
-          card_index: 0,
-          header: { type: 'image', image: { link: 'https://x.test/1.png' } },
-          body: { text: tarjetas[0].body },
-          action: { buttons: [{ type: 'quick_reply', quick_reply: { id: 'compra:v:B00QES9K4G', title: 'Cotizar' } }] },
-        }),
-      'tarjeta: header image.link, body.text y action.buttons[quick_reply.{id,title}]',
-      JSON.stringify(cards[0]),
-    )
-    comprueba(!('type' in cards[0]) && cards[1].card_index === 1, 'sin `type` a nivel de tarjeta (solo se manda con cta_url); card_index consecutivo')
-    comprueba(cards.every((c) => c.action.buttons.length === cards[0].action.buttons.length && c.action.buttons[0].type === 'quick_reply'), 'todas las tarjetas con el mismo tipo y número de botones')
-    const largo = cuerpoDeTarjeta(`${'a'.repeat(100)}\n${'b'.repeat(100)}\nc\nd\ne`)
-    comprueba(largo.length <= 160 && (largo.match(/\n/g) ?? []).length <= 2, 'cuerpo de tarjeta: ≤160 caracteres y ≤2 saltos de línea', `${largo.length}`)
-    let lanzo = false
-    try {
-      construirTarjetasMeta([tarjetas[0]])
-    } catch {
-      lanzo = true
-    }
-    comprueba(lanzo, 'un carrusel de 1 tarjeta no se construye')
-    lanzo = false
-    try {
-      construirTarjetasMeta([tarjetas[0], { ...tarjetas[1], image_url: '' }])
-    } catch {
-      lanzo = true
-    }
-    comprueba(lanzo, 'una tarjeta sin foto no se construye')
     const sec = construirSeccionesLista('Tus compras', Array.from({ length: 12 }, (_, i) => ({ id: `compra:det:${i}`, title: `#C-10${i} · ${'Producto largo '.repeat(3)}`, description: 'x'.repeat(100) })))
     comprueba(
       sec.length === 1 && sec[0].rows.length === 10 && sec[0].rows.every((r) => r.title.length <= 24 && r.description.length <= 72),
@@ -414,13 +372,11 @@ async function main() {
       },
       personal: { phone_e164: '+584140000001', user_id: 'u1' },
     })
-    await t.enviarCarrusel('Encontré 2 opciones', tarjetas)
-    comprueba(llamadas[0].fn === 'helios_whatsapp_carousel' && JSON.stringify(llamadas[0].args.p_cards) === JSON.stringify(cards), 'helios_whatsapp_carousel recibe las tarjetas exactas')
     await t.enviar('x'.repeat(1500), [{ id: 'a', title: 'Un título larguísimo de botón' }])
-    comprueba(llamadas.length === 3 && (llamadas[1].args.p_buttons as Boton[]).length === 0 && (llamadas[2].args.p_buttons as Boton[])[0].title.length <= 20, 'cuerpo >1024 con botones: texto aparte y botones aparte, título ≤20')
+    comprueba(llamadas.length === 2 && (llamadas[0].args.p_buttons as Boton[]).length === 0 && (llamadas[1].args.p_buttons as Boton[])[0].title.length <= 20, 'cuerpo >1024 con botones: texto aparte y botones aparte, título ≤20')
     await t.enviarLista('Tus compras', 'Ver compras', [{ id: 'compra:det:1', title: '#C-1', description: 'En camino' }])
-    const secs = llamadas[3].args.p_sections as Array<{ rows: Array<{ id: string; description: string }> }>
-    comprueba(llamadas[3].fn === 'helios_whatsapp_list' && llamadas[3].args.p_button === 'Ver compras' && secs[0].rows[0].id === 'compra:det:1' && secs[0].rows[0].description === 'En camino', 'WhatsApp: la lista se encola con helios_whatsapp_list', JSON.stringify(llamadas[3]))
+    const secs = llamadas[2].args.p_sections as Array<{ rows: Array<{ id: string; description: string }> }>
+    comprueba(llamadas[2].fn === 'helios_whatsapp_list' && llamadas[2].args.p_button === 'Ver compras' && secs[0].rows[0].id === 'compra:det:1' && secs[0].rows[0].description === 'En camino', 'WhatsApp: la lista se encola con helios_whatsapp_list', JSON.stringify(llamadas[2]))
     const falla = crearTransporteWhatsApp({
       rpc: async <T>(fn: string, args: Record<string, unknown>) => {
         llamadas.push({ fn, args })
@@ -461,28 +417,38 @@ async function main() {
     comprueba(gate?.args.p_phone === '+584140000001', 'bot_compra_habilitada(p_phone)')
   }
 
-  console.log('\n8. Búsqueda → carrusel numerado → detalle')
+  console.log('\n8. Búsqueda → lista numerada → detalle')
   let sesionResultados: Record<string, unknown> = {}
   {
     const ini = await correr({ boton: 'menu:comprar', texto: 'Comprar en Amazon' }, { state: 'menu', data: {} })
     comprueba(ini.estado === 'compra_buscar', 'menu:comprar → compra_buscar')
 
     const r = await correr({ texto: 'estetoscopio' }, { state: 'compra_buscar', data: {} }, { bot_compra_cache_get: new Error('x'), bot_compra_cache_set: new Error('x') })
-    const c = r.carruseles[0]
-    const cards = (c?.p_cards ?? []) as ReturnType<typeof construirTarjetasMeta>
-    comprueba(r.carruseles.length === 1 && cards.length === 3, 'varios resultados → helios_whatsapp_carousel con 3 tarjetas')
+    const c = r.listas[0]
+    const filas = ((c?.p_sections ?? []) as Array<{ rows: Array<{ id: string; title: string; description: string }> }>)[0]?.rows ?? []
+    const cuerpo = String(c?.p_body ?? '')
+    comprueba(r.listas.length === 1 && filas.length === 3 && r.textos.length === 0, 'varios resultados → UNA lista (helios_whatsapp_list) con 3 filas, sin carrusel ni texto aparte', JSON.stringify(r.fns))
+    comprueba(!r.fns.includes('helios_whatsapp_carousel'), 'jamás se usa helios_whatsapp_carousel')
     comprueba(
-      String(c.p_body) === 'Encontré 3 opciones para «estetoscopio». Elige una para cotizarla. Si no es lo que buscas, escribe otra búsqueda.',
-      'encabezado con el conteo y la consulta',
-      String(c.p_body),
+      cuerpo.startsWith('Encontré 3 opciones para «estetoscopio». Elige una para cotizarla. Si no es lo que buscas, escribe otra búsqueda.'),
+      'el cuerpo empieza con el conteo y la consulta',
+      cuerpo,
     )
     comprueba(
-      cards[0].body.text.startsWith('1. 3M Littmann') && cards[1].body.text.startsWith('2. ') && cards[0].body.text.includes('Puesto en Venezuela aprox.: $135,70') && cards[0].body.text.includes('Amazon: $104,95'),
-      'tarjetas numeradas «1.», «2.» con «Puesto en Venezuela aprox.»',
-      cards[0].body.text,
+      cuerpo.includes('1. 3M Littmann') && cuerpo.includes('\nAmazon: $104,95 · Puesto en Venezuela aprox.: $135,70') && cuerpo.includes('\n\n2. ') && cuerpo.includes('\n\n3. '),
+      'el cuerpo resume cada resultado numerado con «Amazon» y «Puesto en Venezuela aprox.»',
+      cuerpo,
     )
-    comprueba(cards[0].action.buttons[0].quick_reply.title === 'Cotizar' && cards[0].action.buttons[0].quick_reply.id === 'compra:v:B00QES9K4G' && cards[0].action.buttons[0].quick_reply.id.length <= 20, 'botón «Cotizar» con id ≤20 caracteres')
-    comprueba(cards.every((x) => x.body.text.length <= 160 && (x.body.text.match(/\n/g) ?? []).length <= 2), 'cada tarjeta ≤160 caracteres y ≤2 saltos')
+    comprueba(cuerpo.length <= 1024, 'el cuerpo no pasa de 1024 caracteres', String(cuerpo.length))
+    comprueba(c.p_button === 'Ver opciones', 'botón «Ver opciones»')
+    comprueba(
+      filas[0].id === 'compra:v:B00QES9K4G' && filas[0].title.startsWith('1. ') && filas[1].title.startsWith('2. ') && filas[0].description === 'Amazon $104,95 · Venezuela aprox. $135,70',
+      'filas: id compra:v:<ASIN>, título «N. …» y descripción «Amazon $… · Venezuela aprox. $…»',
+      JSON.stringify(filas[0]),
+    )
+    comprueba(filas.every((f) => f.id.length <= 200 && f.title.length <= 24 && f.description.length <= 72), 'filas: id ≤200, título ≤24 y descripción ≤72')
+    const sec1 = ((c?.p_sections ?? []) as Array<{ title: string }>)[0]
+    comprueba(sec1.title.length <= 24 && (c.p_button as string).length <= 20, 'sección ≤24 y botón ≤20')
     comprueba(r.estado === 'compra_resultados', 'guarda compra_resultados')
     sesionResultados = r.datos as Record<string, unknown>
 
@@ -493,23 +459,47 @@ async function main() {
     comprueba(n9.estado === undefined || n9.estado === 'compra_resultados', 'un número fuera de lo visible no elige nada')
     comprueba((n9.textos[0] ?? '').includes('del 1 al 3'), '…y dice el rango visible', n9.textos[0])
 
-    // Sin fotos: texto numerado en WhatsApp.
+    // Títulos larguísimos y consulta larga: el cuerpo se acorta, nunca pasa de 1024.
+    const largos: ProveedorCatalogo = {
+      nombre: 'mock',
+      buscar: async (q, l) => (await MOCK.buscar(q, l)).map((p) => ({ ...p, titulo: `${p.titulo} ${'extra largo '.repeat(40)}` })),
+      detalle: (a) => MOCK.detalle(a),
+    }
+    const lg = await correr({ texto: 'estetoscopio '.repeat(5).trim() }, { state: 'compra_buscar', data: {} }, {}, { proveedorDe: () => largos })
+    const cuerpoLg = String(lg.listas[0]?.p_body ?? '')
+    comprueba(lg.listas.length === 1 && cuerpoLg.length > 0 && cuerpoLg.length <= 1024 && cuerpoLg.includes('3. '), 'títulos larguísimos: el cuerpo se acorta y sigue ≤1024 con todos los resultados', String(cuerpoLg.length))
+
+    // Sin fotos: igual, una lista (las fotos ya no hacen falta).
     const sinFoto: ProveedorCatalogo = {
       nombre: 'mock',
       buscar: async (q, l) => (await MOCK.buscar(q, l)).map((p) => ({ ...p, imagenUrl: '' })),
       detalle: (a) => MOCK.detalle(a),
     }
     const sf = await correr({ texto: 'estetoscopio' }, { state: 'compra_buscar', data: {} }, {}, { proveedorDe: () => sinFoto })
-    comprueba(sf.carruseles.length === 0 && sf.textos[0]?.includes('1. 3M Littmann') && sf.textos[0].includes('Responde con el número'), 'sin fotos no hay carrusel: texto numerado', sf.textos[0])
+    comprueba(sf.listas.length === 1 && sf.textos.length === 0, 'sin fotos también sale la lista', JSON.stringify(sf.fns))
+
+    // Si la RPC de la lista falla, el mismo cuerpo sale como texto numerado y la sesión sigue.
+    const errLista = console.error
+    console.error = () => {}
+    const sinLista = await correr({ texto: 'estetoscopio' }, { state: 'compra_buscar', data: {} }, { helios_whatsapp_list: Object.assign(new Error('helios_whatsapp_list: x'), { code: '22023' }) })
+    console.error = errLista
+    comprueba(sinLista.estado === 'compra_resultados' && sinLista.textos.length === 1 && sinLista.textos[0].includes('1. 3M Littmann') && sinLista.textos[0].includes('Responde con el número de la opción.') && !sinLista.fns.includes('helios_whatsapp_carousel'), 'lista caída: texto numerado, el turno sigue', sinLista.textos[0])
+    comprueba(sinLista.llamadas.filter((l) => l.fn === 'helios_whatsapp_list').length === 1, 'la lista se intenta una sola vez')
+
+    // Un botón de una búsqueda anterior (ASIN que ya no está) no cotiza nada.
+    const viejo = await correr({ boton: 'compra:v:B0XXXXXXXX', texto: 'Cotizar' }, { state: 'compra_resultados', data: sesionResultados })
+    comprueba((viejo.textos[0] ?? '').startsWith('Esa opción ya no está activa'), 'una fila vieja (ASIN que no está en la búsqueda actual) es un botón obsoleto', viejo.textos[0])
+    const fueraDeEstado = await correr({ boton: 'compra:v:B00QES9K4G', texto: 'Cotizar' }, { state: 'compra_buscar', data: {} })
+    comprueba((fueraDeEstado.textos[0] ?? '').startsWith('Esa opción ya no está activa'), 'una fila tocada fuera de compra_resultados es un botón obsoleto', fueraDeEstado.textos[0])
 
     // Un solo resultado → directo al detalle.
     const uno = await correr({ texto: 'autoclave' }, { state: 'compra_buscar', data: {} })
-    comprueba(uno.carruseles.length === 0 && uno.estado === 'compra_envio' && uno.textos[0].includes('Autoclave'), 'un solo resultado va directo al detalle')
+    comprueba(uno.listas.length === 0 && uno.estado === 'compra_envio' && uno.textos[0].includes('Autoclave'), 'un solo resultado va directo al detalle')
 
-    // Ver detalle desde una tarjeta.
+    // Ver detalle desde una fila de la lista.
     const ver = await correr({ boton: 'compra:v:B00QES9K4G', texto: 'Cotizar' }, { state: 'compra_resultados', data: sesionResultados })
     const t = ver.textos[0]
-    comprueba(ver.estado === 'compra_envio', 'tocar «Cotizar» → compra_envio')
+    comprueba(ver.estado === 'compra_envio', 'tocar una fila de la lista → compra_envio')
     comprueba(!t.includes('Bs') && !/bol[ií]vares/i.test(t), 'el detalle NO lleva bolívares', t)
     comprueba(t.includes('• *Aéreo* · $135,70 · llega en 7–12 días') && t.includes('• *Marítimo* · $') && t.includes('llega en 3–5 semanas'), 'aéreo y marítimo con todo incluido y ETA', t)
     comprueba(t.includes('Elige cómo traerlo (todo incluido):') && t.includes('Todo incluido = producto + impuesto EE. UU. + envío + gestión Helios.'), 'explica «todo incluido»', t)
@@ -808,9 +798,9 @@ async function main() {
     const lim = await correr({ texto: 'estetoscopio' }, { state: 'compra_buscar', data: {} }, cfgRf, { proveedorDe: () => falla('limite') })
     comprueba(lim.textos[0].startsWith('Amazon recibe muchas consultas'), 'límite (429): mensaje distinto')
     const sinClave = await correr({ texto: 'estetoscopio' }, { state: 'compra_buscar', data: {} }, cfgRf, { proveedorDe: (n) => crearProveedorCatalogo(n, '') })
-    comprueba(sinClave.textos[0].startsWith('Las compras en Amazon no están disponibles en este momento') && !sinClave.carruseles.length, 'rainforest sin clave: «no disponibles», jamás mock', sinClave.textos[0])
+    comprueba(sinClave.textos[0].startsWith('Las compras en Amazon no están disponibles en este momento') && !sinClave.listas.length, 'rainforest sin clave: «no disponibles», jamás mock', sinClave.textos[0])
     const sinTasa = await correr({ texto: 'estetoscopio' }, { state: 'compra_buscar', data: {} }, { bot_compra_config: { ...CONFIG_RPC, fx_rate_usd: null } })
-    comprueba(sinTasa.textos[0].includes('no puedo cotizar') && sinTasa.carruseles.length === 0, 'sin tasa BCV: se niega a cotizar')
+    comprueba(sinTasa.textos[0].includes('no puedo cotizar') && sinTasa.listas.length === 0, 'sin tasa BCV: se niega a cotizar')
     const cfgCae = await correr({ texto: 'estetoscopio' }, { state: 'compra_buscar', data: {} }, { bot_compra_config: new Error('boom') })
     comprueba(cfgCae.textos[0].includes('no puedo cotizar'), 'si la configuración no carga: se niega, sin tarifas de respaldo')
     const todo = emitidos.map((e) => e.texto).join('\n')
@@ -822,11 +812,11 @@ async function main() {
     const ok = await correr({ texto: 'mira https://amzn.to/3xYzAbc' }, { state: 'menu', data: {} }, {}, { resolverEnlace: async () => 'https://www.amazon.com/-/es/Estetoscopio/dp/B00QES9K4G?th=1' })
     comprueba(ok.estado === 'compra_envio' && ok.textos[0].includes('3M Littmann'), 'amzn.to se resuelve y cotiza el producto')
     const mal = await correr({ texto: 'https://amzn.to/3xYzAbc' }, { state: 'compra_buscar', data: {} }, {}, { resolverEnlace: async () => null })
-    comprueba(mal.textos[0] === 'Ese enlace corto no me deja ver el producto. Ábrelo y copia el enlace largo, o escríbeme el nombre.' && !mal.fns.includes('bot_compra_cache_get') && mal.carruseles.length === 0, 'enlace corto que no se resuelve: mensaje exacto y NO se busca la URL como texto', mal.textos[0])
+    comprueba(mal.textos[0] === 'Ese enlace corto no me deja ver el producto. Ábrelo y copia el enlace largo, o escríbeme el nombre.' && !mal.fns.includes('bot_compra_cache_get') && mal.listas.length === 0, 'enlace corto que no se resuelve: mensaje exacto y NO se busca la URL como texto', mal.textos[0])
     const otra = await correr({ texto: 'https://www.amazon.es/dp/B00QES9K4G' }, { state: 'menu', data: {} })
     comprueba(otra.textos[0].startsWith('Compramos en Amazon EE. UU. (amazon.com); busco ese producto allá.') && otra.estado === 'compra_envio', 'tienda que no es .com: avisa y prueba el ASIN en .com', otra.textos[0])
     const ajeno = await correr({ texto: 'https://example.com/estetoscopio-barato' }, { state: 'compra_buscar', data: {} })
-    comprueba(ajeno.textos[0].startsWith('Ese enlace no es de Amazon') && ajeno.carruseles.length === 0, 'un enlace de otro sitio no se busca como texto')
+    comprueba(ajeno.textos[0].startsWith('Ese enlace no es de Amazon') && ajeno.listas.length === 0, 'un enlace de otro sitio no se busca como texto')
 
     // El resolvedor real: sigue redirecciones manuales, solo a hosts de Amazon, con tiempo.
     const visitados: string[] = []
@@ -896,7 +886,7 @@ async function main() {
     comprueba(conBs.length === 0, 'bolívares solo dentro del bloque de pago', conBs.map((i) => i.texto.slice(0, 80)).join(' | '))
   }
 
-  console.log('\n23. Canal, botones vs. estado, carrusel caído y errores amistosos (revisión final)')
+  console.log('\n23. Canal, botones vs. estado, lista caída y errores amistosos (revisión final)')
   {
     const SEIS = ['bot_compra_pendiente_de_pago', 'bot_compra_mis_solicitudes', 'bot_compra_detalle', 'bot_compra_cancelar', 'bot_compra_recotizar', 'bot_compra_reportar_pago']
     const seis = todasLasLlamadas.filter((l) => SEIS.includes(l.fn))
@@ -930,10 +920,13 @@ async function main() {
     const desdePagoDatos = await correr({ boton: 'compra:recotizar', texto: 'Actualizar' }, { state: 'compra_pago_datos', data: sesionPago({ compraVencida: true }).data }, recot)
     comprueba(desdePagoDatos.fns.includes('bot_compra_recotizar'), '«Actualizar» también vale si la sesión sigue en compra_pago_datos')
 
-    // El carrusel que falla (22023) no tumba el turno ni repite la búsqueda.
-    const caido = await correr({ texto: 'estetoscopio' }, { state: 'compra_buscar', data: {} }, { helios_whatsapp_carousel: Object.assign(new Error('helios_whatsapp_carousel: Mensaje de carrusel incompleto'), { code: '22023' }) })
-    comprueba(caido.fns.includes('helios_whatsapp_carousel') && caido.estado === 'compra_resultados' && caido.textos.some((t) => t.includes('Responde con el número de la opción.')), 'carrusel caído (22023): el turno sigue y los resultados salen en texto numerado', caido.textos.join(' | ').slice(0, 200))
-    comprueba(caido.llamadas.filter((l) => l.fn === 'helios_whatsapp_carousel').length === 1, 'el carrusel se intenta una sola vez')
+    // La lista que falla (22023) no tumba el turno ni repite la búsqueda.
+    const errL = console.error
+    console.error = () => {}
+    const caido = await correr({ texto: 'estetoscopio' }, { state: 'compra_buscar', data: {} }, { helios_whatsapp_list: Object.assign(new Error('helios_whatsapp_list: Mensaje de lista incompleto'), { code: '22023' }) })
+    console.error = errL
+    comprueba(caido.fns.includes('helios_whatsapp_list') && caido.estado === 'compra_resultados' && caido.textos.some((t) => t.includes('Responde con el número de la opción.')), 'lista caída (22023): el turno sigue y los resultados salen en texto numerado', caido.textos.join(' | ').slice(0, 200))
+    comprueba(caido.llamadas.filter((l) => l.fn === 'helios_whatsapp_list').length === 1, 'la lista se intenta una sola vez')
 
     // Errores de la base en palabras del médico.
     const cancelar = (msg: string) => correr({ boton: 'compra:cancelar_si' }, { state: 'compra_cancelar', data: sesionPago().data }, { bot_compra_cancelar: Object.assign(new Error('bot_compra_cancelar: ' + msg), { code: '22023' }) })

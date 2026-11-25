@@ -3,27 +3,13 @@
 //
 // El flujo (flujo.ts) no sabe si habla por WhatsApp o con el simulador del
 // superadmin: depende de `TransporteCompras`. Aquí viven la interfaz, los
-// constructores EXACTOS de lo que se manda a Meta (carrusel y lista) y el
+// constructores EXACTOS de lo que se manda a Meta (la lista) y el
 // transporte de WhatsApp (las RPC `helios_whatsapp_*` + `bot_session`).
-//
-// Formato del carrusel interactivo (Cloud API, «Interactive media carousel
-// messages», developers.facebook.com/docs/whatsapp/cloud-api/messages/
-// interactive-media-carousel-messages; 360dialog: docs.360dialog.com/docs/
-// messaging/message-types/interactive/media-carousel):
-//   interactive.type = 'carousel'; body.text ≤ 1024; action.cards[2..10]:
-//   { card_index, header:{type:'image',image:{link}}, body:{text ≤160, ≤2 saltos},
-//     action:{ buttons:[{ type:'quick_reply', quick_reply:{ id, title ≤20 } }] } }
-//   · todas las tarjetas con el MISMO tipo y número de botones;
-//   · el `type` a nivel de tarjeta solo se manda con `cta_url`: con botones de
-//     respuesta rápida NO se manda (lo rechaza Meta);
-//   · 360dialog limita el id del botón a 20 caracteres.
-// El `type:'button'` + `{type:'reply', reply}` del código anterior era el
-// formato de los mensajes interactivos de botones, no el de las tarjetas.
 // ═══════════════════════════════════════════════════════════════════════════
 
 import { bajarAdjunto360, rutaDelComprobante } from './adjuntos.ts'
 import type { AlmacenComprobantes, ConfigD360 } from './adjuntos.ts'
-import type { DatosCompra, FilaLista, TarjetaCarrusel } from './tipos.ts'
+import type { DatosCompra, FilaLista } from './tipos.ts'
 
 export type BotonCompra = { id: string; title: string }
 
@@ -38,10 +24,11 @@ export interface TransporteCompras {
   readonly canal: CanalCompra
   /** Texto con hasta 3 botones de respuesta. */
   enviar(texto: string, botones?: BotonCompra[]): Promise<unknown>
-  /** Carrusel de 2 a 10 tarjetas con foto y un botón de respuesta cada una. */
-  enviarCarrusel(cuerpo: string, tarjetas: TarjetaCarrusel[]): Promise<unknown>
-  /** Lista interactiva (≤ 10 filas). */
-  enviarLista(cuerpo: string, boton: string, filas: FilaLista[]): Promise<unknown>
+  /**
+   * Lista interactiva (≤ 10 filas). `textoAlterno` es lo que sale si WhatsApp no
+   * acepta la lista; sin él, el cuerpo y las filas numeradas.
+   */
+  enviarLista(cuerpo: string, boton: string, filas: FilaLista[], textoAlterno?: string): Promise<unknown>
   obtenerSesion(): Promise<SesionCompra>
   guardarSesion(estado: string, datos?: Record<string, unknown>): Promise<unknown>
   /** Guarda el comprobante y devuelve su ruta en `payment-receipts`. */
@@ -51,10 +38,7 @@ export interface TransporteCompras {
 // ── Límites de Meta ─────────────────────────────────────────────────────
 
 export const LIMITE_CUERPO_CON_BOTONES = 1024
-export const LIMITE_CUERPO_TARJETA = 160
-export const LIMITE_SALTOS_TARJETA = 2
 export const LIMITE_TITULO_BOTON = 20
-export const LIMITE_ID_BOTON_TARJETA = 20
 export const LIMITE_TITULO_FILA = 24
 export const LIMITE_DESCRIPCION_FILA = 72
 export const LIMITE_BOTON_LISTA = 20
@@ -65,43 +49,6 @@ export function cortar(texto: string, max: number): string {
   const t = texto.trim()
   if (t.length <= max) return t
   return `${t.slice(0, Math.max(1, max - 1)).trimEnd()}…`
-}
-
-/** Cuerpo de tarjeta: ≤160 caracteres y ≤2 saltos de línea. */
-export function cuerpoDeTarjeta(texto: string): string {
-  const lineas = texto.split(/\r?\n/).map((l) => l.trim()).filter(Boolean)
-  // Más de 3 líneas = más de 2 saltos: lo que sobra se junta con la última.
-  const juntas =
-    lineas.length > LIMITE_SALTOS_TARJETA + 1
-      ? [...lineas.slice(0, LIMITE_SALTOS_TARJETA), lineas.slice(LIMITE_SALTOS_TARJETA).join(' ')]
-      : lineas
-  return cortar(juntas.join('\n'), LIMITE_CUERPO_TARJETA)
-}
-
-export type TarjetaMeta = {
-  card_index: number
-  header: { type: 'image'; image: { link: string } }
-  body: { text: string }
-  action: { buttons: Array<{ type: 'quick_reply'; quick_reply: { id: string; title: string } }> }
-}
-
-/** Las tarjetas tal como las pide la Cloud API (`interactive.action.cards`). */
-export function construirTarjetasMeta(tarjetas: TarjetaCarrusel[]): TarjetaMeta[] {
-  if (tarjetas.length < 2 || tarjetas.length > MAXIMO_FILAS) {
-    throw new Error('El carrusel necesita entre 2 y 10 tarjetas')
-  }
-  return tarjetas.map((t, card_index) => {
-    if (!t.image_url) throw new Error('Toda tarjeta del carrusel necesita foto')
-    if (t.button_id.length > LIMITE_ID_BOTON_TARJETA) throw new Error('El id del botón de la tarjeta pasa de 20 caracteres')
-    return {
-      card_index,
-      header: { type: 'image', image: { link: t.image_url } },
-      body: { text: cuerpoDeTarjeta(t.body) },
-      action: {
-        buttons: [{ type: 'quick_reply', quick_reply: { id: t.button_id, title: cortar(t.button_title, LIMITE_TITULO_BOTON) } }],
-      },
-    }
-  })
 }
 
 export type SeccionLista = { title: string; rows: Array<{ id: string; title: string; description: string }> }
@@ -187,18 +134,10 @@ export function crearTransporteWhatsApp({ rpc, personal, almacen, fetchFn }: Opc
   return {
     canal: 'whatsapp',
     enviar,
-    async enviarCarrusel(cuerpo, tarjetas) {
-      return rpc('helios_whatsapp_carousel', {
-        p_to: tel,
-        p_body: cuerpo.slice(0, 1024),
-        p_cards: construirTarjetasMeta(tarjetas),
-        p_staff_user_id: personal.user_id,
-      })
-    },
     // Lista interactiva por `helios_whatsapp_list`. Si la RPC falla (límites,
     // ventana cerrada, red) la lista sale como texto numerado y el flujo acepta
     // el número escrito; el fallo queda en el log.
-    async enviarLista(cuerpo, boton, filas) {
+    async enviarLista(cuerpo, boton, filas, textoAlterno) {
       try {
         return await rpc('helios_whatsapp_list', {
           p_to: tel,
@@ -209,7 +148,7 @@ export function crearTransporteWhatsApp({ rpc, personal, almacen, fetchFn }: Opc
         })
       } catch (err) {
         console.error('compras: helios_whatsapp_list falló; la lista sale como texto', (err as { code?: unknown } | null)?.code)
-        return texto(`${cuerpo}\n\n${filasComoTexto(filas.slice(0, MAXIMO_FILAS))}\n\nResponde con el número.`)
+        return texto(textoAlterno ?? `${cuerpo}\n\n${filasComoTexto(filas.slice(0, MAXIMO_FILAS))}\n\nResponde con el número.`)
       }
     },
     obtenerSesion: () => rpc<SesionCompra>('bot_session', { p_phone: tel }),

@@ -321,14 +321,8 @@ export function leerMensajeSim(raw: unknown): MensajeSimulador {
       ...base,
       contenido: { kind: 'buttons', buttons: leerBotones(p.buttons) },
     }
-  if (kind === 'carousel') {
-    const cards = filas(p.cards).map((c) => ({
-      imageUrl: reqTexto(c, 'image_url', 'una tarjeta'),
-      body: reqTexto(c, 'body', 'una tarjeta'),
-      button: leerBotones([c.button])[0] ?? falla('una tarjeta', 'button'),
-    }))
-    return { ...base, contenido: { kind: 'carousel', cards } }
-  }
+  // Los carruseles que el simulador guardó antes de pasar a la lista se leen como texto.
+  if (kind === 'carousel') return { ...base, contenido: { kind: 'text' } }
   if (kind === 'list') {
     const sections = filas(p.sections).map((s) => ({
       title: textoONulo(s.title) ?? '',
