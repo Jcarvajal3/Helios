@@ -29,7 +29,7 @@ import {
   rifValido,
   tieneNumero,
 } from '@/lib/documento'
-import { SOLO_QUIEN_EDITA_EL_PERFIL, useIsSuperAdmin, usePuedeEditarElPerfil } from '@/features/admin/role'
+import { SOLO_QUIEN_EDITA_EL_PERFIL, usePuedeEditarElPerfil } from '@/features/admin/role'
 import { describeError } from '@/lib/supabase'
 import { OtrasEspecialidades } from './OtrasEspecialidades'
 
@@ -57,8 +57,6 @@ export function Perfil({
 }) {
   const avisar = useToast()
   const puedeEditar = usePuedeEditarElPerfil()
-  // Las otras especialidades viven en el directorio, que solo lee el super admin.
-  const esSuperAdmin = useIsSuperAdmin()
 
   const [category, setCategory] = useState<MerchantCategory | null>(initial.category)
   const [city, setCity] = useState(initial.city ?? '')
@@ -138,7 +136,8 @@ export function Perfil({
         </Card>
       </Seccion>
 
-      {esSuperAdmin && <OtrasEspecialidades merchantId={merchantId} />}
+      {/* El operador abre la ficha sin poder editarla: no la ve. */}
+      {puedeEditar && <OtrasEspecialidades merchantId={merchantId} />}
 
       <Seccion
         titulo="Perfil de la clínica"

@@ -138,6 +138,19 @@ function leerDatos(raw: unknown): DatosDeTarjeta {
   }
 }
 
+/** Las especialidades de un médico en su perfil: la principal y las otras. */
+export type EspecialidadesDelMedico = {
+  clave: ClaveDeEspecialidad
+  otrasClaves: ClaveDeEspecialidad[]
+}
+
+/** `admin_medico_especialidades()` (migración 20261125100000). */
+export function leerEspecialidadesDelMedico(raw: unknown): EspecialidadesDelMedico {
+  const r = comoFila(raw)
+  const clave = leerEspecialidad(r.specialty_key)
+  return { clave, otrasClaves: leerOtrasEspecialidades(r.other_specialty_keys, clave) }
+}
+
 /** `admin_directorio()`. */
 export function leerTablero(raw: unknown): TableroDelDirectorio {
   const r = comoFila(raw)

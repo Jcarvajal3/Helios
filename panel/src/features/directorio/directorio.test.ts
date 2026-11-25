@@ -35,6 +35,7 @@ import {
   datosDelBorrador,
   filtrarInteresados,
   filtrarMedicos,
+  leerEspecialidadesDelMedico,
   leerInteresados,
   leerTablero,
   motivoParaNoGuardar,
@@ -545,6 +546,14 @@ const conOtras = leerTablero({
 }).medicos[0]
 comprueba(conOtras.tarjeta.otrasClaves.join() === 'medicina_interna', 'el superadmin lee las otras de la tarjeta')
 comprueba(filtrarMedicos([conOtras], { q: 'interna', ver: 'todos' }).length === 1, 'y lo encuentra buscándolas')
+// El perfil del médico las lee con su propia RPC (super admin y capacitador).
+const delPerfil = leerEspecialidadesDelMedico({
+  specialty_key: 'psiquiatria',
+  other_specialty_keys: ['medicina_interna', 'psiquiatria', 'otra', 'astrologia', 'medicina_interna'],
+})
+comprueba(delPerfil.clave === 'psiquiatria', 'el perfil lee la principal')
+comprueba(delPerfil.otrasClaves.join() === 'medicina_interna', 'el perfil lee las otras sin la principal, sin «otra» y sin repetir')
+comprueba(leerEspecialidadesDelMedico(null).otrasClaves.length === 0, 'el perfil de una base de antes no trae ninguna')
 const bo = borradorDe(conOtras.tarjeta)
 comprueba(cambiosDelBorrador(bo, conOtras.tarjeta) === null, 'sin tocarlas no hay cambio')
 comprueba(

@@ -2,7 +2,7 @@ import { keepPreviousData, queryOptions } from '@tanstack/react-query'
 import type { QueryClient } from '@tanstack/react-query'
 
 import { supabase } from '@/lib/supabase'
-import { leerInteresados, leerOrigenes, leerTablero } from './directorioDeMedicos'
+import { leerEspecialidadesDelMedico, leerInteresados, leerOrigenes, leerTablero } from './directorioDeMedicos'
 import { leerPruebaAB } from './pruebaAB'
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -35,6 +35,34 @@ export function consultaDirectorio() {
       return leerTablero(data)
     },
   })
+}
+
+/**
+ * La especialidad principal de un médico y las otras en las que sale, para su
+ * perfil. La leen el super admin y el capacitador (`admin_medico_especialidades`).
+ */
+export function consultaEspecialidadesDelMedico(merchantId: string) {
+  return queryOptions({
+    queryKey: [...CLAVE, 'especialidades', merchantId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('admin_medico_especialidades', { p_merchant_id: merchantId })
+      if (error) throw error
+      return leerEspecialidadesDelMedico(data)
+    },
+  })
+}
+
+/**
+ * Reemplaza las otras especialidades de un médico, y nada más de su tarjeta
+ * (`admin_medico_especialidades_guardar`): el super admin y el capacitador.
+ */
+export async function guardarOtrasEspecialidades(merchantId: string, otras: string[]): Promise<void> {
+  const { error } = await supabase.rpc('admin_medico_especialidades_guardar', {
+    p_merchant_id: merchantId,
+    p_otras: otras,
+  })
+  if (error) throw error
+  avisarALosBuscadores()
 }
 
 /**

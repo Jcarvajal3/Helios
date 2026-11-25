@@ -4,9 +4,13 @@ import { Save, X } from 'lucide-react'
 
 import { useToast } from '@/components/Toast'
 import { Button, Card, Chip, ErrorBox, Seccion, Select } from '@/components/ui'
-import { consultaDirectorio, guardarTarjeta, refrescarDirectorio } from '@/features/admin/directorioDeMedicos/api'
+import {
+  consultaEspecialidadesDelMedico,
+  guardarOtrasEspecialidades,
+  refrescarDirectorio,
+} from '@/features/admin/directorioDeMedicos/api'
 import { MAXIMO_DE_OTRAS_ESPECIALIDADES, otrasDelBorrador } from '@/features/admin/directorioDeMedicos/directorioDeMedicos'
-import type { MedicoEnElDirectorio } from '@/features/admin/directorioDeMedicos/directorioDeMedicos'
+import type { EspecialidadesDelMedico } from '@/features/admin/directorioDeMedicos/directorioDeMedicos'
 import { ESPECIALIDADES, nombreDeEspecialidad } from '@/features/directorio/especialidades'
 import type { ClaveDeEspecialidad } from '@/features/directorio/especialidades'
 import { describeError } from '@/lib/supabase'
@@ -17,38 +21,36 @@ import { describeError } from '@/lib/supabase'
  * dato vive en la tarjeta (`directory_listings.other_specialty_keys`), pero se
  * edita aquí para tener todo lo del médico en un solo sitio.
  *
- * Solo el super admin: guardar pasa por `admin_directorio_guardar`, que exige
- * `is_platform_admin()` (el capacitador no la pasa). Una sola tarjeta: nada de
- * duplicar al médico. La especialidad principal (filtro e icono) se sigue
- * eligiendo en la tarjeta del directorio.
+ * Lo ven y lo guardan el super admin y el capacitador
+ * (`admin_medico_especialidades_guardar`, 20261125100000): solo cambia esa
+ * lista, nada más de la tarjeta. Una sola tarjeta: nada de duplicar al
+ * médico. La especialidad principal (filtro e icono) se sigue eligiendo en la
+ * tarjeta del directorio, que es del super admin.
  */
 export function OtrasEspecialidades({ merchantId }: { merchantId: string }) {
-  // Sin relectura periódica: aquí no se miran los clics.
-  const tablero = useQuery({ ...consultaDirectorio(), refetchInterval: false, refetchOnWindowFocus: false })
-  const medico = tablero.data?.medicos.find((m) => m.id === merchantId) ?? null
+  const lectura = useQuery(consultaEspecialidadesDelMedico(merchantId))
 
   return (
     <Seccion
       titulo="Otras especialidades"
-      info="Las especialidades además de la principal en las que sale el médico en el directorio (hasta tres): el psiquiatra que también es internista. Sale también en el filtro y en la página de cada una, con la misma tarjeta; no se duplica. La principal (filtro e icono) se elige en la tarjeta del directorio."
+      info="Las especialidades además de la principal en las que sale el médico en el directorio (hasta tres): el psiquiatra que también es internista. Sale también en el filtro y en la página de cada una, con la misma tarjeta; no se duplica. La principal (filtro e icono) la elige el super admin en la tarjeta del directorio."
     >
       <Card className="flex flex-col gap-3">
-        {tablero.isPending && <p className="type-panel-caption text-on-surface-variant">Leyendo sus especialidades…</p>}
-        {tablero.isError && <ErrorBox title="No se pudieron leer sus especialidades" detail={describeError(tablero.error)} />}
-        {tablero.isSuccess && !medico && (
-          <p className="type-panel-caption text-on-surface-variant">Esta clínica todavía no está en el directorio.</p>
+        {lectura.isPending && <p className="type-panel-caption text-on-surface-variant">Leyendo sus especialidades…</p>}
+        {lectura.isError && <ErrorBox title="No se pudieron leer sus especialidades" detail={describeError(lectura.error)} />}
+        {lectura.data && (
+          <Editor key={lectura.data.otrasClaves.join(',')} merchantId={merchantId} actuales={lectura.data} />
         )}
-        {medico && <Editor key={medico.tarjeta.otrasClaves.join(',')} medico={medico} />}
       </Card>
     </Seccion>
   )
 }
 
-function Editor({ medico: m }: { medico: MedicoEnElDirectorio }) {
+function Editor({ merchantId, actuales }: { merchantId: string; actuales: EspecialidadesDelMedico }) {
   const client = useQueryClient()
   const avisar = useToast()
-  const principal = m.tarjeta.clave
-  const guardadas = m.tarjeta.otrasClaves
+  const principal = actuales.clave
+  const guardadas = actuales.otrasClaves
   const [elegidas, setElegidas] = useState<ClaveDeEspecialidad[]>(guardadas)
 
   // La principal cuenta aparte: no se repite entre las otras.
@@ -60,8 +62,9 @@ function Editor({ medico: m }: { medico: MedicoEnElDirectorio }) {
   )
 
   const guardar = useMutation({
-    mutationFn: () => guardarTarjeta(m.id, { other_specialty_keys: limpias }),
+    mutationFn: () => guardarOtrasEspecialidades(merchantId, limpias),
     onSuccess: () => {
+      // La lectura de aquí y el directorio del super admin, que las enseña.
       refrescarDirectorio(client)
       avisar('Especialidades guardadas')
     },
@@ -91,7 +94,7 @@ function Editor({ medico: m }: { medico: MedicoEnElDirectorio }) {
         </div>
         {!lleno && (
           <Select
-            id={`otras-especialidades-${m.id}`}
+            id={`otras-especialidades-${merchantId}`}
             label="Añadir otra especialidad"
             value=""
             placeholder="Elige una…"

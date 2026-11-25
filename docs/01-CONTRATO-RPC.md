@@ -1388,6 +1388,10 @@ superadmin › Agenda y a superadmin › Clínicas, ve el perfil de cada médico
   editar; el dinero (condiciones, cuenta de cobro, estado) y el personal,
   igual que antes. En el panel, su ficha enseña el mismo editor de perfil
   que la ficha completa.
+- **(2026-11-25, 20261125100000)** Y elige las otras especialidades del médico
+  (`admin_medico_especialidades[_guardar]`, §2.11): solo esa lista, sin tocar
+  la tarjeta del directorio (publicar, precio, WhatsApp), que sigue siendo del
+  super admin.
 
 ### 2.15 El super admin cambia el rol del equipo (2026-11-02, 20261102210000)
 
@@ -1582,11 +1586,27 @@ sale en su página `/directorio/<especialidad>` (y en el sitemap y
 `llms.txt`), la búsqueda encuentra el nombre de cada una, la tarjeta dice
 «Psiquiatría · Medicina interna» (sin repetir la que el texto ya nombra:
 `especialidadDeTarjeta`) y el JSON-LD lleva un `medicalSpecialty` por cada
-una con equivalente en schema.org. En superadmin, las otras especialidades se
-añaden y se quitan en el **perfil del médico** (Clínicas › ficha › Perfil ›
-«Otras especialidades», solo el super admin: guarda con
-`admin_directorio_guardar`, que el capacitador no pasa); la ficha de
-superadmin › Directorio solo las lee y enlaza a ese perfil.
+una con equivalente en schema.org. Las otras especialidades se añaden y se
+quitan en el **perfil del médico** (Clínicas › ficha › Perfil › «Otras
+especialidades»); la ficha de superadmin › Directorio solo las lee y enlaza a
+ese perfil.
+
+**(2026-11-25, 20261125100000) El capacitador las elige.** Dos RPC con
+`helios_assert_puede_afiliar()` (super admin o capacitador; el operador no, `42501`):
+
+- `admin_medico_especialidades(p_merchant_id uuid) → jsonb`:
+  `{specialty_key, other_specialty_keys}` (la principal efectiva y las otras,
+  sin la principal). `P0002` si la clínica no existe.
+- `admin_medico_especialidades_guardar(p_merchant_id uuid, p_otras jsonb) → void`:
+  reemplaza la lista y nada más de la tarjeta. Mismas reglas que
+  `admin_directorio_guardar` (sin repetir, sin la principal, `22023` con una
+  clave desconocida, `otra`, más de tres o algo que no sea una lista; `null`
+  tampoco: la lista vacía va `[]`). Si el médico no tiene tarjeta, la crea
+  **oculta** (no publica). Queda en `audit.admin_actions`
+  (`directory.listing.update`).
+
+Publicar, ocultar y los demás datos de la tarjeta siguen en
+`admin_directorio_guardar`, solo del super admin.
 
 Suite: `supabase/tests/directorio_especialidades_smoke.sql`.
 
