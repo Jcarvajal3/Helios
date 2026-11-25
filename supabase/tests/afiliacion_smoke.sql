@@ -326,13 +326,21 @@ begin
   v_res := public.admin_create_clinic(v_datos || '{"email":"con.precio@example.com","owner_document":"V11222340","phone":"0414 700 0910","consultation_price_cur":"42.5","consultation_currency":"EUR"}');
   v_con_precio := (v_res->>'merchant_id')::uuid;
   reset role;
+  -- (20261125210000) La ficha nace publicada, con o sin precio.
   if not exists (select 1 from public.directory_listings l
-                  where l.merchant_id = v_con_precio and not l.is_visible
+                  where l.merchant_id = v_con_precio and l.is_visible and l.published_at is not null
+                    and l.slug is not null and l.lead_code is not null
                     and l.consultation_price_cur = 42.5 and l.consultation_currency = 'EUR') then
-    raise exception 'El alta no dejó la ficha del directorio oculta con su precio';
+    raise exception 'El alta no dejó la ficha del directorio publicada con su precio';
   end if;
-  if exists (select 1 from public.directory_listings where merchant_id = v_sin_contacto) then
-    raise exception 'Sin precio, la clínica no debía nacer con ficha del directorio';
+  if not exists (select 1 from public.directory_listings l
+                  where l.merchant_id = v_sin_contacto and l.is_visible and l.published_at is not null
+                    and l.slug is not null and l.consultation_price_cur is null and l.consultation_currency = 'USD') then
+    raise exception 'Sin precio, la ficha del directorio tenía que nacer publicada y sin precio';
+  end if;
+  if not exists (select 1 from public.helios_directorio() d where d.merchant_id = v_con_precio)
+     or not exists (select 1 from public.helios_directorio() d where d.merchant_id = v_sin_contacto) then
+    raise exception 'Una clínica recién dada de alta no salió en el directorio';
   end if;
   if (select contact_phone from public.merchants where id = v_con_contacto) is distinct from '+584247000906' then
     raise exception 'El alta no guardó el teléfono de contacto';

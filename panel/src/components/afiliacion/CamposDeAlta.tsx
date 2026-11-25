@@ -43,8 +43,8 @@ const NOMBRES_DE_LA_LISTA: ReadonlySet<string> = new Set(OPCIONES_ESPECIALIDAD.m
  *    Colegio y el MPPS.
  * 2. El consultorio: nombre, dirección, teléfono personal, teléfono de
  *    contacto (opcional, el que sale en el directorio), correo y, opcionales,
- *    la red social y el precio mínimo de la consulta (con él nace su ficha
- *    del directorio, oculta, ya con el precio).
+ *    la red social y el precio mínimo de la consulta (la ficha del
+ *    directorio nace publicada; con precio, ya con él).
  * 3. Dónde se le paga: a nombre de quién está la cuenta (del médico, o del
  *    consultorio u otra persona) y el número de cuenta, del que sale el
  *    banco. El equipo puede añadir además el Pago Móvil.

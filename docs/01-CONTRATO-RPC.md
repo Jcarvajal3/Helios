@@ -1430,9 +1430,14 @@ Suite: `supabase/tests/rol_del_equipo_smoke.sql`.
 - **En el alta** (2026-11-09, 20261109120000): `admin_create_clinic` y
   `admin_approve_merchant_application` (vía `helios_crear_clinica`) aceptan en
   `p` `consultation_price_cur` y `consultation_currency`, opcionales y con las
-  mismas reglas. Con precio, la clínica nace con su ficha del directorio
-  **oculta** y ese precio; sin precio, sin ficha, como antes. La moneda sin
-  precio se ignora. Solo los manda el formulario del equipo, no la portada.
+  mismas reglas. La moneda sin precio se ignora. Solo los manda el formulario
+  del equipo, no la portada.
+- **(2026-11-25, 20261125210000) El alta publica la ficha.** `helios_crear_clinica`
+  crea siempre la ficha del directorio con `is_visible = true` y `published_at =
+  now()` (con o sin precio; recibe su enlace y su código). Sigue mandando
+  `helios_directorio_fichas().blocked_reason`: una clínica sin WhatsApp, de
+  prueba, pausada o terminada no sale hasta que se pueda publicar. El equipo la
+  oculta con `admin_directorio_guardar`. Las clínicas anteriores no se tocan.
 
 La tarjeta y la ficha pública `/medico/<slug>` lo enseñan como «Consulta a partir de:
 $40» o «Consulta a partir de: €40» (`ROTULO_DE_PRECIO`): el precio es el mínimo,
