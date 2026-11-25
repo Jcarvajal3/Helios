@@ -3,8 +3,14 @@ import type { Moneda } from '@/components/ui'
 import { limpiarUsuarioDeRed, motivoDelUsuarioDeRed } from '@/features/admin/clinicas/clinicas'
 import type { RedSocial } from '@/features/admin/clinicas/clinicas'
 import type { MedicoDelDirectorio } from '@/features/directorio/directorio'
-import { leerOtrasEspecialidades, leerRed, normalizar } from '@/features/directorio/directorio'
-import { leerEspecialidad, nombreDeEspecialidad } from '@/features/directorio/especialidades'
+import {
+  MAXIMO_DE_OTRAS_ESPECIALIDADES,
+  leerOtrasEspecialidades,
+  leerOtrosNombres,
+  leerRed,
+  normalizar,
+} from '@/features/directorio/directorio'
+import { ESPECIALIDADES, leerEspecialidad, nombreDeEspecialidad } from '@/features/directorio/especialidades'
 import type { ClaveDeEspecialidad } from '@/features/directorio/especialidades'
 import { unoDe } from '@/lib/busqueda'
 import { booleano, comoFila, comoLista, filaONula, numero, numeroONulo, numeros, texto, textoONulo } from '@/lib/json'
@@ -28,6 +34,8 @@ export type DatosDeTarjeta = {
   clave: ClaveDeEspecialidad
   /** Las otras en las que sale; la ficha de la clínica nunca tiene. */
   otrasClaves: ClaveDeEspecialidad[]
+  /** Las otras escritas a mano (no están en la lista); la ficha de la clínica nunca tiene. */
+  otrosNombres: string[]
   direccion: string | null
   ciudad: string | null
   /** E.164, o `null` si no hay. */
@@ -128,6 +136,7 @@ function leerDatos(raw: unknown): DatosDeTarjeta {
     especialidad: textoONulo(r.specialty),
     clave,
     otrasClaves: leerOtrasEspecialidades(r.other_specialty_keys, clave),
+    otrosNombres: leerOtrosNombres(r.other_specialty_names),
     direccion: textoONulo(r.address),
     ciudad: textoONulo(r.city),
     whatsapp: textoONulo(r.whatsapp),
@@ -142,13 +151,19 @@ function leerDatos(raw: unknown): DatosDeTarjeta {
 export type EspecialidadesDelMedico = {
   clave: ClaveDeEspecialidad
   otrasClaves: ClaveDeEspecialidad[]
+  /** Las escritas a mano, las que no están en la lista. */
+  otrosNombres: string[]
 }
 
 /** `admin_medico_especialidades()` (migración 20261125100000). */
 export function leerEspecialidadesDelMedico(raw: unknown): EspecialidadesDelMedico {
   const r = comoFila(raw)
   const clave = leerEspecialidad(r.specialty_key)
-  return { clave, otrasClaves: leerOtrasEspecialidades(r.other_specialty_keys, clave) }
+  return {
+    clave,
+    otrasClaves: leerOtrasEspecialidades(r.other_specialty_keys, clave),
+    otrosNombres: leerOtrosNombres(r.other_specialty_names),
+  }
 }
 
 /** `admin_directorio()`. */
@@ -221,6 +236,7 @@ export function comoTarjetaPublica(id: string, d: DatosDeTarjeta): MedicoDelDire
     especialidad: d.especialidad?.trim() || null,
     clave: d.clave,
     otrasClaves: d.otrasClaves.filter((c) => c !== d.clave),
+    otrosNombres: d.otrosNombres,
     direccion: d.direccion?.trim() || null,
     ciudad: d.ciudad?.trim() || null,
     whatsapp: d.whatsapp ?? '',
@@ -268,6 +284,7 @@ export function filtrarMedicos(
         m.clinica,
         m.tarjeta.especialidad,
         ...[m.tarjeta.clave, ...m.tarjeta.otrasClaves].map(nombreDeEspecialidad),
+        ...m.tarjeta.otrosNombres,
         m.tarjeta.direccion,
         m.tarjeta.ciudad,
         m.tarjeta.whatsapp,
@@ -365,6 +382,8 @@ export type BorradorDeTarjeta = {
   clave: ClaveDeEspecialidad
   /** En el orden en que se eligieron. */
   otrasClaves: ClaveDeEspecialidad[]
+  /** Las escritas a mano: la ficha no las edita (se editan en el perfil del médico). */
+  otrosNombres: string[]
   direccion: string
   ciudad: string
   whatsapp: string
@@ -382,6 +401,7 @@ export function borradorDe(d: DatosDeTarjeta): BorradorDeTarjeta {
     especialidad: d.especialidad ?? '',
     clave: d.clave,
     otrasClaves: [...d.otrasClaves],
+    otrosNombres: [...d.otrosNombres],
     direccion: d.direccion ?? '',
     ciudad: d.ciudad ?? '',
     whatsapp: d.whatsapp ? formatPhone(d.whatsapp) : '',
@@ -415,6 +435,7 @@ export function datosDelBorrador(b: BorradorDeTarjeta, ficha: DatosDeTarjeta): D
     especialidad: limpio(b.especialidad) || ficha.especialidad,
     clave: b.clave,
     otrasClaves: otrasDelBorrador(b),
+    otrosNombres: b.otrosNombres,
     direccion: limpio(b.direccion) || ficha.direccion,
     ciudad: limpio(b.ciudad) || ficha.ciudad,
     whatsapp: b.whatsapp.trim() ? whatsappE164(b.whatsapp) : ficha.whatsapp,
@@ -426,8 +447,35 @@ export function datosDelBorrador(b: BorradorDeTarjeta, ficha: DatosDeTarjeta): D
   }
 }
 
-/** Como mucho, cuántas especialidades además de la principal (la base dice lo mismo). */
-export const MAXIMO_DE_OTRAS_ESPECIALIDADES = 3
+export { MAXIMO_DE_OTRAS_ESPECIALIDADES }
+
+/** Lo que se teclea como especialidad a mano, sin espacios de más. */
+export function limpiarNombreDeEspecialidad(tecleado: string): string {
+  return tecleado.trim().replace(/\s+/g, ' ')
+}
+
+/**
+ * Por qué una especialidad escrita a mano no vale, o `null`. Las que ya están
+ * en la lista cerrada se eligen allí (tienen filtro y página); las repetidas
+ * (sin mayúsculas ni tildes) y la principal, tampoco. Es la regla de
+ * `admin_medico_especialidades_guardar`.
+ */
+export function motivoDelNombreDeEspecialidad(
+  tecleado: string,
+  { principal, nombres }: { principal: ClaveDeEspecialidad; nombres: readonly string[] },
+): string | null {
+  const nombre = limpiarNombreDeEspecialidad(tecleado)
+  if (nombre.length < 2) return 'Escribe al menos 2 letras.'
+  if (nombre.length > 60) return 'No puede pasar de 60 caracteres.'
+  if ([...nombre].some((c) => c === '<' || c === '>' || c.charCodeAt(0) < 32)) return 'Tiene caracteres que no se admiten.'
+  const n = normalizar(nombre)
+  const deLaLista = ESPECIALIDADES.find((e) => e.clave !== 'otra' && normalizar(e.nombre) === n)
+  if (deLaLista) {
+    return deLaLista.clave === principal ? 'Esa es la especialidad principal.' : 'Ya está en la lista: elígela allí.'
+  }
+  if (nombres.some((x) => normalizar(x) === n)) return 'Ya la tienes.'
+  return null
+}
 
 /**
  * Las otras especialidades del borrador como las guarda la base: sin la

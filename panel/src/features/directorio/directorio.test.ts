@@ -20,6 +20,7 @@ import {
   fichasQueCaben,
   filtrarDirectorio,
   leerDirectorio,
+  leerOtrosNombres,
   lugarDeTarjeta,
   mensajeAHelios,
   precioDeTarjeta,
@@ -38,6 +39,8 @@ import {
   leerEspecialidadesDelMedico,
   leerInteresados,
   leerTablero,
+  limpiarNombreDeEspecialidad,
+  motivoDelNombreDeEspecialidad,
   motivoParaNoGuardar,
   parteDe,
   rotuloDelInteresado,
@@ -137,7 +140,7 @@ console.log('── La tarjeta ────────────────�
 const [nadia, jesus, carlos] = medicos
 comprueba(especialidadDeTarjeta(nadia) === 'Odontóloga', 'con texto propio, el texto')
 comprueba(especialidadDeTarjeta(jesus) === 'Medicina interna', 'sin texto, el nombre de la especialidad')
-comprueba(especialidadDeTarjeta({ especialidad: null, clave: 'otra', otrasClaves: [] }) === null, '«otra» sin texto no dice nada')
+comprueba(especialidadDeTarjeta({ especialidad: null, clave: 'otra', otrasClaves: [], otrosNombres: [] }) === null, '«otra» sin texto no dice nada')
 comprueba(lugarDeTarjeta(nadia) === 'Av. Lara, Torre Médica, Barquisimeto', 'la ciudad no se repite si ya va en la dirección')
 comprueba(lugarDeTarjeta(jesus) === 'Centro Médico La Trinidad · Caracas', 'dirección y ciudad')
 comprueba(lugarDeTarjeta(carlos) === null, 'sin dirección ni ciudad, nada')
@@ -580,6 +583,68 @@ comprueba(
   'la vista previa enseña las del borrador',
   especialidadDeTarjeta(vista),
 )
+
+console.log('── Otras especialidades escritas a mano ────────────────────────')
+comprueba(
+  leerOtrosNombres(['  Hepatología   pediátrica ', 'hepatologia pediatrica', 'x', 7, null, 'Medicina del dolor', 'a'.repeat(61), 'Nutrición', 'Otra más']).join('|') ===
+    'Hepatología pediátrica|Medicina del dolor|Nutrición',
+  'se leen limpias: sin espacios de más, sin cortas ni largas, sin repetidas (tildes aparte) y como mucho tres',
+)
+comprueba(leerOtrosNombres(undefined).length === 0 && leerOtrosNombres('hola').length === 0, 'una base de antes no trae ninguna')
+const escrita = leerDirectorio([
+  {
+    ...medicos[0],
+    merchant_id: 's9',
+    name: 'Dr. Escrito',
+    specialty_key: 'psiquiatria',
+    specialty: null,
+    other_specialty_keys: ['medicina_interna'],
+    other_specialty_names: ['Hepatología pediátrica'],
+    whatsapp: '+584141110009',
+  },
+])[0]
+comprueba(escrita.otrosNombres.join() === 'Hepatología pediátrica', 'el directorio lee las escritas a mano')
+comprueba(
+  especialidadDeTarjeta(escrita) === 'Psiquiatría · Medicina interna · Hepatología pediátrica',
+  'la tarjeta las suma al final',
+  especialidadDeTarjeta(escrita),
+)
+const conTexto = { ...escrita, especialidad: 'Psiquiatra y hepatología pediátrica' }
+comprueba(
+  especialidadDeTarjeta(conTexto) === 'Psiquiatra y hepatología pediátrica · Medicina interna',
+  'si el texto ya la nombra, no se repite',
+  especialidadDeTarjeta(conTexto),
+)
+comprueba(filtrarDirectorio([escrita], { q: 'pediatrica' }).length === 1, 'la búsqueda las encuentra')
+comprueba(filtrarDirectorio([escrita], { especialidad: 'hepatologia' }).length === 0, 'pero no cuentan en ningún filtro')
+const conNombres = leerTablero({
+  medicos: [
+    {
+      merchant_id: 's7',
+      clinic_name: 'Dr. A',
+      listing: { name: 'Dr. A', specialty_key: 'psiquiatria', other_specialty_names: ['Hepatología pediátrica'] },
+      base: { name: 'Dr. A', specialty_key: 'psiquiatria' },
+    },
+  ],
+}).medicos[0]
+comprueba(
+  conNombres.tarjeta.otrosNombres.join() === 'Hepatología pediátrica' && conNombres.ficha.otrosNombres.length === 0,
+  'el superadmin las lee de la tarjeta; la ficha no tiene',
+)
+comprueba(
+  leerEspecialidadesDelMedico({ specialty_key: 'psiquiatria', other_specialty_names: ['Medicina del dolor'] }).otrosNombres.join() ===
+    'Medicina del dolor',
+  'el perfil las lee',
+)
+const sin = { principal: 'psiquiatria' as const, nombres: ['Medicina del dolor'] }
+comprueba(motivoDelNombreDeEspecialidad('Hepatología pediátrica', sin) === null, 'una a mano vale')
+comprueba(motivoDelNombreDeEspecialidad(' a ', sin) !== null, 'una letra no')
+comprueba(motivoDelNombreDeEspecialidad('x'.repeat(61), sin) !== null, 'más de 60 no')
+comprueba(motivoDelNombreDeEspecialidad('medicina DEL dolor', sin) !== null, 'repetida (sin mayúsculas) no')
+comprueba(motivoDelNombreDeEspecialidad('Cardiología', sin)?.includes('lista') === true, 'si ya está en la lista, se elige allí')
+comprueba(motivoDelNombreDeEspecialidad('psiquiatría', sin)?.includes('principal') === true, 'la principal no se repite')
+comprueba(motivoDelNombreDeEspecialidad('<b>hola</b>', sin) !== null, 'sin etiquetas')
+comprueba(limpiarNombreDeEspecialidad('  Medicina   del  dolor ') === 'Medicina del dolor', 'se limpia lo tecleado')
 
 console.log(fallos === 0 ? '\nTodo bien.' : `\n${fallos} fallo(s).`)
 if (fallos > 0) process.exit(1)

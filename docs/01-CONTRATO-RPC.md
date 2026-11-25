@@ -1608,6 +1608,32 @@ ese perfil.
 Publicar, ocultar y los demás datos de la tarjeta siguen en
 `admin_directorio_guardar`, solo del super admin.
 
+**(2026-11-25, 20261125200000) Especialidades escritas a mano.** Para la
+segunda especialidad que no está en la lista cerrada (hepatología pediátrica,
+medicina del dolor):
+
+- `directory_listings.other_specialty_names text[] not null default '{}'`:
+  hasta **tres** textos de 2 a 60 caracteres, sin `<`, `>` ni caracteres de
+  control (check, con `helios_directorio_nombres_validos`). No tienen filtro
+  ni página propia: solo se leen en la tarjeta, detrás de las de la lista
+  («Psiquiatría · Medicina interna · Hepatología pediátrica»), y la búsqueda
+  del directorio las encuentra.
+- `helios_directorio_fichas()`, `helios_directorio()`,
+  `helios_directorio_medico()` y `helios_directorio_consultas()` añaden al
+  final `other_specialty_names text[]`; `admin_directorio()` las trae en
+  `listing.other_specialty_names` (y `base.other_specialty_names` es `[]`).
+- `admin_medico_especialidades` devuelve también `other_specialty_names`.
+  `admin_medico_especialidades_guardar(p_merchant_id, p_otras, p_nombres
+  default null)`: `p_nombres` es una lista que **reemplaza** a la de hoy
+  (limpia espacios y quita repetidas sin mayúsculas ni tildes); `null` no las
+  toca, así una llamada de antes, con solo claves, sigue valiendo. `22023`
+  con un texto fuera de 2–60 caracteres, con `<`/`>`, si no es una lista, o si
+  entre claves y nombres pasan de **tres**.
+- `admin_directorio_guardar` no cambia ni toca los nombres.
+- Panel: la sección «Otras especialidades» del perfil tiene un campo «¿No está
+  en la lista? Escríbela» (rechaza lo que ya está en la lista cerrada, la
+  principal y las repetidas).
+
 Suite: `supabase/tests/directorio_especialidades_smoke.sql`.
 
 ---

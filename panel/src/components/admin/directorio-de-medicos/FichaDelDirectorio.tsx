@@ -354,14 +354,14 @@ function SusInteresados({ medico: m }: { medico: MedicoEnElDirectorio }) {
  * médico, donde está todo lo suyo (`ficha-local/OtrasEspecialidades`).
  */
 function OtrasEspecialidades({ medico: m }: { medico: MedicoEnElDirectorio }) {
+  const otras = [...m.tarjeta.otrasClaves.map(nombreDeEspecialidad), ...m.tarjeta.otrosNombres]
   return (
     <p className="type-panel-caption text-on-surface-variant">
-      {m.tarjeta.otrasClaves.length === 0 ? (
+      {otras.length === 0 ? (
         'Sale solo en la especialidad principal. '
       ) : (
         <>
-          También sale en{' '}
-          <span className="text-on-surface">{m.tarjeta.otrasClaves.map(nombreDeEspecialidad).join(' · ')}</span>.{' '}
+          También sale en <span className="text-on-surface">{otras.join(' · ')}</span>.{' '}
         </>
       )}
       Las otras especialidades se cambian en{' '}

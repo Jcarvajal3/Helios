@@ -29,6 +29,11 @@ export type MedicoDelDirectorio = {
    * filtro y en su página igual que la principal. Nunca la principal ni «otra».
    */
   otrasClaves: ClaveDeEspecialidad[]
+  /**
+   * Las otras especialidades escritas a mano, las que no están en la lista
+   * cerrada: se leen en la tarjeta, pero no tienen filtro ni página propia.
+   */
+  otrosNombres: string[]
   direccion: string | null
   ciudad: string | null
   /** E.164: '+584141234567'. */
@@ -65,6 +70,7 @@ export function leerDirectorio(raw: unknown): MedicoDelDirectorio[] {
         especialidad: textoONulo(r.specialty),
         clave,
         otrasClaves: leerOtrasEspecialidades(r.other_specialty_keys, clave),
+        otrosNombres: leerOtrosNombres(r.other_specialty_names),
         direccion: textoONulo(r.address),
         ciudad: textoONulo(r.city),
         whatsapp: texto(r.whatsapp),
@@ -93,6 +99,25 @@ export function leerOtrasEspecialidades(v: unknown, principal: ClaveDeEspecialid
   return otras
 }
 
+/** Como mucho, cuántas especialidades además de la principal (la base dice lo mismo). */
+export const MAXIMO_DE_OTRAS_ESPECIALIDADES = 3
+
+/**
+ * `other_specialty_names` tal cual llega (de una base de antes, nada): textos
+ * sin espacios de más, de 2 a 60 caracteres, sin repetir (sin mayúsculas ni
+ * tildes) y como mucho tres.
+ */
+export function leerOtrosNombres(v: unknown): string[] {
+  const nombres: string[] = []
+  for (const x of Array.isArray(v) ? v : []) {
+    const nombre = typeof x === 'string' ? x.trim().replace(/\s+/g, ' ') : ''
+    if (nombre.length < 2 || nombre.length > 60) continue
+    if (nombres.some((n) => normalizar(n) === normalizar(nombre))) continue
+    nombres.push(nombre)
+  }
+  return nombres.slice(0, MAXIMO_DE_OTRAS_ESPECIALIDADES)
+}
+
 /** Todas las especialidades en las que sale: la principal primero. */
 export function clavesDelMedico(m: Pick<MedicoDelDirectorio, 'clave' | 'otrasClaves'>): ClaveDeEspecialidad[] {
   return [m.clave, ...m.otrasClaves.filter((c) => c !== m.clave)]
@@ -113,14 +138,16 @@ export function saleEn(m: Pick<MedicoDelDirectorio, 'clave' | 'otrasClaves'>, cl
  * ya dice las dos).
  */
 export function especialidadDeTarjeta(
-  m: Pick<MedicoDelDirectorio, 'especialidad' | 'clave' | 'otrasClaves'>,
+  m: Pick<MedicoDelDirectorio, 'especialidad' | 'clave' | 'otrasClaves' | 'otrosNombres'>,
 ): string | null {
   const principal = m.especialidad || (m.clave === 'otra' ? null : nombreDeEspecialidad(m.clave))
   const dicho = normalizar(principal ?? '')
   const otras = m.otrasClaves
     .filter((c) => !yaLaNombra(dicho, c))
     .map((c) => nombreDeEspecialidad(c))
-  return [principal, ...otras].filter(Boolean).join(' · ') || null
+  // Las escritas a mano, detrás de las de la lista y sin repetir lo ya dicho.
+  const escritas = m.otrosNombres.filter((n) => !dicho.includes(normalizar(n)))
+  return [principal, ...otras, ...escritas].filter(Boolean).join(' · ') || null
 }
 
 /** Si un texto (ya normalizado) nombra la especialidad o a quien la ejerce. */
@@ -278,7 +305,7 @@ export function normalizar(t: string): string {
 
 function textoDeBusqueda(m: MedicoDelDirectorio): string {
   return normalizar(
-    [m.nombre, m.especialidad, ...clavesDelMedico(m).map(nombreDeEspecialidad), m.direccion, m.ciudad, m.usuarioDeRed]
+    [m.nombre, m.especialidad, ...clavesDelMedico(m).map(nombreDeEspecialidad), ...m.otrosNombres, m.direccion, m.ciudad, m.usuarioDeRed]
       .filter(Boolean)
       .join(' '),
   )

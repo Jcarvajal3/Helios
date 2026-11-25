@@ -218,7 +218,9 @@ begin
                           'social_network', 'social_user', 'lead_code', 'slug', 'updated_at',
                           'consultation_price_cur', 'consultation_currency', 'consultation_price_usd',
                           -- 20261110120000: las otras especialidades, al final.
-                          'other_specialty_keys'])
+                          'other_specialty_keys',
+                          -- 20261125200000: las escritas a mano, al final.
+                          'other_specialty_names'])
              with ordinality a(attname, attnum))
      is distinct from
      (select array_agg(n order by i)
@@ -235,13 +237,14 @@ begin
     from public.helios_directorio() with ordinality as t(
            merchant_id, name, specialty, specialty_key, address, city, whatsapp,
            social_network, social_user, lead_code, slug, updated_at,
-           consultation_price_cur, consultation_currency, other_specialty_keys, n);
+           consultation_price_cur, consultation_currency, other_specialty_keys, other_specialty_names, n);
   perform setseed(0.42);
   select array_agg(t.merchant_id order by t.n) into v_orden_b
     from public.helios_directorio_consultas() with ordinality as t(
            merchant_id, name, specialty, specialty_key, address, city, whatsapp,
            social_network, social_user, lead_code, slug, updated_at,
-           consultation_price_cur, consultation_currency, consultation_price_usd, other_specialty_keys, n);
+           consultation_price_cur, consultation_currency, consultation_price_usd, other_specialty_keys,
+           other_specialty_names, n);
   reset role;
   if v_orden_b is distinct from
      array(select x from unnest(v_orden_a) with ordinality u(x, i) where x = any (v_orden_b) order by i) then

@@ -17,6 +17,10 @@
 --      (`admin_medico_especialidades[_guardar]`, 20261125100000), limpias y
 --      con las mismas reglas; a un médico sin tarjeta se la crea oculta. No
 --      publica tarjetas; el operador y un anónimo, nada.
+--   7. Las especialidades escritas a mano (`other_specialty_names`,
+--      20261125200000): limpias y sin repetir, hasta tres entre claves y
+--      nombres, las traen las lecturas públicas y el superadmin, y guardar la
+--      tarjeta no las toca.
 --
 -- No manda nada: no llama a `helios_dispatch_*`.
 -- ============================================================================
@@ -247,6 +251,117 @@ begin
   if (select count(*) from audit.admin_actions
        where actor = v_cap and target_id = v_m2 and action = 'directory.listing.update') <> 1 then
     raise exception '6. el cambio del capacitador no quedó en la bitácora';
+  end if;
+
+  -- =========================================================================
+  -- 7. Las escritas a mano (20261125200000)
+  -- =========================================================================
+  set local role authenticated;
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', v_cap::text, 'role', 'authenticated', 'aal', 'aal2')::text, true);
+
+  -- Con solo las claves (el panel de antes), los nombres no se tocan: aún no hay.
+  v_j := public.admin_medico_especialidades(v_m2);
+  if v_j -> 'other_specialty_names' is distinct from '[]'::jsonb then
+    raise exception '7. el médico ya tenía nombres escritos: %', v_j;
+  end if;
+
+  -- Una clave y un nombre: dos de las tres. Sin espacios de más y sin repetir
+  -- aunque cambien las mayúsculas o las tildes.
+  perform public.admin_medico_especialidades_guardar(v_m2, '["neumologia"]',
+    '["  Hepatología   pediátrica ", "hepatologia PEDIATRICA"]');
+  v_j := public.admin_medico_especialidades(v_m2);
+  if v_j -> 'other_specialty_keys' is distinct from '["neumologia"]'::jsonb
+     or v_j -> 'other_specialty_names' is distinct from '["Hepatología pediátrica"]'::jsonb then
+    raise exception '7. no se guardaron limpias las escritas a mano: %', v_j;
+  end if;
+
+  -- Null no las toca: una llamada de antes, con solo claves, las respeta.
+  perform public.admin_medico_especialidades_guardar(v_m2, '["neumologia", "angiologia"]');
+  v_j := public.admin_medico_especialidades(v_m2);
+  if v_j -> 'other_specialty_names' is distinct from '["Hepatología pediátrica"]'::jsonb
+     or v_j -> 'other_specialty_keys' is distinct from '["neumologia", "angiologia"]'::jsonb then
+    raise exception '7. una llamada sin nombres tocó los nombres: %', v_j;
+  end if;
+
+  -- Una lista vacía las quita; las claves siguen.
+  perform public.admin_medico_especialidades_guardar(v_m2, '["neumologia", "angiologia"]', '[]');
+  if public.admin_medico_especialidades(v_m2) -> 'other_specialty_names' is distinct from '[]'::jsonb then
+    raise exception '7. la lista vacía no quitó los nombres';
+  end if;
+
+  foreach v_mal in array array[
+    '["a"]',
+    '[""]',
+    '["<b>Hepatología</b>"]',
+    '"Hepatología"',
+    '[7]'
+  ] loop
+    v_fallo := false;
+    begin
+      perform public.admin_medico_especialidades_guardar(v_m2, '[]', v_mal::jsonb);
+    exception when sqlstate '22023' then v_fallo := true;
+    end;
+    if not v_fallo then raise exception '7. se aceptó el nombre %', v_mal; end if;
+  end loop;
+
+  -- Más de 60 caracteres, y más de tres entre claves y nombres.
+  v_fallo := false;
+  begin
+    perform public.admin_medico_especialidades_guardar(v_m2, '[]', to_jsonb(array[repeat('x', 61)]));
+  exception when sqlstate '22023' then v_fallo := true;
+  end;
+  if not v_fallo then raise exception '7. se aceptó un nombre de 61 caracteres'; end if;
+  v_fallo := false;
+  begin
+    perform public.admin_medico_especialidades_guardar(v_m2, '["neumologia", "angiologia"]', '["Una", "Dos"]');
+  exception when sqlstate '22023' then v_fallo := true;
+  end;
+  if not v_fallo then raise exception '7. se aceptaron más de tres entre claves y nombres'; end if;
+
+  perform public.admin_medico_especialidades_guardar(v_m2, '["neumologia"]', '["Hepatología pediátrica", "Medicina del dolor"]');
+  reset role;
+
+  -- La tabla no deja pasar lo que la RPC no deja (cuarta línea de defensa).
+  v_fallo := false;
+  begin
+    update public.directory_listings set other_specialty_names = array['Uno', 'Dos', 'Tres', 'Cuatro'] where merchant_id = v_m2;
+  exception when check_violation then v_fallo := true;
+  end;
+  if not v_fallo then raise exception '7. la tabla aceptó cuatro nombres'; end if;
+
+  -- Las lecturas públicas las traen (la tarjeta oculta, la hacemos visible).
+  update public.directory_listings set is_visible = true, published_at = now() where merchant_id = v_m2;
+  select slug into v_slug from public.directory_listings where merchant_id = v_m2;
+  set local role anon;
+  perform set_config('request.jwt.claims', '{"role": "anon"}', true);
+  select d.other_specialty_names into v_otras from public.helios_directorio() d where d.merchant_id = v_m2;
+  if v_otras is distinct from array['Hepatología pediátrica', 'Medicina del dolor'] then
+    raise exception '7. helios_directorio no trae los nombres: %', v_otras;
+  end if;
+  select d.other_specialty_names into v_otras from public.helios_directorio_medico(v_slug) d;
+  if v_otras is distinct from array['Hepatología pediátrica', 'Medicina del dolor'] then
+    raise exception '7. helios_directorio_medico no trae los nombres: %', v_otras;
+  end if;
+  reset role;
+
+  -- El superadmin los ve en la tarjeta; la ficha no tiene.
+  set local role authenticated;
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', v_admin::text, 'role', 'authenticated', 'aal', 'aal2')::text, true);
+  select m into v_j
+    from jsonb_array_elements(public.admin_directorio() -> 'medicos') m
+   where m ->> 'merchant_id' = v_m2::text;
+  if v_j -> 'listing' -> 'other_specialty_names' is distinct from '["Hepatología pediátrica", "Medicina del dolor"]'::jsonb
+     or v_j -> 'base' -> 'other_specialty_names' is distinct from '[]'::jsonb then
+    raise exception '7. admin_directorio no trae los nombres como debe: % / %', v_j -> 'listing', v_j -> 'base';
+  end if;
+  -- Guardar la tarjeta no toca los nombres.
+  perform public.admin_directorio_guardar(v_m2, '{"city": "Maracaibo"}');
+  reset role;
+  if (select other_specialty_names from public.directory_listings where merchant_id = v_m2)
+       is distinct from array['Hepatología pediátrica', 'Medicina del dolor'] then
+    raise exception '7. admin_directorio_guardar tocó los nombres';
   end if;
 end;
 $$;

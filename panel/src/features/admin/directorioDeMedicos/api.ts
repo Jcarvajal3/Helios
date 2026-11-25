@@ -53,13 +53,15 @@ export function consultaEspecialidadesDelMedico(merchantId: string) {
 }
 
 /**
- * Reemplaza las otras especialidades de un médico, y nada más de su tarjeta
+ * Reemplaza las otras especialidades de un médico (las de la lista y las
+ * escritas a mano), y nada más de su tarjeta
  * (`admin_medico_especialidades_guardar`): el super admin y el capacitador.
  */
-export async function guardarOtrasEspecialidades(merchantId: string, otras: string[]): Promise<void> {
+export async function guardarOtrasEspecialidades(merchantId: string, otras: string[], nombres: string[]): Promise<void> {
   const { error } = await supabase.rpc('admin_medico_especialidades_guardar', {
     p_merchant_id: merchantId,
     p_otras: otras,
+    p_nombres: nombres,
   })
   if (error) throw error
   avisarALosBuscadores()
