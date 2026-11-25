@@ -1582,8 +1582,11 @@ sale en su página `/directorio/<especialidad>` (y en el sitemap y
 `llms.txt`), la búsqueda encuentra el nombre de cada una, la tarjeta dice
 «Psiquiatría · Medicina interna» (sin repetir la que el texto ya nombra:
 `especialidadDeTarjeta`) y el JSON-LD lleva un `medicalSpecialty` por cada
-una con equivalente en schema.org. En superadmin › Directorio, la ficha del
-médico tiene «También sale en» bajo la principal.
+una con equivalente en schema.org. En superadmin, las otras especialidades se
+añaden y se quitan en el **perfil del médico** (Clínicas › ficha › Perfil ›
+«Otras especialidades», solo el super admin: guarda con
+`admin_directorio_guardar`, que el capacitador no pasa); la ficha de
+superadmin › Directorio solo las lee y enlaza a ese perfil.
 
 Suite: `supabase/tests/directorio_especialidades_smoke.sql`.
 
