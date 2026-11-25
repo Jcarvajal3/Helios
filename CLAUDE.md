@@ -36,7 +36,7 @@ scripts/    portar-de-ronda.mjs (transforma SQL de Ronda al vocabulario de Helio
 ## El negocio (detalle e historia en `docs/REGLAS-DEL-NEGOCIO.md`)
 
 - **Paciente**: inicial del 50% del total el día del Sí (cuota
-  `sequence = 0`, orden en `awaiting_down_payment`, se anula a las 2 h sin
+  `sequence = 0`, orden en `awaiting_down_payment`, se anula a las 3 h sin
   pago) y 2 cuotas a los 14 y 28 días. Hasta el lanzamiento (plantilla v3 de
   Meta), 2 cuotas sin inicial. Se decide por orden
   (`charges.down_payment_pct`). `/consultas` no se toca («$15 de inicial»).

@@ -12,7 +12,7 @@ el cobro real (Javier, 2026-11-12: «No tocar /consultas»).
 |---|---|
 | Base de la inicial | **50% del total con la comisión** (consulta + Comisión Helios 12% + IVA 16% de la comisión). Consulta de $100 → total $113,92 → **inicial $56,96 hoy + 2 cuotas de $28,48**. La comisión queda repartida en los 3 pagos. |
 | Pago al médico | **Sin cambios**: 50% a los 8 días y 50% a los 15, desde la orden. La inicial se queda en Helios. Garantizado desde que la orden queda activa. |
-| Si no paga la inicial | La orden solo queda **activa** cuando se aprueba la inicial. Si a las **2 horas** de aceptar (Sí + cédula) no la pagó, **se anula sola** y se avisa al paciente y al médico. Basta con que el pago **llegue dentro del plazo** (captura o datos enviados): si la aprobación tarda, se espera. |
+| Si no paga la inicial | La orden solo queda **activa** cuando se aprueba la inicial. Si a las **3 horas** de aceptar (Sí + cédula) no la pagó (eran 2 h hasta el 2026-11-24), **se anula sola** y se avisa al paciente y al médico. Basta con que el pago **llegue dentro del plazo** (captura o datos enviados): si la aprobación tarda, se espera. |
 | Límite de $150 | **Toda la consulta**, como hoy (la base sin comisión). La inicial no amplía lo que cabe. |
 | Aviso al médico | **Uno, al aprobarse la inicial** («aceptó su pago en cuotas», plantilla `helios_paciente_acepto`). Si se anula, otro aviso de que se anuló. |
 | Plantilla de Meta | Hace falta `helios_confirmar_pago_en_cuotas_v3` (la v2 dice «sin inicial»). **No se lanza hasta que Meta la apruebe.** |
@@ -44,7 +44,7 @@ $100 → 56,96 + 28,48 + 28,48. $30 → T = 34,18 → 17,09 + 8,55 + 8,54.
   cotización en bolívares y `reconcile_payment` cobran la inicial sin código
   nuevo de cobro.
 - Parámetro `down_payment_pct` (`business_parameters`, = 50 desde el día del
-  lanzamiento) y `helios_down_payment_minutes()` (= 120). `charges.down_payment_pct`
+  lanzamiento) y `helios_down_payment_minutes()` (= 180; era 120). `charges.down_payment_pct`
   guarda el de la orden al crearla (null/0 = orden vieja: 2 cuotas, sin inicial).
 - Estado nuevo de la orden: **`awaiting_down_payment`** («Esperando la
   inicial»), con `charges.down_payment_due_at`. El valor del enum va en su
@@ -56,7 +56,7 @@ $100 → 56,96 + 28,48 + 28,48. $30 → T = 34,18 → 17,09 + 8,55 + 8,54.
    pregunta al paciente ya enseña la inicial y las 2 cuotas.
 2. **Sí (+ foto de la cédula si no la tenemos)** → `helios_finalize_charge`:
    asiento del libro y deuda (3 cuotas: 0, 1, 2) como hoy, pero la orden queda
-   en **`awaiting_down_payment`** con `down_payment_due_at = now() + 2 h`.
+   en **`awaiting_down_payment`** con `down_payment_due_at = now() + 3 h` (2 h hasta el 2026-11-24).
    **No** se causan todavía la comisión de la secretaria, el comprobante por
    correo ni el aviso al médico. Al paciente le llega: «tu orden queda activa
    cuando pagues la inicial de $X hoy» + el bloque de pago de la inicial.
@@ -199,7 +199,7 @@ ni por separado.
 
 - El aviso «se anuló» al médico **no sale si su ventana de 24 h está
   cerrada**: no hay plantilla de Meta para eso (lo ve en el panel).
-- Las órdenes de capacitación también esperan la inicial y se anulan a las 2 h.
+- Las órdenes de capacitación también esperan la inicial y se anulan a las 3 h.
 - Si el paciente manda la captura del pago cuando se le pide la cédula, se
   toma como cédula (el lector solo alerta si no coincide).
 

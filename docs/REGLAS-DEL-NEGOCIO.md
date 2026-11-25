@@ -12,7 +12,7 @@ la historia aquí.
   plantilla v3 de Meta: hasta entonces, 2 cuotas sin inicial.
   - La inicial es la cuota `sequence = 0`. La orden queda en
     `awaiting_down_payment` hasta que se aprueba (igual que una cuota) y se
-    anula sola a las 2 h sin pago.
+    anula sola a las 3 h sin pago.
   - Se decide por orden (`charges.down_payment_pct`): las viejas conservan
     sus condiciones.
   - `/consultas` (prueba A/B) no se toca: sigue diciendo «$15 de inicial».

@@ -211,10 +211,10 @@ igual(
 igual('sin la tasa que falta, sin bolívares', leerPrevisionDelPago({ amount_ves: null, fx_rate_eur: null }).amountVes, null)
 igual('diferencia que cuadra (céntimos)', diferenciaEnBs(11735, 11735.47, 184.52), { bs: -0.47, usd: -0, cuadra: true })
 igual('pagó de menos', diferenciaEnBs(11000, 11735.47, 184.52), { bs: -735.47, usd: -3.99, cuadra: false })
-// El margen (2026-10-26): 10 Bs de menos y 100 de más cuadran; un céntimo más allá, no.
+// El margen (2026-10-26; por debajo, de 10 a 100 Bs el 2026-11-24): 100 Bs de menos y 100 de más cuadran; un céntimo más allá, no.
 igual('13,42 de más (Andrea Toledo) cuadra', diferenciaEnBs(14155, 14141.58, 886.2271)?.cuadra, true)
-igual('10 de menos cuadra', diferenciaEnBs(14131.58, 14141.58, 886.2271)?.cuadra, true)
-igual('10,01 de menos no', diferenciaEnBs(14131.57, 14141.58, 886.2271)?.cuadra, false)
+igual('100 de menos cuadra', diferenciaEnBs(14041.58, 14141.58, 886.2271)?.cuadra, true)
+igual('100,01 de menos no', diferenciaEnBs(14041.57, 14141.58, 886.2271)?.cuadra, false)
 igual('100 de más cuadra', diferenciaEnBs(14241.58, 14141.58, 886.2271)?.cuadra, true)
 igual('100,01 de más no', diferenciaEnBs(14241.59, 14141.58, 886.2271)?.cuadra, false)
 igual('con el margen de los parámetros', diferenciaEnBs(14155, 14141.58, 886.2271, { menosBs: 0, masBs: 5 })?.cuadra, false)

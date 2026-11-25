@@ -266,7 +266,7 @@ export function leerPrevisionDelPago(raw: unknown): PrevisionDelPago {
  * estos son sus valores por defecto, los mismos que usa la base sin ellos.
  */
 export type MargenBs = { menosBs: number; masBs: number }
-export const MARGEN_POR_DEFECTO: MargenBs = { menosBs: 10, masBs: 100 }
+export const MARGEN_POR_DEFECTO: MargenBs = { menosBs: 100, masBs: 100 }
 
 export type DiferenciaEnBs = {
   /** Escrito − esperado. Positivo: pagó de más. */

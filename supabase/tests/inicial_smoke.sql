@@ -189,7 +189,7 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub', v_cajero::text, 'role', 'authenticated')::text, true);
   v_j := public.preview_patient_charge(v_m, null, 100, 'USD');
   reset role;
-  if (v_j->>'down_payment_pct')::numeric <> 50 or (v_j->>'down_payment_minutes')::integer <> 120
+  if (v_j->>'down_payment_pct')::numeric <> 50 or (v_j->>'down_payment_minutes')::integer <> 180
      or jsonb_array_length(v_j->'installments') <> 3
      or (select array_agg((x->>'amount_usd')::numeric order by (x->>'sequence')::integer)
          from jsonb_array_elements(v_j->'installments') x) <> array[56.96, 28.48, 28.48]::numeric[]

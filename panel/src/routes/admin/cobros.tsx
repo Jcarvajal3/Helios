@@ -54,6 +54,7 @@ import {
 } from '@/features/admin/colaDePagos'
 import type { EstadoCola, FiltrosPagos } from '@/features/admin/colaDePagos'
 import { estadoDePagoReportado } from '@/features/admin/estados'
+import { pagaLaInicial, quePagaElPago } from '@/features/admin/rotuloDeCuota'
 import { lineaDeSumandos, sumandosDeLosPagos } from '@/features/admin/sumandosDelPago'
 import { formatTasa } from '@/features/admin/ajustesReglas'
 import { etiquetaDeLaTasa, partesDelPago } from '@/features/admin/tasaDelPago'
@@ -515,6 +516,36 @@ const COLUMNAS: Array<Column<QueueItem>> = [
     cell: (p) => <EstadoBadge tipo="pago" valor={p.status} />,
   },
   {
+    // La inicial tiene plazo (2 h desde el «Sí», docs/07): si se aprueba tarde,
+    // la orden ya se anuló. Por eso se ve de un vistazo y no escondida en la ficha.
+    key: 'cuotas',
+    header: 'Qué salda',
+    info: 'Qué cuotas paga este reporte. «Inicial» es la del 50% del día del Sí: la orden no se activa hasta que se aprueba, y se anula sola si no llega en 2 horas.',
+    sort: (p) => (pagaLaInicial(p) ? 0 : 1),
+    csv: (p) => {
+      const cuotas = quePagaElPago(p) || `${p.installmentCount} ${p.installmentCount === 1 ? 'cuota' : 'cuotas'}`
+      return p.lateFeeUsd > 0 ? `${cuotas} y cargos por atraso` : cuotas
+    },
+    cell: (p) => {
+      const cuotas = quePagaElPago(p) || `${p.installmentCount} ${p.installmentCount === 1 ? 'cuota' : 'cuotas'}`
+      const inicial = pagaLaInicial(p)
+      // Solo la inicial: la insignia ya lo dice, no se repite debajo.
+      const detalle = inicial && cuotas === 'Inicial' ? '' : cuotas
+      const cargos = p.lateFeeUsd > 0 ? ` y ${formatUsd(p.lateFeeUsd)} en cargos por atraso` : ''
+      return (
+        <span className="block">
+          {inicial && <Badge tone="brand">Inicial</Badge>}
+          {(detalle || cargos) && (
+            <span className={`block type-panel-caption text-on-surface-variant ${inicial ? 'mt-0.5' : ''}`}>
+              {detalle}
+              {cargos}
+            </span>
+          )}
+        </span>
+      )
+    },
+  },
+  {
     key: 'referencia',
     header: 'Referencia',
     sort: (p) => p.reference,
@@ -604,18 +635,5 @@ const COLUMNAS: Array<Column<QueueItem>> = [
         </Badge>
       )
     },
-  },
-  {
-    key: 'cuotas',
-    header: 'Qué salda',
-    hidden: true,
-    sort: (p) => p.installmentCount,
-    csv: (p) => p.installmentCount,
-    cell: (p) => (
-      <span className="text-on-surface-variant">
-        {p.installmentCount} {p.installmentCount === 1 ? 'cuota' : 'cuotas'}
-        {p.lateFeeUsd > 0 && ` y ${formatUsd(p.lateFeeUsd)} en cargos por atraso`}
-      </span>
-    ),
   },
 ]

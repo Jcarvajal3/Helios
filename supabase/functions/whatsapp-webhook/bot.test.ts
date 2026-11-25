@@ -313,7 +313,7 @@ async function main() {
     })
     comprueba(
       r.fns.includes('bot_resend_confirmation') &&
-        r.textos[0]?.includes('pagará la inicial en las 2 horas siguientes') &&
+        r.textos[0]?.includes('pagará la inicial en las 3 horas siguientes') &&
         r.textos[0]?.includes('La orden queda activa cuando se aprueba la inicial'),
       'una vencida reabierta con inicial: la pregunta y la inicial',
       r.textos[0],
@@ -336,7 +336,7 @@ async function main() {
   {
     const r = await correr({ boton: 'menu:ayuda', texto: 'Ayuda' }, { state: 'menu', data: {} })
     const t = r.textos[0] ?? ''
-    comprueba(t.includes('pagará la inicial en las 2 horas siguientes') && t.includes('se anula y también te aviso'), 'explica la inicial', t)
+    comprueba(t.includes('pagará la inicial en las 3 horas siguientes') && t.includes('se anula y también te aviso'), 'explica la inicial', t)
     comprueba(t.length <= 1024 && !PROHIBIDO.test(t), 'cabe con botones y sin vocabulario prohibido', String(t.length))
   }
 

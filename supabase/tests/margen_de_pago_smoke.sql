@@ -1,12 +1,13 @@
 -- ============================================================================
--- Helios — Un pago cuadra con margen: 10 Bs por debajo, 100 por encima
--- (20261026150000)
+-- Helios — Un pago cuadra con margen: 100 Bs por debajo, 100 por encima
+-- (20261026150000; el de por debajo subió de 10 a 100 en 20261124190000, así
+-- que esta suite solo pasa con esa migración aplicada)
 --
 --   bash supabase/tests/run.sh margen_de_pago_smoke
 --
 --  1. La regla y sus bordes, y que manda el parámetro.
 --  2. El lector: 13,42 Bs de más (el caso de Andrea Toledo) registra el pago;
---     10,01 de menos o 100,01 de más van al equipo.
+--     100,01 de menos o 100,01 de más van al equipo.
 --  3. El aviso del BNC aprueba el pago que cuadra con margen.
 --  4. El extracto: la línea con 13,42 de más es candidata del pago, y un pago
 --     aprobado la saca de «Abonos sin dueño».
@@ -70,15 +71,15 @@ begin
   v_q := public.helios_installments_ves(v_pac, array[v_a1], v_today);
 
   -- --- 1. La regla ------------------------------------------------------------
-  if public.helios_parameter('payment_margin_under_ves', null) <> 10
+  if public.helios_parameter('payment_margin_under_ves', null) <> 100
      or public.helios_parameter('payment_margin_over_ves', null) <> 100 then
-    raise exception 'Los márgenes por defecto son 10 y 100 Bs';
+    raise exception 'Los márgenes por defecto son 100 y 100 Bs';
   end if;
-  if not (public.helios_monto_cuadra(v_q + 13.42, v_q) and public.helios_monto_cuadra(v_q - 10, v_q)
+  if not (public.helios_monto_cuadra(v_q + 13.42, v_q) and public.helios_monto_cuadra(v_q - 100, v_q)
           and public.helios_monto_cuadra(v_q + 100, v_q) and public.helios_monto_cuadra(v_q, v_q)) then
     raise exception 'Dentro del margen tiene que cuadrar';
   end if;
-  if public.helios_monto_cuadra(v_q - 10.01, v_q) or public.helios_monto_cuadra(v_q + 100.01, v_q) then
+  if public.helios_monto_cuadra(v_q - 100.01, v_q) or public.helios_monto_cuadra(v_q + 100.01, v_q) then
     raise exception 'Fuera del margen no cuadra';
   end if;
   if not public.helios_monto_cuadra(v_q + 500, v_q, 600) then
@@ -112,9 +113,9 @@ begin
   perform public.lector_tomar(5);
   perform public.lector_leido(v_id, null, v_x,
             jsonb_build_object('method', 'pago_movil', 'bank', 'Banesco', 'reference', '0099887766',
-                               'amount_ves', v_q - 10.01, 'paid_on', v_today), 'claude-sonnet-5-5', '{}');
+                               'amount_ves', v_q - 100.01, 'paid_on', v_today), 'claude-sonnet-5-5', '{}');
   if (select reason from public.payment_receipt_reads where id = v_id) <> 'monto_no_cuadra' then
-    raise exception '10,01 Bs de menos no cuadra';
+    raise exception '100,01 Bs de menos no cuadra';
   end if;
   perform public.bot_paciente_guardar(v_tel, null, 0, null, null);
 

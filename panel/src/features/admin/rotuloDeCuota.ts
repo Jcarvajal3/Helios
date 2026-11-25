@@ -71,6 +71,35 @@ export function cobradoDeLaOrden(orden: {
   return `Inicial + ${orden.pagadas - 1} de ${cuotasDelPlanDe(orden.total, orden.downPaymentPct)}`
 }
 
+/** Lo que hace falta de un pago reportado para saber qué cuotas salda (`QueueItem`). */
+type PagoConCompras = {
+  purchases: ReadonlyArray<{
+    installmentsTotal: number
+    downPaymentPct: number | null
+    installments: ReadonlyArray<{ sequence: number }>
+  }>
+}
+
+/** Si el pago salda la inicial de alguna de sus órdenes (la cuota 0). */
+export function pagaLaInicial(pago: PagoConCompras): boolean {
+  return pago.purchases.some((c) => c.installments.some((i) => esLaInicial(i.sequence)))
+}
+
+/**
+ * Qué cuotas salda un pago, en una frase: «Inicial», «Cuota 1 de 2» o, si
+ * junta varias, «Inicial + Cuota 1 de 2». Con varias órdenes se juntan todas,
+ * la inicial primero.
+ */
+export function quePagaElPago(pago: PagoConCompras): string {
+  const rotulos = pago.purchases
+    .flatMap((c) => {
+      const de = cuotasDelPlanDe(c.installmentsTotal, c.downPaymentPct)
+      return [...c.installments].sort((a, b) => a.sequence - b.sequence).map((i) => rotuloDeCuota(i.sequence, de))
+    })
+    .sort((a, b) => Number(b === 'Inicial') - Number(a === 'Inicial'))
+  return rotulos.join(' + ')
+}
+
 /** Solo las cuotas del plan (la 1, la 2…): lo que miran la mora, el cobro a tiempo y las cohortes. */
 export function sinLaInicial<T extends { sequence: number | null }>(cuotas: ReadonlyArray<T>): T[] {
   return cuotas.filter((c) => !esLaInicial(c.sequence))

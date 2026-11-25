@@ -2238,7 +2238,7 @@ supabase/tests/run.sh <suite>` (la suite `inicial_smoke` recorre el ciclo).
 | Paso | Estado | Qué pasa |
 |---|---|---|
 | Registro (panel o bot) | `pending` | Como hoy: 2 h para el «Sí». La pregunta ya enseña la inicial. |
-| «Sí» (+ cédula) | `awaiting_down_payment` | Asiento y deuda (cuotas 0, 1 y 2). `down_payment_due_at` = ahora + 2 h. Sin comisión de la secretaria, comprobante ni aviso al médico. Al paciente: «paga tu inicial» con el bloque de pago. |
+| «Sí» (+ cédula) | `awaiting_down_payment` | Asiento y deuda (cuotas 0, 1 y 2). `down_payment_due_at` = ahora + `down_payment_minutes` (3 h desde el 2026-11-24). Sin comisión de la secretaria, comprobante ni aviso al médico. Al paciente: «paga tu inicial» con el bloque de pago. |
 | Se aprueba un pago que cubre la cuota 0 (lector, aviso del BNC, Caja) | `confirmed` | `activated_at` = `confirmed_at` = ese instante. Comisión, aviso al médico («pagó su inicial»), aviso de pago aprobado con las 2 cuotas; el comprobante por correo, cuando el pago queda aprobado entero (con el estado final de las cuotas). Si una mitad de la clínica ya debía devengarse, pasa a hoy. |
 | Pasa `down_payment_due_at` sin un pago abierto (cron cada minuto) | `reverted` | `down_payment_expired_at`, `void_reason` = «La inicial no se pagó a tiempo». Asiento contrario, cuotas borradas, cupo de vuelta. Avisos al paciente y al médico. |
 
@@ -2472,7 +2472,7 @@ vencida pasa a hoy y la 2.ª, como pronto, al día siguiente.
 | key | valor | catálogo |
 |---|---|---|
 | `down_payment_pct` | 50 desde el día del lanzamiento (antes, 0); `admin_set_business_parameter` solo admite 0 a 90 | «Inicial del paciente… La plantilla de Meta v3 dice «50%»», % |
-| `down_payment_minutes` | 120; al menos 1 | «Plazo para pagar la inicial. La plantilla de Meta v3 dice «2 horas»», minutos |
+| `down_payment_minutes` | 180 (antes 120); al menos 1 | «Plazo para pagar la inicial. La plantilla de Meta v3 dice «2 horas»», minutos |
 | `alert_down_payment_stuck_hours` | 6 | grupo `alerta`, horas |
 
 ### Condiciones

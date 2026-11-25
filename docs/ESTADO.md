@@ -2,9 +2,16 @@
 
 Actualizado el 2026-11-17.
 
+## 2026-11-24 · Margen de 100 Bs por debajo y la inicial a la vista
+
+- **Margen:** `payment_margin_under_ves` pasa de 10 a 100 Bs (por encima sigue en 100). Dos pagos de la semana (Bs 41.878,83 y 23.493,68) fueron al equipo con `monto_no_cuadra` aunque el lector los leyó bien. Migración `20261124190000_el_pago_acepta_hasta_100_bs_de_menos.sql`, aplicada en producción. Lo usan el lector, el aviso del BNC, el extracto y los pagos de Amazon. `margen_de_pago_smoke` actualizada (sin correr aún).
+- **Pagos reportados:** columna «Qué salda» visible, con insignia «Inicial» cuando el pago salda la cuota 0 (`quePagaElPago`, `pagaLaInicial` en `rotuloDeCuota.ts`). Sin RPC nueva: sale del árbol que ya manda `admin_payment_queue`. Sin probar en el navegador.
+- **La aprobación automática de la inicial sin el aviso del BNC no se lanza:** los avisos sí llegan.
+- **Plazo de la inicial: 3 horas** (`down_payment_minutes` 120 → 180, migración `20261124200000_la_inicial_se_paga_en_3_horas.sql`). Solo para las órdenes que acepten desde entonces. **Pendiente:** la plantilla de Meta v3, el texto libre `confirmar_pago_con_inicial`, las Condiciones v4 y la portada siguen diciendo «2 horas»; hay que mandar plantilla nueva y publicar otra versión de las condiciones.
+
 ## 2026-11-17 · La inicial del 50%
 
-Plan y decisiones en docs/07. Inicial del 50% del total con comisión el día del Sí (cuota 0) y 2 cuotas a los 14 y 28 días; la orden espera la inicial (`awaiting_down_payment`) y se anula a las 2 h sin pago; el médico cobra igual (8 y 15 días). `/consultas` no cambia.
+Plan y decisiones en docs/07. Inicial del 50% del total con comisión el día del Sí (cuota 0) y 2 cuotas a los 14 y 28 días; la orden espera la inicial (`awaiting_down_payment`) y se anula a las 3 h sin pago (desde el 2026-11-24; antes 2 h); el médico cobra igual (8 y 15 días). `/consultas` no cambia.
 
 - **Base:** `20261112100000_la_orden_espera_la_inicial_tipos.sql` y `20261117202000_la_inicial_del_50.sql` aplicadas. Suite `inicial_smoke` en `supabase/tests/run.sh`.
 - **Pendiente menor:** imagen para compartir nueva (`compartir.jpg` dice «Págala en dos cuotas.»).

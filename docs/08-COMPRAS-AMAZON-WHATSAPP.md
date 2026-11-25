@@ -23,7 +23,7 @@ Todo se administra desde el Superadmin en **`/admin/compras`** (Solicitudes, Pag
   - `public.purchase_settings`: tarifas configurables (`tax_usa_pct`, `service_fee_pct`, `air_rate_per_lb_usd`, `air_min_usd`, `sea_rate_per_ft3_usd`, `sea_min_usd`, `fallback_weight_lb`, `quote_ttl_hours`, `catalog_provider`, `is_enabled`).
   - `public.amazon_catalog_cache`: caché temporal de búsquedas y fichas ASIN (`cache_key`, `kind`, `provider`, `payload`, `expires_at`).
   - `public.purchase_requests`: solicitudes `#C-1001+` con snapshot del producto, peso real/volumétrico, volumen ft³, bandera aduanal (`restricted_flag`), desglose congelado (`numeric(18,4)` USD, `numeric(18,2)` VES, `numeric(18,6)` tasa BCV), canal (`whatsapp` | `simulador`) y ciclo logístico completo.
-  - `public.purchase_payment_reports`: reportes de pago en bolívares (`pago_movil` | `transferencia`), bucket privado `payment-receipts` bajo `compras/<request_id>/<archivo>`, tolerancia de cuadre `helios_monto_cuadra` (−10 / +100 Bs), detección de referencias duplicadas y doble control (`payment_four_eyes`, excepto `super_admin`).
+  - `public.purchase_payment_reports`: reportes de pago en bolívares (`pago_movil` | `transferencia`), bucket privado `payment-receipts` bajo `compras/<request_id>/<archivo>`, tolerancia de cuadre `helios_monto_cuadra` (−100 / +100 Bs desde el 2026-11-24), detección de referencias duplicadas y doble control (`payment_four_eyes`, excepto `super_admin`).
   - `public.purchase_request_events`: línea de tiempo append-only protegida con triggers contra `UPDATE`/`DELETE`.
   - `public.purchase_simulator_messages`: historial del simulador en Superadmin, **totalmente aislado de `outbound_messages`** (nunca envía mensajes reales a 360dialog).
 

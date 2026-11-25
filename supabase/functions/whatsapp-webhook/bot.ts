@@ -178,9 +178,9 @@ function estadoDeLaOrden(f: Record<string, unknown>): string {
 }
 
 /** El plazo de la inicial cuando la base no lo dice (`helios_down_payment_minutes()`). */
-const MINUTOS_DE_LA_INICIAL = 120
+const MINUTOS_DE_LA_INICIAL = 180
 
-/** 120 → «2 horas», 60 → «1 hora», 90 → «90 minutos». */
+/** 180 → «3 horas», 60 → «1 hora», 90 → «90 minutos». */
 function plazoEnPalabras(minutos: unknown): string {
   const m = positivo(minutos) ?? MINUTOS_DE_LA_INICIAL
   if (m % 60 === 0) return m === 60 ? '1 hora' : `${m / 60} horas`

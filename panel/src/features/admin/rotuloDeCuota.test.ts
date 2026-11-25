@@ -9,6 +9,8 @@ import {
   cuotasDelPlanDe,
   esLaInicial,
   laCuota,
+  pagaLaInicial,
+  quePagaElPago,
   rotuloDeCuota,
   sinLaInicial,
 } from './rotuloDeCuota'
@@ -51,6 +53,27 @@ igual(cobradoDeLaOrden({ pagadas: 0, total: 3, downPaymentPct: 50 }), 'Inicial s
 igual(cobradoDeLaOrden({ pagadas: 1, total: 3, downPaymentPct: 50 }), 'Inicial + 0 de 2', 'activa, solo la inicial')
 igual(cobradoDeLaOrden({ pagadas: 2, total: 3, downPaymentPct: 50 }), 'Inicial + 1 de 2', 'la inicial y la cuota 1')
 igual(cobradoDeLaOrden({ pagadas: 0, total: 0, downPaymentPct: 50 }), null, 'sin cuotas (revertida), nada')
+
+console.log('── Qué paga un pago reportado ─────────────────────────────────')
+const pagoDeLaInicial = {
+  purchases: [{ installmentsTotal: 3, downPaymentPct: 50, installments: [{ sequence: 0 }] }],
+}
+const pagoDeUnaCuota = {
+  purchases: [{ installmentsTotal: 2, downPaymentPct: null, installments: [{ sequence: 1 }] }],
+}
+const pagoMixto = {
+  purchases: [
+    { installmentsTotal: 2, downPaymentPct: null, installments: [{ sequence: 2 }, { sequence: 1 }] },
+    { installmentsTotal: 3, downPaymentPct: 50, installments: [{ sequence: 0 }] },
+  ],
+}
+igual(pagaLaInicial(pagoDeLaInicial), true, 'la cuota 0 es una inicial')
+igual(pagaLaInicial(pagoDeUnaCuota), false, 'una cuota de una orden vieja no lo es')
+igual(pagaLaInicial(pagoMixto), true, 'basta con que una orden pague su inicial')
+igual(pagaLaInicial({ purchases: [] }), false, 'sin órdenes, no')
+igual(quePagaElPago(pagoDeLaInicial), 'Inicial', 'la inicial, sin «de N»')
+igual(quePagaElPago(pagoDeUnaCuota), 'Cuota 1 de 2', 'una cuota del plan')
+igual(quePagaElPago(pagoMixto), 'Inicial + Cuota 1 de 2 + Cuota 2 de 2', 'la inicial va primero')
 
 if (fallos > 0) {
   console.error(`\n${fallos} prueba(s) fallaron`)
