@@ -40,6 +40,12 @@
 // Secretos (supabase secrets set … --project-ref ahyfbnfsbyzdoyjzjvfb):
 //   ANTHROPIC_API_KEY   la clave de la API de Anthropic
 //   LECTOR_CLAVE        la misma que el secreto `lector_clave` del vault
+//   LECTOR_PROVEEDOR    `claude` (por defecto) o `gemini`. Provisional
+//                       (2026-11-26): la cuenta de Anthropic se quedó sin
+//                       crédito y el lector pasa a Gemini mientras se recarga.
+//                       Se cambia sin desplegar: basta con el secreto.
+//   GEMINI_API_KEY      la clave de la API de Gemini (Google AI Studio)
+//   GEMINI_MODEL        opcional; por defecto `gemini-3.8-flash` (Google retiró el 2.5)
 // En el vault: `lector_url` (la URL de esta función) y `lector_clave`.
 //
 // Despliegue (sin Docker):
@@ -82,6 +88,11 @@ const db = createClient(
 
 const claude = new Anthropic({ apiKey: Deno.env.get('ANTHROPIC_API_KEY') ?? '' })
 
+/** Quién lee: Claude salvo que el secreto `LECTOR_PROVEEDOR` diga `gemini`. */
+const PROVEEDOR = (Deno.env.get('LECTOR_PROVEEDOR') ?? 'claude').trim().toLowerCase() === 'gemini' ? 'gemini' : 'claude'
+const GEMINI_KEY = Deno.env.get('GEMINI_API_KEY') ?? ''
+const GEMINI_MODELO = (Deno.env.get('GEMINI_MODEL') ?? '').trim() || 'gemini-3.8-flash'
+
 async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<T> {
   const { data, error } = await db.rpc(fn, args)
   if (error) throw new Error(`${fn}: ${error.message}`)
@@ -112,8 +123,108 @@ async function bajarAdjunto(mediaId: string, cfg: Config): Promise<Uint8Array> {
   return bytes
 }
 
+/** Le pasa un adjunto al modelo (Claude o Gemini, según `PROVEEDOR`) con unas instrucciones y un esquema cerrados. */
+function transcribir(bytes: Uint8Array, mime: string, instrucciones: string, esquema: unknown, pedido: string) {
+  return PROVEEDOR === 'gemini'
+    ? transcribirConGemini(bytes, mime, instrucciones, esquema, pedido)
+    : transcribirConClaude(bytes, mime, instrucciones, esquema, pedido)
+}
+
+type RespuestaGemini = {
+  candidates?: Array<{ finishReason?: string; content?: { parts?: Array<{ text?: string; thought?: boolean }> } }>
+  promptFeedback?: { blockReason?: string }
+  usageMetadata?: unknown
+  modelVersion?: string
+  error?: { message?: string }
+}
+
+/**
+ * Provisional: los modelos que esta clave puede usar para leer, para anotarlos
+ * junto al error y elegir otro con el secreto `GEMINI_MODEL`. Nunca falla.
+ */
+async function modelosDisponibles(): Promise<string> {
+  try {
+    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200', {
+      headers: { 'x-goog-api-key': GEMINI_KEY },
+      signal: AbortSignal.timeout(5_000),
+    })
+    if (!r.ok) return ''
+    const { models } = (await r.json()) as { models?: Array<{ name?: string; supportedGenerationMethods?: string[] }> }
+    const nombres = (models ?? [])
+      .filter((m) => m.supportedGenerationMethods?.includes('generateContent'))
+      .map((m) => (m.name ?? '').replace(/^models\//, ''))
+      .filter((n) => /gemini/.test(n) && !/(tts|image|audio|live|embedding)/.test(n))
+    return nombres.length ? ` · Modelos disponibles: ${nombres.join(', ')}` : ''
+  } catch {
+    return ''
+  }
+}
+
+/** Una llamada a `generateContent`, con 30 s como mucho: con tres, la vuelta sigue cabiendo en el tiempo de la función. */
+function llamarAGemini(data: string, mime: string, instrucciones: string, esquema: unknown, pedido: string): Promise<Response> {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODELO)}:generateContent`
+  // Transcribir no necesita pensar mucho: los Gemini 3 aceptan `thinkingLevel`
+  // y con «low» responden en segundos. Y con un tope de tiempo: si no, la
+  // función se corta sin anotar el fallo y la lectura se queda «leyendo».
+  const pensar = /^gemini-3/.test(GEMINI_MODELO) ? { thinkingConfig: { thinkingLevel: 'low' } } : {}
+  return fetch(url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-goog-api-key': GEMINI_KEY },
+    signal: AbortSignal.timeout(30_000),
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: instrucciones }] },
+      contents: [{ role: 'user', parts: [{ inlineData: { mimeType: mime, data } }, { text: pedido }] }],
+      generationConfig: { temperature: 0, responseMimeType: 'application/json', responseJsonSchema: esquema, ...pensar },
+    }),
+  })
+}
+
+/**
+ * Lo mismo con Gemini (API REST de Google AI Studio): el adjunto va en línea,
+ * las instrucciones como `systemInstruction` y el esquema como
+ * `responseJsonSchema`, así que devuelve el mismo JSON que Claude y la base no
+ * nota la diferencia (salvo en `model` y `usage`).
+ */
+async function transcribirConGemini(bytes: Uint8Array, mime: string, instrucciones: string, esquema: unknown, pedido: string) {
+  if (GEMINI_KEY === '') throw new Error('Falta el secreto GEMINI_API_KEY')
+  const data = encodeBase64(bytes)
+
+  // «Alta demanda» (503), cuota (429) o un 500 de Google son pasajeros: se
+  // reintenta en la misma llamada (a los 3 y a los 8 s) antes de darla por
+  // fallida, que si no gasta uno de los tres intentos del lector cada vez.
+  const ESPERAS_MS = [0, 3_000, 8_000]
+  let http: Response | null = null
+  let respuesta: RespuestaGemini = {}
+  try {
+    for (const espera of ESPERAS_MS) {
+      if (espera > 0) await new Promise((r) => setTimeout(r, espera))
+      http = await llamarAGemini(data, mime, instrucciones, esquema, pedido)
+      respuesta = (await http.json().catch(() => ({}))) as RespuestaGemini
+      if (![429, 500, 503].includes(http.status)) break
+      console.warn('lector: Gemini ocupado, se reintenta', { status: http.status })
+    }
+  } catch (err) {
+    const mensaje = err instanceof Error ? err.message : String(err)
+    throw new Error(`Gemini (${GEMINI_MODELO}): ${mensaje}${await modelosDisponibles()}`)
+  }
+  if (!http || !http.ok) {
+    throw new Error(`Gemini ${http?.status ?? '?'} (${GEMINI_MODELO}): ${(respuesta.error?.message ?? '').slice(0, 200)}${await modelosDisponibles()}`)
+  }
+
+  const candidato = respuesta.candidates?.[0]
+  if (!candidato) throw new Error(`Gemini no devolvió respuesta (${respuesta.promptFeedback?.blockReason ?? 'sin motivo'})`)
+  if (candidato.finishReason === 'MAX_TOKENS') throw new Error('La lectura se cortó (MAX_TOKENS)')
+  if (candidato.finishReason && candidato.finishReason !== 'STOP') {
+    throw new Error(`El modelo declinó leer el adjunto (${candidato.finishReason})`)
+  }
+  const texto = (candidato.content?.parts ?? []).filter((p) => !p.thought).map((p) => p.text ?? '').join('')
+  if (texto.trim() === '') throw new Error('El modelo no devolvió texto')
+  const leido: unknown = JSON.parse(texto)
+  return { leido, modelo: respuesta.modelVersion ?? GEMINI_MODELO, consumo: respuesta.usageMetadata ?? null }
+}
+
 /** Le pasa un adjunto a Claude con unas instrucciones y un esquema cerrados; devuelve el JSON, el modelo y su consumo. */
-async function transcribir(bytes: Uint8Array, mime: string, instrucciones: string, esquema: unknown, pedido: string) {
+async function transcribirConClaude(bytes: Uint8Array, mime: string, instrucciones: string, esquema: unknown, pedido: string) {
   const data = encodeBase64(bytes)
   const adjunto =
     mime === 'application/pdf'

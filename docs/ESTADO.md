@@ -2,6 +2,12 @@
 
 Actualizado el 2026-11-17.
 
+## 2026-11-26 · El lector de comprobantes lee con Gemini (provisional)
+
+- La cuenta de la API de Anthropic se quedó sin crédito (el 25-nov): el lector mandaba todo al equipo con `no_se_pudo_leer` y el asistente del superadmin no responde.
+- `lector-comprobantes` elige proveedor con el secreto `LECTOR_PROVEEDOR` (`claude` por defecto, o `gemini`). Hoy: `gemini`, con `GEMINI_MODEL=gemini-4-hydrogen` y el `GEMINI_API_KEY` que ya estaba en los secretos. Reintenta en la misma llamada los 503/429/500 de Google, corta a los 30 s y, si falla, anota en el error los modelos disponibles. Probado con una captura real: leída bien.
+- **Pendiente:** al recargar Anthropic, volver con `LECTOR_PROVEEDOR=claude` (sin desplegar). El asistente del superadmin solo usa Claude.
+
 ## 2026-11-26 · Helios Lab (base de datos)
 
 - Migraciones `20261126120000` (rol `driver`) a `20261126120400` (tablas `lab_*`, bucket `lab-comprobantes`, RPC del médico, del equipo, de la ruta y del lector) y suite `lab_smoke`. Spec y contrato: docs/09 y docs/01 §10. **Estado: escritas, sin aplicar ni probar**: la cuenta de Supabase de esta máquina no ve el proyecto Helios (403 en la Management API). Lab nace `apagado`.
