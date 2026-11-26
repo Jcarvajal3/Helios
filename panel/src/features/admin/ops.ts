@@ -416,9 +416,9 @@ export function datosDe(cuenta: CuentaEnBolivares) {
 
 /**
  * `agenda` solo entra a superadmin › Agenda (20261022220100); `capacitador`,
- * a la Agenda y a Clínicas, donde afilia (20261102130100); `cobranza`, solo a Por cobrar (20261118120100).
+ * a la Agenda y a Clínicas, donde afilia (20261102130100); `cobranza`, solo a Por cobrar (20261118120100); `driver`, solo a la ruta del día de Helios Lab.
  */
-export type RolDelPanel = 'operador' | 'super_admin' | 'agenda' | 'capacitador' | 'cobranza'
+export type RolDelPanel = 'operador' | 'super_admin' | 'agenda' | 'capacitador' | 'cobranza' | 'driver'
 
 export type TeamMember = {
   userId: string
@@ -446,7 +446,8 @@ export async function fetchTeam(): Promise<TeamMember[]> {
       role:
         row.role === 'super_admin' || row.role === 'operador' ||
           row.role === 'capacitador' ||
-          row.role === 'cobranza'
+          row.role === 'cobranza' ||
+          row.role === 'driver'
           ? row.role
           : 'agenda',
       isActive: Boolean(row.is_active),

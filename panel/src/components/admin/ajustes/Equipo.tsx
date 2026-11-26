@@ -38,12 +38,13 @@ const ROTULO_DE_ROL: Record<RolDelPanel, string> = {
   agenda: 'Agenda',
   capacitador: 'Capacitador',
   cobranza: 'Cobranza',
+  driver: 'Driver',
   operador: 'Operador',
   super_admin: 'Super admin',
 }
 
 /** De menos a más poder. */
-const ROLES: Array<{ value: RolDelPanel; label: string }> = (['agenda', 'capacitador', 'cobranza', 'operador', 'super_admin'] as const).map(
+const ROLES: Array<{ value: RolDelPanel; label: string }> = (['agenda', 'capacitador', 'cobranza', 'driver', 'operador', 'super_admin'] as const).map(
   (value) => ({ value, label: ROTULO_DE_ROL[value] }),
 )
 
@@ -56,6 +57,7 @@ const LO_QUE_PUEDE: Record<RolDelPanel, string> = {
   agenda: 'solo entrará a la Agenda: apunta médicos, anota cada gestión y agenda visitas',
   capacitador: 'entrará a la Agenda y a Clínicas, verá el perfil de cada médico sin su dinero y podrá afiliar',
   cobranza: 'solo entrará a Por cobrar: verá la cola de cobro, los morosos, las cohortes, el calendario y las promesas',
+  driver: 've la ruta del día de Helios Lab en su teléfono y marca las paradas',
   operador: 'registrará y aprobará pagos, mandará los avisos y trabajará la cobranza',
   super_admin:
     'podrá mover dinero, cambiar la tasa, los parámetros y la cuenta de cobro, y dar, quitar o cambiar el acceso de otras personas',

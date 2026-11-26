@@ -76,7 +76,7 @@ export function Sidebar({
   /** `/admin` es prefijo de todo lo que cuelga de ella: sin el trato
    *  especial, el match difuso la dejaría siempre activa. */
   function estaActivo(item: NavItem): boolean {
-    return item.path === '/admin'
+    return item.path === '/admin' || item.exacto
       ? !!matchRoute({ to: item.path, fuzzy: false })
       : !!matchRoute({ to: item.path, fuzzy: true })
   }

@@ -25,6 +25,15 @@
 // borró el reinicio de la capacitación (`lector_cedula_por_borrar`): desde SQL
 // no se puede.
 //
+// Lee, por último, las capturas de pago de Helios Lab (docs/09 §5.3;
+// `lector_lab_tomar`): a diferencia de las de WhatsApp, el médico ya las subió
+// al bucket privado `lab-comprobantes` (`storage_path`), así que se bajan de
+// ahí y no de 360dialog. Claude las lee con el mismo esquema e instrucciones
+// que un comprobante de pago y la base decide (`lector_lab_leido`: `cuadra` o
+// `para_revisar`). Los fallos, igual: tres intentos (`lector_lab_fallo`). La
+// despierta también `helios_lector_despertar`, que cuenta las lecturas de Lab
+// pendientes.
+//
 // Es pública (sin JWT): la protege la clave del encabezado `x-helios-clave`,
 // que conocen esta función (LECTOR_CLAVE) y el vault (`lector_clave`).
 //
@@ -51,6 +60,7 @@ import {
   esComprobante,
   extensionDe,
   igualSeguro,
+  mimeDeLab,
   normalizar,
   urlDeDescarga,
 } from './logica.ts'
@@ -80,6 +90,7 @@ async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<T> {
 
 type Tomada = { id: string; media_id: string; mime: string; profile_id: string }
 type CedulaTomada = { id: string; media_id: string; mime: string; ruta: string; guardada: boolean }
+type LabTomada = { id: string; muestra_id: string; storage_path: string; mime: string }
 type Config = { d360_api_key: string | null; d360_base_url: string | null }
 
 /** Baja un adjunto de 360dialog: primero su URL, luego el archivo. */
@@ -188,6 +199,34 @@ async function procesarCedula(t: CedulaTomada, cfg: Config): Promise<void> {
   }
 }
 
+/**
+ * Una captura de pago de Helios Lab: la baja del bucket `lab-comprobantes`,
+ * la lee con el mismo esquema que un comprobante y le pasa a la base lo leído.
+ */
+async function procesarLab(t: LabTomada): Promise<void> {
+  try {
+    const mime = mimeDeLab(t.mime)
+    if (!mime) throw new Error(`Tipo de archivo no soportado (${t.mime})`)
+    const bajada = await db.storage.from('lab-comprobantes').download(t.storage_path)
+    if (bajada.error) throw new Error(`No se pudo leer la captura del bucket: ${bajada.error.message}`)
+    const bytes = new Uint8Array(await bajada.data.arrayBuffer())
+    if (bytes.byteLength === 0) throw new Error('El archivo viene vacío')
+    if (bytes.byteLength > MAX_BYTES) throw new Error('El archivo pesa más de 10 MB')
+
+    const { leido } = await leer(bytes, mime)
+    const r = await rpc<{ pago_estado?: string }>('lector_lab_leido', { p_id: t.id, p_lectura: leido })
+    console.log('lector: captura de Lab leída', { id: t.id, muestra: t.muestra_id, pago: r?.pago_estado })
+  } catch (err) {
+    const mensaje = err instanceof Error ? err.message : String(err)
+    console.error('lector: no se pudo leer la captura de Lab', { id: t.id, mensaje })
+    try {
+      await rpc('lector_lab_fallo', { p_id: t.id, p_error: mensaje })
+    } catch (e) {
+      console.error('lector: tampoco se pudo anotar el fallo de Lab', e)
+    }
+  }
+}
+
 async function procesar(t: Tomada, cfg: Config): Promise<void> {
   // La ruta de la captura una vez guardada: va también con un fallo, para
   // que el equipo la vea.
@@ -242,7 +281,7 @@ async function borrarCedulas(): Promise<void> {
   }
 }
 
-/** Lee lo pendiente, de tres en tres, hasta vaciar la cola o agotar el tiempo: primero las cédulas, luego las capturas. */
+/** Lee lo pendiente, de tres en tres, hasta vaciar la cola o agotar el tiempo: primero las cédulas, luego las capturas y al final las de Lab. */
 async function vuelta(): Promise<void> {
   const inicio = Date.now()
   let leidas = 0
@@ -264,6 +303,14 @@ async function vuelta(): Promise<void> {
     }
     // Los mensajes que dejó la base (pedir la referencia, el duplicado) salen ya.
     if (leidas > 0) await rpc('helios_dispatch_whatsapp_batch', { p_limit: 10 })
+    // Helios Lab: sin WhatsApp de por medio, no hay mensajes que despachar.
+    let lab = 0
+    while (lab < MAX_POR_VUELTA && Date.now() - inicio < MAX_MS) {
+      const filas = await rpc<LabTomada[]>('lector_lab_tomar', { p_limit: 3 })
+      if (!filas || filas.length === 0) break
+      await Promise.all(filas.map((t) => procesarLab(t)))
+      lab += filas.length
+    }
   } catch (err) {
     console.error('lector: vuelta', err)
   }

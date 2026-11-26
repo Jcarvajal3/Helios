@@ -1,6 +1,7 @@
 import {
   BarChart3,
   CalendarDays,
+  FlaskConical,
   LayoutGrid,
   MessageCircle,
   Settings,
@@ -119,6 +120,18 @@ export const HERRAMIENTAS: ReadonlyArray<SeccionLite> = [
     pestanas: [{ rotulo: 'Ajustes', to: '/admin/ajustes' }],
   },
 ]
+
+/**
+ * Helios Lab: otro marco (`/lab`), no una sección de Lite. Va al final de las
+ * herramientas y se abre en otra pestaña, así que no tiene pestañas de Pro ni
+ * entra en `ubicar`.
+ */
+export const ENLACE_LAB_LITE = {
+  titulo: 'Helios Lab',
+  descripcion: 'Muestras de laboratorio, inventario y ruta del driver. Se abre en otra pestaña.',
+  href: '/lab',
+  icono: FlaskConical,
+} as const
 
 const TODAS = [...PRINCIPALES, ...HERRAMIENTAS]
 

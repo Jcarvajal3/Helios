@@ -283,6 +283,17 @@ export function extensionDe(mime: string): string {
   return 'jpg'
 }
 
+/**
+ * El tipo de archivo de un comprobante de Helios Lab (docs/09 §5.3): jpeg, png,
+ * webp o pdf. Devuelve el mime ya normalizado (`image/jpg` → `image/jpeg`, sin
+ * parámetros ni mayúsculas) o null si no es de los que se leen.
+ */
+export function mimeDeLab(mime: string | null | undefined): string | null {
+  const m = (mime ?? '').split(';')[0].trim().toLowerCase()
+  const normal = m === 'image/jpg' ? 'image/jpeg' : m
+  return ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'].includes(normal) ? normal : null
+}
+
 /** Comparación en tiempo constante, para la clave del encabezado. */
 export function igualSeguro(a: string, b: string): boolean {
   const ea = new TextEncoder().encode(a)

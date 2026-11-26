@@ -8,6 +8,7 @@ import { ROLE_LABEL } from '@/features/auth/permissions'
 import { useSession } from '@/features/auth/session'
 import type { StaffContext } from '@/features/auth/session'
 import { useUsoDelPanel } from '@/features/auth/usoDelPanel'
+import { useLabHabilitado } from '@/features/lab/medico'
 import { NO_INDEXAR } from '@/config/sitio'
 
 export const Route = createFileRoute('/_comercio')({
@@ -46,10 +47,12 @@ function ComercioShell({
 }) {
   const session = useSession()
   useUsoDelPanel(staff.merchantId)
+  // Laboratorio solo aparece en el menú si Helios lo habilitó para la clínica.
+  const labHabilitado = useLabHabilitado(staff.merchantId)
 
   return (
     <PanelShell
-      groups={merchantNavGroupsFor(staff)}
+      groups={merchantNavGroupsFor(staff, labHabilitado)}
       barraInferior={merchantBarraInferiorFor(staff)}
       logo={(plegado) => (
         <LogoDeHelios clinica={staff.merchantName} plegado={plegado} />

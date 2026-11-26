@@ -134,7 +134,7 @@ const tmp = path.join(os.tmpdir(), `helios-contrato-${process.pid}.sql`)
 fs.writeFileSync(tmp, SQL)
 let filas
 try {
-  const salida = execFileSync('supabase', ['db', 'query', '--linked', '--project-ref', REF, '-f', tmp, '-o', 'json'], {
+  const salida = execFileSync('supabase', ['db', 'query', '--linked', '--project-ref', REF, '--read-only', '-f', tmp, '-o', 'json'], {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
     shell: process.platform === 'win32',

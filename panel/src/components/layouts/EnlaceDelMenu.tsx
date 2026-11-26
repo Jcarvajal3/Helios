@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router'
+import { ExternalLink } from 'lucide-react'
 
 import type { NavItem } from '@/config/navigation'
 import { tonoDeAmbito } from '@/features/admin/areas'
@@ -94,23 +95,49 @@ export function EnlaceDelMenu({
     )
   }
 
+  const clase = `relative flex h-panel-control-md items-center gap-2.5 pointer-coarse:h-11 rounded-full px-3 type-panel-control transition-colors duration-(--transition-fast) ${
+    plegado ? 'lg:justify-center lg:px-0' : ''
+  } ${
+    activo
+      ? 'bg-on-surface text-shell-canvas shadow-[0_0_0_4px_rgb(21_126_253/0.12),0_12px_26px_-12px_rgb(4_94_243/0.55)]'
+      : 'text-on-surface-variant hover:bg-panel-control hover:text-on-surface'
+  }`
+
+  // Otro marco (Helios Lab): un enlace de verdad, a otra pestaña. El icono
+  // de salida avisa de que no se navega dentro de este panel.
+  if (item.nuevaPestana) {
+    return (
+      <a
+        href={item.path}
+        target="_blank"
+        rel="noopener"
+        title={plegado ? `${item.label} (otra pestaña)` : undefined}
+        className={clase}
+      >
+        <Icon size={18} strokeWidth={1.75} aria-hidden className="shrink-0" />
+        <span className={`min-w-0 truncate ${plegado ? 'lg:hidden' : ''}`}>{item.label}</span>
+        <ExternalLink
+          size={14}
+          strokeWidth={1.75}
+          aria-hidden
+          className={`ml-auto shrink-0 opacity-70 ${plegado ? 'lg:hidden' : ''}`}
+        />
+        <span className="sr-only">(se abre en otra pestaña)</span>
+      </a>
+    )
+  }
+
   return (
     <Link
       to={item.path}
       // `/admin` es prefijo de todo el panel: sin `exact`, Inicio se
       // anunciaría como la página actual desde cualquier pantalla.
-      activeOptions={{ exact: item.path === '/admin' }}
+      activeOptions={{ exact: item.path === '/admin' || item.exacto === true }}
       data-area={areaDelItem(item)}
       // Plegada, el nombre solo existe aquí. Sin esto la barra a 64 px es una
       // columna de iconos que hay que adivinar.
       title={plegado ? item.label : undefined}
-      className={`relative flex h-panel-control-md items-center gap-2.5 pointer-coarse:h-11 rounded-full px-3 type-panel-control transition-colors duration-(--transition-fast) ${
-        plegado ? 'lg:justify-center lg:px-0' : ''
-      } ${
-        activo
-          ? 'bg-on-surface text-shell-canvas shadow-[0_0_0_4px_rgb(21_126_253/0.12),0_12px_26px_-12px_rgb(4_94_243/0.55)]'
-          : 'text-on-surface-variant hover:bg-panel-control hover:text-on-surface'
-      }`}
+      className={clase}
     >
       <Icon size={18} strokeWidth={1.75} aria-hidden className="shrink-0" />
       <span className={`min-w-0 truncate ${plegado ? 'lg:hidden' : ''}`}>{item.label}</span>

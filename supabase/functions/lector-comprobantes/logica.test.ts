@@ -13,6 +13,7 @@ import {
   leerMontoBs,
   leerMovil,
   leerReferencia,
+  mimeDeLab,
   nombreDelBanco,
   normalizar,
   urlDeDescarga,
@@ -156,6 +157,15 @@ comprueba(esCedula({ es_cedula: false, numero: null, nombres: null, apellidos: n
 comprueba(!esCedula({ es_cedula: 'si', numero: null, nombres: null, apellidos: null }), 'es_cedula tiene que ser booleano')
 comprueba(!esCedula({ es_cedula: true, numero: 12345678, nombres: null, apellidos: null }), 'el número viene como texto')
 comprueba(!esCedula(null), 'nada no es una lectura')
+
+console.log('Helios Lab (docs/09 §5.3)')
+comprueba(
+  mimeDeLab('image/jpeg') === 'image/jpeg' && mimeDeLab('image/jpg') === 'image/jpeg' &&
+    mimeDeLab('IMAGE/PNG; charset=x') === 'image/png' && mimeDeLab('image/webp') === 'image/webp' &&
+    mimeDeLab('application/pdf') === 'application/pdf',
+  'los tipos que se leen',
+)
+comprueba(mimeDeLab('image/gif') === null && mimeDeLab('text/html') === null && mimeDeLab('') === null && mimeDeLab(null) === null, 'los que no')
 
 if (fallos > 0) {
   console.log(`\n${fallos} fallo(s)`)

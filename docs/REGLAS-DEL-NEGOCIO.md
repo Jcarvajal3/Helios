@@ -84,6 +84,29 @@ tasa del euro. Detalle en docs/01 §7.
   pregunta de WhatsApp, su plantilla de Meta y el comprobante) siguen
   diciendo «comisión de servicio».
 
+## Helios Lab (2026-11-26)
+
+- **Decisión de Javier, 2026-11-26.** Vertical de muestras y exámenes de
+  laboratorio (docs/09): el médico toma la muestra, el paciente paga **en
+  bolívares por Pago Móvil** a la cuenta de Helios a la tasa BCV del día del
+  registro, un driver la lleva al laboratorio y Helios reenvía el resultado.
+  No es pago en cuotas: no toca `charges`, `installments`, `settlements` ni el
+  libro contable.
+- **Precio** en dólares = base del laboratorio + **Cargo Helios** (hoy $15 por
+  examen, `lab_ajustes.cargo_helios_usd`, editable por el superadmin y copiado
+  a cada muestra) + la comisión del médico (por examen, la fija él).
+- **Excepción a «a la clínica, ningún total incluye la Comisión Helios»**: en
+  Lab el médico ve el precio final al paciente, porque es quien se lo dice. Se
+  llama «Cargo Helios», nunca «Comisión Helios» ni «fee».
+- **Interruptor** `lab_ajustes.modo`: `apagado` (nace así), `prueba` (solo
+  clínicas con `merchants.is_test`) o `todos`.
+- **Pagos al médico y al laboratorio**: solo se registran (la plataforma dice
+  cuánto se debe y el equipo marca «pagado» con su referencia). Sin libro en
+  la v1.
+- **Rol interno `driver`**: solo ve la ruta del día y marca paradas.
+- El resultado se reenvía a mano (correo o WhatsApp); la plataforma solo
+  registra la entrega y el canal.
+
 ## Proyecto Supabase y entornos
 
 - Sin Docker (decisión del usuario, 2026-09-30).

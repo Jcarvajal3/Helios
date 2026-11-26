@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
-import { BarChart3, FilePlus2, FileText, HandCoins, Landmark, UserCog } from 'lucide-react'
+import { BarChart3, FilePlus2, FileText, FlaskConical, HandCoins, Landmark, UserCog } from 'lucide-react'
 
 import { canSee } from '@/features/auth/permissions'
 import type { Acceso, MerchantSection } from '@/features/auth/permissions'
@@ -29,6 +29,13 @@ export type NavItem = {
    * un cuarto de pantalla: «Nuevo» por «Nuevo pago en cuotas».
    */
   corto?: string
+  /**
+   * Se abre en otra pestaña (`<a target="_blank">`) y no con el router: «Helios
+   * Lab» es otro marco, con su propio menú, que no debe pisar el del panel.
+   */
+  nuevaPestana?: boolean
+  /** Solo está activo con la ruta exacta: la raíz de un marco (`/lab`) es prefijo de todo lo suyo. */
+  exacto?: boolean
 }
 
 /**
@@ -99,6 +106,13 @@ export const merchantNavGroups: MerchantNavGroup[] = [
         icon: UserCog,
         section: 'personal',
       },
+      // Helios Lab: solo si la clínica está habilitada (`merchantNavGroupsFor`).
+      {
+        label: 'Laboratorio',
+        path: '/laboratorio',
+        icon: FlaskConical,
+        section: 'laboratorio',
+      },
       // Cuenta no está en la barra: quién eres y cómo salir viven en el
       // bloque del pie del sidebar. La ruta sigue existiendo.
     ],
@@ -117,11 +131,14 @@ type MerchantNavGroup = { title?: string; items: MerchantNavItem[] }
  * peligroso que hay — el que parece una respuesta legítima (el mismo que
  * documenta la migración 20260822123000).
  */
-export function merchantNavGroupsFor(acceso: Acceso): NavGroup[] {
+export function merchantNavGroupsFor(acceso: Acceso, labHabilitado = false): NavGroup[] {
   return merchantNavGroups
     .map((group) => ({
       ...group,
-      items: group.items.filter((i) => canSee(acceso, i.section)),
+      // Laboratorio solo sale si Helios lo habilitó para la clínica.
+      items: group.items.filter(
+        (i) => canSee(acceso, i.section) && (i.section !== 'laboratorio' || labHabilitado),
+      ),
     }))
     .filter((group) => group.items.length > 0)
 }
@@ -191,6 +208,20 @@ const MENU_ADMIN: ReadonlyArray<{
 ]
 
 /**
+ * «Helios Lab»: la otra vertical de Helios (docs/09-HELIOS-LAB.md), con su
+ * propio marco en `/lab`. Se abre en otra pestaña, y por eso NO es una
+ * pantalla del catálogo: el catálogo solo habla de rutas `/admin/...` (menú,
+ * paleta y mapa del asistente lo suponen). La paleta y el asistente no la
+ * listan; el menú Pro (en el pie, junto a la cuenta) y el de Lite sí.
+ */
+export const ENLACE_LAB: NavItem = {
+  label: 'Helios Lab',
+  path: '/lab',
+  icon: FlaskConical,
+  nuevaPestana: true,
+}
+
+/**
  * Lo que va al pie del menú, junto a la cuenta y fuera de los bloques. Hoy
  * nada.
  */
@@ -231,7 +262,7 @@ export const capacitadorNavGroups: NavGroup[] = [
 export const cobranzaNavGroups: NavGroup[] = [{ espacio: 'cobranza', items: [itemDePantalla('cartera-vencida')] }]
 
 /** El pie del menú del super admin. */
-export const superAdminNavPie: NavItem[] = PIE_ADMIN.map(itemDePantalla)
+export const superAdminNavPie: NavItem[] = [...PIE_ADMIN.map(itemDePantalla), ENLACE_LAB]
 
 /**
  * Quita del sidebar lo que este rol no puede usar.

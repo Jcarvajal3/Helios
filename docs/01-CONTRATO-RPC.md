@@ -2534,3 +2534,46 @@ vencida pasa a hoy y la 2.ª, como pronto, al día siguiente.
 `terms_versions` v4 (al final del mismo fichero): inicial del 50%, la orden se anula si no se paga
 en 2 h, y el límite se libera al pagar la inicial y las dos cuotas. Las
 órdenes viejas conservan la v3.
+
+## 10. Helios Lab (2026-11-26, 20261126120000 a 20261126120400)
+
+Muestras y exámenes de laboratorio (docs/09). No toca `charges`,
+`installments`, `settlements` ni el libro. Tablas `lab_*` con RLS y sin
+políticas: solo se llega por RPC. Errores: `42501` sin permiso (o Lab no
+habilitado para la clínica), `22023` dato inválido, `P0002` no existe,
+`23505` referencia repetida. Toda escritura del equipo va a `audit.log`
+(acciones `lab.*`).
+
+### 10.1 Panel del médico (gerente y cajero; Lab habilitado para su clínica)
+
+- **10.1.1 `lab_mi_acceso(p_merchant_id) → jsonb`** `{habilitado, modo, rol, cargo_helios_usd}`. Nunca falla por no estar habilitado.
+- **10.1.2 `lab_precios(p_merchant_id) → table`** `examen_id, codigo, nombre, kit_tipo, indicaciones, laboratorio_id, laboratorio_nombre, base_usd, cargo_helios_usd, comision_usd, precio_usd` (solo activos). El médico ve el precio final: excepción a «ningún total incluye la Comisión Helios».
+- **10.1.3 `lab_comision_set(p_merchant_id, p_examen_id, p_comision_usd) → jsonb`** Solo gerente.
+- **10.1.4 `lab_muestra_cotizar(p_merchant_id, p_examen_id, p_laboratorio_id) → jsonb`** `{base_usd, cargo_helios_usd, comision_usd, precio_usd, tasa_bcv, monto_ves, fecha_tasa}`.
+- **10.1.5 `lab_muestra_registrar(p_merchant_id, p_examen_id, p_laboratorio_id, p_paciente_nombre, p_paciente_whatsapp, p_paciente_correo, p_pago_referencia, p_pago_banco, p_comprobante_path, p_idempotency_key) → jsonb`** `{id, codigo, precio_usd, monto_ves, tasa_bcv, pago_estado, kits_restantes}`. Idempotente. WhatsApp E.164 venezolano (acepta `04…` y lo pasa a `+58…`), referencia de 4 a 20 dígitos y única entre muestras no anuladas (`23505`), captura dentro de `<merchant_id>/`. Escribe el `uso` del kit (el stock puede quedar negativo).
+- **10.1.6 `lab_muestra_anular(p_merchant_id, p_muestra_id, p_motivo) → jsonb`** Solo `lista_para_retirar`.
+- **10.1.7 `lab_mis_muestras(p_merchant_id, p_estado, p_busqueda, p_limit, p_offset) → table`** `id, codigo, paciente_nombre, paciente_whatsapp, examen_id, examen_nombre, laboratorio_nombre, kit_tipo, base_usd, cargo_helios_usd, comision_usd, precio_usd, monto_ves, pago_estado, estado, created_at, retirada_at, en_laboratorio_at, resultado_recibido_at, resultado_entregado_at, anulada_motivo, total_count`.
+- **10.1.8 `lab_mis_kits(p_merchant_id) → table`** `kit_tipo, nombre, en_consultorio, pedidos_pendientes`.
+- **10.1.9 `lab_kits_pedir(p_merchant_id, p_kit_tipo, p_cantidad, p_nota) → jsonb`**
+
+### 10.2 Equipo (`is_platform_admin()`; catálogo, ajustes y pagos: super admin)
+
+- **10.2.1 `admin_lab_resumen() → jsonb`** `{muestras_por_estado, pagos_por_revisar, kits:[{tipo, nombre, stock_helios, minimo, en_medicos, reponer}], ganancia_hoy_usd, ganancia_mes_usd, muestras_hoy}`. La ganancia es el Cargo Helios de las muestras con pago `verificado` (día de registro).
+- **10.2.2 `admin_lab_ajustes_get() → jsonb`** / **`admin_lab_ajustes_set(p_modo, p_cargo_helios_usd) → jsonb`** (super admin).
+- **10.2.3 `admin_lab_laboratorios() → table`** / **`admin_lab_laboratorio_guardar(p_id, p_nombre, p_correo, p_telefono, p_direccion, p_activo) → jsonb`** (super admin).
+- **10.2.4 `admin_lab_examenes() → table`** `id, codigo, nombre, kit_tipo, indicaciones, activo, precios` (`[{laboratorio_id, laboratorio_nombre, base_usd, activo}]`) / **`admin_lab_examen_guardar(p_id, p_codigo, p_nombre, p_kit_tipo, p_indicaciones, p_activo)`** / **`admin_lab_precio_guardar(p_laboratorio_id, p_examen_id, p_base_usd, p_activo)`** (super admin).
+- **10.2.5 Kits:** `admin_lab_kits() → table` (`tipo, nombre, stock_helios, en_medicos, minimo_helios, minimo_por_medico, reponer`), `admin_lab_kit_minimo_guardar(p_tipo, p_minimo_helios, p_minimo_por_medico)`, `admin_lab_kit_movimiento(p_tipo entrada|ajuste, p_kit_tipo, p_cantidad, p_merchant_id, p_nota, p_idempotency_key)` (idempotente; `lab_kit_movimientos` es append-only), `admin_lab_inventario_por_medico() → table` (`merchant_id, medico, consultorio, sangre, orina, biopsia, entregados_total, usados_total, bajo_minimo`).
+- **10.2.6 Muestras y cobros:** `admin_lab_muestras(p_estado, p_pago_estado, p_merchant_id, p_desde, p_hasta, p_busqueda, p_limit, p_offset) → table` (`id, codigo, merchant_id, medico, consultorio, paciente_*, examen, laboratorio, kit_tipo`, montos, `tasa_bcv`, `pago_referencia, pago_banco, pago_nota, tiene_comprobante, comprobante_path, lectura, pago_estado, estado, created_at, total_count`; `lectura` = `{status, cuadra, error, lectura:{monto_ves, referencia, banco, fecha}}`), `admin_lab_muestra(p_id) → {muestra, lectura, historia:[{created_at, accion, actor_nombre, nota}]}`, `admin_lab_muestra_estado(p_id, p_estado, p_canal, p_nota)` (corrige a mano; `resultado_entregado` pide canal `correo`/`whatsapp`; `anulada` toma el motivo de `p_nota`), `admin_lab_pago_revisar(p_id, p_aprobar, p_nota)`, `admin_lab_pagos_confirmar_cuadrados(p_ids) → {confirmados}`.
+- **10.2.7 Logística:** `admin_lab_logistica(p_fecha) → {fecha, por_retirar:[{merchant_id, medico, consultorio, direccion, telefono, muestras:[{codigo, examen, kit_tipo}]}], pedidos:[{id, merchant_id, medico, kit_tipo, cantidad, nota, estado, created_at}], bajo_minimo:[{merchant_id, medico, consultorio, sangre, orina, biopsia}]}`.
+- **10.2.8 Dinero (solo se registra, sin libro):** `admin_lab_ganancia(p_desde, p_hasta) → {desde, hasta, totales, filas:[{muestra_id, codigo, fecha, medico, examen, laboratorio, cobrado_usd, base_usd, comision_usd, cargo_helios_usd}]}`, `admin_lab_por_pagar() → {medicos:[{merchant_id, medico, consultorio, comision_usd, muestras, muestra_ids}], laboratorios:[{laboratorio_id, nombre, base_usd, muestras, muestra_ids}]}` (solo pagos `verificado`), `admin_lab_marcar_pagado(p_tipo comision|base, p_muestra_ids, p_referencia) → {marcadas}` (super admin).
+
+### 10.3 La ruta (`helios_puede_manejar()`: super admin, operador y driver)
+
+- **10.3.1 `admin_lab_ruta_armar(p_fecha)`** arma o rehace el borrador: consultorios con muestras por retirar, pedidos o kits bajo el mínimo (solo quien ya movió kits) y, al final, un laboratorio por cada uno que recibe muestras. Los kits a dejar son el mayor entre los pedidos y lo que falta para el mínimo.
+- **10.3.2** `admin_lab_parada_mover(p_parada_id, p_orden)` (la deja en esa posición y renumera las demás), `admin_lab_parada_kits(p_parada_id, p_kit_tipo, p_cantidad)` (0 la quita), `admin_lab_ruta_iniciar(p_fecha)`.
+- **10.3.3 `lab_ruta_del_dia(p_fecha) → jsonb`** `{ruta:{id, fecha, estado}|null, paradas:[{id, orden, tipo, estado, nombre, direccion, telefono, nota, completada_at, kits_a_dejar:[{kit_tipo, cantidad}], muestras:[{codigo, examen, kit_tipo}]}]}`.
+- **10.3.4 `lab_parada_completar(p_parada_id, p_nota) → jsonb`** `{ok, ya_completada, muestras, kits, ruta_estado}`. Idempotente. Consultorio: muestras a `retirada`, kits a `entrega`, pedidos a `entregado`. Laboratorio: sus muestras retiradas a `en_laboratorio`. La última parada cierra la ruta.
+
+### 10.4 Lector (`service_role`)
+
+`lector_lab_tomar(p_limit) → table(id, muestra_id, storage_path, mime)`, `lector_lab_leido(p_id, p_lectura jsonb) → jsonb` (recibe la salida cruda del modelo, el `ESQUEMA` de `logica.ts`; la base normaliza referencia y monto y decide `cuadra` con `helios_monto_cuadra`), `lector_lab_fallo(p_id, p_error) → text` (3 intentos, 2 minutos). `helios_lector_despertar` cuenta también la cola de Lab. Bucket privado `lab-comprobantes`.

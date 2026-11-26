@@ -2,6 +2,10 @@
 
 Actualizado el 2026-11-17.
 
+## 2026-11-26 · Helios Lab (base de datos)
+
+- Migraciones `20261126120000` (rol `driver`) a `20261126120400` (tablas `lab_*`, bucket `lab-comprobantes`, RPC del médico, del equipo, de la ruta y del lector) y suite `lab_smoke`. Spec y contrato: docs/09 y docs/01 §10. **Estado: escritas, sin aplicar ni probar**: la cuenta de Supabase de esta máquina no ve el proyecto Helios (403 en la Management API). Lab nace `apagado`.
+
 ## 2026-11-24 · Margen de 100 Bs por debajo y la inicial a la vista
 
 - **Margen:** `payment_margin_under_ves` pasa de 10 a 100 Bs (por encima sigue en 100). Dos pagos de la semana (Bs 41.878,83 y 23.493,68) fueron al equipo con `monto_no_cuadra` aunque el lector los leyó bien. Migración `20261124190000_el_pago_acepta_hasta_100_bs_de_menos.sql`, aplicada en producción. Lo usan el lector, el aviso del BNC, el extracto y los pagos de Amazon. `margen_de_pago_smoke` actualizada (sin correr aún).

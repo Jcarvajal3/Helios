@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
-import { LogOut, Monitor, Moon, Sun } from 'lucide-react'
+import { ExternalLink, LogOut, Monitor, Moon, Sun } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 
@@ -38,6 +38,26 @@ export function PieDelMenu({
   return (
     <div className="mx-3 mt-2 flex shrink-0 flex-col gap-2 border-t border-panel-hairline pt-2.5">
       {items.map((item) => {
+        // Otro marco (Helios Lab): un enlace de verdad, a otra pestaña.
+        if (item.nuevaPestana) {
+          return (
+            <a
+              key={item.path}
+              href={item.path}
+              target="_blank"
+              rel="noopener"
+              data-area={areaDelItem(item)}
+              title={plegado ? `${item.label} (otra pestaña)` : undefined}
+              className={`${claseDeFila(plegado)} text-panel-muted hover:bg-panel-card hover:text-on-surface`}
+            >
+              <Contenido icon={item.icon} plegado={plegado}>
+                {item.label}
+              </Contenido>
+              <ExternalLink size={12} aria-hidden className={`ml-auto shrink-0 opacity-70 ${plegado ? 'lg:hidden' : ''}`} />
+              <span className="sr-only">(se abre en otra pestaña)</span>
+            </a>
+          )
+        }
         const activo = estaActivo(item)
         return (
           <Link

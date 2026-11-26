@@ -19,6 +19,7 @@ import { Route as ConsultasRouteImport } from './routes/consultas'
 import { Route as CosmetologiaEnCuotasRouteImport } from './routes/cosmetologia-en-cuotas'
 import { Route as DirectorioRouteImport } from './routes/directorio'
 import { Route as IndexnowClaveDottxtRouteImport } from './routes/indexnow-clave[.]txt'
+import { Route as LabRouteImport } from './routes/lab'
 import { Route as LlmsDottxtRouteImport } from './routes/llms[.]txt'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as MedicosRouteImport } from './routes/medicos'
@@ -31,6 +32,7 @@ import { Route as SoporteRouteImport } from './routes/soporte'
 import { Route as ComercioComisionesRouteImport } from './routes/_comercio/comisiones'
 import { Route as ComercioCuentaRouteImport } from './routes/_comercio/cuenta'
 import { Route as ComercioFinanciamientosRouteImport } from './routes/_comercio/financiamientos'
+import { Route as ComercioLaboratorioRouteImport } from './routes/_comercio/laboratorio'
 import { Route as ComercioMetricasRouteImport } from './routes/_comercio/metricas'
 import { Route as ComercioPagosRouteImport } from './routes/_comercio/pagos'
 import { Route as ComercioPersonalRouteImport } from './routes/_comercio/personal'
@@ -54,6 +56,15 @@ import { Route as AdminSeguimientoRouteImport } from './routes/admin/seguimiento
 import { Route as AdminWhatsappRouteImport } from './routes/admin/whatsapp'
 import { Route as ApiIndexnowRouteImport } from './routes/api.indexnow'
 import { Route as DirectorioEspecialidadRouteImport } from './routes/directorio_.$especialidad'
+import { Route as LabIndexRouteImport } from './routes/lab/index'
+import { Route as LabAjustesRouteImport } from './routes/lab/ajustes'
+import { Route as LabCatalogoRouteImport } from './routes/lab/catalogo'
+import { Route as LabCobrosRouteImport } from './routes/lab/cobros'
+import { Route as LabGananciaRouteImport } from './routes/lab/ganancia'
+import { Route as LabInventarioRouteImport } from './routes/lab/inventario'
+import { Route as LabLogisticaRouteImport } from './routes/lab/logistica'
+import { Route as LabMuestrasRouteImport } from './routes/lab/muestras'
+import { Route as LabRutaRouteImport } from './routes/lab/ruta'
 import { Route as LegalPrivacidadRouteImport } from './routes/legal.privacidad'
 import { Route as LegalTerminosRouteImport } from './routes/legal.terminos'
 import { Route as MedicoSlugRouteImport } from './routes/medico.$slug'
@@ -116,6 +127,11 @@ const IndexnowClaveDottxtRoute = IndexnowClaveDottxtRouteImport.update({
   path: '/indexnow-clave.txt',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LabRoute = LabRouteImport.update({
+  id: '/lab',
+  path: '/lab',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LlmsDottxtRoute = LlmsDottxtRouteImport.update({
   id: '/llms.txt',
   path: '/llms.txt',
@@ -174,6 +190,11 @@ const ComercioCuentaRoute = ComercioCuentaRouteImport.update({
 const ComercioFinanciamientosRoute = ComercioFinanciamientosRouteImport.update({
   id: '/financiamientos',
   path: '/financiamientos',
+  getParentRoute: () => ComercioRoute,
+} as any)
+const ComercioLaboratorioRoute = ComercioLaboratorioRouteImport.update({
+  id: '/laboratorio',
+  path: '/laboratorio',
   getParentRoute: () => ComercioRoute,
 } as any)
 const ComercioMetricasRoute = ComercioMetricasRouteImport.update({
@@ -291,6 +312,51 @@ const DirectorioEspecialidadRoute = DirectorioEspecialidadRouteImport.update({
   path: '/directorio/$especialidad',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LabIndexRoute = LabIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => LabRoute,
+} as any)
+const LabAjustesRoute = LabAjustesRouteImport.update({
+  id: '/ajustes',
+  path: '/ajustes',
+  getParentRoute: () => LabRoute,
+} as any)
+const LabCatalogoRoute = LabCatalogoRouteImport.update({
+  id: '/catalogo',
+  path: '/catalogo',
+  getParentRoute: () => LabRoute,
+} as any)
+const LabCobrosRoute = LabCobrosRouteImport.update({
+  id: '/cobros',
+  path: '/cobros',
+  getParentRoute: () => LabRoute,
+} as any)
+const LabGananciaRoute = LabGananciaRouteImport.update({
+  id: '/ganancia',
+  path: '/ganancia',
+  getParentRoute: () => LabRoute,
+} as any)
+const LabInventarioRoute = LabInventarioRouteImport.update({
+  id: '/inventario',
+  path: '/inventario',
+  getParentRoute: () => LabRoute,
+} as any)
+const LabLogisticaRoute = LabLogisticaRouteImport.update({
+  id: '/logistica',
+  path: '/logistica',
+  getParentRoute: () => LabRoute,
+} as any)
+const LabMuestrasRoute = LabMuestrasRouteImport.update({
+  id: '/muestras',
+  path: '/muestras',
+  getParentRoute: () => LabRoute,
+} as any)
+const LabRutaRoute = LabRutaRouteImport.update({
+  id: '/ruta',
+  path: '/ruta',
+  getParentRoute: () => LabRoute,
+} as any)
 const LegalPrivacidadRoute = LegalPrivacidadRouteImport.update({
   id: '/legal/privacidad',
   path: '/legal/privacidad',
@@ -364,6 +430,7 @@ export interface FileRoutesByFullPath {
   '/cosmetologia-en-cuotas': typeof CosmetologiaEnCuotasRoute
   '/directorio': typeof DirectorioRoute
   '/indexnow-clave.txt': typeof IndexnowClaveDottxtRoute
+  '/lab': typeof LabRouteWithChildren
   '/llms.txt': typeof LlmsDottxtRoute
   '/login': typeof LoginRoute
   '/medicos': typeof MedicosRoute
@@ -376,6 +443,7 @@ export interface FileRoutesByFullPath {
   '/comisiones': typeof ComercioComisionesRoute
   '/cuenta': typeof ComercioCuentaRoute
   '/financiamientos': typeof ComercioFinanciamientosRoute
+  '/laboratorio': typeof ComercioLaboratorioRoute
   '/metricas': typeof ComercioMetricasRoute
   '/pagos': typeof ComercioPagosRoute
   '/personal': typeof ComercioPersonalRoute
@@ -398,10 +466,19 @@ export interface FileRoutesByFullPath {
   '/admin/whatsapp': typeof AdminWhatsappRoute
   '/api/indexnow': typeof ApiIndexnowRoute
   '/directorio/$especialidad': typeof DirectorioEspecialidadRoute
+  '/lab/ajustes': typeof LabAjustesRoute
+  '/lab/catalogo': typeof LabCatalogoRoute
+  '/lab/cobros': typeof LabCobrosRoute
+  '/lab/ganancia': typeof LabGananciaRoute
+  '/lab/inventario': typeof LabInventarioRoute
+  '/lab/logistica': typeof LabLogisticaRoute
+  '/lab/muestras': typeof LabMuestrasRoute
+  '/lab/ruta': typeof LabRutaRoute
   '/legal/privacidad': typeof LegalPrivacidadRoute
   '/legal/terminos': typeof LegalTerminosRoute
   '/medico/$slug': typeof MedicoSlugRoute
   '/admin/': typeof AdminIndexRoute
+  '/lab/': typeof LabIndexRoute
   '/financiamientos/$id': typeof ComercioFinanciamientosIdRoute
   '/admin/clinicas/$id': typeof AdminClinicasIdRoute
   '/admin/clinicas/alta': typeof AdminClinicasAltaRoute
@@ -433,6 +510,7 @@ export interface FileRoutesByTo {
   '/comisiones': typeof ComercioComisionesRoute
   '/cuenta': typeof ComercioCuentaRoute
   '/financiamientos': typeof ComercioFinanciamientosRoute
+  '/laboratorio': typeof ComercioLaboratorioRoute
   '/metricas': typeof ComercioMetricasRoute
   '/pagos': typeof ComercioPagosRoute
   '/personal': typeof ComercioPersonalRoute
@@ -455,10 +533,19 @@ export interface FileRoutesByTo {
   '/admin/whatsapp': typeof AdminWhatsappRoute
   '/api/indexnow': typeof ApiIndexnowRoute
   '/directorio/$especialidad': typeof DirectorioEspecialidadRoute
+  '/lab/ajustes': typeof LabAjustesRoute
+  '/lab/catalogo': typeof LabCatalogoRoute
+  '/lab/cobros': typeof LabCobrosRoute
+  '/lab/ganancia': typeof LabGananciaRoute
+  '/lab/inventario': typeof LabInventarioRoute
+  '/lab/logistica': typeof LabLogisticaRoute
+  '/lab/muestras': typeof LabMuestrasRoute
+  '/lab/ruta': typeof LabRutaRoute
   '/legal/privacidad': typeof LegalPrivacidadRoute
   '/legal/terminos': typeof LegalTerminosRoute
   '/medico/$slug': typeof MedicoSlugRoute
   '/admin': typeof AdminIndexRoute
+  '/lab': typeof LabIndexRoute
   '/financiamientos/$id': typeof ComercioFinanciamientosIdRoute
   '/admin/clinicas/$id': typeof AdminClinicasIdRoute
   '/admin/clinicas/alta': typeof AdminClinicasAltaRoute
@@ -481,6 +568,7 @@ export interface FileRoutesById {
   '/cosmetologia-en-cuotas': typeof CosmetologiaEnCuotasRoute
   '/directorio': typeof DirectorioRoute
   '/indexnow-clave.txt': typeof IndexnowClaveDottxtRoute
+  '/lab': typeof LabRouteWithChildren
   '/llms.txt': typeof LlmsDottxtRoute
   '/login': typeof LoginRoute
   '/medicos': typeof MedicosRoute
@@ -493,6 +581,7 @@ export interface FileRoutesById {
   '/_comercio/comisiones': typeof ComercioComisionesRoute
   '/_comercio/cuenta': typeof ComercioCuentaRoute
   '/_comercio/financiamientos': typeof ComercioFinanciamientosRoute
+  '/_comercio/laboratorio': typeof ComercioLaboratorioRoute
   '/_comercio/metricas': typeof ComercioMetricasRoute
   '/_comercio/pagos': typeof ComercioPagosRoute
   '/_comercio/personal': typeof ComercioPersonalRoute
@@ -515,10 +604,19 @@ export interface FileRoutesById {
   '/admin/whatsapp': typeof AdminWhatsappRoute
   '/api/indexnow': typeof ApiIndexnowRoute
   '/directorio_/$especialidad': typeof DirectorioEspecialidadRoute
+  '/lab/ajustes': typeof LabAjustesRoute
+  '/lab/catalogo': typeof LabCatalogoRoute
+  '/lab/cobros': typeof LabCobrosRoute
+  '/lab/ganancia': typeof LabGananciaRoute
+  '/lab/inventario': typeof LabInventarioRoute
+  '/lab/logistica': typeof LabLogisticaRoute
+  '/lab/muestras': typeof LabMuestrasRoute
+  '/lab/ruta': typeof LabRutaRoute
   '/legal/privacidad': typeof LegalPrivacidadRoute
   '/legal/terminos': typeof LegalTerminosRoute
   '/medico/$slug': typeof MedicoSlugRoute
   '/admin/': typeof AdminIndexRoute
+  '/lab/': typeof LabIndexRoute
   '/_comercio/financiamientos_/$id': typeof ComercioFinanciamientosIdRoute
   '/admin/clinicas_/$id': typeof AdminClinicasIdRoute
   '/admin/clinicas_/alta': typeof AdminClinicasAltaRoute
@@ -541,6 +639,7 @@ export interface FileRouteTypes {
     | '/cosmetologia-en-cuotas'
     | '/directorio'
     | '/indexnow-clave.txt'
+    | '/lab'
     | '/llms.txt'
     | '/login'
     | '/medicos'
@@ -553,6 +652,7 @@ export interface FileRouteTypes {
     | '/comisiones'
     | '/cuenta'
     | '/financiamientos'
+    | '/laboratorio'
     | '/metricas'
     | '/pagos'
     | '/personal'
@@ -575,10 +675,19 @@ export interface FileRouteTypes {
     | '/admin/whatsapp'
     | '/api/indexnow'
     | '/directorio/$especialidad'
+    | '/lab/ajustes'
+    | '/lab/catalogo'
+    | '/lab/cobros'
+    | '/lab/ganancia'
+    | '/lab/inventario'
+    | '/lab/logistica'
+    | '/lab/muestras'
+    | '/lab/ruta'
     | '/legal/privacidad'
     | '/legal/terminos'
     | '/medico/$slug'
     | '/admin/'
+    | '/lab/'
     | '/financiamientos/$id'
     | '/admin/clinicas/$id'
     | '/admin/clinicas/alta'
@@ -610,6 +719,7 @@ export interface FileRouteTypes {
     | '/comisiones'
     | '/cuenta'
     | '/financiamientos'
+    | '/laboratorio'
     | '/metricas'
     | '/pagos'
     | '/personal'
@@ -632,10 +742,19 @@ export interface FileRouteTypes {
     | '/admin/whatsapp'
     | '/api/indexnow'
     | '/directorio/$especialidad'
+    | '/lab/ajustes'
+    | '/lab/catalogo'
+    | '/lab/cobros'
+    | '/lab/ganancia'
+    | '/lab/inventario'
+    | '/lab/logistica'
+    | '/lab/muestras'
+    | '/lab/ruta'
     | '/legal/privacidad'
     | '/legal/terminos'
     | '/medico/$slug'
     | '/admin'
+    | '/lab'
     | '/financiamientos/$id'
     | '/admin/clinicas/$id'
     | '/admin/clinicas/alta'
@@ -657,6 +776,7 @@ export interface FileRouteTypes {
     | '/cosmetologia-en-cuotas'
     | '/directorio'
     | '/indexnow-clave.txt'
+    | '/lab'
     | '/llms.txt'
     | '/login'
     | '/medicos'
@@ -669,6 +789,7 @@ export interface FileRouteTypes {
     | '/_comercio/comisiones'
     | '/_comercio/cuenta'
     | '/_comercio/financiamientos'
+    | '/_comercio/laboratorio'
     | '/_comercio/metricas'
     | '/_comercio/pagos'
     | '/_comercio/personal'
@@ -691,10 +812,19 @@ export interface FileRouteTypes {
     | '/admin/whatsapp'
     | '/api/indexnow'
     | '/directorio_/$especialidad'
+    | '/lab/ajustes'
+    | '/lab/catalogo'
+    | '/lab/cobros'
+    | '/lab/ganancia'
+    | '/lab/inventario'
+    | '/lab/logistica'
+    | '/lab/muestras'
+    | '/lab/ruta'
     | '/legal/privacidad'
     | '/legal/terminos'
     | '/medico/$slug'
     | '/admin/'
+    | '/lab/'
     | '/_comercio/financiamientos_/$id'
     | '/admin/clinicas_/$id'
     | '/admin/clinicas_/alta'
@@ -717,6 +847,7 @@ export interface RootRouteChildren {
   CosmetologiaEnCuotasRoute: typeof CosmetologiaEnCuotasRoute
   DirectorioRoute: typeof DirectorioRoute
   IndexnowClaveDottxtRoute: typeof IndexnowClaveDottxtRoute
+  LabRoute: typeof LabRouteWithChildren
   LlmsDottxtRoute: typeof LlmsDottxtRoute
   LoginRoute: typeof LoginRoute
   MedicosRoute: typeof MedicosRoute
@@ -805,6 +936,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexnowClaveDottxtRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/lab': {
+      id: '/lab'
+      path: '/lab'
+      fullPath: '/lab'
+      preLoaderRoute: typeof LabRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/llms.txt': {
       id: '/llms.txt'
       path: '/llms.txt'
@@ -887,6 +1025,13 @@ declare module '@tanstack/react-router' {
       path: '/financiamientos'
       fullPath: '/financiamientos'
       preLoaderRoute: typeof ComercioFinanciamientosRouteImport
+      parentRoute: typeof ComercioRoute
+    }
+    '/_comercio/laboratorio': {
+      id: '/_comercio/laboratorio'
+      path: '/laboratorio'
+      fullPath: '/laboratorio'
+      preLoaderRoute: typeof ComercioLaboratorioRouteImport
       parentRoute: typeof ComercioRoute
     }
     '/_comercio/metricas': {
@@ -1050,6 +1195,69 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DirectorioEspecialidadRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/lab/': {
+      id: '/lab/'
+      path: '/'
+      fullPath: '/lab/'
+      preLoaderRoute: typeof LabIndexRouteImport
+      parentRoute: typeof LabRoute
+    }
+    '/lab/ajustes': {
+      id: '/lab/ajustes'
+      path: '/ajustes'
+      fullPath: '/lab/ajustes'
+      preLoaderRoute: typeof LabAjustesRouteImport
+      parentRoute: typeof LabRoute
+    }
+    '/lab/catalogo': {
+      id: '/lab/catalogo'
+      path: '/catalogo'
+      fullPath: '/lab/catalogo'
+      preLoaderRoute: typeof LabCatalogoRouteImport
+      parentRoute: typeof LabRoute
+    }
+    '/lab/cobros': {
+      id: '/lab/cobros'
+      path: '/cobros'
+      fullPath: '/lab/cobros'
+      preLoaderRoute: typeof LabCobrosRouteImport
+      parentRoute: typeof LabRoute
+    }
+    '/lab/ganancia': {
+      id: '/lab/ganancia'
+      path: '/ganancia'
+      fullPath: '/lab/ganancia'
+      preLoaderRoute: typeof LabGananciaRouteImport
+      parentRoute: typeof LabRoute
+    }
+    '/lab/inventario': {
+      id: '/lab/inventario'
+      path: '/inventario'
+      fullPath: '/lab/inventario'
+      preLoaderRoute: typeof LabInventarioRouteImport
+      parentRoute: typeof LabRoute
+    }
+    '/lab/logistica': {
+      id: '/lab/logistica'
+      path: '/logistica'
+      fullPath: '/lab/logistica'
+      preLoaderRoute: typeof LabLogisticaRouteImport
+      parentRoute: typeof LabRoute
+    }
+    '/lab/muestras': {
+      id: '/lab/muestras'
+      path: '/muestras'
+      fullPath: '/lab/muestras'
+      preLoaderRoute: typeof LabMuestrasRouteImport
+      parentRoute: typeof LabRoute
+    }
+    '/lab/ruta': {
+      id: '/lab/ruta'
+      path: '/ruta'
+      fullPath: '/lab/ruta'
+      preLoaderRoute: typeof LabRutaRouteImport
+      parentRoute: typeof LabRoute
+    }
     '/legal/privacidad': {
       id: '/legal/privacidad'
       path: '/legal/privacidad'
@@ -1141,6 +1349,7 @@ interface ComercioRouteChildren {
   ComercioComisionesRoute: typeof ComercioComisionesRoute
   ComercioCuentaRoute: typeof ComercioCuentaRoute
   ComercioFinanciamientosRoute: typeof ComercioFinanciamientosRoute
+  ComercioLaboratorioRoute: typeof ComercioLaboratorioRoute
   ComercioMetricasRoute: typeof ComercioMetricasRoute
   ComercioPagosRoute: typeof ComercioPagosRoute
   ComercioPersonalRoute: typeof ComercioPersonalRoute
@@ -1152,6 +1361,7 @@ const ComercioRouteChildren: ComercioRouteChildren = {
   ComercioComisionesRoute: ComercioComisionesRoute,
   ComercioCuentaRoute: ComercioCuentaRoute,
   ComercioFinanciamientosRoute: ComercioFinanciamientosRoute,
+  ComercioLaboratorioRoute: ComercioLaboratorioRoute,
   ComercioMetricasRoute: ComercioMetricasRoute,
   ComercioPagosRoute: ComercioPagosRoute,
   ComercioPersonalRoute: ComercioPersonalRoute,
@@ -1221,6 +1431,32 @@ const AdminRouteChildren: AdminRouteChildren = {
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
+interface LabRouteChildren {
+  LabAjustesRoute: typeof LabAjustesRoute
+  LabCatalogoRoute: typeof LabCatalogoRoute
+  LabCobrosRoute: typeof LabCobrosRoute
+  LabGananciaRoute: typeof LabGananciaRoute
+  LabInventarioRoute: typeof LabInventarioRoute
+  LabLogisticaRoute: typeof LabLogisticaRoute
+  LabMuestrasRoute: typeof LabMuestrasRoute
+  LabRutaRoute: typeof LabRutaRoute
+  LabIndexRoute: typeof LabIndexRoute
+}
+
+const LabRouteChildren: LabRouteChildren = {
+  LabAjustesRoute: LabAjustesRoute,
+  LabCatalogoRoute: LabCatalogoRoute,
+  LabCobrosRoute: LabCobrosRoute,
+  LabGananciaRoute: LabGananciaRoute,
+  LabInventarioRoute: LabInventarioRoute,
+  LabLogisticaRoute: LabLogisticaRoute,
+  LabMuestrasRoute: LabMuestrasRoute,
+  LabRutaRoute: LabRutaRoute,
+  LabIndexRoute: LabIndexRoute,
+}
+
+const LabRouteWithChildren = LabRoute._addFileChildren(LabRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ComercioRoute: ComercioRouteWithChildren,
@@ -1232,6 +1468,7 @@ const rootRouteChildren: RootRouteChildren = {
   CosmetologiaEnCuotasRoute: CosmetologiaEnCuotasRoute,
   DirectorioRoute: DirectorioRoute,
   IndexnowClaveDottxtRoute: IndexnowClaveDottxtRoute,
+  LabRoute: LabRouteWithChildren,
   LlmsDottxtRoute: LlmsDottxtRoute,
   LoginRoute: LoginRoute,
   MedicosRoute: MedicosRoute,

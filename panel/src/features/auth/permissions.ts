@@ -44,6 +44,9 @@ export type MerchantSection =
   | 'contabilidad'
   | 'pagos'
   | 'personal'
+  // Helios Lab. Además del rol, la clínica tiene que estar habilitada
+  // (`lab_mi_acceso`): el menú y la pantalla lo comprueban aparte.
+  | 'laboratorio'
   | 'cuenta'
 
 const SECTIONS_BY_ROLE: Record<MerchantRole, MerchantSection[]> = {
@@ -60,9 +63,10 @@ const SECTIONS_BY_ROLE: Record<MerchantRole, MerchantSection[]> = {
     // administradora ella misma y el rol dejaría de separar nada. Lo mismo
     // comprueba el servidor en `can_manage_merchant_staff`.
     'personal',
+    'laboratorio',
     'cuenta',
   ],
-  cajero: ['registrar', 'financiamientos', 'comisiones', 'cuenta'],
+  cajero: ['registrar', 'financiamientos', 'comisiones', 'laboratorio', 'cuenta'],
 }
 
 /** La secretaria que solo registra: sin el historial de pagos en cuotas. */

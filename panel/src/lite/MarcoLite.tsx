@@ -19,7 +19,7 @@ import { tonoDeRuta } from '@/features/admin/areas'
 import { ES_CAJON, useMediaQuery } from '@/lib/media'
 import { cerrarSesion } from '@/lib/supabase'
 import { InterruptorDeVersion } from './InterruptorDeVersion'
-import { HERRAMIENTAS, PRINCIPALES, esDeLaPestana, ubicar } from './menu'
+import { ENLACE_LAB_LITE, HERRAMIENTAS, PRINCIPALES, esDeLaPestana, ubicar } from './menu'
 import type { SeccionLite } from './menu'
 import './estilos/maqueta.css'
 import './estilos/vestido.css'
@@ -202,6 +202,22 @@ function BarraDeIconos({
           })}
         </nav>
       ))}
+
+      {/* Otro marco: se abre en otra pestaña y no lleva «página actual». */}
+      <nav className="lt-nav" aria-label="Helios Lab">
+        <a
+          href={ENLACE_LAB_LITE.href}
+          target="_blank"
+          rel="noopener"
+          aria-label={`${ENLACE_LAB_LITE.titulo} (se abre en otra pestaña)`}
+          className="lt-boton-nav"
+        >
+          <ENLACE_LAB_LITE.icono strokeWidth={1.8} aria-hidden />
+          <span className="lt-nombre" aria-hidden>
+            {ENLACE_LAB_LITE.titulo} ↗
+          </span>
+        </a>
+      </nav>
 
       <div className="lt-pie-barra">
         <Cuenta account={account} />

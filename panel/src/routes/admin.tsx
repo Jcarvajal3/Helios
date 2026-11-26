@@ -68,7 +68,11 @@ function SuperAdminLayoutRoute() {
   return (
     <PlatformGate>
       {(admin) =>
-        admin.role === 'agenda' || admin.role === 'capacitador' || admin.role === 'cobranza' ? (
+        admin.role === 'driver' ? (
+          // El driver no tiene nada en este panel: su pantalla es la ruta del
+          // día de Helios Lab, en su teléfono.
+          <Navigate to="/lab/ruta" replace />
+        ) : admin.role === 'agenda' || admin.role === 'capacitador' || admin.role === 'cobranza' ? (
           <ShellReducido admin={admin} />
         ) : (
           // El asistente solo existe con un admin confirmado: su conversación
