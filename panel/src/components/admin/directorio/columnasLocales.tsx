@@ -3,7 +3,16 @@ import { CircleAlert } from 'lucide-react'
 
 import type { Column } from '@/components/DataTable'
 import { LogoLocal } from '@/components/admin/directorio/LogoLocal'
-import { Badge, NoSePudoLeer, formatDateTime, formatUsd } from '@/components/ui'
+import { LogoWhatsApp } from '@/components/directorio/TarjetaDeMedico'
+import {
+  Badge,
+  NoSePudoLeer,
+  claseDeBoton,
+  formatDateTime,
+  formatPhone,
+  formatUsd,
+  whatsappNumber,
+} from '@/components/ui'
 import { MERCHANT_CATEGORY_LABEL } from '@/features/admin/api'
 import type { MerchantRow } from '@/features/admin/api'
 import { csvDinero, csvInstante } from '@/lib/csv'
@@ -42,17 +51,48 @@ export function columnasLocales(porPagar: PorPagar): Array<Column<MerchantRow>> 
       identity: true,
       sort: (m) => m.name,
       csv: (m) => m.name,
-      cell: (m) => (
-        <div className="flex items-center gap-3">
-          <LogoLocal name={m.name} logoUrl={m.logoUrl} />
-          <div>
-            <p className="font-medium text-on-surface">{m.name}</p>
-            <p className="type-panel-caption text-on-surface-variant">
-              {[m.consultorio, m.taxId ?? 'Sin RIF'].filter(Boolean).join(' · ')}
-            </p>
+      // Ancho fijo: el consultorio a veces trae la dirección entera («Calle
+      // Guaicaipuro, Callejón Almenar, …») y estiraba la columna hasta
+      // empujar las cifras fuera de la pantalla. Se corta con «…» y el texto
+      // completo queda en el `title`.
+      cell: (m) => {
+        const debajo = [m.consultorio, m.taxId ?? 'Sin RIF'].filter(Boolean).join(' · ')
+        return (
+          <div className="flex items-center gap-3 sm:w-80">
+            <LogoLocal name={m.name} logoUrl={m.logoUrl} />
+            <div className="min-w-0">
+              <p className="font-medium text-on-surface">{m.name}</p>
+              <p className="truncate type-panel-caption text-on-surface-variant" title={debajo}>
+                {debajo}
+              </p>
+            </div>
           </div>
-        </div>
-      ),
+        )
+      },
+    },
+
+    {
+      // El chat con el médico titular, al número de su perfil (`merchants.phone`).
+      key: 'whatsapp',
+      header: 'WhatsApp',
+      csv: (m) => m.phone,
+      cell: (m) => {
+        const numero = whatsappNumber(m.phone)
+        if (!numero) return <span className="text-on-surface-variant">—</span>
+        return (
+          <a
+            href={`https://wa.me/${numero}`}
+            target="_blank"
+            rel="noreferrer"
+            title={`Escribirle por WhatsApp al ${formatPhone(m.phone)}`}
+            aria-label={`Escribirle por WhatsApp a ${m.name}`}
+            className={`whitespace-nowrap ${claseDeBoton('outlined', 'sm')}`}
+          >
+            <LogoWhatsApp className="size-4 text-[#25D366]" />
+            WhatsApp
+          </a>
+        )
+      },
     },
 
     {

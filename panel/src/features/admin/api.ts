@@ -444,6 +444,8 @@ export type MerchantRow = {
   /** El nombre del consultorio o centro médico, un dato secundario: `name` es
    *  el del médico titular («Dra. Ana Lara», 20261029190000). */
   consultorio: string | null
+  /** El teléfono del perfil del médico (`merchants.phone`), tal como se cargó. */
+  phone: string | null
 }
 
 export async function fetchMerchants(): Promise<MerchantRow[]> {
@@ -473,6 +475,7 @@ export async function fetchMerchants(): Promise<MerchantRow[]> {
     socialUrl: (row.social_url as string | null) ?? null,
     ownerName: (row.owner_name as string | null) ?? null,
     consultorio: textoONulo(row.consultorio),
+    phone: textoONulo(row.phone),
   }))
 }
 
